@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Strategy Signal Scanner + Paper Trade</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 { color: #667eea; margin-bottom: 30px; text-align: center; }
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .strategy-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .strategy-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .strategy-option:hover { border-color: #667eea; background: #f0f0ff; }
+        .strategy-option input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+        .strategy-option label { cursor: pointer; font-weight: 500; flex: 1; }
+        .filter-options { margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd; }
+        .filter-option { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .filter-option input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+        .filter-option label { cursor: pointer; font-weight: 500; flex: 1; }
+        .help-text { font-size: 13px; color: #666; margin-left: 30px; font-style: italic; }
+        button {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover { background: #5568d3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .summary-card h3 { font-size: 13px; margin-bottom: 10px; opacity: 0.9; }
+        .summary-card .value { font-size: 32px; font-weight: bold; }
+        #loading { display: none; text-align: center; }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #resultsContainer { display: none; }
+        /* Watchlist Cards */
+        .watchlist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .watch-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.2s;
+        }
+        .watch-card:hover { border-color: #667eea; box-shadow: 0 4px 15px rgba(102,126,234,0.2); }
+        .watch-card.has-signal { border-color: #28a745; }
+        .watch-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .watch-ticker { font-size: 22px; font-weight: bold; color: #333; }
+        .watch-signal-badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .badge-signal { background: #d4edda; color: #155724; }
+        .badge-nosignal { background: #f8f9fa; color: #6c757d; }
+        .watch-strategy { font-size: 12px; color: #667eea; font-weight: 600; margin-bottom: 8px; }
+        .watch-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+        .metric-box { background: #f8f9fa; border-radius: 6px; padding: 6px; text-align: center; }
+        .metric-label { font-size: 10px; color: #888; }
+        .metric-value { font-size: 14px; font-weight: bold; color: #333; }
+        .watch-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+        .filter-badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .fb-green { background: #d4edda; color: #155724; }
+        .fb-yellow { background: #fff3cd; color: #856404; }
+        .fb-red { background: #f8d7da; color: #721c24; }
+        .fb-gray { background: #e2e3e5; color: #383d41; }
+        .watch-signal-detail {
+            font-size: 11px; color: #555; background: #f0f4ff;
+            border-radius: 6px; padding: 6px 8px; margin-bottom: 10px; line-height: 1.5;
+        }
+        .btn-open-trade {
+            flex: 1; background: #28a745; color: white; border: none;
+            padding: 8px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold;
+        }
+        .btn-open-trade:hover { background: #218838; }
+        .btn-open-trade:disabled { background: #aaa; cursor: not-allowed; }
+        .watch-actions { display: flex; gap: 8px; }
+        .pnl-positive { color: #28a745; font-weight: bold; }
+        .pnl-negative { color: #dc3545; font-weight: bold; }
+        /* Paper Trade Section */
+        .paper-trade-section {
+            margin-top: 40px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border-radius: 10px;
+            color: white;
+        }
+        .paper-trade-section h2 { color: white; margin-bottom: 20px; text-align: center; }
+        .paper-trade-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; text-align: center; }
+        .stat-card h4 { font-size: 12px; opacity: 0.8; margin-bottom: 8px; }
+        .stat-card .value { font-size: 24px; font-weight: bold; }
+        .stat-card.positive { background: rgba(40, 167, 69, 0.3); }
+        .stat-card.negative { background: rgba(220, 53, 69, 0.3); }
+        .paper-trade-table {
+            width: 100%; background: white; border-radius: 8px;
+            overflow: hidden; color: #333; margin-top: 15px;
+        }
+        .paper-trade-table th { background: #667eea; color: white; padding: 12px; text-align: left; }
+        .paper-trade-table td { padding: 12px; border-bottom: 1px solid #eee; }
+        .paper-trade-table tr:hover { background: #f8f9fa; }
+        .btn-tp { background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; margin: 1px; }
+        .btn-tp:hover { background: #218838; }
+        .btn-sl { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; margin: 1px; }
+        .btn-sl:hover { background: #c82333; }
+        .btn-manual { background: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; margin: 1px; }
+        .btn-manual:hover { background: #545b62; }
+        .btn-refresh { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 15px; font-size: 14px; }
+        .btn-refresh:hover { background: #218838; }
+        .btn-clear-history { background: #e83e8c; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 15px; margin-left: 10px; font-size: 14px; }
+        .btn-clear-history:hover { background: #d6256f; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Multi-Strategy Signal Scanner</h1>
+        <div class="controls">
+            <h3 style="margin-bottom: 15px; color: #555;">Select Strategies:</h3>
+            <div class="strategy-grid">
+                <div class="strategy-option"><input type="checkbox" id="s1" value="vol_weighted" checked><label for="s1">Vol-Weighted Entry (VR > 1.8x)</label></div>
+                <div class="strategy-option"><input type="checkbox" id="s2" value="momentum" checked><label for="s2">Momentum Following (2-day streak)</label></div>
+                <div class="strategy-option"><input type="checkbox" id="s3" value="vwap_reversion"><label for="s3">VWAP Mean Reversion (< -1%)</label></div>
+                <div class="strategy-option"><input type="checkbox" id="s4" value="conservative"><label for="s4">Conservative Confirm</label></div>
+                <div class="strategy-option"><input type="checkbox" id="s5" value="NR7 Breakout"><label for="s5">NR7 Breakout (Volatility Squeeze)</label></div>
+                <div class="strategy-option"><input type="checkbox" id="s6" value="ORB"><label for="s6">ORB (Opening Range Breakout)</label></div>
+                <div class="strategy-option"><input type="checkbox" id="s7" value="Inside Bar Breakout"><label for="s7">Inside Bar Breakout</label></div>
+                <div class="strategy-option"><input type="checkbox" id="s8" value="Volume Profile POC"><label for="s8">Volume Profile POC</label></div>
+            </div>
+            <div class="filter-options">
+                <div class="filter-option"><input type="checkbox" id="hasSignal" checked><label for="hasSignal">Hanya ticker dengan signal</label></div>
+                <div class="filter-option"><input type="checkbox" id="displaySeparate"><label for="displaySeparate">Tampilkan terpisah per strategy</label></div>
+                <div class="filter-option"><input type="checkbox" id="flowConfirmed"><label for="flowConfirmed">Flow Confirmed Only (score >= +2)</label></div>
+                <div class="filter-option"><input type="checkbox" id="wfFilter"><label for="wfFilter">WF Filter (Walk-Forward consistency >= 50%)</label></div>
+                <p class="help-text">Default: hanya ticker yang lolos SEMUA strategy yang dipilih</p>
+            </div>
+            <div style="margin-top: 20px;">
+                <button onclick="runScan()">Scan All 87</button>
+                <button onclick="clearResults()" style="background: #6c757d;">Clear</button>
+            </div>
+        </div>
+        <div id="summaryCards" style="display: none;"></div>
+        <div id="loading"><div class="spinner"></div><p>Scanning 87 tickers across selected strategies...</p></div>
+        <div id="resultsContainer"></div>
+        <div class="paper-trade-section">
+            <h2>Paper Trading Monitor</h2>
+            <div class="paper-trade-stats" id="paperStats">
+                <div class="stat-card"><h4>Open Trades</h4><div class="value" id="statOpen">-</div></div>
+                <div class="stat-card"><h4>Closed Trades</h4><div class="value" id="statClosed">-</div></div>
+                <div class="stat-card" id="statPnlCard"><h4>Total P&L</h4><div class="value" id="statPnl">-</div></div>
+                <div class="stat-card"><h4>Win Rate</h4><div class="value" id="statWinRate">-</div></div>
+            </div>
+            <button class="btn-refresh" onclick="loadPaperTrades()">Refresh Trades</button>
+            <button class="btn-clear-history" onclick="clearTradeHistory()">Clear History</button>
+            <h3 style="margin: 20px 0 10px 0; color: white;">Open Trades</h3>
+            <table class="paper-trade-table">
+                <thead><tr><th>ID</th><th>Ticker</th><th>Strategy</th><th>Entry</th><th>SL</th><th>TP</th><th>Lots</th><th>Capital</th><th>Action</th></tr></thead>
+                <tbody id="openTradesBody"><tr><td colspan="9" style="text-align:center;">Loading...</td></tr></tbody>
+            </table>
+            <h3 style="margin: 20px 0 10px 0; color: white;">Recent Closed Trades</h3>
+            <table class="paper-trade-table">
+                <thead><tr><th>ID</th><th>Ticker</th><th>Entry</th><th>Exit</th><th>P&L %</th><th>P&L Rp</th><th>Reason</th></tr></thead>
+                <tbody id="closedTradesBody"><tr><td colspan="7" style="text-align:center;">Loading...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+<script>
+// ── SCAN ──────────────────────────────────────────────────────────
+async function runScan() {
+    var loading = document.getElementById("loading");
+    var resCon = document.getElementById("resultsContainer");
+    var sumEl = document.getElementById("summaryCards");
+    loading.style.display = "block";
+    resCon.style.display = "none";
+    sumEl.style.display = "none";
+
+    var strategies = [];
+    var cbs = document.querySelectorAll(".strategy-option input:checked");
+    for (var i = 0; i < cbs.length; i++) strategies.push(cbs[i].value);
+
+    var hasSignal = document.getElementById("hasSignal").checked;
+    var displaySeparate = document.getElementById("displaySeparate").checked;
+    var flowConfirmed = document.getElementById("flowConfirmed").checked;
+    var wfFilter = document.getElementById("wfFilter").checked;
+
+    try {
+        var resp = await fetch("/api/backtest/scan_all", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                strategies: strategies,
+                filter_mode: hasSignal ? "signals_only" : "all",
+                display_separate: displaySeparate,
+                flow_confirmed_only: flowConfirmed,
+                use_wf_filter: wfFilter,
+                wf_min_consistency: 50.0
+            })
+        });
+        var data = await resp.json();
+        displayResults(data);
+    } catch (err) {
+        alert("Error: " + err.message);
+    } finally {
+        loading.style.display = "none";
+    }
+}
+
+function displayResults(data) {
+    var arr = data.results || [];
+    var sum = data.summary || {};
+    var con = document.getElementById("resultsContainer");
+    var sEl = document.getElementById("summaryCards");
+    con.style.display = "block";
+    sEl.style.display = "block";
+
+    var sigCount = 0;
+    for (var x = 0; x < arr.length; x++) { if (arr[x].has_signal) sigCount++; }
+
+    sEl.innerHTML = '<div class="summary-cards">'
+        + '<div class="summary-card"><h3>Scanned</h3><div class="value">' + (sum.total_tickers_scanned || data.total || 0) + '</div></div>'
+        + '<div class="summary-card"><h3>Signal</h3><div class="value">' + (sum.tickers_with_signal || sigCount) + '</div></div>'
+        + '<div class="summary-card"><h3>Profitable</h3><div class="value">' + (data.profitable || 0) + '</div></div>'
+        + '<div class="summary-card"><h3>Tampil</h3><div class="value">' + arr.length + '</div></div>'
+        + '</div>';
+
+    con.innerHTML = "";
+    var grid = document.createElement("div");
+    grid.className = "watchlist-grid";
+    con.appendChild(grid);
+
+    if (arr.length === 0) {
+        grid.innerHTML = '<p style="text-align:center;padding:40px;color:#666;">Tidak ada hasil. Kurangi filter.</p>';
+        return;
+    }
+
+    for (var i = 0; i < arr.length; i++) {
+        var r = arr[i];
+        var card = document.createElement("div");
+        card.className = "watch-card" + (r.has_signal ? " has-signal" : "");
+
+        var sd = r.signal_details || {};
+        var ret = (r.best_return || 0).toFixed(2);
+        var retSign = (r.best_return || 0) >= 0 ? "+" : "";
+        var retClass = (r.best_return || 0) >= 0 ? "pnl-positive" : "pnl-negative";
+
+        var wfPct = r.consistency_pct;
+        var wfBadge = "";
+        if (wfPct != null) {
+            var wfCls = wfPct >= 60 ? "fb-green" : wfPct >= 50 ? "fb-yellow" : "fb-red";
+            wfBadge = '<span class="filter-badge ' + wfCls + '">WF ' + wfPct.toFixed(0) + '%</span>';
+        }
+
+        var fs = r.flow_score;
+        var flowBadge = "";
+        if (fs != null) {
+            var fCls = fs >= 2 ? "fb-green" : fs >= 0 ? "fb-yellow" : "fb-red";
+            flowBadge = '<span class="filter-badge ' + fCls + '">Flow ' + (fs >= 0 ? "+" : "") + fs + '</span>';
+        } else {
+            flowBadge = '<span class="filter-badge fb-gray">' + (r.flow_reason || "Flow-") + '</span>';
+        }
+
+        var reg = r.regime || "-";
+        var regCls = reg === "TRENDING" ? "fb-green" : reg === "SIDEWAYS" ? "fb-yellow" : "fb-gray";
+        var regBadge = '<span class="filter-badge ' + regCls + '">' + reg + '</span>';
+
+        var sigDetail = "";
+        if (r.has_signal && r.signal_reason) {
+            sigDetail = '<div class="watch-signal-detail">' + r.signal_reason;
+            if (sd.vr) sigDetail += " | VR: " + sd.vr + "x";
+            if (sd.price) sigDetail += " | Rp " + sd.price.toLocaleString("id-ID");
+            sigDetail += "</div>";
+        }
+
+        var price = sd.price || 0;
+        var ticker = r.ticker;
+        var btnHtml = '<div class="watch-actions">';
+        btnHtml += '<button class="btn-open-trade"';
+        if (!r.has_signal) btnHtml += ' disabled';
+        btnHtml += ' data-ticker="' + ticker + '" data-price="' + price + '">';
+        btnHtml += 'Open Trade</button></div>';
+
+        var h = '<div class="watch-card-header">'
+            + '<span class="watch-ticker">' + ticker + '</span>'
+            + '<span class="watch-signal-badge ' + (r.has_signal ? "badge-signal" : "badge-nosignal") + '">'
+            + (r.has_signal ? "Signal" : "No Signal") + '</span></div>'
+            + '<div class="watch-strategy">' + (r.best_strategy || "-") + '</div>'
+            + '<div class="watch-metrics">'
+            + '<div class="metric-box"><div class="metric-label">Return</div><div class="metric-value ' + retClass + '">' + retSign + ret + '%</div></div>'
+            + '<div class="metric-box"><div class="metric-label">Win Rate</div><div class="metric-value">' + (r.best_winrate || 0).toFixed(0) + '%</div></div>'
+            + '<div class="metric-box"><div class="metric-label">Sharpe</div><div class="metric-value">' + (r.best_sharpe || 0).toFixed(2) + '</div></div>'
+            + '</div>'
+            + '<div class="watch-badges">' + wfBadge + flowBadge + regBadge + '</div>'
+            + sigDetail
+            + btnHtml;
+
+        card.innerHTML = h;
+        // Attach click handler via data attributes
+        var btn = card.querySelector(".btn-open-trade");
+        if (btn && !btn.disabled) {
+            btn.addEventListener("click", function() {
+                var t = this.getAttribute("data-ticker");
+                var p = parseFloat(this.getAttribute("data-price"));
+                openTradeFromWatchlist(t, p);
+            });
+        }
+        grid.appendChild(card);
+    }
+}
+
+function clearResults() {
+    document.getElementById("resultsContainer").style.display = "none";
+    document.getElementById("summaryCards").style.display = "none";
+}
+
+// ── OPEN TRADE FROM WATCHLIST ─────────────────────────────────────
+async function openTradeFromWatchlist(ticker, price) {
+    var entryPrice = prompt("Open Trade: " + ticker + "\nHarga: Rp " + price.toLocaleString("id-ID") + "\n\nMasukkan harga entry:", price);
+    if (!entryPrice || isNaN(entryPrice)) return;
+    if (!confirm("Open trade " + ticker + " @ Rp " + parseFloat(entryPrice).toLocaleString("id-ID") + "?")) return;
+    try {
+        var res = await fetch("/api/paper/open", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ticker: ticker, entry_price: parseFloat(entryPrice)})
+        });
+        var d = await res.json();
+        if (d.error) { alert("Error: " + d.error); return; }
+        alert("Trade opened!\n" + ticker + " @ Rp " + parseFloat(entryPrice).toLocaleString("id-ID") + "\nLots: " + d.lots + " | TP: Rp " + (d.tp_price || 0).toLocaleString("id-ID") + " | SL: Rp " + (d.sl_price || 0).toLocaleString("id-ID"));
+        loadPaperTrades();
+    } catch (e) { alert("Error: " + e.message); }
+}
+
+// ── PAPER TRADE FUNCTIONS ─────────────────────────────────────────
+function loadPaperTrades() {
+    fetch("/api/paper/summary")
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            updatePaperStats(data);
+            renderOpenTrades(data.open_trades || []);
+            renderClosedTrades(data.closed_trades || []);
+        })
+        .catch(function(err) {
+            console.error("Error loading paper trades:", err);
+        });
+}
+
+function updatePaperStats(data) {
+    var open = data.open_trades ? data.open_trades.length : 0;
+    var closed = data.closed_trades ? data.closed_trades.length : 0;
+    var pnl = data.total_pnl_rp || 0;
+    var pnlPct = data.total_return_pct || 0;
+    var winRate = data.win_rate || 0;
+    document.getElementById("statOpen").textContent = open;
+    document.getElementById("statClosed").textContent = closed;
+    document.getElementById("statPnl").textContent = formatCurrency(pnl) + " (" + pnlPct.toFixed(2) + "%)";
+    document.getElementById("statWinRate").textContent = winRate.toFixed(1) + "%";
+    var pnlCard = document.getElementById("statPnlCard");
+    pnlCard.classList.remove("positive", "negative");
+    pnlCard.classList.add(pnl >= 0 ? "positive" : "negative");
+}
+
+function renderOpenTrades(trades) {
+    var tbody = document.getElementById("openTradesBody");
+    if (trades.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;">No open trades</td></tr>';
+        return;
+    }
+    var html = "";
+    for (var i = 0; i < trades.length; i++) {
+        var t = trades[i];
+        html += "<tr>"
+            + "<td>" + t.id + "</td>"
+            + "<td><strong>" + t.ticker + "</strong></td>"
+            + "<td>" + (t.strategy || "-") + "</td>"
+            + "<td>" + formatCurrency(t.entry_price) + "</td>"
+            + "<td>" + formatCurrency(t.sl_price) + "</td>"
+            + "<td>" + formatCurrency(t.tp_price) + "</td>"
+            + "<td>" + t.lots + "</td>"
+            + "<td>" + formatCurrency(t.capital_used) + "</td>"
+            + '<td>'
+            + '<button class="btn-tp" onclick="closePaperTrade(' + t.id + ',' + t.tp_price + ',\'' + t.ticker + '\',\'TP\')">TP</button>'
+            + '<button class="btn-sl" onclick="closePaperTrade(' + t.id + ',' + t.sl_price + ',\'' + t.ticker + '\',\'SL\')">SL</button>'
+            + '<button class="btn-manual" onclick="closePaperTrade(' + t.id + ',' + t.entry_price + ',\'' + t.ticker + '\',\'MANUAL\')">Manual</button>'
+            + '</td></tr>';
+    }
+    tbody.innerHTML = html;
+}
+
+function renderClosedTrades(trades) {
+    var tbody = document.getElementById("closedTradesBody");
+    var recent = trades.slice(-10).reverse();
+    if (recent.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;">No closed trades</td></tr>';
+        return;
+    }
+    var html = "";
+    for (var i = 0; i < recent.length; i++) {
+        var t = recent[i];
+        var pnlClass = t.pnl_pct >= 0 ? "pnl-positive" : "pnl-negative";
+        html += "<tr>"
+            + "<td>" + t.id + "</td>"
+            + "<td><strong>" + t.ticker + "</strong></td>"
+            + "<td>" + formatCurrency(t.entry_price) + "</td>"
+            + "<td>" + formatCurrency(t.exit_price) + "</td>"
+            + '<td class="' + pnlClass + '">' + (t.pnl_pct >= 0 ? "+" : "") + t.pnl_pct.toFixed(2) + "%</td>"
+            + '<td class="' + pnlClass + '">' + (t.pnl_rp >= 0 ? "+" : "") + formatCurrency(t.pnl_rp) + "</td>"
+            + "<td>" + (t.exit_reason || "MANUAL") + "</td>"
+            + "</tr>";
+    }
+    tbody.innerHTML = html;
+}
+
+function closePaperTrade(tradeId, priceHint, ticker, reason) {
+    var exitPrice;
+    if (reason === "TP" || reason === "SL") {
+        var label = reason === "TP" ? "Take Profit" : "Stop Loss";
+        if (!confirm(label + "\nTrade #" + tradeId + " (" + ticker + ")\nClose at: " + formatCurrency(priceHint) + "?")) return;
+        exitPrice = priceHint;
+    } else {
+        var input = prompt("Close Manual\nTrade #" + tradeId + " (" + ticker + ")\n\nMasukkan harga exit:", priceHint);
+        if (!input || isNaN(input)) return;
+        if (!confirm("Close trade #" + tradeId + " at " + formatCurrency(parseFloat(input)) + "?")) return;
+        exitPrice = parseFloat(input);
+    }
+    fetch("/api/paper/close", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({trade_id: tradeId, exit_price: exitPrice, reason: reason || "MANUAL"})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        var pnlText = data.pnl_rp >= 0 ? "+" + formatCurrency(data.pnl_rp) : formatCurrency(data.pnl_rp);
+        alert("Trade closed!\nP&L: " + pnlText + " (" + (data.pnl_pct >= 0 ? "+" : "") + data.pnl_pct + "%)\nReason: " + reason);
+        loadPaperTrades();
+    })
+    .catch(function(err) { alert("Failed: " + err.message); });
+}
+
+function clearTradeHistory() {
+    if (!confirm("Clear semua closed trades?\n\nOpen trades TIDAK akan terhapus.\nStatistik dihitung ulang dari 0.\n\nLanjutkan?")) return;
+    fetch("/api/paper/clear_history", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        alert("History cleared! " + (data.deleted || 0) + " trades dihapus.");
+        loadPaperTrades();
+    })
+    .catch(function(err) { alert("Error: " + err.message); });
+}
+
+function formatCurrency(num) {
+    if (num === null || num === undefined) return "-";
+    return "Rp " + num.toLocaleString("id-ID");
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    loadPaperTrades();
+    setInterval(loadPaperTrades, 30000);
+});
+</script>
+</body>
+</html>

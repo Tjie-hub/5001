@@ -1,0 +1,12 @@
+.env
+.env.local
+.stockbit_token
+.playwright_state/
+logs/
+*.log
+__pycache__/
+*.pyc
+.DS_Store
+venv/
+.venv/
+app.log
