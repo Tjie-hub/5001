@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m py_compile auto_token.py)",
+      "Bash(python3 auto_token.py --check)"
+    ]
+  }
+}
