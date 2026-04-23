@@ -4,7 +4,8 @@
     {
       "label": "Sync Obsidian Vault",
       "type": "shell",
-      "command": "git add . && git commit -m 'Auto-sync from VS Code' && git push",
+      "command": "git add . && (git commit -m 'Auto-sync from VS Code' || echo 'No changes') && git push",
+
       "group": { "kind": "build", "isDefault": true },
       "presentation": { "reveal": "silent" }
     }
