@@ -9,7 +9,7 @@ import os
 import shutil
 from datetime import datetime
 
-TEMPLATE = "/home/tjiesar/idx-walkforward/templates/backtest_multi.html"
+TEMPLATE = "/home/tjiesar/10 Projects/idx-walkforward-5001/templates/backtest_multi.html"
 BACKUP_SUFFIX = f".backup_flow_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

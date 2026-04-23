@@ -27,9 +27,10 @@ FILTER_MAP = {
 def resolve_filters(filter_names: list) -> list:
     return [FILTER_MAP[f] for f in (filter_names or []) if f in FILTER_MAP]
 
+import os
 backtest_multi_bp = Blueprint('backtest_multi', __name__)
 
-DB_PATH = '/home/tjiesar/idx-walkforward/data/walkforward.db'   # sesuaikan dengan path db idx-walkforward
+DB_PATH = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
 
 
 def get_ohlcv(ticker: str) -> pd.DataFrame:
@@ -69,15 +70,48 @@ def api_backtest_multi():
             return jsonify({'error': f'Data {ticker} kurang (hanya {len(df)} bar)'}), 400
 
         results = run_all_strategies(df, capital=capital, filters=filters)
+        dates = [str(d)[:10] for d in df['date'].tolist()]
 
-        # Hapus equity (besar) dari JSON response utama, simpan terpisah
+        # Strategy name → wf_scores key mapping
+        STRAT_KEY = {
+            'Vol-Weighted Entry':   'vol_weighted',
+            'Momentum Following':   'momentum',
+            'VWAP Reversion':       'vwap_reversion',
+            'Conservative Confirm': 'conservative',
+            'Volume Profile POC':   'Volume Profile POC',
+            'Inside Bar Breakout':  'Inside Bar Breakout',
+            'NR7 Breakout':         'NR7 Breakout',
+            'ORB':                  'ORB',
+        }
+
+        # Load WF scores for this ticker
+        wf_map = {}
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            rows = conn.execute("""
+                SELECT strategy, consistency_pct, weighted_score
+                FROM wf_scores WHERE ticker=?
+            """, (ticker,)).fetchall()
+            conn.close()
+            wf_map = {r[0]: {'consistency_pct': r[1], 'weighted_score': r[2]} for r in rows}
+        except Exception:
+            pass
+
+        # Include equity inline (trimmed to dates length)
         for r in results:
-            r.pop('equity', None)
+            eq = r.get('equity', [])
+            r['equity'] = eq[:len(dates)] if eq else []
+            # Attach WF score using name mapping
+            key = STRAT_KEY.get(r['strategy'], r['strategy'])
+            wf = wf_map.get(key, {})
+            r['wf_score'] = wf.get('weighted_score')
+            r['wf_consistency'] = wf.get('consistency_pct')
 
         return jsonify({
             'ticker':  ticker,
             'bars':    len(df),
             'capital': capital,
+            'dates':   dates,
             'results': results
         })
     except Exception as e:

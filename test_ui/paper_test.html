@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Trade UI Test - Port 5004</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 { color: #667eea; margin-bottom: 30px; text-align: center; }
+        
+        .paper-trade-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border-radius: 10px;
+            color: white;
+        }
+        
+        .paper-trade-section h2 {
+            color: white;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .paper-trade-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-card h4 {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 8px;
+        }
+        
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .stat-card.positive { background: rgba(40, 167, 69, 0.3); }
+        .stat-card.negative { background: rgba(220, 53, 69, 0.3); }
+        
+        .paper-trade-table {
+            width: 100%;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            color: #333;
+            margin-top: 15px;
+        }
+        
+        .paper-trade-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .paper-trade-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .paper-trade-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .btn-close {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .btn-close:hover {
+            background: #c82333;
+        }
+        
+        .btn-refresh {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+        
+        .btn-refresh:hover {
+            background: #218838;
+        }
+        
+        .positive { color: #28a745; font-weight: bold; }
+        .negative { color: #dc3545; font-weight: bold; }
+        
+        .test-notice {
+            background: #ffc107;
+            color: #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Paper Trade UI Test (Port 5004)</h1>
+        
+        <div class="test-notice">
+            ⚠️ TEST MODE - Using mock data. Backend API calls disabled.
+        </div>
+
+        <!-- Paper Trade Section -->
+        <div class="paper-trade-section">
+            <h2>📊 Paper Trading Monitor</h2>
+            
+            <div class="paper-trade-stats" id="paperStats">
+                <div class="stat-card">
+                    <h4>Open Trades</h4>
+                    <div class="value" id="statOpen">3</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Closed Trades</h4>
+                    <div class="value" id="statClosed">12</div>
+                </div>
+                <div class="stat-card negative" id="statPnlCard">
+                    <h4>Total P&L</h4>
+                    <div class="value" id="statPnl">-Rp 9,119,700 (-18.24%)</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Win Rate</h4>
+                    <div class="value" id="statWinRate">41.7%</div>
+                </div>
+            </div>
+            
+            <button class="btn-refresh" onclick="loadMockData()">🔄 Refresh (Mock)</button>
+            
+            <h3 style="margin: 20px 0 10px 0;">Open Trades</h3>
+            <table class="paper-trade-table" id="openTradesTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Ticker</th>
+                        <th>Strategy</th>
+                        <th>Entry</th>
+                        <th>SL</th>
+                        <th>TP</th>
+                        <th>Lots</th>
+                        <th>Capital</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="openTradesBody">
+                    <!-- Filled by JS -->
+                </tbody>
+            </table>
+            
+            <h3 style="margin: 20px 0 10px 0;">Recent Closed Trades</h3>
+            <table class="paper-trade-table" id="closedTradesTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Ticker</th>
+                        <th>Entry</th>
+                        <th>Exit</th>
+                        <th>P&L %</th>
+                        <th>P&L Rp</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="closedTradesBody">
+                    <!-- Filled by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Mock data for testing
+        const mockOpenTrades = [
+            { id: 13, ticker: 'BBTN', strategy: 'Momentum Following', entry_price: 1345, sl_price: 1311, tp_price: 1387, lots: 111, capital_used: 14929500 },
+            { id: 14, ticker: 'CTRA', strategy: 'Momentum Following', entry_price: 755, sl_price: 736, tp_price: 784, lots: 198, capital_used: 14949000 },
+            { id: 15, ticker: 'ANJT', strategy: 'Momentum Following', entry_price: 1730, sl_price: 1687, tp_price: 1816, lots: 86, capital_used: 14878000 }
+        ];
+        
+        const mockClosedTrades = [
+            { id: 1, ticker: 'BRPT', entry_price: 1385, exit_price: 1433, pnl_pct: 3.47, pnl_rp: 518400, exit_reason: 'TP' },
+            { id: 2, ticker: 'BRPT', entry_price: 1720, exit_price: 1780, pnl_pct: 3.49, pnl_rp: 522000, exit_reason: 'TP' },
+            { id: 3, ticker: 'MAPI', entry_price: 1320, exit_price: 1287, pnl_pct: -2.5, pnl_rp: -372900, exit_reason: 'SL' },
+            { id: 6, ticker: 'BRPT', entry_price: 1835, exit_price: 2027, pnl_pct: 10.46, pnl_rp: 1555200, exit_reason: 'TP' },
+            { id: 7, ticker: 'BRPT', entry_price: 1955, exit_price: 2169, pnl_pct: 10.95, pnl_rp: 1626400, exit_reason: 'TP' },
+            { id: 11, ticker: 'ANJT', entry_price: 1730, exit_price: 187, pnl_pct: -89.19, pnl_rp: -13269800, exit_reason: 'ADAPTIVE_TEST' }
+        ];
+
+        function loadMockData() {
+            renderOpenTrades(mockOpenTrades);
+            renderClosedTrades(mockClosedTrades);
+            alert('Mock data refreshed! (In real mode, this would call /api/paper/summary)');
+        }
+
+        function renderOpenTrades(trades) {
+            const tbody = document.getElementById('openTradesBody');
+            
+            if (trades.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;">No open trades</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = trades.map(t => `
+                <tr>
+                    <td>${t.id}</td>
+                    <td><strong>${t.ticker}</strong></td>
+                    <td>${t.strategy || '-'}</td>
+                    <td>${formatCurrency(t.entry_price)}</td>
+                    <td>${formatCurrency(t.sl_price)}</td>
+                    <td>${formatCurrency(t.tp_price)}</td>
+                    <td>${t.lots}</td>
+                    <td>${formatCurrency(t.capital_used)}</td>
+                    <td>
+                        <button class="btn-close" onclick="testCloseTrade(${t.id}, ${t.entry_price}, '${t.ticker}')">
+                            Close
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderClosedTrades(trades) {
+            const tbody = document.getElementById('closedTradesBody');
+            const recent = trades.slice(-10).reverse();
+            
+            if (recent.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;">No closed trades</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = recent.map(t => {
+                const pnlClass = t.pnl_pct >= 0 ? 'positive' : 'negative';
+                return `
+                    <tr>
+                        <td>${t.id}</td>
+                        <td><strong>${t.ticker}</strong></td>
+                        <td>${formatCurrency(t.entry_price)}</td>
+                        <td>${formatCurrency(t.exit_price)}</td>
+                        <td class="${pnlClass}">${t.pnl_pct >= 0 ? '+' : ''}${t.pnl_pct.toFixed(2)}%</td>
+                        <td class="${pnlClass}">${t.pnl_rp >= 0 ? '+' : ''}${formatCurrency(t.pnl_rp)}</td>
+                        <td>${t.exit_reason || 'MANUAL'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function testCloseTrade(tradeId, entryPrice, ticker) {
+            const exitPrice = prompt(
+                `TEST MODE - Close trade #${tradeId} (${ticker})\\n` +
+                `Entry: ${formatCurrency(entryPrice)}\\n\\n` +
+                `Enter exit price:`, 
+                entryPrice
+            );
+            
+            if (!exitPrice || isNaN(exitPrice)) {
+                return;
+            }
+            
+            const pnl = (parseFloat(exitPrice) - entryPrice) * 100; // Mock calculation
+            const pnlPct = ((parseFloat(exitPrice) - entryPrice) / entryPrice * 100).toFixed(2);
+            
+            alert(
+                `TEST: Trade #${tradeId} would be closed at ${formatCurrency(parseFloat(exitPrice))}\\n` +
+                `P&L: ${pnl >= 0 ? '+' : ''}${formatCurrency(pnl)} (${pnlPct >= 0 ? '+' : ''}${pnlPct}%)\\n\\n` +
+                `(In real mode, this would POST to /api/paper/close)`
+            );
+            
+            // Remove from mock data for visual feedback
+            const idx = mockOpenTrades.findIndex(t => t.id === tradeId);
+            if (idx > -1) {
+                mockOpenTrades.splice(idx, 1);
+                renderOpenTrades(mockOpenTrades);
+                document.getElementById('statOpen').textContent = mockOpenTrades.length;
+            }
+        }
+
+        function formatCurrency(num) {
+            if (num === null || num === undefined) return '-';
+            return 'Rp ' + num.toLocaleString('id-ID');
+        }
+
+        // Load on startup
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMockData();
+        });
+    </script>
+</body>
+</html>

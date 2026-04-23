@@ -7,7 +7,7 @@ Usage: python3 fix_flow_cells_py.py
 import shutil
 from datetime import datetime
 
-TEMPLATE = "/home/tjiesar/idx-walkforward/templates/backtest_multi.html"
+TEMPLATE = "/home/tjiesar/10 Projects/idx-walkforward-5001/templates/backtest_multi.html"
 BACKUP_SUFFIX = f".fix_cells_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

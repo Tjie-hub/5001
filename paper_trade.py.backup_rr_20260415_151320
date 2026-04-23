@@ -1,0 +1,220 @@
+
+import sqlite3
+import json
+from datetime import datetime
+import pytz
+
+WIB     = pytz.timezone("Asia/Jakarta")
+DB_PATH = "/home/tjiesar/idx-walkforward/data/walkforward.db"
+
+def calc_swing_tp(ticker: str, entry_price: float, lookback: int = 20) -> float:
+    """
+    Hitung TP berdasarkan swing high terdekat di atas entry price.
+    - Swing high: bar dengan high lebih tinggi dari N bar kiri dan kanan (N=2)
+    - TP = swing high - 0.5%
+    - Fallback: ATR-based jika tidak ada swing high di atas entry
+    """
+    import pandas as pd
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        df = pd.read_sql(
+            f'SELECT date, high, close FROM ohlcv WHERE ticker="{ticker}" ORDER BY date DESC LIMIT {lookback + 10}',
+            conn
+        )
+        conn.close()
+        if len(df) < 6:
+            raise ValueError("Data tidak cukup")
+
+        df = df.iloc[::-1].reset_index(drop=True)  # balik ke ascending
+
+        # Deteksi swing high (high > 2 bar kiri & 2 bar kanan)
+        swing_highs = []
+        for i in range(2, len(df) - 2):
+            h = df.loc[i, 'high']
+            if (h > df.loc[i-1, 'high'] and h > df.loc[i-2, 'high'] and
+                h > df.loc[i+1, 'high'] and h > df.loc[i+2, 'high']):
+                swing_highs.append(h)
+
+        # Cari swing high terdekat DI ATAS entry price
+        candidates = [sh for sh in swing_highs if sh > entry_price * 1.005]
+        if candidates:
+            nearest_swing = min(candidates)
+            tp = round(nearest_swing * 0.995)  # swing high - 0.5%
+            # Minimum TP = entry + 2%
+            tp = max(tp, round(entry_price * 1.02))
+            return tp
+
+        # Fallback: ATR-based (ATR 14 bar * 2)
+        df['tr'] = df['high'] - df['close'].shift(1).fillna(df['close'])
+        atr = df['tr'].tail(14).mean()
+        tp = round(entry_price + (atr * 2))
+        tp = max(tp, round(entry_price * 1.02))  # minimum 2%
+        return tp
+
+    except Exception as e:
+        print(f"[swing_tp] Error {ticker}: {e}, fallback ATR 4%")
+        return round(entry_price * 1.04)
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_paper_table():
+    conn = get_db()
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS paper_trades (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticker      TEXT NOT NULL,
+            strategy    TEXT DEFAULT "Momentum Following",
+            entry_date  TEXT,
+            entry_price REAL,
+            lots        INTEGER,
+            capital_used REAL,
+            tp_price    REAL,
+            sl_price    REAL,
+            exit_date   TEXT,
+            exit_price  REAL,
+            exit_reason TEXT,
+            pnl_rp      REAL,
+            pnl_pct     REAL,
+            status      TEXT DEFAULT "OPEN"
+        );
+        CREATE TABLE IF NOT EXISTS paper_config (
+            key   TEXT PRIMARY KEY,
+            value TEXT
+        );
+    """)
+    # Default config
+    configs = [
+        ("capital",    "50000000"),
+        ("tp_pct",     "0.035"),
+        ("sl_pct",     "0.025"),
+        ("risk_pct",   "0.02"),
+        ("max_open",   "3"),
+    ]
+    for k, v in configs:
+        conn.execute("INSERT OR IGNORE INTO paper_config (key,value) VALUES (?,?)", (k,v))
+    conn.commit()
+    conn.close()
+    print("Paper trade tables initialized.")
+
+def get_config():
+    conn = get_db()
+    rows = conn.execute("SELECT key, value FROM paper_config").fetchall()
+    conn.close()
+    return {r["key"]: float(r["value"]) for r in rows}
+
+def get_open_trades():
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM paper_trades WHERE status=\'OPEN\'").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def open_trade(ticker: str, entry_price: float):
+    cfg    = get_config()
+    capital = cfg["capital"]
+    tp_pct  = cfg["tp_pct"]
+    sl_pct  = cfg["sl_pct"]
+    risk_pct = cfg["risk_pct"]
+    max_open = int(cfg["max_open"])
+
+    # Cek max open positions
+    open_trades = get_open_trades()
+    if len(open_trades) >= max_open:
+        return {"error": f"Max {max_open} posisi sudah terbuka"}
+
+    # Cek duplikat ticker
+    if any(t["ticker"] == ticker for t in open_trades):
+        return {"error": f"{ticker} sudah ada posisi terbuka"}
+
+    # Hitung lot (max 30% capital)
+    cost_per_lot = entry_price * 100
+    risk_rp      = capital * risk_pct
+    sl_rp        = cost_per_lot * sl_pct
+    lots         = int(risk_rp / sl_rp)
+    max_lots     = int((capital * 0.30) / cost_per_lot)
+    lots         = max(1, min(lots, max_lots))
+    capital_used = lots * cost_per_lot
+
+    # TP dari swing high (20 bar lookback, -0.5%, fallback ATR)
+    tp_price = calc_swing_tp(ticker, entry_price, lookback=20)
+    sl_price = round(entry_price * (1 - sl_pct))
+    now      = datetime.now(WIB).strftime("%Y-%m-%d")
+
+    conn = get_db()
+    conn.execute("""
+        INSERT INTO paper_trades
+        (ticker, entry_date, entry_price, lots, capital_used, tp_price, sl_price, status)
+        VALUES (?,?,?,?,?,?,?,\'OPEN\')
+    """, (ticker, now, entry_price, lots, capital_used, tp_price, sl_price))
+    conn.commit()
+    trade_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.close()
+
+    return {
+        "id":           trade_id,
+        "ticker":       ticker,
+        "entry_price":  entry_price,
+        "lots":         lots,
+        "capital_used": capital_used,
+        "tp_price":     tp_price,
+        "sl_price":     sl_price,
+        "entry_date":   now
+    }
+
+def close_trade(trade_id: int, exit_price: float, exit_reason: str = "MANUAL"):
+    conn  = get_db()
+    trade = conn.execute("SELECT * FROM paper_trades WHERE id=?", (trade_id,)).fetchone()
+    if not trade:
+        conn.close()
+        return {"error": "Trade tidak ditemukan"}
+
+    trade    = dict(trade)
+    pnl_rp   = round((exit_price - trade["entry_price"]) * trade["lots"] * 100)
+    pnl_pct  = round((exit_price - trade["entry_price"]) / trade["entry_price"] * 100, 2)
+    now      = datetime.now(WIB).strftime("%Y-%m-%d")
+
+    conn.execute("""
+        UPDATE paper_trades SET
+        exit_date=?, exit_price=?, exit_reason=?,
+        pnl_rp=?, pnl_pct=?, status=\'CLOSED\'
+        WHERE id=?
+    """, (now, exit_price, exit_reason, pnl_rp, pnl_pct, trade_id))
+    conn.commit()
+    conn.close()
+
+    return {
+        "ticker":       trade["ticker"],
+        "entry_price":  trade["entry_price"],
+        "exit_price":   exit_price,
+        "lots":         trade["lots"],
+        "pnl_rp":       pnl_rp,
+        "pnl_pct":      pnl_pct,
+        "exit_reason":  exit_reason
+    }
+
+def get_summary():
+    conn   = get_db()
+    closed = conn.execute("SELECT * FROM paper_trades WHERE status=\'CLOSED\'").fetchall()
+    opened = conn.execute("SELECT * FROM paper_trades WHERE status=\'OPEN\'").fetchall()
+    conn.close()
+
+    closed = [dict(r) for r in closed]
+    opened = [dict(r) for r in opened]
+
+    total_pnl   = sum(t["pnl_rp"] for t in closed)
+    winners     = [t for t in closed if t["pnl_rp"] > 0]
+    win_rate    = round(len(winners) / len(closed) * 100, 1) if closed else 0
+
+    return {
+        "open_trades":   opened,
+        "closed_trades": closed,
+        "total_closed":  len(closed),
+        "win_rate":      win_rate,
+        "total_pnl_rp":  total_pnl,
+        "total_return_pct": round(total_pnl / 50_000_000 * 100, 2)
+    }
+
+if __name__ == "__main__":
+    init_paper_table()

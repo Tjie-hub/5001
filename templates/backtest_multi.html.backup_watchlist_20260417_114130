@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Strategy Signal Scanner + Paper Trade</title>
+    <style>
+        /* Base Styles */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        h1 { 
+            color: #667eea; 
+            margin-bottom: 30px; 
+            text-align: center; 
+        }
+        
+        /* Controls Section */
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .strategy-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .strategy-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .strategy-option:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+        
+        .strategy-option input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .strategy-option label {
+            cursor: pointer;
+            font-weight: 500;
+            flex: 1;
+        }
+        
+        .filter-options {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+        
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .filter-option input[type="checkbox"] { 
+            width: 20px;
+            height: 20px;
+            cursor: pointer; 
+        }
+        
+        .filter-option label {
+            cursor: pointer;
+            font-weight: 500;
+            flex: 1;
+        }
+        
+        .help-text {
+            font-size: 13px;
+            color: #666;
+            margin-left: 30px;
+            font-style: italic;
+        }
+        
+        button {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background: #5568d3;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        /* Summary Cards */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .summary-card h3 { 
+            font-size: 13px; 
+            margin-bottom: 10px; 
+            opacity: 0.9; 
+        }
+        
+        .summary-card .value { 
+            font-size: 32px; 
+            font-weight: bold; 
+        }
+        
+        /* Results Table */
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 10px; 
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .strategy-tag {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #667eea;
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        
+        .signal-detail {
+            font-size: 12px;
+            color: #666;
+            margin: 2px 0;
+        }
+        
+        /* Loading & Messages */
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #loading { display: none; text-align: center; }
+        #resultsContainer { display: none; }
+        
+        /* PAPER TRADE SECTION - NEW */
+        .paper-trade-section {
+            margin-top: 40px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border-radius: 10px;
+            color: white;
+        }
+        
+        .paper-trade-section h2 {
+            color: white;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .paper-trade-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-card h4 {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 8px;
+        }
+        
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .stat-card.positive { background: rgba(40, 167, 69, 0.3); }
+        .stat-card.negative { background: rgba(220, 53, 69, 0.3); }
+        
+        .paper-trade-table {
+            width: 100%;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            color: #333;
+            margin-top: 15px;
+        }
+        
+        .paper-trade-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .paper-trade-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .paper-trade-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .btn-close {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .btn-close:hover {
+            background: #c82333;
+        }
+
+        .btn-tp {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            margin: 1px;
+        }
+        .btn-tp:hover { background: #218838; }
+
+        .btn-sl {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            margin: 1px;
+        }
+        .btn-sl:hover { background: #c82333; }
+
+        .btn-manual {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            margin: 1px;
+        }
+        .btn-manual:hover { background: #545b62; }
+
+        .btn-clear-history {
+            background: #e83e8c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 15px;
+            margin-left: 10px;
+            font-size: 14px;
+        }
+        .btn-clear-history:hover { background: #d6256f; }
+        
+        .btn-refresh {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .btn-refresh:hover {
+            background: #218838;
+        }
+        
+        .status-open { color: #28a745; font-weight: bold; }
+        .status-closed { color: #6c757d; }
+        .pnl-positive { color: #28a745; font-weight: bold; }
+        .pnl-negative { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Multi-Strategy Signal Scanner</h1>
+        
+        <!-- Strategy Selection -->
+        <div class="controls">
+            <h3 style="margin-bottom: 15px; color: #555;">Select Strategies:</h3>
+            <div class="strategy-grid">
+                <div class="strategy-option">
+                    <input type="checkbox" id="s1" value="vol_weighted" checked>
+                    <label for="s1">Vol-Weighted Entry (VR > 1.8x)</label>
+                </div>
+                <div class="strategy-option">
+                    <input type="checkbox" id="s2" value="momentum" checked>
+                    <label for="s2">Momentum Following (2-day streak)</label>
+                </div>
+                <div class="strategy-option">
+                    <input type="checkbox" id="s3" value="vwap_reversion">
+                    <label for="s3">VWAP Mean Reversion (< -1%)</label>
+                </div>
+                <div class="strategy-option">
+                    <input type="checkbox" id="s4" value="conservative">
+                    <label for="s4">Conservative Confirm</label>
+                </div>
+                <div class="strategy-option">
+                    <input type="checkbox" id="s5" value="NR7 Breakout">
+                    <label for="s5">NR7 Breakout (Volatility Squeeze)</label>
+                </div>
+                <div class="strategy-option">
+                    <input type="checkbox" id="s6" value="ORB">
+                    <label for="s6">ORB (Opening Range Breakout)</label>
+                </div>
+                <div class="strategy-option">
+                    <input type="checkbox" id="s7" value="Inside Bar Breakout">
+                    <label for="s7">Inside Bar Breakout</label>
+                </div>
+                <div class="strategy-option">
+                    <input type="checkbox" id="s8" value="Volume Profile POC">
+                    <label for="s8">Volume Profile POC</label>
+                </div>
+            </div>
+            
+            <div class="filter-options">
+                <div class="filter-option">
+                    <input type="checkbox" id="hasSignal" checked>
+                    <label for="hasSignal">🔴 Hanya ticker dengan signal</label>
+                </div>
+                <div class="filter-option">
+                    <input type="checkbox" id="displaySeparate">
+                    <label for="displaySeparate">📊 Tampilkan terpisah per strategy</label>
+                </div>
+                <div class="filter-option">
+                    <input type="checkbox" id="flowConfirmed">
+                    <label for="flowConfirmed">✅ Flow Confirmed Only (score >= +2)</label>
+                </div>
+                <div class="filter-option">
+                    <input type="checkbox" id="wfFilter">
+                    <label for="wfFilter">📈 WF Filter (Walk-Forward consistency >= 50%)</label>
+                </div>
+                <p class="help-text">ℹ️ Default: hanya ticker yang lolos SEMUA strategy yang dipilih</p>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button onclick="runScan()">🔍 Scan All 87</button>
+                <button onclick="clearResults()" style="background: #6c757d;">Clear</button>
+            </div>
+        </div>
+        
+        <!-- Summary Cards -->
+        <div id="summaryCards" style="display: none;"></div>
+        
+        <!-- Loading -->
+        <div id="loading">
+            <div class="spinner"></div>
+            <p>Scanning 87 tickers across selected strategies...</p>
+        </div>
+        
+        <!-- Results -->
+        <div id="resultsContainer"></div>
+        
+        <!-- PAPER TRADE SECTION -->
+        <div class="paper-trade-section">
+            <h2>📊 Paper Trading Monitor</h2>
+            
+            <div class="paper-trade-stats" id="paperStats">
+                <div class="stat-card">
+                    <h4>Open Trades</h4>
+                    <div class="value" id="statOpen">-</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Closed Trades</h4>
+                    <div class="value" id="statClosed">-</div>
+                </div>
+                <div class="stat-card" id="statPnlCard">
+                    <h4>Total P&L</h4>
+                    <div class="value" id="statPnl">-</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Win Rate</h4>
+                    <div class="value" id="statWinRate">-</div>
+                </div>
+            </div>
+            
+            <button class="btn-refresh" onclick="loadPaperTrades()">🔄 Refresh Trades</button>
+            <button class="btn-clear-history" onclick="clearTradeHistory()">🗑️ Clear History</button>
+            
+            <h3 style="margin: 20px 0 10px 0; color: white;">Open Trades</h3>
+            <table class="paper-trade-table" id="openTradesTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Ticker</th>
+                        <th>Strategy</th>
+                        <th>Entry</th>
+                        <th>SL</th>
+                        <th>TP</th>
+                        <th>Lots</th>
+                        <th>Capital</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="openTradesBody">
+                    <tr><td colspan="9" style="text-align:center;">Loading...</td></tr>
+                </tbody>
+            </table>
+            
+            <h3 style="margin: 20px 0 10px 0; color: white;">Recent Closed Trades</h3>
+            <table class="paper-trade-table" id="closedTradesTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Ticker</th>
+                        <th>Entry</th>
+                        <th>Exit</th>
+                        <th>P&L %</th>
+                        <th>P&L Rp</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="closedTradesBody">
+                    <tr><td colspan="7" style="text-align:center;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Original Multi-Strategy Functions
+        async function runScan() {
+            const loading     = document.getElementById('loading');
+            const resultsEl   = document.getElementById('resultsContainer');
+            const summaryEl   = document.getElementById('summaryCards');
+            
+            loading.style.display   = 'block';
+            resultsEl.style.display = 'none';
+            summaryEl.style.display = 'none';
+            
+            const strategies = Array.from(document.querySelectorAll('.strategy-option input:checked'))
+                .map(cb => cb.value);
+            
+            const hasSignal = document.getElementById('hasSignal').checked;
+            const displaySeparate = document.getElementById('displaySeparate').checked;
+            const flowConfirmed = document.getElementById('flowConfirmed').checked;
+            const wfFilter      = document.getElementById('wfFilter').checked;
+            
+            try {
+                const response = await fetch('/api/backtest/scan_all', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        strategies,
+                        has_signal: hasSignal,
+                        display_separate: displaySeparate,
+                        flow_confirmed_only: flowConfirmed,
+                        use_wf_filter: wfFilter,
+                        wf_min_consistency: 50.0
+                    })
+                });
+                
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+        
+        function displayResults(data) {
+            document.getElementById('resultsContainer').style.display = 'block';
+            document.getElementById('summaryCards').style.display = 'block';
+
+            const results   = data.results  || [];
+            const summary   = data.summary  || {};
+            const container = document.getElementById('resultsContainer');
+            const summaryEl = document.getElementById('summaryCards');
+
+            summaryEl.innerHTML = `
+                <div class="summary-cards">
+                    <div class="summary-card"><h3>Tickers Scanned</h3><div class="value">${summary.total_tickers_scanned || data.total || 0}</div></div>
+                    <div class="summary-card"><h3>With Signal</h3><div class="value">${summary.tickers_with_signal || 0}</div></div>
+                    <div class="summary-card"><h3>Profitable</h3><div class="value">${data.profitable || 0}</div></div>
+                    <div class="summary-card"><h3>Displayed</h3><div class="value">${results.length}</div></div>
+                </div>`;
+
+            if (results.length === 0) {
+                container.innerHTML = '<p style="text-align:center;padding:20px;color:#666;">Tidak ada hasil yang cocok dengan filter.</p>';
+                return;
+            }
+
+            const rows = results.map(r => {
+                if (r.error) return \`<tr><td>\${r.ticker}</td><td colspan="9" style="color:red;">Error: \${r.error}</td></tr>\`;
+                const retClass  = (r.best_return||0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+                const wfBadge   = r.consistency_pct ? \`<span style="color:\${r.consistency_pct>=60?'#28a745':'#ffc107'}">\${r.consistency_pct.toFixed(0)}%</span>\` : '–';
+                const flowBadge = r.flow_score != null ? \`<span style="color:\${r.flow_score>=2?'#28a745':r.flow_score>=0?'#ffc107':'#dc3545'}">\${r.flow_score>=0?'+':''}\${r.flow_score} (\${r.flow_reason||''})</span>\` : \`<span style="color:#aaa">\${r.flow_reason||'–'}</span>\`;
+                const regimeBadge = r.regime==='TRENDING' ? \`<span style="color:#28a745">📈 \${r.regime}</span>\` : r.regime==='SIDEWAYS' ? \`<span style="color:#ffc107">➡️ \${r.regime}</span>\` : \`<span style="color:#aaa">\${r.regime||'–'}</span>\`;
+                const signalBadge = r.has_signal ? \`<span style="color:#28a745;font-weight:bold;">✅ \${r.signal_reason||'Signal'}</span>\` : \`<span style="color:#6c757d;">–</span>\`;
+                return \`<tr>
+                    <td><strong>\${r.ticker}</strong></td>
+                    <td><span class="strategy-tag">\${r.best_strategy||'–'}</span></td>
+                    <td class="\${retClass}">\${(r.best_return||0).toFixed(2)}%</td>
+                    <td>\${(r.best_winrate||0).toFixed(1)}%</td>
+                    <td>\${r.best_trades||0}</td>
+                    <td>\${(r.best_sharpe||0).toFixed(2)}</td>
+                    <td>\${wfBadge}</td>
+                    <td>\${flowBadge}</td>
+                    <td>\${regimeBadge}</td>
+                    <td>\${signalBadge}</td>
+                </tr>\`;
+            }).join('');
+
+            container.innerHTML = \`
+                <table>
+                    <thead><tr>
+                        <th>Ticker</th><th>Best Strategy</th><th>Return</th><th>Win Rate</th>
+                        <th>Trades</th><th>Sharpe</th><th>WF Consist.</th><th>Flow</th><th>Regime</th><th>Signal</th>
+                    </tr></thead>
+                    <tbody>\${rows}</tbody>
+                </table>\`;
+        }
+        
+        function clearResults() {
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('summaryCards').style.display = 'none';
+        }
+        
+        // PAPER TRADE FUNCTIONS
+        function loadPaperTrades() {
+            fetch('/api/paper/summary')
+                .then(r => r.json())
+                .then(data => {
+                    updatePaperStats(data);
+                    renderOpenTrades(data.open_trades || []);
+                    renderClosedTrades(data.closed_trades || []);
+                })
+                .catch(err => {
+                    console.error('Error loading paper trades:', err);
+                    alert('Failed to load paper trades: ' + err.message);
+                });
+        }
+        
+        function updatePaperStats(data) {
+            const open = data.open_trades ? data.open_trades.length : 0;
+            const closed = data.closed_trades ? data.closed_trades.length : 0;
+            const pnl = data.total_pnl_rp || 0;
+            const pnlPct = data.total_return_pct || 0;
+            const winRate = data.win_rate || 0;
+            
+            document.getElementById('statOpen').textContent = open;
+            document.getElementById('statClosed').textContent = closed;
+            document.getElementById('statPnl').textContent = formatCurrency(pnl) + ' (' + pnlPct.toFixed(2) + '%)';
+            document.getElementById('statWinRate').textContent = winRate.toFixed(1) + '%';
+            
+            const pnlCard = document.getElementById('statPnlCard');
+            if (pnl >= 0) {
+                pnlCard.classList.add('positive');
+                pnlCard.classList.remove('negative');
+            } else {
+                pnlCard.classList.add('negative');
+                pnlCard.classList.remove('positive');
+            }
+        }
+        
+        function renderOpenTrades(trades) {
+            const tbody = document.getElementById('openTradesBody');
+            
+            if (trades.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;">No open trades</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = trades.map(t => `
+                <tr>
+                    <td>${t.id}</td>
+                    <td><strong>${t.ticker}</strong></td>
+                    <td>${t.strategy || '-'}</td>
+                    <td>${formatCurrency(t.entry_price)}</td>
+                    <td>${formatCurrency(t.sl_price)}</td>
+                    <td>${formatCurrency(t.tp_price)}</td>
+                    <td>${t.lots}</td>
+                    <td>${formatCurrency(t.capital_used)}</td>
+                    <td>
+                        <button class="btn-tp"
+                            onclick="closePaperTrade(${t.id}, ${t.tp_price}, '${t.ticker}', 'TP')"
+                            title="Close at TP: ${formatCurrency(t.tp_price)}">
+                            ✅ TP
+                        </button>
+                        <button class="btn-sl"
+                            onclick="closePaperTrade(${t.id}, ${t.sl_price}, '${t.ticker}', 'SL')"
+                            title="Close at SL: ${formatCurrency(t.sl_price)}">
+                            🛑 SL
+                        </button>
+                        <button class="btn-manual"
+                            onclick="closePaperTrade(${t.id}, ${t.entry_price}, '${t.ticker}', 'MANUAL')"
+                            title="Close manual harga bebas">
+                            ✏️ Manual
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function renderClosedTrades(trades) {
+            const tbody = document.getElementById('closedTradesBody');
+            const recent = trades.slice(-10).reverse();
+            
+            if (recent.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;">No closed trades</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = recent.map(t => {
+                const pnlClass = t.pnl_pct >= 0 ? 'pnl-positive' : 'pnl-negative';
+                return `
+                    <tr>
+                        <td>${t.id}</td>
+                        <td><strong>${t.ticker}</strong></td>
+                        <td>${formatCurrency(t.entry_price)}</td>
+                        <td>${formatCurrency(t.exit_price)}</td>
+                        <td class="${pnlClass}">${t.pnl_pct >= 0 ? '+' : ''}${t.pnl_pct.toFixed(2)}%</td>
+                        <td class="${pnlClass}">${t.pnl_rp >= 0 ? '+' : ''}${formatCurrency(t.pnl_rp)}</td>
+                        <td>${t.exit_reason || 'MANUAL'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function closePaperTrade(tradeId, priceHint, ticker, reason) {
+            let exitPrice;
+
+            if (reason === 'TP' || reason === 'SL') {
+                // Harga sudah diketahui, konfirmasi langsung
+                const label = reason === 'TP' ? '✅ Take Profit' : '🛑 Stop Loss';
+                if (!confirm(`${label}\nTrade #${tradeId} (${ticker})\nClose at: ${formatCurrency(priceHint)}?`)) return;
+                exitPrice = priceHint;
+            } else {
+                // Manual — prompt harga
+                const input = prompt(
+                    `✏️ Close Manual\nTrade #${tradeId} (${ticker})\n\nMasukkan harga exit:`,
+                    priceHint
+                );
+                if (!input || isNaN(input)) return;
+                if (!confirm(`Close trade #${tradeId} at ${formatCurrency(parseFloat(input))}?`)) return;
+                exitPrice = parseFloat(input);
+            }
+
+            fetch('/api/paper/close', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    trade_id: tradeId,
+                    exit_price: exitPrice,
+                    reason: reason || 'MANUAL'
+                })
+            })
+            .then(r => {
+                if (!r.ok) throw new Error('Close failed');
+                return r.json();
+            })
+            .then(data => {
+                const pnlText = data.pnl_rp >= 0 ? '+' + formatCurrency(data.pnl_rp) : formatCurrency(data.pnl_rp);
+                const icon = data.pnl_rp >= 0 ? '🟢' : '🔴';
+                alert(`${icon} Trade closed!\nP&L: ${pnlText} (${data.pnl_pct >= 0 ? '+' : ''}${data.pnl_pct}%)\nReason: ${reason}`);
+                loadPaperTrades();
+            })
+            .catch(err => {
+                console.error('Error closing trade:', err);
+                alert('Failed to close trade: ' + err.message);
+            });
+        }
+
+        function clearTradeHistory() {
+            if (!confirm('🗑️ Clear semua closed trades?\n\nOpen trades TIDAK akan terhapus.\nStatistik akan dihitung ulang dari 0.\n\nLanjutkan?')) return;
+
+            fetch('/api/paper/clear_history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            })
+            .then(r => {
+                if (!r.ok) throw new Error('Clear failed - cek apakah endpoint /api/paper/clear_history sudah ada di paper_trade.py');
+                return r.json();
+            })
+            .then(data => {
+                alert('✅ History cleared! ' + (data.deleted || 0) + ' trades dihapus.');
+                loadPaperTrades();
+            })
+            .catch(err => {
+                console.error('Error clearing history:', err);
+                alert('❌ ' + err.message);
+            });
+        }
+        
+        function formatCurrency(num) {
+            if (num === null || num === undefined) return '-';
+            return 'Rp ' + num.toLocaleString('id-ID');
+        }
+        
+        // Load on startup
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPaperTrades();
+            // Auto refresh every 30 seconds
+            setInterval(loadPaperTrades, 30000);
+        });
+    </script>
+</body>
+</html>

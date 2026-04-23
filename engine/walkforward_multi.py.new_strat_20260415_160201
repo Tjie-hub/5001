@@ -1,0 +1,292 @@
+"""
+walkforward_multi.py — Walk-Forward Engine + Metrics Calculator
+Untuk idx-walkforward integration
+"""
+
+import pandas as pd
+import numpy as np
+from typing import List
+from engine.strategies import (
+
+    strategy_momentum,
+    strategy_volume_profile_poc,
+    strategy_inside_bar_breakout,
+    strategy_nr7_breakout,
+    strategy_orb,
+    Trade
+)
+from engine.regime_filter import strategy_regime_adaptive, RegimeClassifier
+
+
+# ─────────────────────────────────────────────
+# METRICS
+# ─────────────────────────────────────────────
+
+def compute_metrics(result: dict) -> dict:
+    trades: List[Trade] = result['trades']
+    equity = result['equity']
+    capital_init = result['initial_capital']
+
+    if not trades:
+        return {
+            'strategy': result['strategy'],
+            'total_trades': 0,
+            'win_rate': 0, 'avg_pnl_pct': 0, 'avg_pnl_rp': 0,
+            'total_pnl_rp': 0, 'total_return_pct': 0,
+            'max_drawdown_pct': 0, 'sharpe': 0, 'profit_factor': 0,
+            'avg_hold_days': 0, 'best_trade_pct': 0, 'worst_trade_pct': 0
+        }
+
+    pnls     = [t.pnl_rp  for t in trades]
+    pnls_pct = [t.pnl_pct for t in trades]
+    winners  = [p for p in pnls if p > 0]
+    losers   = [p for p in pnls if p < 0]
+
+    # Hold days
+    hold_days = []
+    for t in trades:
+        try:
+            d1 = pd.to_datetime(t.entry_date)
+            d2 = pd.to_datetime(t.exit_date)
+            hold_days.append((d2 - d1).days)
+        except:
+            hold_days.append(0)
+
+    # Max Drawdown dari equity curve
+    eq  = np.array(equity)
+    peak = np.maximum.accumulate(eq)
+    dd   = (eq - peak) / peak
+    max_dd = dd.min() * 100   # negative %
+
+    # Sharpe (daily returns dari equity)
+    eq_series = pd.Series(equity)
+    daily_ret = eq_series.pct_change().dropna()
+    sharpe = 0.0
+    if daily_ret.std() > 0:
+        sharpe = (daily_ret.mean() / daily_ret.std()) * np.sqrt(252)
+
+    # Profit Factor
+    gross_profit = sum(winners)
+    gross_loss   = abs(sum(losers))
+    pf = (gross_profit / gross_loss) if gross_loss > 0 else float('inf')
+
+    total_pnl = sum(pnls)
+    total_return = (result['final_capital'] - capital_init) / capital_init * 100
+
+    return {
+        'strategy':        result['strategy'],
+        'total_trades':    len(trades),
+        'win_rate':        round(len(winners) / len(trades) * 100, 1),
+        'avg_pnl_pct':     round(np.mean(pnls_pct), 2),
+        'avg_pnl_rp':      round(np.mean(pnls)),
+        'total_pnl_rp':    round(total_pnl),
+        'total_return_pct':round(total_return, 2),
+        'max_drawdown_pct':round(max_dd, 2),
+        'sharpe':          round(sharpe, 2),
+        'profit_factor':   round(pf, 2) if pf != float('inf') else 999,
+        'avg_hold_days':   round(np.mean(hold_days), 1) if hold_days else 0,
+        'best_trade_pct':  round(max(pnls_pct), 2),
+        'worst_trade_pct': round(min(pnls_pct), 2),
+        'exit_reasons':    _count_exits(trades)
+    }
+
+
+def _count_exits(trades: List[Trade]) -> dict:
+    counts = {'TP': 0, 'SL': 0, 'EOD': 0, 'TRAIL': 0}
+    for t in trades:
+        counts[t.exit_reason] = counts.get(t.exit_reason, 0) + 1
+    return counts
+
+
+# ─────────────────────────────────────────────
+# WALK-FORWARD
+# ─────────────────────────────────────────────
+
+def walk_forward_split(df: pd.DataFrame,
+                       train_months: int = 12,
+                       test_months:  int = 3) -> List[dict]:
+    """
+    Bagi df menjadi rolling train/test windows.
+    Returns list of {'train': df, 'test': df, 'window': N}
+    """
+    df = df.copy()
+    df['date'] = pd.to_datetime(df['date'])
+    df = df.sort_values('date').reset_index(drop=True)
+
+    windows = []
+    start   = df['date'].min()
+    end     = df['date'].max()
+
+    step_months = test_months
+    window_num  = 0
+
+    cur = start
+    while True:
+        train_end = cur + pd.DateOffset(months=train_months)
+        test_end  = train_end + pd.DateOffset(months=test_months)
+
+        if test_end > end:
+            break
+
+        train_df = df[(df['date'] >= cur) & (df['date'] < train_end)].reset_index(drop=True)
+        test_df  = df[(df['date'] >= train_end) & (df['date'] < test_end)].reset_index(drop=True)
+
+        if len(train_df) > 60 and len(test_df) > 15:
+            windows.append({
+                'window':    window_num,
+                'train_start': str(cur.date()),
+                'train_end':   str(train_end.date()),
+                'test_start':  str(train_end.date()),
+                'test_end':    str(test_end.date()),
+                'train': train_df,
+                'test':  test_df
+            })
+            window_num += 1
+
+        cur += pd.DateOffset(months=step_months)
+
+    return windows
+
+
+STRATEGY_FUNCS = {
+    'Momentum Following':      strategy_momentum,
+    'Volume Profile POC':      strategy_volume_profile_poc,
+    'Inside Bar Breakout':     strategy_inside_bar_breakout,
+    'NR7 Breakout':            strategy_nr7_breakout,
+    'Regime Adaptive':         strategy_regime_adaptive,
+    'ORB':                      strategy_orb,
+}
+
+
+def run_all_strategies(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None) -> List[dict]:
+    """Full backtest semua 4 strategy pada df penuh."""
+    results = []
+    # Train regime classifier once on full df
+    regime_clf = RegimeClassifier()
+    train_result = regime_clf.train(df)
+    if 'error' in train_result:
+        regime_clf = None
+
+    for name, func in STRATEGY_FUNCS.items():
+        if name == 'Regime Adaptive' and regime_clf:
+            raw = func(df, capital=capital, filters=filters, classifier=regime_clf)
+        else:
+            raw = func(df, capital=capital, filters=filters)
+        metrics = compute_metrics(raw)
+        metrics['equity'] = raw['equity']
+        metrics['trades_detail'] = [
+            {
+                'entry_date':  t.entry_date,
+                'exit_date':   t.exit_date,
+                'entry_price': round(t.entry_price),
+                'exit_price':  round(t.exit_price),
+                'lots':        t.lots,
+                'exit_reason': t.exit_reason,
+                'pnl_rp':      round(t.pnl_rp),
+                'pnl_pct':     round(t.pnl_pct, 2),
+            }
+            for t in raw['trades']
+        ]
+        results.append(metrics)
+    return results
+
+
+def run_walk_forward(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None) -> dict:
+    """
+    Walk-forward: train 12 bulan, test 3 bulan, rolling.
+    Returns summary per strategy + per window.
+    """
+    windows = walk_forward_split(df, train_months=12, test_months=3)
+    if not windows:
+        return {'error': 'Data tidak cukup untuk walk-forward (butuh minimal 15 bulan)'}
+
+    wf_results = {name: [] for name in STRATEGY_FUNCS}
+
+    for w in windows:
+        test_df = w['test']
+        # Train regime classifier on train_df for this window
+        regime_clf = RegimeClassifier()
+        train_result = regime_clf.train(w['train'])
+        if 'error' in train_result:
+            regime_clf = None
+
+        for name, func in STRATEGY_FUNCS.items():
+            if name == 'Regime Adaptive':
+                raw = func(test_df, capital=capital, filters=filters,
+                           classifier=regime_clf if regime_clf else None)
+            elif func.__name__ == "strategy_vwma_breakout_pullback":
+                raw = func(test_df, capital=capital)
+            else:
+                raw = func(test_df, capital=capital, filters=filters)
+            metrics = compute_metrics(raw)
+            metrics['window']      = w['window']
+            metrics['test_start']  = w['test_start']
+            metrics['test_end']    = w['test_end']
+            metrics['train_start'] = w['train_start']
+            wf_results[name].append(metrics)
+
+    # Summary per strategy
+    summary = {}
+    for name, window_list in wf_results.items():
+        if not window_list:
+            continue
+        avg_wr  = np.mean([w['win_rate']        for w in window_list])
+        avg_ret = np.mean([w['total_return_pct'] for w in window_list])
+        avg_dd  = np.mean([w['max_drawdown_pct'] for w in window_list])
+        avg_sh  = np.mean([w['sharpe']           for w in window_list])
+        avg_pf  = np.mean([w['profit_factor']    for w in window_list if w['profit_factor'] < 999])
+        n_profitable = sum(1 for w in window_list if w['total_return_pct'] > 0)
+
+        summary[name] = {
+            'strategy':            name,
+            'windows_tested':      len(window_list),
+            'windows_profitable':  n_profitable,
+            'consistency_pct':     round(n_profitable / len(window_list) * 100, 1),
+            'avg_win_rate':        round(avg_wr, 1),
+            'avg_return_pct':      round(avg_ret, 2),
+            'avg_max_drawdown':    round(avg_dd, 2),
+            'avg_sharpe':          round(avg_sh, 2),
+            'avg_profit_factor':   round(avg_pf, 2) if avg_pf else 0,
+            'windows':             window_list
+        }
+
+    # Rank: weighted score (win_rate 30% + return 30% + sharpe 20% + consistency 20%)
+    ranked = _rank_strategies(summary)
+
+    return {
+        'mode':     'walk_forward',
+        'windows':  len(windows),
+        'summary':  summary,
+        'ranked':   ranked,
+        'best':     ranked[0]['strategy'] if ranked else None
+    }
+
+
+def _rank_strategies(summary: dict) -> List[dict]:
+    rows = list(summary.values())
+    if not rows:
+        return []
+
+    # Normalize each metric 0–1
+    def norm(vals):
+        mn, mx = min(vals), max(vals)
+        if mx == mn:
+            return [0.5] * len(vals)
+        return [(v - mn) / (mx - mn) for v in vals]
+
+    wr   = norm([r['avg_win_rate']       for r in rows])
+    ret  = norm([r['avg_return_pct']     for r in rows])
+    sh   = norm([r['avg_sharpe']         for r in rows])
+    cons = norm([r['consistency_pct']    for r in rows])
+    dd   = norm([-r['avg_max_drawdown']  for r in rows])  # less negative = better
+
+    for i, r in enumerate(rows):
+        r['score'] = round(
+            wr[i]   * 0.25 +
+            ret[i]  * 0.25 +
+            sh[i]   * 0.20 +
+            cons[i] * 0.20 +
+            dd[i]   * 0.10, 3
+        )
+
+    return sorted(rows, key=lambda x: x['score'], reverse=True)

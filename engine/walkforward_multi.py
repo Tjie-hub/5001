@@ -15,6 +15,7 @@ from .strategies import (
     strategy_inside_bar_breakout,
     strategy_nr7_breakout,
     strategy_orb,
+    strategy_swing_trend,
     Trade
 )
 from engine.regime_filter import strategy_regime_adaptive, RegimeClassifier
@@ -159,6 +160,7 @@ STRATEGY_FUNCS = {
     'Inside Bar Breakout':     strategy_inside_bar_breakout,
     'NR7 Breakout':            strategy_nr7_breakout,
     'ORB':                     strategy_orb,
+    'Swing Trend':             strategy_swing_trend,
 }
 
 

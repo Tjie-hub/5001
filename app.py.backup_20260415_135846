@@ -1,0 +1,617 @@
+from flask import Flask, render_template, request, jsonify
+from engine.strategies import check_current_entry_signal, get_ticker_data
+from scheduler import start_scheduler, scan_momentum_signals, daily_signal_scan
+from routes_backtest_multi import backtest_multi_bp
+
+app = Flask(__name__)
+app.register_blueprint(backtest_multi_bp)
+
+@app.route("/")
+@app.route("/backtest/multi")
+def backtest_multi_page():
+    return render_template("backtest_multi.html")
+
+
+@app.route('/api/backtest/scan_all', methods=['POST'])
+def api_scan_all():
+    import sqlite3, pandas as pd
+    from engine.walkforward_multi import run_all_strategies
+    from engine.regime_filter import detect_regime
+    from routes_backtest_multi import resolve_filters
+    body = request.get_json(force=True)
+    capital = float(body.get('capital', 50_000_000))
+    filters = resolve_filters(body.get('filters', []))
+    strategy = body.get('strategy', 'vol_weighted')  # NEW
+    filter_mode = body.get('filter_mode', 'all')     # NEW
+    conn = sqlite3.connect('/home/tjiesar/idx-walkforward/data/walkforward.db')
+    tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker').fetchall()]
+    conn.close()
+
+    results = []
+    for ticker in tickers:
+        try:
+            conn = sqlite3.connect('/home/tjiesar/idx-walkforward/data/walkforward.db')
+            df = pd.read_sql(f'SELECT * FROM ohlcv WHERE ticker="{ticker}" ORDER BY date ASC', conn)
+            conn.close()
+            if len(df) < 60:
+                continue
+            for c in ['open','high','low','close','volume']:
+                df[c] = df[c].astype(float)
+            strat_results = run_all_strategies(df, capital=capital, filters=filters)
+            best = max(strat_results, key=lambda x: x['total_return_pct'])
+            # Regime detection — rule-based only (fast)
+            try:
+                final_regime = detect_regime(df)
+                regime_conf = 0
+            except:
+                final_regime = "UNCERTAIN"
+                regime_conf = 0
+            # Check current entry signal
+            signal_check = check_current_entry_signal(ticker, strategy, df)
+            results.append({
+                'ticker': ticker,
+                'best_strategy': best['strategy'],
+                'best_return': best['total_return_pct'],
+                'best_winrate': best['win_rate'],
+                'best_sharpe': best['sharpe'],
+                'best_trades': best['total_trades'],
+                'profitable': bool(best['total_return_pct'] > 0),
+                'regime': final_regime,
+                'regime_conf': regime_conf,
+                'has_signal': signal_check['has_signal'],
+                'signal_reason': signal_check['reason'],
+                'signal_details': signal_check['details']
+            })
+        except Exception as e:
+            results.append({'ticker': ticker, 'error': str(e), 'best_return': -999})
+    
+    # Load wf_scores untuk enrichment
+    wf_map = {}
+    try:
+        conn_wf = sqlite3.connect('/home/tjiesar/idx-walkforward/data/walkforward.db')
+        rows = conn_wf.execute(
+            "SELECT ticker, consistency_pct, weighted_score FROM wf_scores WHERE strategy='Momentum Following'"
+        ).fetchall()
+        conn_wf.close()
+        wf_map = {r[0]: {'consistency_pct': r[1], 'weighted_score': r[2]} for r in rows}
+    except:
+        pass
+
+    for r in results:
+        wf = wf_map.get(r['ticker'], {})
+        r['consistency_pct'] = wf.get('consistency_pct', None)
+        r['wf_score']        = wf.get('weighted_score', 0)
+
+    # Min trades guard: mark low-trade results
+    for r in results:
+        if not r.get('error') and r.get('best_trades', 0) < 5:
+            r['low_trades'] = True
+            r['profitable'] = False  # exclude from profitable count
+# Filter berdasarkan mode
+    if filter_mode == 'signals_only':
+        results = [r for r in results if r.get('has_signal', False)]
+    
+    results.sort(key=lambda x: (x.get('wf_score', 0), x.get('best_return', -999)), reverse=True)
+    profitable = [r for r in results if r.get('profitable')]
+    tickers_with_signal = sum(1 for r in results if r.get('has_signal', False))
+    
+    return jsonify({
+        'success': True,
+        'total': len(results), 
+        'profitable': len(profitable), 
+        'results': results,
+        'summary': {
+            'total_tickers_scanned': len(tickers),
+            'tickers_with_signal': tickers_with_signal,
+            'tickers_displayed': len(results),
+            'filter_mode': filter_mode,
+            'strategy': strategy
+        }
+    })
+
+
+@app.route('/api/backtest/quick_scan', methods=['POST'])
+def api_quick_scan():
+    """Quick scan - hanya cek signal hari ini (tanpa backtest historical)"""
+    import sqlite3, pandas as pd
+    from engine.strategies import check_current_entry_signal
+    
+    body = request.get_json(force=True)
+    strategy = body.get('strategy', 'vol_weighted')
+    filter_mode = body.get('filter_mode', 'all')
+    
+    conn = sqlite3.connect('/home/tjiesar/idx-walkforward/data/walkforward.db')
+    tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker').fetchall()]
+    conn.close()
+    
+    results = []
+    for ticker in tickers:
+        try:
+            conn = sqlite3.connect('/home/tjiesar/idx-walkforward/data/walkforward.db')
+            df = pd.read_sql(f'SELECT * FROM ohlcv WHERE ticker="{ticker}" ORDER BY date ASC', conn)
+            conn.close()
+            
+            if len(df) < 20:
+                continue
+                
+            for c in ['open','high','low','close','volume']:
+                df[c] = df[c].astype(float)
+            
+            signal_check = check_current_entry_signal(ticker, strategy, df)
+            
+            # Skip jika mode signals_only dan tidak ada signal
+            if filter_mode == 'signals_only' and not signal_check['has_signal']:
+                continue
+            
+            results.append({
+                'ticker': ticker,
+                'has_signal': signal_check['has_signal'],
+                'signal_reason': signal_check['reason'],
+                'signal_details': signal_check['details']
+            })
+        except Exception as e:
+            print(f"Error {ticker}: {e}")
+            continue
+    
+    tickers_with_signal = sum(1 for r in results if r['has_signal'])
+    
+    return jsonify({
+        'success': True,
+        'results': results,
+        'summary': {
+            'total_tickers_scanned': len(tickers),
+            'tickers_with_signal': tickers_with_signal,
+            'tickers_displayed': len(results),
+            'filter_mode': filter_mode,
+            'strategy': strategy
+        }
+    })
+
+
+@app.route("/signal-scanner")
+def signal_scanner_page():
+    return render_template("backtest_multi.html")
+
+
+@app.route('/api/backtest/multi_quick_scan', methods=['POST'])
+def api_multi_quick_scan():
+    """Quick scan - support multiple strategies with intersection mode"""
+    import sqlite3, pandas as pd
+    from engine.strategies import check_current_entry_signal
+    
+    body = request.get_json(force=True)
+    strategies = body.get('strategies', ['vol_weighted'])
+    if isinstance(strategies, str):
+        strategies = [strategies]
+    filter_mode = body.get('filter_mode', 'all')
+    intersection_mode = body.get('intersection_mode', True)  # NEW: default True
+    
+    conn = sqlite3.connect('/home/tjiesar/idx-walkforward/data/walkforward.db')
+    tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker').fetchall()]
+    conn.close()
+    
+    # Collect signals per ticker per strategy
+    ticker_signals = {}  # {ticker: {strategy: signal_data}}
+    
+    for ticker in tickers:
+        try:
+            conn = sqlite3.connect('/home/tjiesar/idx-walkforward/data/walkforward.db')
+            df = pd.read_sql(f'SELECT * FROM ohlcv WHERE ticker="{ticker}" ORDER BY date ASC', conn)
+            conn.close()
+            
+            if len(df) < 20:
+                continue
+                
+            for c in ['open','high','low','close','volume']:
+                df[c] = df[c].astype(float)
+            
+            ticker_signals[ticker] = {}
+            
+            for strategy in strategies:
+                signal_check = check_current_entry_signal(ticker, strategy, df)
+                ticker_signals[ticker][strategy] = {
+                    'has_signal': signal_check['has_signal'],
+                    'reason': signal_check['reason'],
+                    'details': signal_check['details']
+                }
+        except Exception as e:
+            print(f"Error {ticker}: {e}")
+            continue
+    
+    # Filter based on mode
+    results = []
+    
+    if intersection_mode:
+        # INTERSECTION: hanya ticker yang pass SEMUA strategy
+        for ticker, signals in ticker_signals.items():
+            # Skip jika tidak punya signal untuk semua strategy
+            if len(signals) < len(strategies):
+                continue
+            
+            # Check jika semua strategy punya signal
+            all_pass = all(signals[s]['has_signal'] for s in strategies)
+            
+            # Filter berdasarkan mode
+            if filter_mode == 'signals_only' and not all_pass:
+                continue
+            
+            # Combine info dari semua strategy
+            combined_reasons = []
+            combined_details = {}
+            
+            for strategy in strategies:
+                sig = signals[strategy]
+                combined_reasons.append(f"{strategy}: {sig['reason']}")
+                combined_details[strategy] = sig['details']
+            
+            results.append({
+                'ticker': ticker,
+                'strategies': strategies,
+                'has_signal': all_pass,
+                'signal_reasons': combined_reasons,
+                'signal_details': combined_details
+            })
+    else:
+        # UNION: group by strategy (old behavior)
+        results_by_strategy = {s: [] for s in strategies}
+        
+        for ticker, signals in ticker_signals.items():
+            for strategy in strategies:
+                if strategy in signals:
+                    sig = signals[strategy]
+                    if filter_mode == 'signals_only' and not sig['has_signal']:
+                        continue
+                    
+                    results_by_strategy[strategy].append({
+                        'ticker': ticker,
+                        'strategy': strategy,
+                        'has_signal': sig['has_signal'],
+                        'signal_reason': sig['reason'],
+                        'signal_details': sig['details']
+                    })
+        
+        return jsonify({
+            'success': True,
+            'results': results_by_strategy,
+            'summary': {
+                'total_tickers_scanned': len(tickers),
+                'total_signals': sum(len(r) for r in results_by_strategy.values()),
+                'filter_mode': filter_mode,
+                'strategies': strategies,
+                'intersection_mode': False,
+                'by_strategy': {s: len(results_by_strategy[s]) for s in strategies}
+            },
+            'multi_strategy': True
+        })
+    
+    # INTERSECTION mode summary
+    tickers_with_all_signals = len([r for r in results if r['has_signal']])
+    
+    return jsonify({
+        'success': True,
+        'results': results,
+        'summary': {
+            'total_tickers_scanned': len(tickers),
+            'tickers_with_all_signals': tickers_with_all_signals,
+            'tickers_displayed': len(results),
+            'filter_mode': filter_mode,
+            'strategies': strategies,
+            'intersection_mode': True
+        },
+        'multi_strategy': len(strategies) > 1,
+        'intersection_mode': True
+    })
+
+def api_multi_quick_scan():
+    """Quick scan - support multiple strategies"""
+    import sqlite3, pandas as pd
+    from engine.strategies import check_current_entry_signal
+    
+    body = request.get_json(force=True)
+    strategies = body.get('strategies', ['vol_weighted'])
+    if isinstance(strategies, str):
+        strategies = [strategies]
+    filter_mode = body.get('filter_mode', 'all')
+    
+    conn = sqlite3.connect('/home/tjiesar/idx-walkforward/data/walkforward.db')
+    tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker').fetchall()]
+    conn.close()
+    
+    results_by_strategy = {}
+    
+    for strategy in strategies:
+        strategy_results = []
+        
+        for ticker in tickers:
+            try:
+                conn = sqlite3.connect('/home/tjiesar/idx-walkforward/data/walkforward.db')
+                df = pd.read_sql(f'SELECT * FROM ohlcv WHERE ticker="{ticker}" ORDER BY date ASC', conn)
+                conn.close()
+                
+                if len(df) < 20:
+                    continue
+                    
+                for c in ['open','high','low','close','volume']:
+                    df[c] = df[c].astype(float)
+                
+                signal_check = check_current_entry_signal(ticker, strategy, df)
+                
+                if filter_mode == 'signals_only' and not signal_check['has_signal']:
+                    continue
+                
+                strategy_results.append({
+                    'ticker': ticker,
+                    'strategy': strategy,
+                    'has_signal': signal_check['has_signal'],
+                    'signal_reason': signal_check['reason'],
+                    'signal_details': signal_check['details']
+                })
+            except Exception as e:
+                print(f"Error {ticker} {strategy}: {e}")
+                continue
+        
+        results_by_strategy[strategy] = strategy_results
+    
+    total_signals = sum(len(results) for results in results_by_strategy.values())
+    
+    if len(strategies) == 1:
+        final_results = results_by_strategy[strategies[0]]
+        summary = {
+            'total_tickers_scanned': len(tickers),
+            'tickers_with_signal': len(final_results),
+            'tickers_displayed': len(final_results),
+            'filter_mode': filter_mode,
+            'strategies': strategies
+        }
+    else:
+        final_results = results_by_strategy
+        summary = {
+            'total_tickers_scanned': len(tickers),
+            'total_signals': total_signals,
+            'filter_mode': filter_mode,
+            'strategies': strategies,
+            'by_strategy': {s: len(results_by_strategy[s]) for s in strategies}
+        }
+    
+    return jsonify({
+        'success': True,
+        'results': final_results,
+        'summary': summary,
+        'multi_strategy': len(strategies) > 1
+    })
+
+@app.route("/api/signals/today", methods=["GET"])
+def api_signals_today():
+    signals = scan_momentum_signals()
+    return jsonify({"count": len(signals), "signals": signals})
+
+@app.route("/api/scheduler/run", methods=["POST"])
+def api_run_scan():
+    signals = daily_signal_scan()
+    return jsonify({"count": len(signals), "signals": signals})
+
+@app.route('/api/paper/open', methods=['POST'])
+def api_paper_open():
+    from paper_trade import open_trade, init_paper_table
+    init_paper_table()
+    body = request.get_json(force=True)
+    return jsonify(open_trade(body['ticker'], float(body['entry_price'])))
+
+@app.route('/api/paper/close', methods=['POST'])
+def api_paper_close():
+    from paper_trade import close_trade
+    from scheduler import send_telegram
+    body = request.get_json(force=True)
+    result = close_trade(int(body['trade_id']), float(body['exit_price']), body.get('reason','MANUAL'))
+    if 'pnl_rp' in result:
+        emoji = "🟢" if result['pnl_rp'] >= 0 else "🔴"
+        send_telegram(f"{emoji} Paper Trade Closed - {result['ticker']} | {result['exit_reason']} | P&L: Rp {result['pnl_rp']:,} ({result['pnl_pct']:+.2f}%)")
+    return jsonify(result)
+
+@app.route('/api/paper/summary', methods=['GET'])
+def api_paper_summary():
+    from paper_trade import get_summary, init_paper_table
+    init_paper_table()
+    return jsonify(get_summary())
+
+
+@app.route('/api/flow/monitor', methods=['GET'])
+def api_flow_monitor():
+    import sqlite3
+    from datetime import date
+    today_str = str(date.today())
+    conn = sqlite3.connect('/home/tjiesar/idx-walkforward/data/walkforward.db')
+    rows = conn.execute("""
+        SELECT ticker, composite_score, verdict, smart_money,
+               buy_lot, sell_lot, net_lot, updated_at
+        FROM stockbit_flow
+        WHERE trade_date=?
+        ORDER BY composite_score DESC
+    """, (today_str,)).fetchall()
+    conn.close()
+    results = []
+    for r in rows:
+        verdict_clean = r[2].replace("🟢 ","").replace("🔴 ","").replace("🟡 ","")
+        results.append({
+            "ticker": r[0], "score": r[1], "verdict": verdict_clean,
+            "smart_money": r[3], "buy_lot": r[4], "sell_lot": r[5],
+            "net_lot": r[6], "updated_at": r[7]
+        })
+    bullish  = [x for x in results if x["score"] >= 3]
+    neutral  = [x for x in results if -3 < x["score"] < 3]
+    bearish  = [x for x in results if x["score"] <= -3]
+    return jsonify({
+        "date": today_str,
+        "total": len(results),
+        "bullish": len(bullish),
+        "neutral": len(neutral),
+        "bearish": len(bearish),
+        "results": results
+    })
+
+
+@app.route('/api/signals/custom', methods=['POST'])
+def api_signals_custom():
+    import sqlite3, pandas as pd, logging
+    from engine.strategies import calc_vol_ratio
+    from engine.regime_filter import RegimeClassifier, get_macro_overlay, apply_macro_overlay
+    import datetime as _dt
+
+    body = request.get_json(force=True)
+    tickers_input = [t.strip().upper() for t in body.get('tickers', '').split(',') if t.strip()]
+    use_fundamental = body.get('use_fundamental', True)
+    use_flow        = body.get('use_flow', True)
+    use_consist     = body.get('use_consist', True)
+    use_regime      = body.get('use_regime', True)
+    use_streak      = body.get('use_streak', True)
+    vr_min          = float(body.get('vr_min', 1.3))
+
+    DB_PATH = '/home/tjiesar/idx-walkforward/data/walkforward.db'
+    conn = sqlite3.connect(DB_PATH)
+    all_tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker').fetchall()]
+    conn.close()
+    tickers = tickers_input if tickers_input else all_tickers
+
+    conn = sqlite3.connect(DB_PATH)
+    wf_rows = conn.execute("SELECT ticker, consistency_pct, weighted_score FROM wf_scores WHERE strategy='Momentum Following'").fetchall()
+    conn.close()
+    wf_map = {r[0]: {"consistency_pct": r[1], "weighted_score": r[2]} for r in wf_rows}
+
+    try:
+        macro_data = get_macro_overlay()
+    except:
+        macro_data = {"idr_weakening": 0.0, "bi_rate": 6.25}
+
+    results = []
+    for ticker in tickers:
+        row = {"ticker": ticker, "passed": False, "fail_reason": None}
+
+        if use_fundamental:
+            from scheduler import check_fundamental
+            fund_ok, fund_reason = check_fundamental(ticker)
+            if not fund_ok:
+                row["fail_reason"] = f"FUND: {fund_reason}"
+                results.append(row)
+                continue
+        row["fundamental"] = "OK" if use_fundamental else "SKIP"
+
+        if use_flow:
+            from flow_filter import flow_confirms_signal
+            flow_ok, flow_reason, flow_data = flow_confirms_signal(ticker, "BUY")
+            row["flow"] = flow_reason
+            if not flow_ok:
+                row["fail_reason"] = f"FLOW: {flow_reason}"
+                results.append(row)
+                continue
+        else:
+            row["flow"] = "SKIP"
+
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            df = pd.read_sql(f'SELECT * FROM ohlcv WHERE ticker="{ticker}" ORDER BY date ASC', conn)
+            conn.close()
+            if len(df) < 25:
+                row["fail_reason"] = "DATA: bars < 25"
+                results.append(row)
+                continue
+            for c in ["open","high","low","close","volume"]:
+                df[c] = df[c].astype(float)
+
+            vr = calc_vol_ratio(df)
+            vr_val = round(float(vr.iloc[-1]), 2)
+            streak = (df["close"] > df["close"].shift(1)) & (df["close"].shift(1) > df["close"].shift(2))
+            streak_val = bool(streak.iloc[-1])
+            last = df.iloc[-1]
+            row["close"] = round(float(last["close"]))
+            row["vr"] = vr_val
+            row["streak"] = streak_val
+
+            if use_streak and not streak_val:
+                row["fail_reason"] = f"STREAK: False (VR={vr_val})"
+                results.append(row)
+                continue
+            if vr_val < vr_min:
+                row["fail_reason"] = f"VR: {vr_val} < {vr_min}"
+                results.append(row)
+                continue
+
+            wf = wf_map.get(ticker)
+            row["consistency"] = wf["consistency_pct"] if wf else None
+            row["wf_score"] = wf["weighted_score"] if wf else 0
+            if use_consist and wf and wf["consistency_pct"] < 50.0:
+                row["fail_reason"] = f"CONSIST: {wf['consistency_pct']}% < 50%"
+                results.append(row)
+                continue
+
+            regime_label = "N/A"
+            regime_conf  = 0
+            try:
+                clf = RegimeClassifier()
+                clf.train(df)
+                regime_info = clf.predict(df)
+                adj_regime, _ = apply_macro_overlay(regime_info[0], macro_data)
+                regime_label = adj_regime
+                regime_conf  = regime_info[1]
+            except:
+                pass
+            row["regime"] = regime_label
+            row["regime_conf"] = round(regime_conf, 2)
+
+            if use_regime and regime_label == "UNCERTAIN":
+                row["fail_reason"] = f"REGIME: UNCERTAIN ({round(regime_conf*100)}%)"
+                results.append(row)
+                continue
+
+            row["passed"] = True
+        except Exception as e:
+            row["fail_reason"] = f"ERROR: {str(e)[:50]}"
+        results.append(row)
+
+    passed = [r for r in results if r["passed"]]
+    failed = [r for r in results if not r["passed"]]
+
+    # Telegram notif
+    try:
+        from scheduler import send_telegram
+        from datetime import datetime
+        import pytz
+        WIB = pytz.timezone("Asia/Jakarta")
+        now_str = datetime.now(WIB).strftime("%d/%m/%Y %H:%M")
+        active_filters = []
+        if use_fundamental: active_filters.append("Fundamental")
+        if use_flow:        active_filters.append("Flow")
+        if use_consist:     active_filters.append("WF Consist")
+        if use_regime:      active_filters.append("Regime")
+        if use_streak:      active_filters.append("Streak")
+        filter_str = " · ".join(active_filters) if active_filters else "No filters"
+        ticker_label = ", ".join(tickers_input) if tickers_input else "ALL"
+
+        if passed:
+            msg = f"🔍 <b>Custom Scan — {now_str}</b>\n"
+            msg += f"🎯 Ticker: {ticker_label}\n"
+            msg += f"⚙️ Filter aktif: <i>{filter_str}</i> | VR≥{vr_min}x\n"
+            msg += f"✅ {len(passed)} lolos / {len(results)} ticker\n\n"
+            for r in passed:
+                regime_emoji = "📈" if r.get("regime") == "TRENDING" else "📉" if r.get("regime") == "SIDEWAYS" else "❓"
+                msg += f"🟢 <b>{r['ticker']}</b> Rp {r.get('close',0):,}\n"
+                msg += f"   VR: {r.get('vr','?')}x | {regime_emoji} {r.get('regime','N/A')} ({round(r.get('regime_conf',0)*100)}%)\n"
+                if r.get('flow') and r['flow'] != 'SKIP':
+                    msg += f"   Flow: {r['flow']}\n"
+                if r.get('consistency') is not None:
+                    msg += f"   Consist: {r['consistency']}% | WF: {r.get('wf_score',0):.3f}\n"
+                msg += "\n"
+            msg += f"⚠️ <i>Custom scan — bukan sinyal resmi</i>"
+        else:
+            msg = f"🔍 <b>Custom Scan — {now_str}</b>\n"
+            msg += f"🎯 Ticker: {ticker_label}\n"
+            msg += f"⚙️ Filter aktif: <i>{filter_str}</i> | VR≥{vr_min}x\n\n"
+            msg += f"❌ Tidak ada ticker lolos dari {len(results)} yang discan."
+        send_telegram(msg)
+    except Exception as _te:
+        print(f"Telegram error: {_te}")
+
+    return jsonify({"total": len(results), "passed": len(passed), "failed": len(failed), "results": results})
+
+if __name__ == "__main__":
+    start_scheduler()
+    app.run(host="0.0.0.0", port=5001, debug=False)

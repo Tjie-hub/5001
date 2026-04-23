@@ -13,7 +13,7 @@ from datetime import datetime
 # Configuration
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-APP_PY = "/home/tjiesar/idx-walkforward/app.py"
+APP_PY = "/home/tjiesar/10 Projects/idx-walkforward-5001/app.py"
 BACKUP_SUFFIX = f".backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

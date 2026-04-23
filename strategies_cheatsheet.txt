@@ -1,0 +1,191 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    STOCK TRADING SYSTEM — STRATEGY CHEATSHEET
+                              April 18, 2026 Edition
+═══════════════════════════════════════════════════════════════════════════════
+
+STRATEGY QUICK REFERENCE
+─────────────────────────────────────────────────────────────────────────────
+
+ID | STRATEGY NAME          | ENTRY CONDITION               | TP   | SL   | WR%
+─────────────────────────────────────────────────────────────────────────────
+ 1 | Vol-Weighted          | VR>1.8x + delta+ + >SMA10     | 2.0% | 1.5% | 65%
+ 2 | Momentum Following    | 2-day streak + VR>1.3x        | 3.5% | 2.5% | 55%
+ 3 | VWAP Reversion        | <VWAP(-1%) + VR>1.3x          | 1.5% | 1.0% | 67%
+ 4 | Conservative Confirm  | VR>1.3 + bullish + >MA20      | 1.5% | 1.0% | 70%
+ 5 | Volume Profile POC    | Price→POC from above          | 1.5% | 1.5% | 65%
+ 6 | Inside Bar Breakout   | 2 inside + 3rd break + vol↑   | 2.0% | 1.0% | 60%
+
+─────────────────────────────────────────────────────────────────────────────
+KEY METRICS & INDICATORS
+─────────────────────────────────────────────────────────────────────────────
+
+Volume Ratio (VR)
+  └─ Current vol ÷ 20-day MA vol
+  └─ VR > 1.8x = Institutional entry pressure (very bullish)
+  └─ VR > 1.3x = Elevated volume (entry signal)
+  └─ VR < 1.0x = Below average (avoid entry)
+
+Delta Volume
+  └─ Buy vol - Sell vol
+  └─ Positive = Buying pressure (bullish)
+  └─ Negative = Selling pressure (bearish)
+  └─ Used in: Vol-Weighted, Momentum strategies
+
+VWAP (Volume-Weighted Average Price)
+  └─ Fair value based on vol-weighted price
+  └─ Price > VWAP = Above fair value (continue trend)
+  └─ Price < VWAP = Below fair value (reversion possible)
+
+Simple Moving Averages
+  └─ SMA10: Short-term trend (volatile, responsive)
+  └─ SMA20: Medium-term support/resistance
+  └─ SMA50: Intermediate trend filter
+  └─ SMA200: Long-term trend direction
+  └─ Entry valid if: close > SMA10 (in uptrend)
+
+ATR (Average True Range)
+  └─ 14-period volatility measure
+  └─ High ATR = High volatility (more risk, larger moves)
+  └─ Low ATR = Low volatility (tight ranges, small moves)
+  └─ Used for: Dynamic TP/SL sizing
+
+RSI (Relative Strength Index)
+  └─ 14-period momentum oscillator (0-100)
+  └─ >70 = Overbought (potential reversal)
+  └─ <30 = Oversold (potential bounce)
+  └─ 50 = Neutral
+
+VPIN (Volume Price Informed Noticeable)
+  └─ 0.0-1.0+ scale: informed trader activity
+  └─ <0.3 = Quiet (avoid)
+  └─ 0.3-0.5 = Normal (can trade if other signals align)
+  └─ 0.5-0.7 = Rising activity (good entry conditions)
+  └─ >0.7 = Peak toxicity (danger zone, reversal likely)
+
+─────────────────────────────────────────────────────────────────────────────
+7-LAYER SIGNAL FILTER (Must Pass All)
+─────────────────────────────────────────────────────────────────────────────
+
+  1. WF Filter          ← Walk-forward score ≥ 50% (strategy is reliable)
+  2. Fundamental        ← PE < 20, PBV < 5, ROE > 5% (good value)
+  3. Flow Confirmation  ← Flow score ≥ +2 (smart money bullish)
+  4. Technical          ← VR > 1.3x, VWAP align, ATR normal
+  5. WF Consistency     ← Win rate ≥ 50%, Sharpe ≥ 0.8
+  6. Regime (ML)        ← TRENDING or SIDEWAYS (avoid UNCERTAIN)
+  7. Telegram Alert     ← Human approval before auto-trade
+
+  Only signals passing ALL 7 layers trigger auto-trade.
+
+─────────────────────────────────────────────────────────────────────────────
+ML REGIME CLASSIFICATION (3 Classes)
+─────────────────────────────────────────────────────────────────────────────
+
+TRENDING (Momentum strategies work)
+  ├─ Price above MA20 + rising
+  ├─ Higher highs, higher lows pattern
+  ├─ Volume expanding on up days
+  └─ Action: Allow all 6 strategies, boost TP% by +0.5%
+
+SIDEWAYS (Mean-reversion strategies work)
+  ├─ Price oscillating within range
+  ├─ MA200 flat, price bouncing between extremes
+  ├─ Volume lower on breakout attempts
+  └─ Action: Allow VWAP Reversion & Conservative only, reduce TP% by -0.5%
+
+UNCERTAIN (Avoid)
+  ├─ Choppy price action, no clear direction
+  ├─ Conflicting signals (high RSI but price falling)
+  ├─ Volume inconsistent, whipsaw risk high
+  └─ Action: HOLD, wait for clarity (usually resolves in 1-2 bars)
+
+─────────────────────────────────────────────────────────────────────────────
+BACKTEST RESULTS (Top Tickers, April 2026)
+─────────────────────────────────────────────────────────────────────────────
+
+Ticker | Best Strategy         | WF Score | Sharpe | Return | Win Rate
+──────────────────────────────────────────────────────────────────────────
+BRPT   | Vol-Weighted          | 0.962    | 1.54   | 28.1%  | 77.8%
+ANJT   | Momentum Following    | 1.000    | 1.18   | 16.5%  | 50.0%
+INPC   | Momentum Following    | 1.000    | 1.08   | 30.2%  | 33.3%
+EXCL   | Inside Bar Breakout   | 0.870    | 0.97   | 7.6%   | 66.7%
+CPIN   | Vol-Weighted          | 0.920    | 0.92   | 12.3%  | 66.7%
+
+─────────────────────────────────────────────────────────────────────────────
+SCHEDULER TIMES (Mon-Fri, WIB)
+─────────────────────────────────────────────────────────────────────────────
+
+08:40  Token auto-refresh (Stockbit JWT)
+08:50  OHLCV + Keystats fetch
+09:05  Scan + 7-layer filter (1st run)
+10:05  Scan + 7-layer filter (2nd run)
+11:05  Scan + 7-layer filter (3rd run)
+13:35  Scan + 7-layer filter (4th run) ← Afternoon session
+14:35  Scan + 7-layer filter (5th run)
+16:40  EOD flow data fetch (Stockbit)
+
+─────────────────────────────────────────────────────────────────────────────
+PAPER TRADING RISK MANAGEMENT
+─────────────────────────────────────────────────────────────────────────────
+
+Capital:              50M IDR
+Max Open Trades:      5 (avoid over-exposure)
+Max per Trade:        30% (if each loses max SL, still have capital)
+Commission Buy:       0.15% (IDX standard)
+Commission Sell:      0.25% (IDX standard + spread)
+Slippage:             0.1% (realistic execution cost)
+
+TP targets typically 2-3.5% (daily realistic)
+SL typically 1-2.5% (risk:reward ≥ 1:1.5)
+
+Example trade:
+  Entry:  1,385 IDR, 108 lots
+  TP:     1,433 IDR (3.5% profit = ~Rp 5.1M gross)
+  SL:     1,350 IDR (2.6% loss = ~Rp 3.8M gross)
+  Max capital at risk: 30% × 50M = 15M IDR
+  Position size: 108 × 1,385 = 149.6M IDR (100% of entry capital)
+
+─────────────────────────────────────────────────────────────────────────────
+KEY URLS & COMMANDS
+─────────────────────────────────────────────────────────────────────────────
+
+Dashboard:     http://192.168.31.120:5001/backtest/multi
+Monitor:       http://192.168.31.120:5000
+Telegram Bot:  @idx_signal_ggc_bot
+
+Check service:
+  systemctl status idx-walkforward-5001
+  journalctl -u idx-walkforward-5001 -f
+
+Manual scan:
+  curl -X POST http://192.168.31.120:5001/api/backtest/scan_all \
+    -H "Content-Type: application/json" \
+    -d '{"filter_mode":"signals_only"}'
+
+Live status:
+  python3 generate_live_status.py --host 192.168.31.120
+
+─────────────────────────────────────────────────────────────────────────────
+COMMON ENTRY MISTAKES (Avoid These)
+─────────────────────────────────────────────────────────────────────────────
+
+✗ Entering below SMA10 (against trend)
+  Fix: Ensure close > SMA10 + SMA20 + SMA50 (all aligned)
+
+✗ VR < 1.3x (low volume = weak signal)
+  Fix: Wait for VR spike to at least 1.3x before entry
+
+✗ Entering near MA50/200 resistance (high rejection risk)
+  Fix: Wait for price to break + hold above resistance
+
+✗ VPIN already > 0.8 (too late, likely reversal imminent)
+  Fix: Let VPIN peak and start falling (release phase)
+
+✗ Trading UNCERTAIN regime (whipsaw risk)
+  Fix: Switch to SIDEWAYS/TRENDING regime only
+
+✗ Taking oversized position (>30% capital per trade)
+  Fix: Size position: qty = (capital × 30%) ÷ entry_price
+
+─────────────────────────────────────────────────────────────────────────────
+For full documentation, see: index.md + docs/ folder
+═══════════════════════════════════════════════════════════════════════════════
