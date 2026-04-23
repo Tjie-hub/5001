@@ -8,7 +8,7 @@ Usage: python3 add_flow_filter.py
 import shutil
 from datetime import datetime
 
-TEMPLATE = "/home/tjiesar/idx-walkforward/templates/backtest_multi.html"
+TEMPLATE = "/home/tjiesar/10 Projects/idx-walkforward-5001/templates/backtest_multi.html"
 BACKUP_SUFFIX = f".phase1c_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

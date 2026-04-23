@@ -3,14 +3,27 @@ from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify
 from engine.strategies import check_current_entry_signal, get_ticker_data
 from flow_filter import get_flow_confirmation, get_flow_batch
-from scheduler import start_scheduler, scan_momentum_signals, daily_signal_scan
+from scheduler import start_scheduler, scan_momentum_signals, daily_signal_scan, send_telegram
 from routes_backtest_multi import backtest_multi_bp
+from screener.routes import screener_bp
+from screener.db import init_screener_tables
+from stockbit_fetcher import init_flow_db
+import requests
+import hashlib
+import hmac
+import threading
+import time
 
 load_dotenv()
-DB_PATH = os.getenv('DB_PATH', '/home/tjiesar/idx-walkforward-5002/data/walkforward.db')
+DB_PATH = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "8790169868:AAE6qno0LrxxIdFydSKSLKhD8EPUzevPIFo")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "5919142813")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "http://192.168.31.120:5001")
+WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/telegram/updates")
 
 app = Flask(__name__)
 app.register_blueprint(backtest_multi_bp)
+app.register_blueprint(screener_bp, url_prefix='/api/screener')
 
 
 def attach_flow_data(results, include_flow=True, flow_threshold=2):
@@ -225,17 +238,36 @@ def api_scan_all():
 
 @app.route('/api/backtest/quick_scan', methods=['POST'])
 def api_quick_scan():
-    """Quick scan - hanya cek signal hari ini (tanpa backtest historical)"""
+    """Quick scan - signal check + backtest metrics for each ticker"""
     import sqlite3, pandas as pd
     from engine.strategies import check_current_entry_signal
+    from engine.walkforward_multi import run_all_strategies
+    from engine.regime_filter import detect_regime
 
     body = request.get_json(force=True)
     strategy = body.get('strategy', 'vol_weighted')
     filter_mode = body.get('filter_mode', 'all')
+    capital = float(body.get('capital', 50_000_000))
 
     conn = sqlite3.connect(DB_PATH)
     tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker').fetchall()]
     conn.close()
+
+    # Load backtest cache for today
+    from datetime import date as _date
+    today = _date.today().isoformat()
+    cache_map = {}
+    try:
+        _init_backtest_cache()
+        conn_c = sqlite3.connect(DB_PATH)
+        rows = conn_c.execute(
+            "SELECT ticker, best_strategy, best_return, win_rate, sharpe, total_trades, profitable, regime FROM backtest_cache WHERE computed_date=?",
+            (today,)
+        ).fetchall()
+        conn_c.close()
+        cache_map = {r[0]: dict(zip(['best_strategy','best_return','win_rate','sharpe','total_trades','profitable','regime'], r[1:])) for r in rows}
+    except Exception:
+        pass
 
     results = []
     for ticker in tickers:
@@ -243,38 +275,105 @@ def api_quick_scan():
             conn = sqlite3.connect(DB_PATH)
             df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
             conn.close()
-            
-            if len(df) < 20:
+
+            if len(df) < 60:
                 continue
-                
+
             for c in ['open','high','low','close','volume']:
                 df[c] = df[c].astype(float)
-            
+
+            # Get signal check (fast — always live)
             signal_check = check_current_entry_signal(ticker, strategy, df)
-            
-            # Skip jika mode signals_only dan tidak ada signal
-            if filter_mode == 'signals_only' and not signal_check['has_signal']:
+
+            # Only include tickers with signals
+            if not signal_check['has_signal']:
                 continue
-            
-            results.append({
+
+            # Try cache first, fallback to live backtest
+            cached = cache_map.get(ticker)
+            if cached:
+                best = cached
+                regime = cached.get('regime', 'UNCERTAIN')
+            else:
+                # Fallback: run backtest live
+                try:
+                    strat_results = run_all_strategies(df, capital=capital)
+                    best_r = max(strat_results, key=lambda x: x['total_return_pct'])
+                    best = {
+                        'best_strategy': best_r['strategy'],
+                        'best_return': best_r['total_return_pct'],
+                        'win_rate': best_r['win_rate'],
+                        'sharpe': best_r.get('sharpe', 0),
+                        'total_trades': best_r.get('total_trades', 0),
+                        'profitable': int(best_r['total_return_pct'] > 0)
+                    }
+                except Exception:
+                    best = None
+                try:
+                    regime = detect_regime(df)
+                except Exception:
+                    regime = "UNCERTAIN"
+
+            # Build result with both signal and backtest data
+            result = {
                 'ticker': ticker,
                 'has_signal': signal_check['has_signal'],
                 'signal_reason': signal_check['reason'],
-                'signal_details': signal_check['details']
-            })
+                'signal_details': signal_check['details'],
+                'regime': regime,
+            }
+
+            # Add price and volume ratio from signal details
+            if signal_check['details']:
+                result['close'] = signal_check['details'].get('price')
+                result['vol_ratio'] = signal_check['details'].get('vr')
+
+            # Add backtest results (from cache or live)
+            if best:
+                result['best_strategy'] = best.get('best_strategy') or best.get('strategy')
+                result['best_return'] = best.get('best_return') or best.get('total_return_pct') or 0
+                result['win_rate'] = best.get('win_rate', 0)
+                result['sharpe'] = best.get('sharpe', 0)
+                result['best_trades'] = best.get('total_trades', 0)
+                result['profitable'] = bool(best.get('profitable') or best.get('best_return', 0) > 0)
+
+            results.append(result)
         except Exception as e:
             print(f"Error {ticker}: {e}")
             continue
-    
-    tickers_with_signal = sum(1 for r in results if r['has_signal'])
-    
+
+    # Load WF scores for enrichment
+    wf_map = {}
+    try:
+        conn_wf = sqlite3.connect(DB_PATH)
+        rows = conn_wf.execute("""
+            SELECT ticker, MAX(weighted_score) as best_wf_score
+            FROM wf_scores
+            GROUP BY ticker
+        """).fetchall()
+        conn_wf.close()
+        wf_map = {r[0]: r[1] for r in rows}
+    except Exception:
+        pass
+
+    # Add WF scores to results
+    for r in results:
+        if r['ticker'] in wf_map:
+            r['wf_score'] = wf_map[r['ticker']]
+
+    # Filter by profit status
+    profitable = [r for r in results if r.get('profitable', False)]
+    tickers_with_signal = sum(1 for r in results if r.get('has_signal', False))
+
     # Attach flow data (optional mode - display only, no filtering)
     include_flow = body.get('include_flow', True)
     flow_threshold = body.get('flow_threshold', 2)
     results = attach_flow_data(results, include_flow, flow_threshold)
-    
+
     return jsonify({
         'success': True,
+        'total': len(results),
+        'profitable': len(profitable),
         'results': results,
         'summary': {
             'total_tickers_scanned': len(tickers),
@@ -291,6 +390,93 @@ def api_quick_scan():
 @app.route("/signal-scanner")
 def signal_scanner_page():
     return render_template("backtest_multi.html")
+
+
+def _init_backtest_cache():
+    """Create backtest_cache table if not exists."""
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS backtest_cache (
+            ticker TEXT NOT NULL,
+            computed_date TEXT NOT NULL,
+            best_strategy TEXT,
+            best_return REAL,
+            win_rate REAL,
+            sharpe REAL,
+            total_trades INTEGER,
+            profitable INTEGER,
+            regime TEXT,
+            updated_at TEXT,
+            PRIMARY KEY (ticker, computed_date)
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+@app.route('/api/backtest/precompute', methods=['POST'])
+def api_precompute():
+    """
+    Pre-compute and cache backtest results for all tickers.
+    Run this once daily (or manually) to speed up quick_scan.
+    """
+    import sqlite3, pandas as pd
+    from engine.walkforward_multi import run_all_strategies
+    from engine.regime_filter import detect_regime
+    from datetime import date
+
+    _init_backtest_cache()
+    capital = float(request.get_json(force=True).get('capital', 50_000_000))
+    today = date.today().isoformat()
+
+    conn = sqlite3.connect(DB_PATH)
+    tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker').fetchall()]
+    conn.close()
+
+    computed = 0
+    errors = 0
+    for ticker in tickers:
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
+            conn.close()
+            if len(df) < 60:
+                continue
+            for c in ['open','high','low','close','volume']:
+                df[c] = df[c].astype(float)
+
+            strat_results = run_all_strategies(df, capital=capital)
+            best = max(strat_results, key=lambda x: x['total_return_pct'])
+            try:
+                regime = detect_regime(df)
+            except Exception:
+                regime = "UNCERTAIN"
+
+            conn = sqlite3.connect(DB_PATH)
+            conn.execute("""
+                INSERT OR REPLACE INTO backtest_cache
+                (ticker, computed_date, best_strategy, best_return, win_rate, sharpe, total_trades, profitable, regime, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?, datetime('now'))
+            """, (ticker, today, best['strategy'], best['total_return_pct'],
+                  best['win_rate'], best.get('sharpe', 0), best.get('total_trades', 0),
+                  int(best['total_return_pct'] > 0), regime))
+            conn.commit()
+            conn.close()
+            computed += 1
+        except Exception as e:
+            errors += 1
+            print(f"[precompute] Error {ticker}: {e}")
+
+    return jsonify({'computed': computed, 'errors': errors, 'date': today})
+
+
+@app.route('/api/paper/config', methods=['GET'])
+def api_paper_config():
+    from paper_trade import init_paper_table, get_config
+    init_paper_table()
+    cfg = get_config()
+    return jsonify(cfg)
 
 
 @app.route('/api/backtest/multi_quick_scan', methods=['POST'])
@@ -343,57 +529,196 @@ def api_multi_quick_scan():
     
     if intersection_mode:
         # INTERSECTION: hanya ticker yang pass SEMUA strategy
+        from engine.walkforward_multi import run_all_strategies
+        from engine.regime_filter import detect_regime
+        capital = float(body.get('capital', 50_000_000))
+
         for ticker, signals in ticker_signals.items():
             # Skip jika tidak punya signal untuk semua strategy
             if len(signals) < len(strategies):
                 continue
-            
+
             # Check jika semua strategy punya signal
             all_pass = all(signals[s]['has_signal'] for s in strategies)
-            
+
             # Filter berdasarkan mode
             if filter_mode == 'signals_only' and not all_pass:
                 continue
-            
+
+            # Only run backtest for tickers with all signals (optimization)
+            if not all_pass:
+                continue
+
             # Combine info dari semua strategy
             combined_reasons = []
             combined_details = {}
-            
+
             for strategy in strategies:
                 sig = signals[strategy]
                 combined_reasons.append(f"{strategy}: {sig['reason']}")
                 combined_details[strategy] = sig['details']
-            
-            results.append({
+
+            # Run backtest untuk get metrics
+            best = None
+            regime = "UNCERTAIN"
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
+                conn.close()
+                if len(df) >= 60:
+                    for c in ['open','high','low','close','volume']:
+                        df[c] = df[c].astype(float)
+                    strat_results = run_all_strategies(df, capital=capital)
+                    best = max(strat_results, key=lambda x: x['total_return_pct'])
+                    regime = detect_regime(df)
+            except Exception:
+                pass
+
+            result = {
                 'ticker': ticker,
                 'strategies': strategies,
                 'has_signal': all_pass,
                 'signal_reasons': combined_reasons,
-                'signal_details': combined_details
-            })
+                'signal_details': combined_details,
+                'regime': regime,
+            }
+
+            # Add price and volume ratio from first strategy's details
+            first_strategy = strategies[0]
+            if combined_details.get(first_strategy):
+                result['close'] = combined_details[first_strategy].get('price')
+                result['vol_ratio'] = combined_details[first_strategy].get('vr')
+
+            # Add backtest results
+            if best:
+                result['best_strategy'] = best['strategy']
+                result['best_return'] = best['total_return_pct']
+                result['win_rate'] = best['win_rate']
+                result['sharpe'] = best.get('sharpe', 0)
+                result['best_trades'] = best.get('total_trades', 0)
+                result['profitable'] = bool(best['total_return_pct'] > 0)
+
+            results.append(result)
+
+        # Load WF scores
+        wf_map = {}
+        try:
+            conn_wf = sqlite3.connect(DB_PATH)
+            rows = conn_wf.execute("""
+                SELECT ticker, MAX(weighted_score) as best_wf_score
+                FROM wf_scores
+                GROUP BY ticker
+            """).fetchall()
+            conn_wf.close()
+            wf_map = {r[0]: r[1] for r in rows}
+        except Exception:
+            pass
+
+        # Add WF scores
+        for r in results:
+            if r['ticker'] in wf_map:
+                r['wf_score'] = wf_map[r['ticker']]
+
         # Attach flow for intersection results
         include_flow = body.get('include_flow', True)
         flow_threshold = body.get('flow_threshold', 2)
         results = attach_flow_data(results, include_flow, flow_threshold)
+
+        # Return early for intersection mode
+        profitable = [r for r in results if r.get('profitable', False)]
+        tickers_with_signal = len([r for r in results if r.get('has_signal', False)])
+
+        return jsonify({
+            'success': True,
+            'total': len(results),
+            'profitable': len(profitable),
+            'results': results,
+            'summary': {
+                'total_tickers_scanned': len(tickers),
+                'tickers_with_signal': tickers_with_signal,
+                'tickers_displayed': len(results),
+                'filter_mode': filter_mode,
+                'strategies': strategies,
+                'intersection_mode': True
+            },
+            'multi_strategy': len(strategies) > 1,
+            'intersection_mode': True
+        })
     else:
-        # UNION: group by strategy (old behavior)
+        # UNION: group by strategy - include backtest metrics
+        from engine.walkforward_multi import run_all_strategies
+        from engine.regime_filter import detect_regime
+        capital = float(body.get('capital', 50_000_000))
         results_by_strategy = {s: [] for s in strategies}
-        
+
         for ticker, signals in ticker_signals.items():
+            # Fetch data once per ticker
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
+                conn.close()
+                if len(df) < 60:
+                    continue
+                for c in ['open','high','low','close','volume']:
+                    df[c] = df[c].astype(float)
+                strat_results = run_all_strategies(df, capital=capital)
+                best = max(strat_results, key=lambda x: x['total_return_pct'])
+                regime = detect_regime(df)
+            except Exception:
+                best = None
+                regime = "UNCERTAIN"
+
             for strategy in strategies:
                 if strategy in signals:
                     sig = signals[strategy]
                     if filter_mode == 'signals_only' and not sig['has_signal']:
                         continue
-                    
-                    results_by_strategy[strategy].append({
+
+                    result = {
                         'ticker': ticker,
                         'strategy': strategy,
                         'has_signal': sig['has_signal'],
                         'signal_reason': sig['reason'],
-                        'signal_details': sig['details']
-                    })
-        
+                        'signal_details': sig['details'],
+                        'regime': regime,
+                    }
+
+                    # Add price and volume ratio
+                    if sig['details']:
+                        result['close'] = sig['details'].get('price')
+                        result['vol_ratio'] = sig['details'].get('vr')
+
+                    # Add backtest results
+                    if best:
+                        result['best_strategy'] = best['strategy']
+                        result['best_return'] = best['total_return_pct']
+                        result['win_rate'] = best['win_rate']
+                        result['sharpe'] = best.get('sharpe', 0)
+                        result['best_trades'] = best.get('total_trades', 0)
+                        result['profitable'] = bool(best['total_return_pct'] > 0)
+
+                    results_by_strategy[strategy].append(result)
+
+        # Load WF scores
+        wf_map = {}
+        try:
+            conn_wf = sqlite3.connect(DB_PATH)
+            rows = conn_wf.execute("""
+                SELECT ticker, MAX(weighted_score) as best_wf_score
+                FROM wf_scores
+                GROUP BY ticker
+            """).fetchall()
+            conn_wf.close()
+            wf_map = {r[0]: r[1] for r in rows}
+        except Exception:
+            pass
+
+        # Add WF scores to all results
+        for strategy_results in results_by_strategy.values():
+            for r in strategy_results:
+                if r['ticker'] in wf_map:
+                    r['wf_score'] = wf_map[r['ticker']]
+
         # Attach flow for union results
         include_flow = body.get('include_flow', True)
         flow_threshold = body.get('flow_threshold', 2)
@@ -403,7 +728,7 @@ def api_multi_quick_scan():
                 include_flow,
                 flow_threshold
             )
-        
+
         return jsonify({
             'success': True,
             'results': results_by_strategy,
@@ -417,102 +742,7 @@ def api_multi_quick_scan():
             },
             'multi_strategy': True
         })
-    
-    # INTERSECTION mode summary
-    tickers_with_all_signals = len([r for r in results if r['has_signal']])
-    
-    return jsonify({
-        'success': True,
-        'results': results,
-        'summary': {
-            'total_tickers_scanned': len(tickers),
-            'tickers_with_all_signals': tickers_with_all_signals,
-            'tickers_displayed': len(results),
-            'filter_mode': filter_mode,
-            'strategies': strategies,
-            'intersection_mode': True
-        },
-        'multi_strategy': len(strategies) > 1,
-        'intersection_mode': True
-    })
 
-def api_multi_quick_scan():
-    """Quick scan - support multiple strategies"""
-    import sqlite3, pandas as pd
-    from engine.strategies import check_current_entry_signal
-    
-    body = request.get_json(force=True)
-    strategies = body.get('strategies', ['vol_weighted'])
-    if isinstance(strategies, str):
-        strategies = [strategies]
-    filter_mode = body.get('filter_mode', 'all')
-    
-    conn = sqlite3.connect(DB_PATH)
-    tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker').fetchall()]
-    conn.close()
-    
-    results_by_strategy = {}
-    
-    for strategy in strategies:
-        strategy_results = []
-        
-        for ticker in tickers:
-            try:
-                conn = sqlite3.connect(DB_PATH)
-                df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
-                conn.close()
-
-                if len(df) < 20:
-                    continue
-
-                for c in ['open','high','low','close','volume']:
-                    df[c] = df[c].astype(float)
-
-                signal_check = check_current_entry_signal(ticker, strategy, df)
-                
-                if filter_mode == 'signals_only' and not signal_check['has_signal']:
-                    continue
-                
-                strategy_results.append({
-                    'ticker': ticker,
-                    'strategy': strategy,
-                    'has_signal': signal_check['has_signal'],
-                    'signal_reason': signal_check['reason'],
-                    'signal_details': signal_check['details']
-                })
-            except Exception as e:
-                print(f"Error {ticker} {strategy}: {e}")
-                continue
-        
-        results_by_strategy[strategy] = strategy_results
-    
-    total_signals = sum(len(results) for results in results_by_strategy.values())
-    
-    if len(strategies) == 1:
-        final_results = results_by_strategy[strategies[0]]
-        summary = {
-            'total_tickers_scanned': len(tickers),
-            'tickers_with_signal': len(final_results),
-            'tickers_displayed': len(final_results),
-            'filter_mode': filter_mode,
-            'strategies': strategies
-        }
-    else:
-        final_results = results_by_strategy
-        summary = {
-            'total_tickers_scanned': len(tickers),
-            'total_signals': total_signals,
-            'filter_mode': filter_mode,
-            'strategies': strategies,
-            'by_strategy': {s: len(results_by_strategy[s]) for s in strategies}
-        }
-    
-    return jsonify({
-        'success': True,
-        'results': final_results,
-        'summary': summary,
-        'multi_strategy': len(strategies) > 1
-    })
 
 @app.route("/api/signals/today", methods=["GET"])
 def api_signals_today():
@@ -524,19 +754,103 @@ def api_run_scan():
     signals = daily_signal_scan()
     return jsonify({"count": len(signals), "signals": signals})
 
+
+@app.route('/api/screener/swing_onset', methods=['POST'])
+def api_swing_onset():
+    """
+    Swing-trend onset screener.
+    Body: { "min_score": 60, "tickers": ["BBCA",...] (optional), "include_flow": true }
+    Returns ranked list of candidates entering a new uptrend.
+    """
+    import sqlite3, pandas as pd
+    from engine.swing_screener import score_swing_onset
+
+    body = request.get_json(force=True) or {}
+    min_score   = int(body.get('min_score', 60))
+    include_flow = bool(body.get('include_flow', True))
+    requested   = body.get('tickers') or []
+
+    conn = sqlite3.connect(DB_PATH)
+    if requested:
+        tickers = [t.upper() for t in requested]
+    else:
+        tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker').fetchall()]
+    conn.close()
+
+    # Optional flow batch
+    flow_map = {}
+    if include_flow:
+        try:
+            flow_map = get_flow_batch(tickers, token=None, delay=0.8) or {}
+        except Exception:
+            flow_map = {}
+
+    results = []
+    for ticker in tickers:
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            df = pd.read_sql('SELECT date, open, high, low, close, volume FROM ohlcv WHERE ticker=? ORDER BY date ASC',
+                             conn, params=(ticker,))
+            conn.close()
+            if len(df) < 60:
+                continue
+            for c in ['open','high','low','close','volume']:
+                df[c] = df[c].astype(float)
+
+            flow_row = None
+            if ticker in flow_map:
+                flow_row = {'composite_score': flow_map[ticker].get('score')}
+
+            s = score_swing_onset(df, flow_row=flow_row)
+            if s['score'] < min_score and s['verdict'] != 'WATCH':
+                continue
+            results.append({
+                'ticker': ticker,
+                'score': s['score'],
+                'verdict': s['verdict'],
+                'components': s['components'],
+                'close': s['close'],
+                'initial_sl_hint': s['initial_sl_hint'],
+                'tp_projection': s['tp_projection'],
+                'atr14': s['atr14'],
+                'flow': flow_map.get(ticker),
+            })
+        except Exception as e:
+            results.append({'ticker': ticker, 'error': str(e)})
+
+    results.sort(key=lambda r: r.get('score', 0), reverse=True)
+    onsets = [r for r in results if r.get('verdict') == 'SWING_ONSET']
+    watches = [r for r in results if r.get('verdict') == 'WATCH']
+    return jsonify({
+        'min_score': min_score,
+        'total_scanned': len(tickers),
+        'n_onsets': len(onsets),
+        'n_watch': len(watches),
+        'onsets': onsets,
+        'watch': watches,
+    })
+
+
 @app.route('/api/paper/open', methods=['POST'])
 def api_paper_open():
     from paper_trade import open_trade, init_paper_table
     init_paper_table()
     body = request.get_json(force=True)
-    return jsonify(open_trade(body['ticker'], float(body['entry_price'])))
+    kwargs = {}
+    if body.get('sl_price'):
+        kwargs['sl_price'] = float(body['sl_price'])
+    if body.get('tp_price'):
+        kwargs['tp_price'] = float(body['tp_price'])
+    if body.get('strategy'):
+        kwargs['strategy'] = body['strategy']
+    return jsonify(open_trade(body['ticker'], float(body['entry_price']), **kwargs))
 
 @app.route('/api/paper/close', methods=['POST'])
 def api_paper_close():
     from paper_trade import close_trade
     from scheduler import send_telegram
     body = request.get_json(force=True)
-    result = close_trade(int(body['trade_id']), float(body['exit_price']), body.get('reason','MANUAL'))
+    result = close_trade(int(body['trade_id']), float(body['exit_price']), body.get('reason','MANUAL'), notify=False)
     if 'pnl_rp' in result:
         emoji = "🟢" if result['pnl_rp'] >= 0 else "🔴"
         send_telegram(f"{emoji} Paper Trade Closed - {result['ticker']} | {result['exit_reason']} | P&L: Rp {result['pnl_rp']:,} ({result['pnl_pct']:+.2f}%)")
@@ -810,6 +1124,405 @@ def check_flow():
         }), 500
 
 
+@app.route('/api/broker-flow/<ticker>', methods=['GET'])
+def api_broker_flow(ticker):
+    import sqlite3
+    from datetime import date
+    ticker = ticker.upper()
+    trade_date = request.args.get('date', None)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+
+    # Latest date if not specified
+    if not trade_date:
+        row = conn.execute(
+            "SELECT MAX(trade_date) FROM broker_flow WHERE ticker=?", (ticker,)
+        ).fetchone()
+        trade_date = row[0] if row and row[0] else str(date.today())
+
+    brokers = conn.execute("""
+        SELECT broker_code, side, lot, lot_value, value, value_total,
+               avg_price, freq, investor_type
+        FROM broker_flow
+        WHERE ticker=? AND trade_date=?
+        ORDER BY side, ABS(lot) DESC
+    """, (ticker, trade_date)).fetchall()
+
+    bandar = conn.execute("""
+        SELECT avg_price, total_buyer, total_seller, net_broker_count,
+               broker_accdist, value, volume,
+               top1_accdist, top3_accdist, top5_accdist, top10_accdist, avg_accdist
+        FROM bandar_detector
+        WHERE ticker=? AND trade_date=?
+    """, (ticker, trade_date)).fetchone()
+
+    # Available dates for this ticker
+    dates = [r[0] for r in conn.execute(
+        "SELECT DISTINCT trade_date FROM broker_flow WHERE ticker=? ORDER BY trade_date DESC LIMIT 30",
+        (ticker,)
+    ).fetchall()]
+    conn.close()
+
+    buy_rows = [dict(r) for r in brokers if r['side'] == 'BUY']
+    sell_rows = [dict(r) for r in brokers if r['side'] == 'SELL']
+
+    return jsonify({
+        'ticker': ticker,
+        'trade_date': trade_date,
+        'available_dates': dates,
+        'bandar': dict(bandar) if bandar else None,
+        'buyers': buy_rows,
+        'sellers': sell_rows,
+    })
+
+
+@app.route('/api/broker-flow/dates/<ticker>', methods=['GET'])
+def api_broker_flow_dates(ticker):
+    import sqlite3
+    ticker = ticker.upper()
+    conn = sqlite3.connect(DB_PATH)
+    dates = [r[0] for r in conn.execute(
+        "SELECT DISTINCT trade_date FROM broker_flow WHERE ticker=? ORDER BY trade_date DESC LIMIT 30",
+        (ticker.upper(),)
+    ).fetchall()]
+    conn.close()
+    return jsonify({'ticker': ticker, 'dates': dates})
+
+
+# ==================== TELEGRAM WEBHOOK ====================
+
+def handle_telegram_message(message):
+    """Process Telegram messages and commands."""
+    chat_id = message.get('chat', {}).get('id')
+    text = message.get('text', '').lower().strip()
+    
+    if not chat_id:
+        return
+    
+    # Extract command (text starting with /)
+    if text.startswith('/'):
+        command = text.split()[0][1:]  # Remove '/'
+        
+        if command == 'start':
+            send_telegram_reply(chat_id, "🤖 *IDX Walkforward Bot Activated*\n\nAvailable commands:\n/status - Current trading status\n/help - Show help")
+        elif command == 'status':
+            handle_status_command(chat_id)
+        elif command == 'help':
+            send_telegram_reply(chat_id, 
+                "📋 *Available Commands:*\n\n"
+                "/status - Get trading status\n"
+                "/signals - Recent signals\n"
+                "/flow - Flow confirmation status\n"
+                "/help - Show this help message")
+        elif command == 'signals':
+            handle_signals_command(chat_id)
+        elif command == 'flow':
+            handle_flow_command(chat_id)
+        else:
+            send_telegram_reply(chat_id, f"❌ Unknown command: /{command}")
+    else:
+        # Echo non-command messages
+        if text:
+            send_telegram_reply(chat_id, f"📝 You said: {text}")
+
+def send_telegram_reply(chat_id, text):
+    """Send a reply via Telegram."""
+    if "ISI_" in TELEGRAM_TOKEN:
+        print(f"[Telegram skip] ChatID:{chat_id} - {text}")
+        return
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        requests.post(url, json={
+            "chat_id": chat_id, 
+            "text": text, 
+            "parse_mode": "Markdown"
+        }, timeout=10)
+    except Exception as e:
+        print(f"Telegram reply error: {e}")
+
+def handle_status_command(chat_id):
+    """Get current trading status."""
+    try:
+        import sqlite3
+        conn = sqlite3.connect(DB_PATH)
+        
+        # Get recent trades
+        recent = conn.execute(
+            "SELECT COUNT(*) FROM ohlcv"
+        ).fetchone()[0]
+        
+        # Get total tickers
+        tickers_count = conn.execute(
+            "SELECT COUNT(DISTINCT ticker) FROM ohlcv"
+        ).fetchone()[0]
+        
+        conn.close()
+        
+        status_msg = f"📊 *Trading Status*\n\nTickers: {tickers_count}\nData points: {recent}\n✅ System Active"
+        send_telegram_reply(chat_id, status_msg)
+    except Exception as e:
+        send_telegram_reply(chat_id, f"❌ Error getting status: {str(e)}")
+
+def handle_signals_command(chat_id):
+    """Get recent signals."""
+    try:
+        import sqlite3, pandas as pd
+        from datetime import datetime, timedelta
+        
+        conn = sqlite3.connect(DB_PATH)
+        
+        # Get tickers with recent data
+        tickers = [r[0] for r in conn.execute(
+            "SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker LIMIT 10"
+        ).fetchall()]
+        
+        conn.close()
+        
+        signals_msg = f"📈 *Recent Signals*\n\nScanned: {len(tickers)} tickers\n✅ Scanning active..."
+        send_telegram_reply(chat_id, signals_msg)
+    except Exception as e:
+        send_telegram_reply(chat_id, f"❌ Error getting signals: {str(e)}")
+
+def handle_flow_command(chat_id):
+    """Get flow confirmation status."""
+    try:
+        import sqlite3
+        conn = sqlite3.connect(DB_PATH)
+        
+        # Get any flow data available
+        flow_count = conn.execute(
+            "SELECT COUNT(*) FROM broker_flow"
+        ).fetchone()[0]
+        
+        conn.close()
+        
+        flow_msg = f"💰 *Flow Status*\n\nBroker flow records: {flow_count}\n✅ Flow tracking active"
+        send_telegram_reply(chat_id, flow_msg)
+    except Exception as e:
+        send_telegram_reply(chat_id, f"❌ Error getting flow: {str(e)}")
+
+@app.route('/telegram/updates', methods=['POST'])
+def telegram_webhook():
+    """Handle Telegram webhook updates."""
+    try:
+        data = request.get_json()
+        
+        if data and 'message' in data:
+            message = data['message']
+            handle_telegram_message(message)
+        elif data and 'callback_query' in data:
+            # Handle button clicks
+            callback = data['callback_query']
+            chat_id = callback['from']['id']
+            send_telegram_reply(chat_id, "Button clicked! Coming soon...")
+        
+        return jsonify({'ok': True}), 200
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/telegram/setup', methods=['GET'])
+def setup_telegram_webhook():
+    """Setup Telegram in polling mode (local development friendly)."""
+    try:
+        # Switch to polling mode (doesn't require HTTPS)
+        remove_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/deleteWebhook"
+        response = requests.post(remove_url, json={"drop_pending_updates": True}, timeout=10)
+        
+        result = response.json()
+        
+        if result.get('ok'):
+            global telegram_polling_active
+            telegram_polling_active = True
+            msg = f"✅ Telegram polling mode activated!\n\nPolling updates at /telegram/start-polling"
+            send_telegram(msg)
+            return jsonify({
+                'success': True,
+                'message': 'Telegram polling mode activated',
+                'mode': 'polling',
+                'instructions': 'Polling is now active and running in background',
+                'webhook_url': None
+            }), 200
+        else:
+            error = result.get('description', 'Unknown error')
+            return jsonify({
+                'success': False,
+                'error': error
+            }), 400
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+# Global polling flag
+telegram_polling_active = False
+telegram_last_update_id = 0
+
+
+def poll_telegram_updates_once():
+    """Fetch and process new Telegram updates once."""
+    global telegram_last_update_id
+    
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
+    params = {
+        'offset': telegram_last_update_id + 1,
+        'timeout': 2,
+        'allowed_updates': ['message', 'callback_query']
+    }
+    response = requests.get(url, params=params, timeout=10)
+    result = response.json()
+    
+    updates = []
+    if result.get('ok'):
+        updates = result.get('result', [])
+        for update in updates:
+            update_id = update.get('update_id')
+            if update_id > telegram_last_update_id:
+                telegram_last_update_id = update_id
+            
+            if 'message' in update:
+                handle_telegram_message(update['message'])
+            elif 'callback_query' in update:
+                callback = update['callback_query']
+                chat_id = callback['from']['id']
+                send_telegram_reply(chat_id, "Button clicked! Coming soon...")
+    
+    return updates
+
+
+def telegram_poller_loop():
+    """Continuously poll Telegram for new updates when polling is active."""
+    while True:
+        if telegram_polling_active:
+            try:
+                updates = poll_telegram_updates_once()
+                if updates:
+                    print(f"[Telegram poll] {len(updates)} new updates processed")
+            except Exception as e:
+                print(f"[Telegram poll error] {e}")
+        time.sleep(3)
+
+
+@app.route('/telegram/start-polling', methods=['GET'])
+def start_telegram_polling():
+    """Start polling for Telegram updates."""
+    global telegram_polling_active
+    
+    telegram_polling_active = True
+    
+    return jsonify({
+        'success': True,
+        'message': 'Telegram polling started',
+        'status': 'polling',
+        'note': 'Polling will run in the background and process updates automatically'
+    }), 200
+
+@app.route('/telegram/stop-polling', methods=['GET'])
+def stop_telegram_polling():
+    """Stop polling for Telegram updates."""
+    global telegram_polling_active
+    
+    telegram_polling_active = False
+    
+    return jsonify({
+        'success': True,
+        'message': 'Telegram polling stopped'
+    }), 200
+
+@app.route('/telegram/poll-updates', methods=['GET'])
+def telegram_poll_updates():
+    """Poll for new Telegram updates."""
+    global telegram_last_update_id
+    
+    try:
+        if not telegram_polling_active:
+            return jsonify({
+                'success': True,
+                'updates': [],
+                'note': 'Polling not active. Call /telegram/start-polling first'
+            }), 200
+        
+        # Get updates
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
+        params = {
+            'offset': telegram_last_update_id + 1,
+            'timeout': 2,
+            'allowed_updates': ['message', 'callback_query']
+        }
+        response = requests.get(url, params=params, timeout=10)
+        result = response.json()
+        
+        updates = []
+        if result.get('ok'):
+            updates = result.get('result', [])
+            
+            # Process each update
+            for update in updates:
+                update_id = update.get('update_id')
+                if update_id > telegram_last_update_id:
+                    telegram_last_update_id = update_id
+                
+                # Handle message
+                if 'message' in update:
+                    message = update['message']
+                    handle_telegram_message(message)
+                
+                # Handle callback query
+                elif 'callback_query' in update:
+                    callback = update['callback_query']
+                    chat_id = callback['from']['id']
+                    send_telegram_reply(chat_id, "Button clicked! Coming soon...")
+        
+        return jsonify({
+            'success': True,
+            'updates_received': len(updates),
+            'last_update_id': telegram_last_update_id,
+            'updates': updates
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/telegram/status', methods=['GET'])
+def telegram_webhook_status():
+    """Check Telegram polling status."""
+    try:
+        get_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getWebhookInfo"
+        response = requests.post(get_url, timeout=10)
+        info = response.json()
+        
+        if info.get('ok'):
+            webhook_info = info.get('result', {})
+            return jsonify({
+                'success': True,
+                'mode': 'polling',
+                'polling_active': telegram_polling_active,
+                'last_update_id': telegram_last_update_id,
+                'webhook_url': webhook_info.get('url', 'Not set (using polling)'),
+                'webhook_active': webhook_info.get('url') != '',
+                'pending_update_count': webhook_info.get('pending_update_count', 0),
+                'endpoints': {
+                    'setup': 'GET /telegram/setup',
+                    'start_polling': 'GET /telegram/start-polling',
+                    'stop_polling': 'GET /telegram/stop-polling',
+                    'poll': 'GET /telegram/poll-updates',
+                    'status': 'GET /telegram/status'
+                }
+            }), 200
+        else:
+            return jsonify({'success': False, 'error': info.get('description')}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 if __name__ == "__main__":
+    init_screener_tables()
+    init_flow_db()
     start_scheduler()
-    app.run(host="0.0.0.0", port=5002, debug=False)
+    poller_thread = threading.Thread(target=telegram_poller_loop, daemon=True)
+    poller_thread.start()
+    app.run(host="0.0.0.0", port=5001, debug=False)

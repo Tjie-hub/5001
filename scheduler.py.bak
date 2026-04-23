@@ -1,0 +1,324 @@
+
+import sqlite3
+import pandas as pd
+import requests
+from datetime import datetime
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import pytz
+
+WIB = pytz.timezone("Asia/Jakarta")
+
+# ── Isi token dan chat_id Telegram kamu ──
+TELEGRAM_TOKEN   = "8790169868:AAE6qno0LrxxIdFydSKSLKhD8EPUzevPIFo"
+TELEGRAM_CHAT_ID = "5919142813"
+
+DB_PATH = "/home/tjiesar/idx-walkforward/data/walkforward.db"
+
+def send_telegram(msg: str):
+    if "ISI_" in TELEGRAM_TOKEN:
+        print(f"[Telegram skip] {msg}")
+        return
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "HTML"}, timeout=10)
+    except Exception as e:
+        print(f"Telegram error: {e}")
+
+def get_all_tickers():
+    conn = sqlite3.connect(DB_PATH)
+    tickers = [r[0] for r in conn.execute("SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker").fetchall()]
+    conn.close()
+    return tickers
+
+def fetch_latest():
+    """Fetch OHLCV terbaru untuk semua ticker."""
+    from data.fetcher import fetch_ticker
+    tickers = get_all_tickers()
+    print(f"[{datetime.now(WIB).strftime('%H:%M')}] Fetching {len(tickers)} tickers...")
+    for t in tickers:
+        fetch_ticker(t, period="5d")
+    print(f"[{datetime.now(WIB).strftime('%H:%M')}] Fetch selesai.")
+
+def refresh_wf_scores():
+    """Run walk-forward semua ticker & simpan ke wf_scores table."""
+    from engine.walkforward_multi import run_walk_forward
+    from datetime import datetime as dt
+
+    tickers = get_all_tickers()
+    conn = sqlite3.connect(DB_PATH)
+    now_str = dt.now().strftime("%Y-%m-%d %H:%M")
+    updated = 0
+    for ticker in tickers:
+        try:
+            df = pd.read_sql(
+                f'SELECT * FROM ohlcv WHERE ticker="{ticker}" ORDER BY date ASC', conn)
+            if len(df) < 60:
+                continue
+            for c in ["open","high","low","close","volume"]:
+                df[c] = df[c].astype(float)
+            result = run_walk_forward(df)
+            if "error" in result:
+                continue
+            ranked = result.get("ranked", [])
+            for metrics in ranked:
+                strategy = metrics.get("strategy", "")
+                if not strategy:
+                    continue
+                conn.execute(
+                    "INSERT OR REPLACE INTO wf_scores "
+                    "(ticker,strategy,consistency_pct,avg_return_pct,avg_sharpe,weighted_score,windows_tested,updated_at) "
+                    "VALUES (?,?,?,?,?,?,?,?)",
+                    (ticker, strategy,
+                     metrics.get("consistency_pct", 0),
+                     float(metrics.get("avg_return_pct", 0)),
+                     float(metrics.get("avg_sharpe", 0)),
+                     float(metrics.get("score", 0)),
+                     metrics.get("windows_tested", 0),
+                     now_str))
+            updated += 1
+        except Exception as e:
+            print(f"[WF] {ticker} error: {e}")
+    conn.commit()
+    conn.close()
+    print(f"[WF] refresh_wf_scores selesai: {updated}/{len(tickers)} ticker diupdate")
+
+
+def calc_votes(df):
+    last = df.iloc[-1]
+    votes = 1
+    labels = ["MOM"]
+    try:
+        tp_vol = (df["close"].tail(20) * df["volume"].tail(20)).sum()
+        tot_vol = df["volume"].tail(20).sum()
+        vwma20 = tp_vol / tot_vol if tot_vol > 0 else 0
+        if last["close"] > vwma20:
+            votes += 1
+            labels.append("VWMA")
+    except:
+        pass
+    try:
+        avg5 = df["volume"].tail(6).iloc[:-1].mean()
+        if last["volume"] > avg5 * 1.5:
+            votes += 1
+            labels.append("VOL5")
+    except:
+        pass
+    try:
+        ma20 = df["close"].tail(20).mean()
+        if last["close"] > ma20:
+            votes += 1
+            labels.append("MA20")
+    except:
+        pass
+    return votes, labels
+
+
+def check_fundamental(ticker):
+    """Check stockbit_keystats: PE>0, ROE>5, PBV<5. Returns (pass, reason)."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        row = conn.execute(
+            'SELECT pe_ttm, pbv, roe FROM stockbit_keystats WHERE ticker=? ORDER BY fetch_date DESC LIMIT 1',
+            (ticker,)
+        ).fetchone()
+        conn.close()
+        if not row:
+            return True, 'no_data'  # no keystats = allow (don't block)
+        pe, pbv, roe = row
+        if pe is not None and pe <= 0:
+            return False, f'PE={pe}'
+        if roe is not None and roe < 5:
+            return False, f'ROE={roe}'
+        if pbv is not None and pbv > 5:
+            return False, f'PBV={pbv}'
+        return True, 'OK'
+    except:
+        return True, 'db_error'
+
+def scan_momentum_signals():
+    """Scan semua ticker untuk Momentum Following signal hari ini."""
+    from engine.strategies import calc_vol_ratio
+
+    STRATEGY    = "Momentum Following"
+    MIN_CONSIST = 50.0
+    BLACKLIST   = 33.0
+
+    tickers = get_all_tickers()
+    wf_map = {}
+    try:
+        conn_wf = sqlite3.connect(DB_PATH)
+        rows = conn_wf.execute(
+            "SELECT ticker, consistency_pct, weighted_score FROM wf_scores WHERE strategy=?",
+            (STRATEGY,)
+        ).fetchall()
+        conn_wf.close()
+        wf_map = {r[0]: {"consistency_pct": r[1], "weighted_score": r[2]} for r in rows}
+    except:
+        pass
+
+    signals = []
+    for ticker in tickers:
+        wf = wf_map.get(ticker)
+        if wf and wf["consistency_pct"] < BLACKLIST:
+            continue
+        # Fundamental filter
+        fund_ok, fund_reason = check_fundamental(ticker)
+        if not fund_ok:
+            continue
+
+        # Flow confirmation filter
+        from flow_filter import flow_confirms_signal
+        flow_ok, flow_reason, flow_data = flow_confirms_signal(ticker, "BUY")
+        if not flow_ok:
+            continue
+
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            df = pd.read_sql(
+                f'SELECT * FROM ohlcv WHERE ticker="{ticker}" ORDER BY date ASC', conn)
+            conn.close()
+            if len(df) < 25:
+                continue
+            for c in ["open","high","low","close","volume"]:
+                df[c] = df[c].astype(float)
+            vr     = calc_vol_ratio(df)
+            streak = (df["close"] > df["close"].shift(1)) & (df["close"].shift(1) > df["close"].shift(2))
+            sig    = streak & (vr > 1.3)
+            if sig.iloc[-1]:
+                last  = df.iloc[-1]
+                prev  = df.iloc[-2]
+                chg   = (last["close"] - prev["close"]) / prev["close"] * 100
+                consistency = wf["consistency_pct"] if wf else None
+                weighted    = wf["weighted_score"]   if wf else 0
+                if wf and consistency < MIN_CONSIST:
+                    continue
+                votes, vote_labels = calc_votes(df)
+                try:
+                    from engine.regime_filter import RegimeClassifier
+                    _clf = RegimeClassifier()
+                    _clf.train(df)
+                    regime_info = _clf.predict(df)
+                except:
+                    regime_info = None
+                # Regime filter: skip UNCERTAIN
+                if regime_info and regime_info[0] == "UNCERTAIN":
+                    continue
+                signals.append({
+                    "ticker":      ticker,
+                    "close":       round(last["close"]),
+                    "vol_ratio":   round(float(vr.iloc[-1]), 2),
+                    "chg_pct":     round(chg, 2),
+                    "date":        str(last["date"])[:10],
+                    "consistency": consistency,
+                    "wf_score":    weighted,
+                    "votes":       votes,
+                    "vote_labels": vote_labels,
+                    "flow_score":  flow_data["score"] if flow_data else None,
+                    "flow_sm":     flow_data["smart_money"] if flow_data else None,
+                    "flow_reason": flow_reason,
+                    "regime": regime_info[0] if regime_info else "N/A",
+                    "regime_conf": regime_info[1] if regime_info else 0,
+                })
+        except:
+            pass
+
+    signals.sort(key=lambda x: x["wf_score"], reverse=True)
+    return signals
+
+def daily_signal_scan():
+    """Job harian: fetch data lalu scan signal."""
+    print(f"[{datetime.now(WIB).strftime('%H:%M')}] Daily scan dimulai...")
+    
+    # 1. Fetch data terbaru
+    fetch_latest()
+    
+    # 2. Scan signal
+    signals = scan_momentum_signals()
+    
+    # 3. Kirim Telegram
+    now = datetime.now(WIB).strftime("%d/%m/%Y %H:%M")
+    if signals:
+        msg = f"📊 <b>Momentum Signal — {now}</b>\n\n"
+        from paper_trade import calc_swing_tp
+        for s in signals:
+            tp = calc_swing_tp(s['ticker'], s['close'])
+            sl = round(s['close'] * 0.975)
+            tp_pct = round((tp / s['close'] - 1) * 100, 1)
+            star = '⭐ ' if s.get('votes', 0) >= 4 else ''
+            vlbl = '+'.join(s.get('vote_labels', []))
+            msg += f"{star}🟢 <b>{s['ticker']}</b> — Rp {s['close']:,}\n"
+            msg += f"   📈 TP: Rp {tp:,} (+{tp_pct}%)\n"
+            msg += f"   🛑 SL: Rp {sl:,} (-2.5%)\n"
+            msg += f"   Vol: {s['vol_ratio']}x | Chg: {s['chg_pct']:+.2f}%\n"
+            flow_emoji = chr(0x1F7E2) if (s.get("flow_score") or 0) >= 3 else chr(0x1F7E1) if (s.get("flow_score") or 0) >= 0 else chr(0x1F534)
+            msg += f"   {flow_emoji} Flow: {s.get('flow_reason','N/A')}\n"
+            regime = s.get('regime', 'N/A')
+            regime_conf = s.get('regime_conf', 0)
+            regime_emoji = '📈' if regime == 'TRENDING' else '📉' if regime == 'SIDEWAYS' else '❓'
+            msg += f"   {regime_emoji} Regime: {regime} ({regime_conf:.0%})\n"
+            msg += f"   🗳 Votes: {s.get('votes',0)}/4 [{vlbl}]\n\n"
+        msg += f"Total: {len(signals)} sinyal hari ini"
+    else:
+        msg = f"📊 <b>Momentum Signal — {now}</b>\n\nTidak ada sinyal Momentum hari ini."
+    
+    send_telegram(msg)
+    print(f"[{datetime.now(WIB).strftime('%H:%M')}] Scan selesai. {len(signals)} signals ditemukan.")
+
+    # ── AUTO-OPEN PAPER TRADE ──
+    if signals:
+        try:
+            import sys, os
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from paper_trade import open_trade, get_open_trades, get_config
+
+            cfg      = get_config()
+            max_open = int(cfg["max_open"])
+            opened   = get_open_trades()
+
+            auto_opened = []
+            for s in signals:
+                if len(opened) >= max_open:
+                    print(f"[AutoTrade] Max posisi ({max_open}) tercapai, skip {s['ticker']}")
+                    break
+                if any(t["ticker"] == s["ticker"] for t in opened):
+                    print(f"[AutoTrade] {s['ticker']} sudah ada posisi terbuka, skip")
+                    continue
+
+                result = open_trade(s["ticker"], s["close"])
+                if "error" in result:
+                    print(f"[AutoTrade] {s['ticker']} error: {result['error']}")
+                else:
+                    auto_opened.append(result)
+                    opened.append(result)  # update local list
+                    notif = (
+                        f"📝 <b>Auto Paper Trade Opened</b>\n\n"
+                        f"🟢 <b>{result['ticker']}</b> @ Rp {result['entry_price']:,}\n"
+                        f"   📈 TP: Rp {result['tp_price']:,}\n"
+                        f"   🛑 SL: Rp {result['sl_price']:,}\n"
+                        f"   Lot: {result['lots']} | Modal: Rp {result['capital_used']:,.0f}"
+                    )
+                    send_telegram(notif)
+                    print(f"[AutoTrade] Opened: {result['ticker']} @ {result['entry_price']}")
+
+            if auto_opened:
+                print(f"[AutoTrade] {len(auto_opened)} trade dibuka otomatis.")
+            else:
+                print(f"[AutoTrade] Tidak ada trade baru dibuka.")
+        except Exception as e:
+            print(f"[AutoTrade] Error: {e}")
+
+    return signals
+
+def start_scheduler():
+    scheduler = BackgroundScheduler(timezone=WIB)
+    # Fetch + scan setiap hari Senin-Jumat jam 15:35 WIB
+    scheduler.add_job(daily_signal_scan, CronTrigger(
+        day_of_week="mon-fri", hour=15, minute=35, timezone=WIB
+    ), id="daily_scan")
+    # Refresh WF scores setiap Jumat 16:00 WIB
+    scheduler.add_job(refresh_wf_scores, CronTrigger(
+        day_of_week="fri", hour=16, minute=0, timezone=WIB))
+    scheduler.start()
+    print("Scheduler started. Daily scan: Mon-Fri 15:35 WIB | WF refresh: Fri 16:00")
+    return scheduler

@@ -68,6 +68,20 @@ def lot_size(capital: float, price: float, risk_pct: float, sl_pct: float) -> in
     lots = min(lots, max_lots)
     return max(1, lots)
 
+
+def atr_tp_sl(entry: float, atr: float, sl_mult: float = 1.0, min_rr: float = 2.0):
+    """
+    Compute ATR-based TP and SL ensuring minimum R/R ratio.
+    Returns (tp_price, sl_price, tp_pct, sl_pct).
+    """
+    sl_dist = atr * sl_mult
+    sl_price = entry - sl_dist
+    # TP must satisfy minimum R/R
+    tp_price = entry + sl_dist * min_rr
+    tp_pct = (tp_price - entry) / entry
+    sl_pct = sl_dist / entry
+    return tp_price, sl_price, tp_pct, sl_pct
+
 def apply_costs(price: float, side: str) -> float:
     if side == 'BUY':
         return price * (1 + COMMISSION_BUY + SLIPPAGE)
@@ -116,46 +130,53 @@ def apply_filters(df: pd.DataFrame, filters: list) -> pd.Series:
 # ─────────────────────────────────────────────
 
 def run_strategy(df: pd.DataFrame, signals: pd.Series,
-                 tp_pct: float, sl_pct: float,
-                 strategy_name: str,
+                 tp_pct: float = None, sl_pct: float = None,
+                 strategy_name: str = '',
                  initial_capital: float = 50_000_000,
                  risk_per_trade: float = 0.02,
                  trail_sl: bool = False,
-                 filters: list = None) -> dict:
+                 filters: list = None,
+                 atr_sl_mult: float = None,
+                 atr_tp_mult: float = None,
+                 min_rr: float = 2.0) -> dict:
     """
     Generic backtest engine. signals: Series of True/False per bar.
-    Returns dict dengan trades list + equity curve.
+    When atr_sl_mult is provided, uses ATR-based TP/SL per entry (min_rr enforced).
+    Falls back to tp_pct/sl_pct if ATR params not provided.
     """
-    # Apply filters ke signal
     if filters:
         filter_mask = apply_filters(df, filters)
         signals = signals & filter_mask
 
-    capital   = initial_capital
-    equity    = [capital]
-    trades    = []
-    in_trade  = False
+    atr_series = calc_atr(df, 14) if atr_sl_mult is not None else None
+
+    capital     = initial_capital
+    equity      = [capital]
+    trades      = []
+    in_trade    = False
     entry_price = exit_price = 0.0
     entry_date  = ""
     lots        = 0
     peak_price  = 0.0
+    _tp_pct     = tp_pct or 0.04
+    _sl_pct     = sl_pct or 0.02
+    _tp_level   = 0.0
+    _sl_level_base = 0.0
 
     for i in range(1, len(df)):
-        row   = df.iloc[i]
-        prev  = df.iloc[i - 1]
-        date  = str(row['date'])[:10]
+        row  = df.iloc[i]
+        date = str(row['date'])[:10]
 
         if in_trade:
-            hi   = row['high']
-            lo   = row['low']
-            cur  = row['close']
+            hi  = row['high']
+            lo  = row['low']
+            cur = row['close']
 
-            # Update trailing stop
             if trail_sl and row['high'] > peak_price:
                 peak_price = row['high']
 
-            sl_level = (peak_price * (1 - sl_pct)) if trail_sl else (entry_price * (1 - sl_pct))
-            tp_level = entry_price * (1 + tp_pct)
+            sl_level = (peak_price * (1 - _sl_pct)) if trail_sl else _sl_level_base
+            tp_level = _tp_level
 
             exit_reason = None
             if lo <= sl_level:
@@ -169,8 +190,8 @@ def run_strategy(df: pd.DataFrame, signals: pd.Series,
                 exit_reason = 'EOD'
 
             if exit_reason:
-                gross    = (exit_price - entry_price) * lots * 100
-                pnl_pct  = (exit_price - entry_price) / entry_price
+                gross   = (exit_price - entry_price) * lots * 100
+                pnl_pct = (exit_price - entry_price) / entry_price
                 capital += gross
                 trades.append(Trade(
                     entry_date=entry_date, exit_date=date,
@@ -181,11 +202,28 @@ def run_strategy(df: pd.DataFrame, signals: pd.Series,
                 ))
                 in_trade = False
 
-        elif signals.iloc[i - 1]:   # signal dari bar sebelumnya, entry open hari ini
-            raw_entry  = row['open']
+        elif signals.iloc[i - 1]:
+            raw_entry   = row['open']
             entry_price = apply_costs(raw_entry, 'BUY')
-            lots        = lot_size(capital, entry_price, risk_per_trade, sl_pct)
-            cost        = entry_price * lots * 100
+
+            if atr_sl_mult is not None and atr_series is not None:
+                atr_val = atr_series.iloc[i - 1]
+                if pd.isna(atr_val) or atr_val <= 0:
+                    atr_val = entry_price * 0.015  # fallback 1.5%
+                tp_price, sl_price, _tp_pct, _sl_pct = atr_tp_sl(
+                    entry_price, atr_val, atr_sl_mult,
+                    atr_tp_mult / atr_sl_mult if atr_tp_mult else min_rr
+                )
+                _tp_level = tp_price
+                _sl_level_base = sl_price
+            else:
+                _tp_pct = tp_pct
+                _sl_pct = sl_pct
+                _tp_level = entry_price * (1 + _tp_pct)
+                _sl_level_base = entry_price * (1 - _sl_pct)
+
+            lots = lot_size(capital, entry_price, risk_per_trade, _sl_pct)
+            cost = entry_price * lots * 100
             if cost <= capital:
                 in_trade   = True
                 entry_date = date
@@ -209,12 +247,12 @@ def run_strategy(df: pd.DataFrame, signals: pd.Series,
 def strategy_vol_weighted(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None) -> dict:
     """
     Entry: Vol Ratio > 2.0x AND Delta positif (close > open)
-    Exit:  TP +2.0% / SL -1.5%
+    Exit:  SL = ATR×1.0, TP = ATR×2.0 (2:1 R/R minimum)
     """
     vr    = calc_vol_ratio(df, 20)
     delta = calc_delta(df)
     sig   = (vr > 1.8) & (delta > 0) & (df['close'] > df['open'])
-    return run_strategy(df, sig, tp_pct=0.02, sl_pct=0.015,
+    return run_strategy(df, sig, atr_sl_mult=1.0, atr_tp_mult=2.0, min_rr=2.0,
                         strategy_name='Vol-Weighted Entry', initial_capital=capital,
                         filters=filters)
 
@@ -226,13 +264,13 @@ def strategy_vol_weighted(df: pd.DataFrame, capital: float = 50_000_000, filters
 def strategy_momentum(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None) -> dict:
     """
     Entry: 2 hari berturut close > close[-1] + Vol Ratio > 1.3x
-    Exit:  Trailing SL 2% dari peak / SL -2.5% dari entry
+    Exit:  SL = ATR×1.2 (trailing), TP = ATR×2.4 (2:1 R/R minimum)
     """
     vr      = calc_vol_ratio(df, 20)
     streak2 = (df['close'] > df['close'].shift(1)) & \
               (df['close'].shift(1) > df['close'].shift(2))
     sig     = streak2 & (vr > 1.3)
-    return run_strategy(df, sig, tp_pct=0.035, sl_pct=0.025,
+    return run_strategy(df, sig, atr_sl_mult=1.2, atr_tp_mult=2.4, min_rr=2.0,
                         strategy_name='Momentum Following',
                         initial_capital=capital, trail_sl=True,
                         filters=filters)
@@ -245,13 +283,13 @@ def strategy_momentum(df: pd.DataFrame, capital: float = 50_000_000, filters: li
 def strategy_vwap_reversion(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None) -> dict:
     """
     Entry: Close > 1.5% di bawah VWAP + Vol spike (ratio > 1.5x)
-    Exit:  TP = kembali ke VWAP (proxy: +1.5%) / SL -1.0%
+    Exit:  SL = ATR×0.8 (tight mean-rev), TP = ATR×1.6 (2:1 R/R minimum)
     """
     vwap = calc_vwap(df)
     vr   = calc_vol_ratio(df, 20)
-    dist = (df['close'] - vwap) / vwap      # negatif = di bawah VWAP
+    dist = (df['close'] - vwap) / vwap
     sig  = (dist < -0.010) & (vr > 1.3)
-    return run_strategy(df, sig, tp_pct=0.015, sl_pct=0.01,
+    return run_strategy(df, sig, atr_sl_mult=0.8, atr_tp_mult=1.6, min_rr=2.0,
                         strategy_name='VWAP Reversion', initial_capital=capital,
                         filters=filters)
 
@@ -274,7 +312,7 @@ def strategy_conservative(df: pd.DataFrame, capital: float = 50_000_000, filters
     atr_ok   = atr < atr_ma * 1.5   # hindari hari terlalu volatile
 
     sig = (vr > 1.3) & bullish & above_ma & atr_ok
-    return run_strategy(df, sig, tp_pct=0.015, sl_pct=0.01,
+    return run_strategy(df, sig, atr_sl_mult=0.7, atr_tp_mult=1.4, min_rr=2.0,
                         strategy_name='Conservative Confirm', initial_capital=capital,
                         filters=filters)
 
@@ -1267,4 +1305,254 @@ if __name__ == '__main__':
     print(f"\nSignal Check untuk {test_ticker} - Strategy: {test_strategy}")
     print(f"Has Signal: {result['has_signal']}")
     print(f"Reason: {result['reason']}")
+
+
+# ─────────────────────────────────────────────
+# STRATEGY: SWING TREND (big TP, reverse-trend SL)
+# ─────────────────────────────────────────────
+
+def _bearish_engulfing(df: pd.DataFrame, i: int) -> bool:
+    if i < 1:
+        return False
+    prev_bull = df['close'].iloc[i - 1] > df['open'].iloc[i - 1]
+    cur_bear  = df['close'].iloc[i]     < df['open'].iloc[i]
+    engulf = (df['open'].iloc[i] >= df['close'].iloc[i - 1] and
+              df['close'].iloc[i] <= df['open'].iloc[i - 1])
+    return bool(prev_bull and cur_bear and engulf)
+
+
+def strategy_swing_trend(df: pd.DataFrame,
+                         capital: float = 50_000_000,
+                         filters: list = None,
+                         risk_per_trade: float = 0.01) -> dict:
+    """
+    Swing-Trend Strategy — ride early-stage uptrends; exit on trend reversal.
+
+    Entry: trend-onset (ADX rising 20<adx<35, MA20 slope up, reclaimed MA50,
+           HH/HL pivots, vol_ratio>=1.5, close>open, not overextended).
+    Initial SL: max(last swing-low, MA50, entry - 1.5*ATR14).
+    No fixed TP. Exit on any reverse-trend trigger:
+      R1 close<MA20 & MA20 slope flips negative
+      R2 close < most-recent swing-low pivot
+      R3 ADX(14) < 20 after having been > 25 during trade
+      R4 3 consecutive lower closes, vol_ratio >= 1.3
+      R5 (live only) flow composite_score <= -2 for 2d
+      R6 bearish engulfing, volume > 1.8x avg20
+      R7 trailed SL hit (raised to each new HL pivot; break-even after +10%)
+    """
+    from engine.regime_filter import calc_adx, calc_ma_slope
+    from engine.swing_screener import find_swing_points
+
+    strategy_name = 'Swing Trend'
+    initial_capital = capital
+
+    if len(df) < 55:
+        return {'strategy': strategy_name, 'trades': [],
+                'equity': [capital] * len(df),
+                'final_capital': capital,
+                'initial_capital': capital}
+
+    adx       = calc_adx(df, 14)
+    slope     = calc_ma_slope(df, 20, 5)
+    ma20      = df['close'].rolling(20).mean()
+    ma50      = df['close'].rolling(50).mean()
+    atr       = calc_atr(df, 14)
+    avg_vol   = df['volume'].rolling(20).mean()
+    vr        = df['volume'] / avg_vol
+
+    highs_idx_all, lows_idx_all = find_swing_points(df, n=2)
+    highs_set = set(highs_idx_all)
+    lows_set  = set(lows_idx_all)
+
+    def _pivots_up_to(i, pivot_set):
+        return [p for p in pivot_set if p <= i]
+
+    equity      = [capital]
+    trades      = []
+    in_trade    = False
+    entry_price = 0.0
+    entry_date  = ''
+    sl_level    = 0.0
+    lots        = 0
+    adx_peak    = 0.0
+    highest_seen = 0.0
+
+    for i in range(1, len(df)):
+        row  = df.iloc[i]
+        date = str(row['date'])[:10]
+
+        if in_trade:
+            high_i = row['high']
+            low_i  = row['low']
+            cur    = row['close']
+
+            highest_seen = max(highest_seen, high_i)
+            if not pd.isna(adx.iloc[i]):
+                adx_peak = max(adx_peak, float(adx.iloc[i]))
+
+            # Raise SL to latest HL pivot
+            lows_seen = [p for p in lows_idx_all if p <= i]
+            if lows_seen:
+                new_hl = float(df['low'].iloc[lows_seen[-1]])
+                if new_hl > sl_level:
+                    sl_level = new_hl
+
+            # Break-even lock after +10%
+            if highest_seen >= entry_price * 1.10 and sl_level < entry_price:
+                sl_level = entry_price
+
+            exit_reason = None
+            exit_price  = None
+
+            # R7 — trailed SL hit
+            if low_i <= sl_level:
+                exit_price  = apply_costs(sl_level, 'SELL')
+                exit_reason = 'R7_TRAIL_SL'
+
+            # R1 — close < MA20 and slope flipped negative
+            if exit_reason is None and not pd.isna(ma20.iloc[i]) and not pd.isna(slope.iloc[i]):
+                if cur < ma20.iloc[i] and slope.iloc[i] < 0:
+                    exit_price  = apply_costs(cur, 'SELL')
+                    exit_reason = 'R1_MA_BREAK'
+
+            # R2 — close below most recent swing-low pivot
+            if exit_reason is None and lows_seen:
+                recent_low = float(df['low'].iloc[lows_seen[-1]])
+                if cur < recent_low:
+                    exit_price  = apply_costs(cur, 'SELL')
+                    exit_reason = 'R2_LOWER_LOW'
+
+            # R3 — ADX collapse (was >25, now <20)
+            if exit_reason is None and adx_peak > 25 and not pd.isna(adx.iloc[i]) and adx.iloc[i] < 20:
+                exit_price  = apply_costs(cur, 'SELL')
+                exit_reason = 'R3_ADX_FADE'
+
+            # R4 — 3 consecutive lower closes on >=1.3 vol
+            if exit_reason is None and i >= 3:
+                c0, c1, c2, c3 = df['close'].iloc[i], df['close'].iloc[i-1], df['close'].iloc[i-2], df['close'].iloc[i-3]
+                three_down = c0 < c1 < c2 < c3
+                vr_hot = (not pd.isna(vr.iloc[i])) and vr.iloc[i] >= 1.3
+                if three_down and vr_hot:
+                    exit_price  = apply_costs(cur, 'SELL')
+                    exit_reason = 'R4_DISTRIBUTION'
+
+            # R6 — bearish engulfing on high volume
+            if exit_reason is None and _bearish_engulfing(df, i):
+                if not pd.isna(vr.iloc[i]) and vr.iloc[i] > 1.8:
+                    exit_price  = apply_costs(cur, 'SELL')
+                    exit_reason = 'R6_BEAR_ENGULF'
+
+            # EOD force close on last bar
+            if exit_reason is None and i == len(df) - 1:
+                exit_price  = apply_costs(cur, 'SELL')
+                exit_reason = 'EOD'
+
+            if exit_reason:
+                gross   = (exit_price - entry_price) * lots * 100
+                pnl_pct = (exit_price - entry_price) / entry_price
+                capital += gross
+                reason_tag = 'TP' if gross > 0 and exit_reason != 'EOD' else (
+                    'SL' if exit_reason == 'R7_TRAIL_SL' else 'TRAIL'
+                )
+                trades.append(Trade(
+                    entry_date=entry_date, exit_date=date,
+                    entry_price=entry_price, exit_price=exit_price,
+                    lots=lots, direction='BUY', exit_reason=reason_tag,
+                    pnl_rp=gross, pnl_pct=pnl_pct * 100,
+                    strategy=f"{strategy_name}[{exit_reason}]"
+                ))
+                in_trade = False
+
+        else:
+            if i < 55 or i >= len(df) - 1:
+                equity.append(capital)
+                continue
+
+            # Onset gates (mirrors swing_screener, simplified for per-bar loop)
+            adx_i, adx_prev = adx.iloc[i], adx.iloc[i - 1]
+            if pd.isna(adx_i) or pd.isna(adx_prev):
+                equity.append(capital); continue
+            slope_i = slope.iloc[i]
+            slope_5 = slope.iloc[i - 5] if i >= 5 else np.nan
+            if pd.isna(slope_i) or pd.isna(slope_5):
+                equity.append(capital); continue
+
+            gate_adx   = (adx_i > adx_prev) and (20 < adx_i < 35)
+            gate_slope = (slope_i > 0) and (slope_i > slope_5)
+
+            if pd.isna(ma50.iloc[i]):
+                equity.append(capital); continue
+            above_ma50_now = df['close'].iloc[i] > ma50.iloc[i]
+            was_below = (df['close'].iloc[max(0, i-5):i] <= ma50.iloc[max(0, i-5):i]).any()
+            gate_reclaim = bool(above_ma50_now and was_below)
+
+            lows_so_far  = [p for p in lows_idx_all  if p <= i]
+            highs_so_far = [p for p in highs_idx_all if p <= i]
+            gate_hhhl = (
+                len(highs_so_far) >= 2 and len(lows_so_far) >= 2 and
+                df['high'].iloc[highs_so_far[-1]] > df['high'].iloc[highs_so_far[-2]] and
+                df['low'].iloc[lows_so_far[-1]]  > df['low'].iloc[lows_so_far[-2]]
+            )
+
+            gate_vol = (not pd.isna(vr.iloc[i])) and vr.iloc[i] >= 1.5
+            bullish_close = df['close'].iloc[i] > df['open'].iloc[i]
+
+            ma20_i = ma20.iloc[i]
+            distance = (df['close'].iloc[i] - ma20_i) / ma20_i * 100 if ma20_i else 100
+            gate_extend = distance < 8.0
+
+            # Pullback-reclaim of MA20 (any of last 3 bars was <= MA20)
+            ma20_win = ma20.iloc[max(0, i-3):i+1]
+            c_win    = df['close'].iloc[max(0, i-3):i+1]
+            pullback_reclaim = (c_win <= ma20_win).any() and (df['close'].iloc[i] > ma20_i)
+
+            score = 0
+            score += 25 if gate_adx     else 0
+            score += 20 if gate_slope   else 0
+            score += 15 if gate_reclaim else 0
+            score += 15 if gate_hhhl    else 0
+            score += 10 if gate_vol     else 0
+            score +=  5 if gate_extend  else 0
+            # flow_confirms not evaluable in offline backtest -> max achievable = 90
+
+            if score >= 50 and bullish_close and pullback_reclaim:
+                # Enter next bar open
+                next_i = i + 1
+                if next_i >= len(df):
+                    equity.append(capital); continue
+                raw_entry   = df['open'].iloc[next_i]
+                entry_price = apply_costs(raw_entry, 'BUY')
+
+                atr_val = atr.iloc[i] if not pd.isna(atr.iloc[i]) else entry_price * 0.02
+                last_sl = df['low'].iloc[lows_so_far[-1]] if lows_so_far else entry_price * 0.95
+                sl_candidates = [last_sl, ma50.iloc[i], entry_price - 1.5 * atr_val]
+                sl_candidates = [x for x in sl_candidates if x > 0]
+                initial_sl = max(sl_candidates) if sl_candidates else entry_price * 0.95
+                if initial_sl >= entry_price:
+                    initial_sl = entry_price * 0.97
+
+                sl_pct_eff = (entry_price - initial_sl) / entry_price
+                if sl_pct_eff <= 0:
+                    equity.append(capital); continue
+
+                lots = lot_size(capital, entry_price, risk_per_trade, sl_pct_eff)
+                cost = entry_price * lots * 100
+                if cost > capital:
+                    equity.append(capital); continue
+
+                sl_level     = initial_sl
+                entry_date   = str(df.iloc[next_i]['date'])[:10]
+                adx_peak     = float(adx_i)
+                highest_seen = entry_price
+                in_trade     = True
+
+        equity.append(capital)
+
+    return {
+        'strategy':        strategy_name,
+        'trades':          trades,
+        'equity':          equity,
+        'final_capital':   capital,
+        'initial_capital': initial_capital,
+    }
     print(f"Details: {result['details']}")

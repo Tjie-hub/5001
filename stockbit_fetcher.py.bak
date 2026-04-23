@@ -1,0 +1,521 @@
+#!/usr/bin/env python3
+"""
+Stockbit Keystats Fetcher (Opsi B)
+===================================
+- Auto-baca JWT token dari Chrome localStorage (Stockbit session)
+- Fetch keystats untuk semua ticker
+- Simpan ke walkforward.db
+
+Syarat: Chrome harus buka & login ke stockbit.com di Ubuntu
+
+Usage:
+  python3 stockbit_fetcher.py              # fetch all tickers
+  python3 stockbit_fetcher.py BBCA BRPT    # fetch specific tickers
+  python3 stockbit_fetcher.py --token XXX  # manual token override
+
+Cron (setiap hari 08:50 WIB sebelum market):
+  50 8 * * 1-5 cd /home/tjiesar/idx-walkforward && python3 stockbit_fetcher.py >> logs/stockbit.log 2>&1
+"""
+
+import os
+import sys
+import glob
+import re
+import json
+import time
+import sqlite3
+import requests
+import base64
+from datetime import datetime
+
+# === CONFIG ===
+WALKFORWARD_DB = "/home/tjiesar/idx-walkforward/data/walkforward.db"
+CHROME_LOCALSTORAGE = os.path.expanduser(
+    "~/.config/google-chrome/Default/Local Storage/leveldb"
+)
+STOCKBIT_BASE = "https://exodus.stockbit.com"
+RATE_LIMIT_DELAY = 1.5  # seconds between requests
+
+# 77 tickers (LQ45 + IDX80)
+TICKERS = [
+    "ACES", "ADRO", "AKRA", "AMMN", "AMRT", "ANTM", "ARTO", "ASII",
+    "ASTR", "BBCA", "BBNI", "BBRI", "BBTN", "BBYB", "BMRI", "BNGA",
+    "BREN", "BRIS", "BRMS", "BRPT", "BTPS", "BUKA", "CMRY", "CPIN",
+    "CTRA", "DNET", "EMTK", "ERAA", "ESSA", "EXCL", "FILM", "GGRM",
+    "GOTO", "HRUM", "ICBP", "INCO", "INDF", "INKP", "INTP", "ISAT",
+    "ITMG", "JSMR", "KAEF", "KLBF", "LPPF", "LSIP", "MAPI", "MBMA",
+    "MDKA", "MEDC", "MIKA", "MNCN", "MTEL", "NCKL", "NISP", "PANI",
+    "PGAS", "PGEO", "PNBN", "PTBA", "PTPP", "PWON", "RAJA", "SCMA",
+    "SIDO", "SMGR", "SMRA", "SRTG", "SSMS", "TAPG", "TBIG", "TINS",
+    "TKIM", "TLKM", "TOWR", "TPIA", "UNTR", "UNVR", "WIKA", "WMUU",
+    "WTON",
+]
+
+# Keystats fields we care about (fitem_id -> column name)
+KEYSTATS_MAP = {
+    "2891": "pe_ttm",
+    "12148": "pe_ann",
+    "16577": "pe_forward",
+    "2896": "pbv",
+    "2893": "ps_ttm",
+    "13200": "eps_ttm",
+    "15718": "bvps",
+    "2898": "earnings_yield",
+    "16533": "pcf_ttm",
+    "15881": "pfcf_ttm",
+    "2897": "ev_ebit",
+    "21457": "ev_ebitda",
+    "13431": "peg_ratio",
+    "15882": "fcf_per_share",
+    "15879": "cash_per_share",
+    "15880": "revenue_per_share",
+    # Profitability (will discover IDs from data)
+    "1498": "current_ratio",
+    "1500": "quick_ratio",
+}
+
+
+def log(msg):
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
+
+
+def extract_token_from_chrome():
+    """Scan Chrome LevelDB localStorage files for Stockbit JWT token."""
+    if not os.path.isdir(CHROME_LOCALSTORAGE):
+        log(f"Chrome localStorage not found at {CHROME_LOCALSTORAGE}")
+        return None
+
+    log("Scanning Chrome localStorage for Stockbit token...")
+
+    # JWT pattern: starts with eyJ, 3 base64 parts separated by dots
+    jwt_pattern = re.compile(
+        r'(eyJ[A-Za-z0-9_-]{50,}\.eyJ[A-Za-z0-9_-]{50,}\.[A-Za-z0-9_-]{50,})'
+    )
+
+    # Scan all .log and .ldb files in the leveldb directory
+    candidates = []
+    for ext in ["*.log", "*.ldb"]:
+        for fpath in glob.glob(os.path.join(CHROME_LOCALSTORAGE, ext)):
+            try:
+                with open(fpath, "rb") as f:
+                    raw = f.read()
+                    # Try to find stockbit-related content
+                    if b"stockbit" in raw.lower() or b"exodus" in raw.lower():
+                        text = raw.decode("utf-8", errors="ignore")
+                        matches = jwt_pattern.findall(text)
+                        for m in matches:
+                            try:
+                                # Decode JWT payload to verify it's Stockbit
+                                payload_b64 = m.split(".")[1]
+                                # Fix padding
+                                payload_b64 += "=" * (4 - len(payload_b64) % 4)
+                                payload = json.loads(
+                                    base64.urlsafe_b64decode(payload_b64)
+                                )
+                                if payload.get("iss") == "STOCKBIT":
+                                    exp = payload.get("exp", 0)
+                                    candidates.append((m, exp))
+                            except Exception:
+                                pass
+            except Exception:
+                pass
+
+    if not candidates:
+        log("No Stockbit JWT found in Chrome localStorage")
+        return None
+
+    # Pick the one with latest expiry
+    candidates.sort(key=lambda x: x[1], reverse=True)
+    token, exp = candidates[0]
+    exp_dt = datetime.fromtimestamp(exp)
+    now = datetime.now()
+
+    if exp_dt < now:
+        log(f"Token found but EXPIRED at {exp_dt}. Buka Chrome & refresh Stockbit.")
+        return None
+
+    remaining = (exp_dt - now).total_seconds() / 3600
+    log(f"Token found! Expires: {exp_dt} ({remaining:.1f}h remaining)")
+    return token
+
+
+def verify_token(token):
+    """Quick verification that token works."""
+    r = requests.get(
+        f"{STOCKBIT_BASE}/keystats/BBCA",
+        headers={"Authorization": f"Bearer {token}", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36", "Origin": "https://stockbit.com", "Referer": "https://stockbit.com/"},
+        timeout=10,
+    )
+    return r.status_code == 200
+
+
+def fetch_keystats(token, ticker):
+    """Fetch keystats for a single ticker."""
+    r = requests.get(
+        f"{STOCKBIT_BASE}/keystats/{ticker}",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+            "Origin": "https://stockbit.com",
+            "Referer": "https://stockbit.com/",
+        },
+        timeout=15,
+    )
+    if r.status_code != 200:
+        return None
+
+    data = r.json()
+    result = {"ticker": ticker}
+
+    # Parse the nested structure
+    closures = data.get("data", {}).get("closure_fin_items_results", [])
+    for group in closures:
+        group_name = group.get("keystats_name", "")
+        for item in group.get("fin_name_results", []):
+            fitem_id = item.get("fitem_id", "")
+            fitem_name = item.get("fitem_name", "")
+            fitem_value = item.get("fitem_value", "")
+
+            # Map by known ID
+            if fitem_id in KEYSTATS_MAP:
+                col = KEYSTATS_MAP[fitem_id]
+                result[col] = parse_value(fitem_value)
+
+            # All remaining fields by ID
+            extra_map = {
+                "1461": "roe", "1460": "roa", "1462": "roce",
+                "1508": "der", "1573": "liab_equity",
+                "1563": "npm", "1561": "gpm", "1562": "opm",
+                "2915": "div_yield", "2916": "payout_ratio",
+                "1554": "rev_growth", "18214": "earn_growth",
+                "13366": "piotroski", "1555": "net_income",
+                "2997": "revenue", "1567": "return_1y",
+                "1502": "fin_leverage", "13447": "roic",
+            }
+            if fitem_id in extra_map and extra_map[fitem_id] not in result:
+                result[extra_map[fitem_id]] = parse_value(fitem_value)
+
+    return result
+
+
+def parse_value(val):
+    """Parse Stockbit formatted value to float."""
+    if not val or val == "-" or val == "N/A":
+        return None
+    try:
+        # Remove %, commas, Tn, Bn, etc
+        cleaned = val.replace(",", "").replace("%", "").strip()
+        # Handle Tn (trillion) / Bn (billion) / Mn (million)
+        multiplier = 1
+        if cleaned.endswith("Tn"):
+            cleaned = cleaned[:-2]
+            multiplier = 1e12
+        elif cleaned.endswith("Bn"):
+            cleaned = cleaned[:-2]
+            multiplier = 1e9
+        elif cleaned.endswith("Mn"):
+            cleaned = cleaned[:-2]
+            multiplier = 1e6
+        elif cleaned.endswith("T"):
+            cleaned = cleaned[:-1]
+            multiplier = 1e12
+        elif cleaned.endswith("B"):
+            cleaned = cleaned[:-1]
+            multiplier = 1e9
+        elif cleaned.endswith("M"):
+            cleaned = cleaned[:-1]
+            multiplier = 1e6
+        return float(cleaned) * multiplier
+    except (ValueError, TypeError):
+        return None
+
+
+def init_db():
+    """Create stockbit_keystats table if not exists."""
+    conn = sqlite3.connect(WALKFORWARD_DB)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS stockbit_keystats (
+            ticker TEXT NOT NULL,
+            fetch_date TEXT NOT NULL,
+            pe_ttm REAL, pe_ann REAL, pe_forward REAL,
+            pbv REAL, ps_ttm REAL,
+            eps_ttm REAL, bvps REAL,
+            earnings_yield REAL,
+            pcf_ttm REAL, pfcf_ttm REAL,
+            ev_ebit REAL, ev_ebitda REAL,
+            peg_ratio REAL,
+            fcf_per_share REAL, cash_per_share REAL, revenue_per_share REAL,
+            current_ratio REAL, quick_ratio REAL,
+            roe REAL, roa REAL,
+            market_cap REAL, der REAL,
+            npm REAL, div_yield REAL,
+            rev_growth REAL, earn_growth REAL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (ticker, fetch_date)
+        )
+    """)
+    conn.commit()
+    return conn
+
+
+def save_keystats(conn, stats):
+    """Insert or replace keystats for a ticker."""
+    now = datetime.now().isoformat()
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    cols = [
+        "ticker", "fetch_date",
+        "pe_ttm", "pe_ann", "pe_forward", "pbv", "ps_ttm",
+        "eps_ttm", "bvps", "earnings_yield",
+        "pcf_ttm", "pfcf_ttm", "ev_ebit", "ev_ebitda",
+        "peg_ratio", "fcf_per_share", "cash_per_share", "revenue_per_share",
+        "current_ratio", "quick_ratio",
+        "roe", "roa", "market_cap", "der", "npm", "div_yield",
+        "rev_growth", "earn_growth", "updated_at",
+    ]
+
+    vals = [
+        stats.get("ticker"), today,
+        stats.get("pe_ttm"), stats.get("pe_ann"), stats.get("pe_forward"),
+        stats.get("pbv"), stats.get("ps_ttm"),
+        stats.get("eps_ttm"), stats.get("bvps"), stats.get("earnings_yield"),
+        stats.get("pcf_ttm"), stats.get("pfcf_ttm"),
+        stats.get("ev_ebit"), stats.get("ev_ebitda"),
+        stats.get("peg_ratio"), stats.get("fcf_per_share"),
+        stats.get("cash_per_share"), stats.get("revenue_per_share"),
+        stats.get("current_ratio"), stats.get("quick_ratio"),
+        stats.get("roe"), stats.get("roa"),
+        stats.get("market_cap"), stats.get("der"),
+        stats.get("npm"), stats.get("div_yield"),
+        stats.get("rev_growth"), stats.get("earn_growth"),
+        now,
+    ]
+
+    placeholders = ",".join(["?"] * len(cols))
+    col_str = ",".join(cols)
+    conn.execute(
+        f"INSERT OR REPLACE INTO stockbit_keystats ({col_str}) VALUES ({placeholders})",
+        vals,
+    )
+
+
+def main():
+    log("=" * 50)
+    log("STOCKBIT KEYSTATS FETCHER")
+    log("=" * 50)
+
+    # Determine tickers
+    tickers = TICKERS
+    manual_token = None
+
+    args = sys.argv[1:]
+    if "--token" in args:
+        idx = args.index("--token")
+        manual_token = args[idx + 1]
+        args = [a for a in args if a != "--token" and a != manual_token]
+    if args:
+        tickers = [t.upper() for t in args]
+
+    # Get token
+    if manual_token:
+        token = manual_token
+        log("Using manual token")
+    else:
+        token = extract_token_from_chrome()
+
+    if not token:
+        log("ERROR: No token available.")
+        log("Options:")
+        log("  1. Open Chrome & login to stockbit.com, then re-run")
+        log("  2. Run with --token <JWT> for manual override")
+        sys.exit(1)
+
+    # Verify
+    log("Verifying token...")
+    if not verify_token(token):
+        log("ERROR: Token invalid or expired. Refresh Stockbit in Chrome.")
+        sys.exit(1)
+    log("Token OK!")
+
+    # Init DB
+    conn = init_db()
+    log(f"DB: {WALKFORWARD_DB}")
+    log(f"Fetching keystats for {len(tickers)} tickers...\n")
+
+    success = 0
+    failed = []
+
+    for i, ticker in enumerate(tickers, 1):
+        log(f"[{i}/{len(tickers)}] {ticker}...")
+        try:
+            stats = fetch_keystats(token, ticker)
+            if stats:
+                save_keystats(conn, stats)
+                conn.commit()
+                pe = stats.get("pe_ttm", "?")
+                pbv = stats.get("pbv", "?")
+                roe = stats.get("roe", "?")
+                log(f"  ✓ PE={pe} PBV={pbv} ROE={roe}")
+                success += 1
+            else:
+                log(f"  ✗ No data")
+                failed.append(ticker)
+        except Exception as e:
+            log(f"  ✗ Error: {e}")
+            failed.append(ticker)
+
+        time.sleep(RATE_LIMIT_DELAY)
+
+    conn.close()
+
+    log(f"\n{'='*50}")
+    log(f"DONE: {success}/{len(tickers)} success")
+    if failed:
+        log(f"Failed: {', '.join(failed)}")
+    log(f"Data saved to: {WALKFORWARD_DB} (table: stockbit_keystats)")
+
+
+
+def fetch_flow(token, ticker):
+    """Fetch tradebook chart, return net flow summary."""
+    r = requests.get(
+        f"{STOCKBIT_BASE}/order-trade/trade-book/chart",
+        params={"symbol": ticker, "time_interval": "1m"},
+        headers={
+            "Authorization": f"Bearer {token}",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Origin": "https://stockbit.com",
+            "Referer": "https://stockbit.com/",
+        },
+        timeout=15,
+    )
+    if r.status_code != 200:
+        return None
+    d = r.json().get("data", {})
+    buys = d.get("buy", [])
+    sells = d.get("sell", [])
+    net_vals = d.get("net_values", [])
+    prices = d.get("prices", [])
+
+    total_buy_lot = sum(int(b["lot"]["raw"]) for b in buys if b.get("lot") and b["lot"].get("raw"))
+    total_sell_lot = sum(int(s["lot"]["raw"]) for s in sells if s.get("lot") and s["lot"].get("raw"))
+    total_buy_freq = sum(int(b["frequency"]["raw"]) for b in buys if b.get("frequency") and b["frequency"].get("raw"))
+    total_sell_freq = sum(int(s["frequency"]["raw"]) for s in sells if s.get("frequency") and s["frequency"].get("raw"))
+    total_net_value = sum(int(nv["value"]["raw"]) for nv in net_vals if nv.get("value") and nv["value"].get("raw"))
+    last_price = int(prices[-1]["value"]["raw"]) if prices and prices[-1].get("value") else None
+    trade_date = d.get("date", datetime.now().strftime("%Y-%m-%d"))
+
+    return {
+        "ticker": ticker,
+        "trade_date": trade_date,
+        "buy_lot": total_buy_lot,
+        "sell_lot": total_sell_lot,
+        "net_lot": total_buy_lot - total_sell_lot,
+        "buy_freq": total_buy_freq,
+        "sell_freq": total_sell_freq,
+        "net_value": total_net_value,
+        "last_price": last_price,
+    }
+
+
+def init_flow_db():
+    conn = sqlite3.connect(WALKFORWARD_DB)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS stockbit_flow (
+            ticker TEXT NOT NULL,
+            trade_date TEXT NOT NULL,
+            buy_lot INTEGER, sell_lot INTEGER, net_lot INTEGER,
+            buy_freq INTEGER, sell_freq INTEGER,
+            net_value INTEGER,
+            last_price INTEGER,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (ticker, trade_date)
+        )
+    """)
+    conn.commit()
+    return conn
+
+
+def run_flow(token, tickers):
+    log("=" * 50)
+    log("STOCKBIT FLOW FETCHER")
+    log("=" * 50)
+    conn = init_flow_db()
+    log(f"Fetching flow for {len(tickers)} tickers...\n")
+    success = 0
+    for i, ticker in enumerate(tickers, 1):
+        log(f"[{i}/{len(tickers)}] {ticker}...")
+        try:
+            flow = fetch_flow(token, ticker)
+            if flow:
+                now = datetime.now().isoformat()
+                conn.execute(
+                    """INSERT OR REPLACE INTO stockbit_flow
+                    (ticker,trade_date,buy_lot,sell_lot,net_lot,buy_freq,sell_freq,net_value,last_price,updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                    (flow["ticker"], flow["trade_date"], flow["buy_lot"], flow["sell_lot"],
+                     flow["net_lot"], flow["buy_freq"], flow["sell_freq"],
+                     flow["net_value"], flow["last_price"], now)
+                )
+                conn.commit()
+                nv = flow["net_value"]
+                nl = flow["net_lot"]
+                sign = "+" if nv >= 0 else ""
+                log(f"  ✓ NetLot={nl:+,} NetVal={sign}{nv:,}")
+                success += 1
+            else:
+                log(f"  ✗ No data")
+        except Exception as e:
+            log(f"  ✗ {e}")
+        time.sleep(RATE_LIMIT_DELAY)
+    conn.close()
+    log(f"\nDONE: {success}/{len(tickers)} success")
+
+
+# Update main() to support 'flow' subcommand
+_original_main = main
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "flow":
+        args = sys.argv[2:]
+        manual_token = None
+        if "--token" in args:
+            idx = args.index("--token")
+            manual_token = args[idx + 1]
+            args = [a for a in args if a != "--token" and a != manual_token]
+        tickers = [t.upper() for t in args] if args else TICKERS
+        token = manual_token or extract_token_from_chrome()
+        if not token:
+            log("ERROR: No token. Use --token <JWT>")
+            sys.exit(1)
+        if not verify_token(token):
+            log("ERROR: Token invalid/expired")
+            sys.exit(1)
+        run_flow(token, tickers)
+    else:
+        _original_main()
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "flow":
+        args = sys.argv[2:]
+        manual_token = None
+        if "--token" in args:
+            idx = args.index("--token")
+            manual_token = args[idx + 1]
+            args = [a for a in args if a != "--token" and a != manual_token]
+        tickers = [t.upper() for t in args] if args else TICKERS
+        token = manual_token or extract_token_from_chrome()
+        if not token:
+            log("ERROR: No token. Use --token <JWT>")
+            sys.exit(1)
+        if not verify_token(token):
+            log("ERROR: Token invalid/expired")
+            sys.exit(1)
+        run_flow(token, tickers)
+    else:
+        main()
+
+
+# ============================================================
+# FLOW FETCHER — Fetch tradebook net flow untuk semua ticker
+# Usage: python3 stockbit_fetcher.py flow
+# ============================================================

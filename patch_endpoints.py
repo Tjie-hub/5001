@@ -8,7 +8,7 @@ import os
 import shutil
 from datetime import datetime
 
-APP_PY = "/home/tjiesar/idx-walkforward/app.py"
+APP_PY = "/home/tjiesar/10 Projects/idx-walkforward-5001/app.py"
 BACKUP_SUFFIX = f".backup_endpoints_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

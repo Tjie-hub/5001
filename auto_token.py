@@ -12,19 +12,20 @@ from datetime import datetime
 from pathlib import Path
 
 # ── Config ──
-BASE_DIR = Path("/home/tjiesar/idx-walkforward")
+BASE_DIR = Path(__file__).resolve().parent
 TOKEN_FILE = BASE_DIR / ".stockbit_token"
 STATE_DIR = BASE_DIR / ".playwright_state"
 LOG_FILE = BASE_DIR / "logs" / "auto_token.log"
 
-TELEGRAM_TOKEN   = os.environ.get('TELEGRAM_TOKEN')
-TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 STOCKBIT_HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-    'Origin': 'https://stockbit.com',
-    'Referer': 'https://stockbit.com/',
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Origin": "https://stockbit.com",
+    "Referer": "https://stockbit.com/",
 }
+
 
 # ── Helpers ──
 def log(msg):
@@ -38,25 +39,28 @@ def log(msg):
 
 def send_telegram(msg):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        log("Telegram not configured (set TELEGRAM_TOKEN and TELEGRAM_CHAT_ID env vars)")
+        log(
+            "Telegram not configured (set TELEGRAM_TOKEN and TELEGRAM_CHAT_ID env vars)"
+        )
         return
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-        requests.post(url, json={
-            "chat_id": TELEGRAM_CHAT_ID,
-            "text": msg,
-            "parse_mode": "HTML"
-        }, timeout=10)
+        requests.post(
+            url,
+            json={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "HTML"},
+            timeout=10,
+        )
     except Exception as e:
         log(f"Telegram send failed: {e}")
 
 
 def verify_token(token):
     """Test token against Stockbit keystats API."""
-    headers = {**STOCKBIT_HEADERS, 'Authorization': f'Bearer {token}'}
+    headers = {**STOCKBIT_HEADERS, "Authorization": f"Bearer {token}"}
     try:
-        r = requests.get('https://exodus.stockbit.com/keystats/BBCA',
-                         headers=headers, timeout=10)
+        r = requests.get(
+            "https://exodus.stockbit.com/keystats/BBCA", headers=headers, timeout=10
+        )
         return r.status_code == 200
     except Exception:
         return False
@@ -67,19 +71,21 @@ def initial_login():
     from playwright.sync_api import sync_playwright
 
     # CRD biasanya pakai :20, tapi cek DISPLAY yang aktif
-    display = os.environ.get('DISPLAY')
+    display = os.environ.get("DISPLAY")
     if not display:
         # Coba detect CRD display
         import subprocess
+
         try:
             result = subprocess.run(
-                ['bash', '-c', 'ls /tmp/.X11-unix/ | sed "s/X/:/g" | tail -1'],
-                capture_output=True, text=True
+                ["bash", "-c", 'ls /tmp/.X11-unix/ | sed "s/X/:/g" | tail -1'],
+                capture_output=True,
+                text=True,
             )
-            display = result.stdout.strip() or ':20'
+            display = result.stdout.strip() or ":20"
         except Exception:
-            display = ':20'
-        os.environ['DISPLAY'] = display
+            display = ":20"
+        os.environ["DISPLAY"] = display
 
     log(f"Starting login browser on DISPLAY={display}")
 
@@ -90,28 +96,29 @@ def initial_login():
             user_data_dir=str(STATE_DIR),
             headless=False,
             args=[
-                '--disable-blink-features=AutomationControlled',
-                '--no-first-run',
-                '--no-default-browser-check',
+                "--disable-blink-features=AutomationControlled",
+                "--no-first-run",
+                "--no-default-browser-check",
             ],
-            user_agent=STOCKBIT_HEADERS['User-Agent'],
-            viewport={'width': 1280, 'height': 720},
+            user_agent=STOCKBIT_HEADERS["User-Agent"],
+            viewport={"width": 1280, "height": 720},
         )
 
-        page = context.pages[0] if context.pages else context.new_page()
-        page.goto('https://stockbit.com/login', wait_until='domcontentloaded')
+        try:
+            page = context.pages[0] if context.pages else context.new_page()
+            page.goto("https://stockbit.com/login", wait_until="domcontentloaded")
 
-        print()
-        print("=" * 55)
-        print("  LOGIN STOCKBIT DI BROWSER YANG TERBUKA")
-        print("  Setelah login berhasil, tekan ENTER di sini")
-        print("=" * 55)
-        input()
+            print()
+            print("=" * 55)
+            print("  LOGIN STOCKBIT DI BROWSER YANG TERBUKA")
+            print("  Setelah login berhasil, tekan ENTER di sini")
+            print("=" * 55)
+            input()
 
-        # Verify: buka halaman saham, capture token
-        captured = _capture_from_page(page)
-
-        context.close()
+            # Verify: buka halaman saham, capture token
+            captured = _capture_from_page(page)
+        finally:
+            context.close()
 
     if captured and verify_token(captured):
         TOKEN_FILE.write_text(captured)
@@ -140,32 +147,32 @@ def auto_refresh():
     with sync_playwright() as p:
         context = p.chromium.launch_persistent_context(
             user_data_dir=str(STATE_DIR),
-            headless=False,
+            headless=True,
             args=[
-                '--disable-blink-features=AutomationControlled',
-                '--disable-gpu',
-                '--no-sandbox',
-                '--no-first-run',
-                '--no-default-browser-check',
+                "--disable-blink-features=AutomationControlled",
+                "--disable-gpu",
+                "--no-sandbox",
+                "--no-first-run",
+                "--no-default-browser-check",
             ],
-            user_agent=STOCKBIT_HEADERS['User-Agent'],
-            viewport={'width': 1280, 'height': 720},
+            user_agent=STOCKBIT_HEADERS["User-Agent"],
+            viewport={"width": 1280, "height": 720},
         )
 
-        page = context.pages[0] if context.pages else context.new_page()
-        token = _capture_from_page(page)
+        try:
+            page = context.pages[0] if context.pages else context.new_page()
+            token = _capture_from_page(page)
 
-        # Kalau gagal, coba sekali lagi setelah reload
-        if not token:
-            log("First attempt failed, retrying...")
-            try:
-                page.reload(wait_until='networkidle', timeout=30000)
-                time.sleep(5)
-                token = _capture_from_page(page, navigate=False)
-            except Exception as e:
-                log(f"Retry error: {e}")
-
-        context.close()
+            # Kalau gagal, coba sekali lagi dengan navigasi ulang
+            # (listener harus aktif SEBELUM page.goto agar tidak miss request)
+            if not token:
+                log("First attempt failed, retrying...")
+                try:
+                    token = _capture_from_page(page, navigate=True)
+                except Exception as e:
+                    log(f"Retry error: {e}")
+        finally:
+            context.close()
 
     return token
 
@@ -176,31 +183,32 @@ def _capture_from_page(page, navigate=True):
 
     def on_request(request):
         nonlocal captured_token
-        if captured_token:
-            return
         url = request.url
-        auth = request.headers.get('authorization', '')
-        if auth.startswith('Bearer ') and 'exodus.stockbit.com' in url:
+        auth = request.headers.get("authorization", "")
+        if auth.startswith("Bearer ") and "exodus.stockbit.com" in url:
             captured_token = auth[7:]
 
-    page.on('request', on_request)
+    page.on("request", on_request)
 
     try:
         if navigate:
-            page.goto('https://stockbit.com/symbol/BBCA',
-                       wait_until='networkidle', timeout=45000)
+            page.goto(
+                "https://stockbit.com/symbol/BBCA",
+                wait_until="networkidle",
+                timeout=45000,
+            )
         # Tunggu API calls lazy-load
         time.sleep(5)
 
         # Scroll untuk trigger lebih banyak API calls kalau belum dapat
         if not captured_token:
-            page.evaluate('window.scrollBy(0, 300)')
+            page.evaluate("window.scrollBy(0, 300)")
             time.sleep(3)
 
     except Exception as e:
         log(f"Capture error: {e}")
 
-    page.remove_listener('request', on_request)
+    page.remove_listener("request", on_request)
     return captured_token
 
 
@@ -218,16 +226,21 @@ def check_token():
     # Decode JWT expiry (tanpa library)
     try:
         import base64, json
-        payload = token.split('.')[1]
+
+        payload = token.split(".")[1]
         # Fix padding
-        payload += '=' * (4 - len(payload) % 4)
+        payload += "=" * (4 - len(payload) % 4)
         data = json.loads(base64.urlsafe_b64decode(payload))
-        exp = data.get('exp', 0)
-        iat = data.get('iat', 0)
+        exp = data.get("exp", 0)
+        iat = data.get("iat", 0)
         now = time.time()
         remaining_h = (exp - now) / 3600
-        print(f"Token issued:  {datetime.fromtimestamp(iat).strftime('%Y-%m-%d %H:%M')}")
-        print(f"Token expires: {datetime.fromtimestamp(exp).strftime('%Y-%m-%d %H:%M')}")
+        print(
+            f"Token issued:  {datetime.fromtimestamp(iat).strftime('%Y-%m-%d %H:%M')}"
+        )
+        print(
+            f"Token expires: {datetime.fromtimestamp(exp).strftime('%Y-%m-%d %H:%M')}"
+        )
         print(f"Remaining:     {remaining_h:.1f} hours")
     except Exception as e:
         print(f"JWT decode error: {e}")
@@ -239,11 +252,11 @@ def check_token():
 
 # ── Main ──
 def main():
-    if '--login' in sys.argv:
+    if "--login" in sys.argv:
         initial_login()
         return
 
-    if '--check' in sys.argv:
+    if "--check" in sys.argv:
         check_token()
         return
 
@@ -284,5 +297,5 @@ def main():
     sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

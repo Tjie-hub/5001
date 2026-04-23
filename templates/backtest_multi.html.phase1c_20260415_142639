@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Strategy Signal Scanner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 { color: #667eea; margin-bottom: 30px; text-align: center; }
+        
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .strategy-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .strategy-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .strategy-option:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+        
+        .strategy-option input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .strategy-option label {
+            cursor: pointer;
+            font-weight: 500;
+            flex: 1;
+        }
+        
+        .filter-options {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+        
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .filter-option input[type="checkbox"] { 
+            width: 20px;
+            height: 20px;
+            cursor: pointer; 
+        }
+        
+        .filter-option label {
+            cursor: pointer;
+            font-weight: 500;
+            flex: 1;
+        }
+        
+        .help-text {
+            font-size: 13px;
+            color: #666;
+            margin-left: 30px;
+            font-style: italic;
+        }
+        
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 10px 5px;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .summary-card h3 { font-size: 13px; margin-bottom: 10px; opacity: 0.9; }
+        .summary-card .value { font-size: 32px; font-weight: bold; }
+        
+        #loading { display: none; text-align: center; padding: 40px; }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        thead { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        tbody tr:hover { background: #f8f9fa; }
+        
+        /* Flow score badges */
+        .flow-score {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .flow-bullish { background: #28a745; color: white; }
+        .flow-neutral { background: #6c757d; color: white; }
+        .flow-bearish { background: #dc3545; color: white; }
+        .flow-unavailable { background: #e9ecef; color: #6c757d; }
+        
+        .flow-verdict {
+            font-size: 0.85em;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .verdict-BULLISH { background: #d4edda; color: #155724; }
+        .verdict-NEUTRAL { background: #fff3cd; color: #856404; }
+        .verdict-BEARISH { background: #f8d7da; color: #721c24; }
+        .verdict-UNAVAILABLE { background: #e9ecef; color: #6c757d; }
+        
+        .smart-money {
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+        
+        .signal-yes { 
+            background: #28a745; 
+            color: white; 
+            padding: 4px 10px; 
+            border-radius: 4px; 
+            font-size: 12px; 
+            font-weight: 600;
+        }
+        
+        .strategy-tag {
+            display: inline-block;
+            padding: 3px 8px;
+            margin: 2px;
+            background: #667eea;
+            color: white;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        
+        .signal-detail {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            padding: 5px;
+            background: #f8f9fa;
+            border-left: 3px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Multi-Strategy Signal Scanner</h1>
+        
+        <div class="controls">
+            <h3 style="margin-bottom: 15px; color: #555;">Select Strategies:</h3>
+            <div class="strategy-grid">
+                <div class="strategy-option">
+                    <input type="checkbox" id="vol_weighted" value="vol_weighted" checked>
+                    <label for="vol_weighted">Vol-Weighted Entry (VR > 1.8x)</label>
+                </div>
+                <div class="strategy-option">
+                    <input type="checkbox" id="momentum" value="momentum">
+                    <label for="momentum">Momentum Following (2-day streak)</label>
+                </div>
+                <div class="strategy-option">
+                    <input type="checkbox" id="vwap_reversion" value="vwap_reversion" checked>
+                    <label for="vwap_reversion">VWAP Mean Reversion (< -1%)</label>
+                </div>
+                <div class="strategy-option">
+                    <input type="checkbox" id="conservative" value="conservative">
+                    <label for="conservative">Conservative Confirm</label>
+                </div>
+            </div>
+            
+            <div class="filter-options">
+                <div class="filter-option">
+                    <input type="checkbox" id="signalsOnly" checked>
+                    <label for="signalsOnly">🎯 Hanya ticker dengan signal</label>
+                </div>
+                <div class="filter-option">
+                    <input type="checkbox" id="displaySeparate">
+                    <label for="displaySeparate">📊 Tampilkan terpisah per strategy</label>
+                </div>
+                <div class="help-text">
+                    ℹ️ Default: hanya ticker yang lolos SEMUA strategy yang dipilih
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: center;">
+            <button onclick="scanAll()" id="scanBtn">🔍 Scan All</button>
+            <button onclick="clearResults()" style="background: #6c757d;">🗑️ Clear</button>
+        </div>
+        
+        <div id="summaryCards" style="display: none;"></div>
+        
+        <div id="loading">
+            <div class="spinner"></div>
+            <p>Scanning selected strategies...</p>
+        </div>
+        
+        <div id="resultsContainer" style="display: none;"></div>
+    </div>
+    
+    <script>
+        function getSelectedStrategies() {
+            const checkboxes = document.querySelectorAll('.strategy-option input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+        
+        async function scanAll() {
+            const strategies = getSelectedStrategies();
+            
+            if (strategies.length === 0) {
+                alert('Pilih minimal 1 strategy!');
+                return;
+            }
+            
+            const signalsOnly = document.getElementById('signalsOnly').checked;
+            const displaySeparate = document.getElementById('displaySeparate').checked;
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('summaryCards').style.display = 'none';
+            document.getElementById('scanBtn').disabled = true;
+            
+            try {
+                const resp = await fetch('/api/backtest/multi_quick_scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        strategies: strategies,
+                        filter_mode: signalsOnly ? 'signals_only' : 'all',
+                        intersection_mode: !displaySeparate  // Intersection jika TIDAK display separate
+                    })
+                });
+                
+                const data = await resp.json();
+                if (data.success) {
+                    displayResults(data);
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown'));
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('scanBtn').disabled = false;
+            }
+        }
+        
+        function formatFlowScore(flow) {
+            if (!flow || !flow.available) {
+                return '<span class="flow-score flow-unavailable">N/A</span>';
+            }
+            
+            const score = flow.score;
+            let cssClass = 'flow-neutral';
+            if (score >= 2) cssClass = 'flow-bullish';
+            else if (score <= -2) cssClass = 'flow-bearish';
+            
+            const confirmed = flow.confirmed ? '✓' : '';
+            return `<span class="flow-score ${cssClass}">${score > 0 ? '+' : ''}${score} ${confirmed}</span>`;
+        }
+        
+        function formatFlowVerdict(flow) {
+            if (!flow || !flow.available) {
+                return '<span class="flow-verdict verdict-UNAVAILABLE">N/A</span>';
+            }
+            return `<span class="flow-verdict verdict-${flow.verdict}">${flow.verdict}</span>`;
+        }
+        
+        function formatSmartMoney(flow) {
+            if (!flow || !flow.available) {
+                return '<span class="smart-money">-</span>';
+            }
+            return `<span class="smart-money">${flow.smart_money || 'N/A'}</span>`;
+        }
+        
+        function displayResults(data) {
+            const { results, summary, intersection_mode } = data;
+            
+            // Summary cards
+            let summaryHTML = '';
+            
+            if (intersection_mode) {
+                // Intersection mode
+                summaryHTML = `
+                    <div class="summary-cards">
+                        <div class="summary-card">
+                            <h3>Total Scanned</h3>
+                            <div class="value">${summary.total_tickers_scanned}</div>
+                        </div>
+                        <div class="summary-card">
+                            <h3>Pass ALL Strategies</h3>
+                            <div class="value">${summary.tickers_with_all_signals}</div>
+                        </div>
+                        <div class="summary-card">
+                            <h3>Strategies Selected</h3>
+                            <div class="value">${summary.strategies.length}</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Union mode (separate display)
+                summaryHTML = `
+                    <div class="summary-cards">
+                        <div class="summary-card">
+                            <h3>Total Scanned</h3>
+                            <div class="value">${summary.total_tickers_scanned}</div>
+                        </div>
+                        <div class="summary-card">
+                            <h3>Total Signals</h3>
+                            <div class="value">${summary.total_signals}</div>
+                        </div>
+                        ${Object.entries(summary.by_strategy).map(([strat, count]) => `
+                            <div class="summary-card">
+                                <h3>${strategyName(strat)}</h3>
+                                <div class="value">${count}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            document.getElementById('summaryCards').innerHTML = summaryHTML;
+            document.getElementById('summaryCards').style.display = 'block';
+            
+            // Results table
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '';
+            
+            if (intersection_mode) {
+                // INTERSECTION: single table dengan ticker yang pass semua
+                if (results.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">Tidak ada ticker yang pass SEMUA strategy yang dipilih.</p>';
+                } else {
+                    container.innerHTML = `
+                        <h2 style="color: #667eea; margin: 20px 0;">Ticker yang Pass SEMUA Strategy (${results.length})</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Ticker</th>
+                                    <th>Strategies</th>
+                                    <th>Flow Score</th>
+                                    <th>Flow Verdict</th>
+                                    <th>Smart Money</th>
+                                    <th>Signal Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${results.map(r => `
+                                    <tr>
+                                        <td><strong>${r.ticker}</strong></td>
+                                        <td>
+                                            ${r.strategies.map(s => `<span class="strategy-tag">${strategyName(s)}</span>`).join('')}
+                                        </td>
+                                        <td>${formatFlowScore(r.flow)}</td>
+                                        <td>${formatFlowVerdict(r.flow)}</td>
+                                        <td>${formatSmartMoney(r.flow)}</td>
+                                        <td>
+                                            ${r.signal_reasons.map(reason => `
+                                                <div class="signal-detail">${reason}</div>
+                                            `).join('')}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+            } else {
+                // UNION: separate tables per strategy
+                for (const [strategy, tickerList] of Object.entries(results)) {
+                    if (tickerList.length === 0) continue;
+                    
+                    const section = document.createElement('div');
+                    section.style.marginBottom = '30px';
+                    
+                    section.innerHTML = `
+                        <h2 style="color: #667eea; margin: 20px 0;">${strategyName(strategy)} (${tickerList.length} signals)</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Ticker</th>
+                                    <th>Flow Score</th>
+                                    <th>Flow Verdict</th>
+                                    <th>Smart Money</th>
+                                    <th>Signal Info</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tickerList.map(r => `
+                                    <tr>
+                                        <td><strong>${r.ticker}</strong></td>
+                                        <td>${formatFlowScore(r.flow)}</td>
+                                        <td>${formatFlowVerdict(r.flow)}</td>
+                                        <td>${formatSmartMoney(r.flow)}</td>
+                                        <td>${r.signal_reason}</td>
+                                        <td>${formatDetails(r.signal_details, strategy)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    
+                    container.appendChild(section);
+                }
+            }
+            
+            container.style.display = 'block';
+        }
+        
+        function strategyName(key) {
+            const names = {
+                'vol_weighted': 'Vol-Weighted',
+                'momentum': 'Momentum',
+                'vwap_reversion': 'VWAP Reversion',
+                'conservative': 'Conservative'
+            };
+            return names[key] || key;
+        }
+        
+        function formatDetails(details, strategy) {
+            if (strategy === 'vol_weighted') {
+                return `VR: ${details.vr}x | Price: ${details.price}`;
+            } else if (strategy === 'momentum') {
+                return `Streak: ${details.streak} days | VR: ${details.vr}x`;
+            } else if (strategy === 'vwap_reversion') {
+                return `Distance: ${details.distance_pct}% | VR: ${details.vr}x`;
+            } else if (strategy === 'conservative') {
+                return `VR: ${details.vr}x | MA20: ${details.above_ma20 ? 'Yes' : 'No'}`;
+            }
+            return '-';
+        }
+        
+        function clearResults() {
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('summaryCards').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

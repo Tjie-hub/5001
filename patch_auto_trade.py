@@ -8,7 +8,7 @@ Usage: python3 patch_auto_trade.py
 import shutil
 from datetime import datetime
 
-SCHEDULER_PY = "/home/tjiesar/idx-walkforward/scheduler.py"
+SCHEDULER_PY = "/home/tjiesar/10 Projects/idx-walkforward-5001/scheduler.py"
 BACKUP_SUFFIX = f".phase4_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

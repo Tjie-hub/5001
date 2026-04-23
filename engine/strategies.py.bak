@@ -1,0 +1,233 @@
+"""
+strategies.py — 4 Strategy Definitions untuk BBCA Multi-Strategy Backtest
+Terintegrasi dengan idx-walkforward engine (market_structure, indicators, signals)
+"""
+
+import pandas as pd
+import numpy as np
+from dataclasses import dataclass
+from typing import Optional
+
+# ─────────────────────────────────────────────
+# CONFIG
+# ─────────────────────────────────────────────
+COMMISSION_BUY  = 0.0015   # 0.15%
+COMMISSION_SELL = 0.0025   # 0.25%
+SLIPPAGE        = 0.001    # 0.10%
+
+@dataclass
+class Trade:
+    entry_date: str
+    exit_date:  str
+    entry_price: float
+    exit_price:  float
+    lots: int
+    direction: str        # BUY
+    exit_reason: str      # TP / SL / EOD / TRAIL
+    pnl_rp: float
+    pnl_pct: float
+    strategy: str
+
+
+# ─────────────────────────────────────────────
+# HELPERS
+# ─────────────────────────────────────────────
+
+def calc_vwap(df: pd.DataFrame, window: int = 60) -> pd.Series:
+    """Rolling VWAP 60 hari — lebih relevan untuk sinyal entry."""
+    tp = (df['high'] + df['low'] + df['close']) / 3
+    cum_tp_vol = (tp * df['volume']).rolling(window).sum()
+    cum_vol    = df['volume'].rolling(window).sum()
+    return cum_tp_vol / cum_vol
+
+def calc_atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    h, l, c = df['high'], df['low'], df['close']
+    tr = pd.concat([h - l,
+                    (h - c.shift()).abs(),
+                    (l - c.shift()).abs()], axis=1).max(axis=1)
+    return tr.rolling(period).mean()
+
+def calc_vol_ratio(df: pd.DataFrame, period: int = 20) -> pd.Series:
+    avg = df['volume'].rolling(period).mean()
+    return df['volume'] / avg
+
+def calc_delta(df: pd.DataFrame) -> pd.Series:
+    """Proxy delta: (close - open) / (high - low) * volume, normalized."""
+    rng = (df['high'] - df['low']).replace(0, np.nan)
+    return ((df['close'] - df['open']) / rng * df['volume']).fillna(0)
+
+def lot_size(capital: float, price: float, risk_pct: float, sl_pct: float) -> int:
+    """Hitung lot (1 lot = 100 lembar) berdasarkan risk per trade."""
+    risk_rp      = capital * risk_pct
+    risk_per_lot = price * 100 * sl_pct
+    if risk_per_lot <= 0:
+        return 1
+    lots = int(risk_rp / risk_per_lot)
+    # Cap: maksimum 30% capital per trade
+    max_lots = int((capital * 0.30) / (price * 100))
+    lots = min(lots, max_lots)
+    return max(1, lots)
+
+def apply_costs(price: float, side: str) -> float:
+    if side == 'BUY':
+        return price * (1 + COMMISSION_BUY + SLIPPAGE)
+    else:
+        return price * (1 - COMMISSION_SELL - SLIPPAGE)
+
+
+# ─────────────────────────────────────────────
+# BASE BACKTEST ENGINE
+# ─────────────────────────────────────────────
+
+def run_strategy(df: pd.DataFrame, signals: pd.Series,
+                 tp_pct: float, sl_pct: float,
+                 strategy_name: str,
+                 initial_capital: float = 50_000_000,
+                 risk_per_trade: float = 0.02,
+                 trail_sl: bool = False) -> dict:
+    """
+    Generic backtest engine. signals: Series of True/False per bar.
+    Returns dict dengan trades list + equity curve.
+    """
+    capital   = initial_capital
+    equity    = [capital]
+    trades    = []
+    in_trade  = False
+    entry_price = exit_price = 0.0
+    entry_date  = ""
+    lots        = 0
+    peak_price  = 0.0
+
+    for i in range(1, len(df)):
+        row   = df.iloc[i]
+        prev  = df.iloc[i - 1]
+        date  = str(row['date'])[:10]
+
+        if in_trade:
+            hi   = row['high']
+            lo   = row['low']
+            cur  = row['close']
+
+            # Update trailing stop
+            if trail_sl and row['high'] > peak_price:
+                peak_price = row['high']
+
+            sl_level = (peak_price * (1 - sl_pct)) if trail_sl else (entry_price * (1 - sl_pct))
+            tp_level = entry_price * (1 + tp_pct)
+
+            exit_reason = None
+            if lo <= sl_level:
+                exit_price  = apply_costs(sl_level, 'SELL')
+                exit_reason = 'SL'
+            elif hi >= tp_level:
+                exit_price  = apply_costs(tp_level, 'SELL')
+                exit_reason = 'TP'
+            elif i == len(df) - 1:
+                exit_price  = apply_costs(cur, 'SELL')
+                exit_reason = 'EOD'
+
+            if exit_reason:
+                gross    = (exit_price - entry_price) * lots * 100
+                pnl_pct  = (exit_price - entry_price) / entry_price
+                capital += gross
+                trades.append(Trade(
+                    entry_date=entry_date, exit_date=date,
+                    entry_price=entry_price, exit_price=exit_price,
+                    lots=lots, direction='BUY', exit_reason=exit_reason,
+                    pnl_rp=gross, pnl_pct=pnl_pct * 100,
+                    strategy=strategy_name
+                ))
+                in_trade = False
+
+        elif signals.iloc[i - 1]:   # signal dari bar sebelumnya, entry open hari ini
+            raw_entry  = row['open']
+            entry_price = apply_costs(raw_entry, 'BUY')
+            lots        = lot_size(capital, entry_price, risk_per_trade, sl_pct)
+            cost        = entry_price * lots * 100
+            if cost <= capital:
+                in_trade   = True
+                entry_date = date
+                peak_price = entry_price
+
+        equity.append(capital)
+
+    return {
+        'strategy': strategy_name,
+        'trades':   trades,
+        'equity':   equity,
+        'final_capital': capital,
+        'initial_capital': initial_capital
+    }
+
+
+# ─────────────────────────────────────────────
+# STRATEGY 1 — VOL-WEIGHTED ENTRY
+# ─────────────────────────────────────────────
+
+def strategy_vol_weighted(df: pd.DataFrame, capital: float = 50_000_000) -> dict:
+    """
+    Entry: Vol Ratio > 2.0x AND Delta positif (close > open)
+    Exit:  TP +2.0% / SL -1.5%
+    """
+    vr    = calc_vol_ratio(df, 20)
+    delta = calc_delta(df)
+    sig   = (vr > 1.8) & (delta > 0) & (df['close'] > df['open'])
+    return run_strategy(df, sig, tp_pct=0.02, sl_pct=0.015,
+                        strategy_name='Vol-Weighted Entry', initial_capital=capital)
+
+
+# ─────────────────────────────────────────────
+# STRATEGY 2 — MOMENTUM FOLLOWING
+# ─────────────────────────────────────────────
+
+def strategy_momentum(df: pd.DataFrame, capital: float = 50_000_000) -> dict:
+    """
+    Entry: 2 hari berturut close > close[-1] + Vol Ratio > 1.3x
+    Exit:  Trailing SL 2% dari peak / SL -2.5% dari entry
+    """
+    vr      = calc_vol_ratio(df, 20)
+    streak2 = (df['close'] > df['close'].shift(1)) & \
+              (df['close'].shift(1) > df['close'].shift(2))
+    sig     = streak2 & (vr > 1.3)
+    return run_strategy(df, sig, tp_pct=0.035, sl_pct=0.025,
+                        strategy_name='Momentum Following',
+                        initial_capital=capital, trail_sl=True)
+
+
+# ─────────────────────────────────────────────
+# STRATEGY 3 — VWAP REVERSION
+# ─────────────────────────────────────────────
+
+def strategy_vwap_reversion(df: pd.DataFrame, capital: float = 50_000_000) -> dict:
+    """
+    Entry: Close > 1.5% di bawah VWAP + Vol spike (ratio > 1.5x)
+    Exit:  TP = kembali ke VWAP (proxy: +1.5%) / SL -1.0%
+    """
+    vwap = calc_vwap(df)
+    vr   = calc_vol_ratio(df, 20)
+    dist = (df['close'] - vwap) / vwap      # negatif = di bawah VWAP
+    sig  = (dist < -0.010) & (vr > 1.3)
+    return run_strategy(df, sig, tp_pct=0.015, sl_pct=0.01,
+                        strategy_name='VWAP Reversion', initial_capital=capital)
+
+
+# ─────────────────────────────────────────────
+# STRATEGY 4 — CONSERVATIVE CONFIRMATION
+# ─────────────────────────────────────────────
+
+def strategy_conservative(df: pd.DataFrame, capital: float = 50_000_000) -> dict:
+    """
+    Entry: Vol Ratio > 1.5x + close > open + close di atas MA20 + ATR normal
+    Exit:  TP +1.5% / SL -1.0%  (tightest risk)
+    """
+    vr    = calc_vol_ratio(df, 20)
+    ma20  = df['close'].rolling(20).mean()
+    atr   = calc_atr(df, 14)
+    atr_ma = atr.rolling(10).mean()
+    bullish = df['close'] > df['open']
+    above_ma = df['close'] > ma20
+    atr_ok   = atr < atr_ma * 1.5   # hindari hari terlalu volatile
+
+    sig = (vr > 1.3) & bullish & above_ma & atr_ok
+    return run_strategy(df, sig, tp_pct=0.015, sl_pct=0.01,
+                        strategy_name='Conservative Confirm', initial_capital=capital)

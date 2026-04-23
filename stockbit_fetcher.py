@@ -14,7 +14,7 @@ Usage:
   python3 stockbit_fetcher.py --token XXX  # manual token override
 
 Cron (setiap hari 08:50 WIB sebelum market):
-  50 8 * * 1-5 cd /home/tjiesar/idx-walkforward && python3 stockbit_fetcher.py >> logs/stockbit.log 2>&1
+  50 8 * * 1-5 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python3 stockbit_fetcher.py >> logs/stockbit.log 2>&1
 """
 
 import os
@@ -30,7 +30,8 @@ from datetime import datetime
 from flow_filter import _parse_bars, _analyze
 
 # === CONFIG ===
-WALKFORWARD_DB = "/home/tjiesar/idx-walkforward/data/walkforward.db"
+_HERE = os.path.dirname(os.path.abspath(__file__))
+WALKFORWARD_DB = os.path.join(_HERE, "data", "walkforward.db")
 CHROME_LOCALSTORAGE = os.path.expanduser(
     "~/.config/google-chrome/Default/Local Storage/leveldb"
 )
@@ -83,7 +84,7 @@ def log(msg):
 def extract_token_from_chrome():
     """Scan Chrome LevelDB localStorage files for Stockbit JWT token."""
     # Try read from .stockbit_token file FIRST
-    token_file = "/home/tjiesar/idx-walkforward/.stockbit_token"
+    token_file = os.path.join(_HERE, ".stockbit_token")
     if os.path.isfile(token_file):
         try:
             with open(token_file, 'r') as f:
@@ -446,8 +447,142 @@ def init_flow_db():
             PRIMARY KEY (ticker, trade_date)
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS stockbit_flow_bars (
+            ticker TEXT NOT NULL,
+            trade_date TEXT NOT NULL,
+            bar_time TEXT NOT NULL,
+            buy_lot INTEGER,
+            sell_lot INTEGER,
+            buy_freq INTEGER,
+            sell_freq INTEGER,
+            net_value INTEGER,
+            price INTEGER,
+            delta INTEGER,
+            PRIMARY KEY (ticker, trade_date, bar_time)
+        )
+    """)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_flow_bars_date ON stockbit_flow_bars(trade_date)"
+    )
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS broker_flow (
+            ticker      TEXT NOT NULL,
+            trade_date  TEXT NOT NULL,
+            broker_code TEXT NOT NULL,
+            side        TEXT NOT NULL,
+            lot         INTEGER,
+            lot_value   INTEGER,
+            value       INTEGER,
+            value_total INTEGER,
+            avg_price   REAL,
+            freq        INTEGER,
+            investor_type TEXT,
+            PRIMARY KEY (ticker, trade_date, broker_code, side)
+        )
+    """)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_broker_flow_date ON broker_flow(trade_date)"
+    )
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS bandar_detector (
+            ticker              TEXT NOT NULL,
+            trade_date          TEXT NOT NULL,
+            avg_price           REAL,
+            total_buyer         INTEGER,
+            total_seller        INTEGER,
+            net_broker_count    INTEGER,
+            broker_accdist      TEXT,
+            value               INTEGER,
+            volume              INTEGER,
+            top1_accdist        TEXT,
+            top3_accdist        TEXT,
+            top5_accdist        TEXT,
+            top10_accdist       TEXT,
+            avg_accdist         TEXT,
+            updated_at          TEXT,
+            PRIMARY KEY (ticker, trade_date)
+        )
+    """)
     conn.commit()
     return conn
+
+
+def fetch_broker_flow(token, ticker):
+    """Fetch broker net buy/sell summary from marketdetectors endpoint."""
+    r = requests.get(
+        f"{STOCKBIT_BASE}/marketdetectors/{ticker}",
+        params={
+            "transaction_type": "TRANSACTION_TYPE_NET",
+            "market_board": "MARKET_BOARD_REGULER",
+            "investor_type": "INVESTOR_TYPE_ALL",
+            "limit": 25,
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+            "Origin": "https://stockbit.com",
+            "Referer": "https://stockbit.com/",
+        },
+        timeout=15,
+    )
+    if r.status_code != 200:
+        return None
+    d = r.json().get("data", {})
+    bs = d.get("broker_summary", {})
+    bd = d.get("bandar_detector", {})
+    date_str = d.get("to", datetime.now().strftime("%Y%m%d"))
+    if len(date_str) == 8:
+        trade_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
+    else:
+        trade_date = date_str
+
+    rows = []
+    for b in bs.get("brokers_buy", []):
+        rows.append({
+            "ticker": ticker, "trade_date": trade_date,
+            "broker_code": b.get("netbs_broker_code", ""),
+            "side": "BUY",
+            "lot": int(float(b.get("blot", 0))),
+            "lot_value": int(float(b.get("blotv", 0))),
+            "value": int(float(b.get("bval", 0))),
+            "value_total": int(float(b.get("bvalv", 0))),
+            "avg_price": float(b.get("netbs_buy_avg_price", 0)),
+            "freq": int(b.get("freq", 0)),
+            "investor_type": b.get("type", ""),
+        })
+    for b in bs.get("brokers_sell", []):
+        rows.append({
+            "ticker": ticker, "trade_date": trade_date,
+            "broker_code": b.get("netbs_broker_code", ""),
+            "side": "SELL",
+            "lot": int(float(b.get("slot", 0))),
+            "lot_value": int(float(b.get("slotv", 0))),
+            "value": int(float(b.get("sval", 0))),
+            "value_total": int(float(b.get("svalv", 0))),
+            "avg_price": float(b.get("netbs_sell_avg_price", 0)),
+            "freq": int(b.get("freq", 0)),
+            "investor_type": b.get("type", ""),
+        })
+
+    bandar = {
+        "ticker": ticker,
+        "trade_date": trade_date,
+        "avg_price": bd.get("average"),
+        "total_buyer": bd.get("total_buyer"),
+        "total_seller": bd.get("total_seller"),
+        "net_broker_count": bd.get("number_broker_buysell"),
+        "broker_accdist": bd.get("broker_accdist"),
+        "value": bd.get("value"),
+        "volume": bd.get("volume"),
+        "top1_accdist": bd.get("top1", {}).get("accdist"),
+        "top3_accdist": bd.get("top3", {}).get("accdist"),
+        "top5_accdist": bd.get("top5", {}).get("accdist"),
+        "top10_accdist": bd.get("top10", {}).get("accdist"),
+        "avg_accdist": bd.get("avg", {}).get("accdist"),
+        "updated_at": datetime.now().isoformat(),
+    }
+    return {"broker_rows": rows, "bandar": bandar, "trade_date": trade_date}
 
 
 def run_flow(token, tickers):
@@ -464,6 +599,7 @@ def run_flow(token, tickers):
             if flow:
                 now = datetime.now().isoformat()
                 comp_score, verdict, smart_money = None, None, None
+                bars = []
                 if flow.get("_raw_data"):
                     try:
                         bars = _parse_bars(flow["_raw_data"])
@@ -474,6 +610,23 @@ def run_flow(token, tickers):
                             smart_money = analysis.get("smart_money")
                     except Exception as ae:
                         log(f"  [WARN] score compute error: {ae}")
+                if bars:
+                    try:
+                        bar_rows = [
+                            (flow["ticker"], flow["trade_date"], b["time"],
+                             b["buy_lot"], b["sell_lot"], b["buy_freq"], b["sell_freq"],
+                             b["net_value"], b["price"], b["delta"])
+                            for b in bars if b.get("time")
+                        ]
+                        conn.executemany(
+                            """INSERT OR REPLACE INTO stockbit_flow_bars
+                            (ticker,trade_date,bar_time,buy_lot,sell_lot,buy_freq,sell_freq,
+                             net_value,price,delta)
+                            VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                            bar_rows,
+                        )
+                    except Exception as be:
+                        log(f"  [WARN] bars insert error: {be}")
                 conn.execute(
                     """INSERT OR REPLACE INTO stockbit_flow
                     (ticker,trade_date,buy_lot,sell_lot,net_lot,buy_freq,sell_freq,
@@ -490,6 +643,38 @@ def run_flow(token, tickers):
                 sign = "+" if nv >= 0 else ""
                 log(f"  ✓ NetLot={nl:+,} NetVal={sign}{nv:,}")
                 success += 1
+
+                # Broker flow
+                try:
+                    bf = fetch_broker_flow(token, ticker)
+                    if bf and bf.get("broker_rows"):
+                        conn.executemany(
+                            """INSERT OR REPLACE INTO broker_flow
+                            (ticker,trade_date,broker_code,side,lot,lot_value,value,
+                             value_total,avg_price,freq,investor_type)
+                            VALUES (:ticker,:trade_date,:broker_code,:side,:lot,:lot_value,
+                                    :value,:value_total,:avg_price,:freq,:investor_type)""",
+                            bf["broker_rows"],
+                        )
+                        b = bf["bandar"]
+                        conn.execute(
+                            """INSERT OR REPLACE INTO bandar_detector
+                            (ticker,trade_date,avg_price,total_buyer,total_seller,
+                             net_broker_count,broker_accdist,value,volume,
+                             top1_accdist,top3_accdist,top5_accdist,top10_accdist,
+                             avg_accdist,updated_at)
+                            VALUES (:ticker,:trade_date,:avg_price,:total_buyer,:total_seller,
+                                    :net_broker_count,:broker_accdist,:value,:volume,
+                                    :top1_accdist,:top3_accdist,:top5_accdist,:top10_accdist,
+                                    :avg_accdist,:updated_at)""",
+                            b,
+                        )
+                        conn.commit()
+                        n_buy = sum(1 for r in bf["broker_rows"] if r["side"] == "BUY")
+                        n_sell = sum(1 for r in bf["broker_rows"] if r["side"] == "SELL")
+                        log(f"  ✓ Broker: {n_buy}B/{n_sell}S | {b['broker_accdist']} | top5={b['top5_accdist']}")
+                except Exception as be:
+                    log(f"  [WARN] broker flow error: {be}")
             else:
                 log(f"  ✗ No data")
         except Exception as e:

@@ -17,7 +17,7 @@ WIB = pytz.timezone("Asia/Jakarta")
 TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN", "8790169868:AAE6qno0LrxxIdFydSKSLKhD8EPUzevPIFo")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "5919142813")
 
-DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/idx-walkforward-5001/data/walkforward.db")
+DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
 
 def send_telegram(msg: str):
     if "ISI_" in TELEGRAM_TOKEN:
@@ -324,7 +324,7 @@ def daily_signal_scan():
                     print(f"[AutoTrade] {s['ticker']} sudah ada posisi terbuka, skip")
                     continue
 
-                result = open_trade(s["ticker"], s["close"])
+                result = open_trade(s["ticker"], s["close"], notify=False)
                 if "error" in result:
                     print(f"[AutoTrade] {s['ticker']} error: {result['error']}")
                 else:
@@ -549,7 +549,7 @@ def scheduled_multi_strategy_scan():
                     continue
                 
                 # Open paper trade
-                trade_result = open_trade(ticker, float(entry_price))
+                trade_result = open_trade(ticker, float(entry_price), notify=False)
                 
                 if 'error' in trade_result:
                     print(f"[{time_str}] {ticker}: {trade_result['error']}")
@@ -621,28 +621,137 @@ def scheduled_multi_strategy_scan():
         send_telegram(msg)
     print(f"[{time_str}] Multi-strategy scan complete.\n")
 
+def _run_open_trade_monitor():
+    try:
+        from monitor import check_all_open_trades
+        check_all_open_trades()
+    except Exception as e:
+        print(f"[scheduler] Monitor error: {e}")
+
+
+def _run_screener_intraday():
+    try:
+        from screener.screener_jobs import run_intraday
+        from scheduler import send_telegram as tg
+        run_intraday()
+    except Exception as e:
+        print(f"[scheduler] Screener intraday error: {e}")
+
+
+def _run_screener_eod():
+    try:
+        from screener.screener_jobs import run_eod
+        run_eod(send_telegram=send_telegram)
+    except Exception as e:
+        print(f"[scheduler] Screener EOD error: {e}")
+
+
 def start_scheduler():
     scheduler = BackgroundScheduler(timezone=WIB)
-    # Fetch + scan setiap hari Senin-Jumat jam 15:35 WIB
+
+    # Daily walkforward scan — Mon-Fri 15:35 WIB
     scheduler.add_job(daily_signal_scan, CronTrigger(
         day_of_week="mon-fri", hour=15, minute=35, timezone=WIB
     ), id="daily_scan")
-    # Refresh WF scores setiap Jumat 16:00 WIB
+
+    # WF score refresh — Fri 16:00 WIB
     scheduler.add_job(refresh_wf_scores, CronTrigger(
         day_of_week="fri", hour=16, minute=0, timezone=WIB))
-    # Flow fetch per jam: 09:30, 10:30, 11:30, 12:30, 13:30, 14:30, 15:15
+
+    # Backtest cache pre-compute — daily at 08:30 WIB (before market open)
+    def _refresh_backtest_cache():
+        try:
+            import sqlite3, pandas as pd
+            from engine.walkforward_multi import run_all_strategies
+            from engine.regime_filter import detect_regime
+            from datetime import date
+            import os
+            db = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
+            today = date.today().isoformat()
+            conn = sqlite3.connect(db)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS backtest_cache (
+                    ticker TEXT NOT NULL, computed_date TEXT NOT NULL,
+                    best_strategy TEXT, best_return REAL, win_rate REAL,
+                    sharpe REAL, total_trades INTEGER, profitable INTEGER,
+                    regime TEXT, updated_at TEXT, PRIMARY KEY (ticker, computed_date)
+                )""")
+            tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv').fetchall()]
+            conn.close()
+            computed = 0
+            for ticker in tickers:
+                try:
+                    conn = sqlite3.connect(db)
+                    df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
+                    conn.close()
+                    if len(df) < 60:
+                        continue
+                    for c in ['open','high','low','close','volume']:
+                        df[c] = df[c].astype(float)
+                    strat_results = run_all_strategies(df, capital=50_000_000)
+                    best = max(strat_results, key=lambda x: x['total_return_pct'])
+                    try:
+                        regime = detect_regime(df)
+                    except Exception:
+                        regime = "UNCERTAIN"
+                    conn = sqlite3.connect(db)
+                    conn.execute("""
+                        INSERT OR REPLACE INTO backtest_cache
+                        (ticker, computed_date, best_strategy, best_return, win_rate, sharpe, total_trades, profitable, regime, updated_at)
+                        VALUES (?,?,?,?,?,?,?,?,?,datetime('now'))
+                    """, (ticker, today, best['strategy'], best['total_return_pct'],
+                          best['win_rate'], best.get('sharpe',0), best.get('total_trades',0),
+                          int(best['total_return_pct']>0), regime))
+                    conn.commit()
+                    conn.close()
+                    computed += 1
+                except Exception:
+                    pass
+            print(f"[scheduler] Backtest cache refreshed: {computed} tickers")
+        except Exception as e:
+            print(f"[scheduler] Cache refresh error: {e}")
+
+    scheduler.add_job(_refresh_backtest_cache, CronTrigger(
+        day_of_week="mon-fri", hour=8, minute=30, timezone=WIB),
+        id="backtest_cache_refresh", name="Backtest Cache 08:30")
+
+    # Flow fetch — hourly 09:30–15:15 WIB
     for hour, minute in [(9,30),(10,30),(11,30),(12,30),(13,30),(14,30),(15,15)]:
         scheduler.add_job(run_flow_fetch, CronTrigger(
             day_of_week="mon-fri", hour=hour, minute=minute, timezone=WIB),
             id=f"flow_fetch_{hour:02d}{minute:02d}")
-    # Multi-strategy scanner - 5x per day
-    scan_times = [(9, 5, "post-open"), (10, 5, "mid-morning"), (11, 5, "pre-lunch"), (13, 35, "post-lunch"), (14, 35, "near-close")]
+
+    # Multi-strategy scanner — 5x per day
+    scan_times = [(9,5,"post-open"),(10,5,"mid-morning"),(11,5,"pre-lunch"),(13,35,"post-lunch"),(14,35,"near-close")]
     for hour, minute, label in scan_times:
-        scheduler.add_job(scheduled_multi_strategy_scan, CronTrigger(hour=hour, minute=minute, timezone=WIB, day_of_week="mon-fri"), id=f"multi_strategy_scan_{hour:02d}{minute:02d}", name=f"Multi-Strategy Scan {label}")
-        print(f"  ✓ Scheduled multi-strategy scan @ {hour:02d}:{minute:02d} ({label})")
-    
+        scheduler.add_job(scheduled_multi_strategy_scan, CronTrigger(
+            hour=hour, minute=minute, timezone=WIB, day_of_week="mon-fri"),
+            id=f"multi_strategy_scan_{hour:02d}{minute:02d}", name=f"Multi-Strategy Scan {label}")
+        print(f"  ✓ Multi-strategy scan @ {hour:02d}:{minute:02d} ({label})")
+
+    # Screener intraday runs — same times as multi-strategy scan
+    for hour, minute, label in scan_times:
+        scheduler.add_job(_run_screener_intraday, CronTrigger(
+            hour=hour, minute=minute+1 if minute < 59 else 0,
+            timezone=WIB, day_of_week="mon-fri"),
+            id=f"screener_intraday_{hour:02d}{minute:02d}", name=f"Screener Intraday {label}")
+
+    # Screener EOD VPIN batch — 15:30 WIB
+    scheduler.add_job(_run_screener_eod, CronTrigger(
+        day_of_week="mon-fri", hour=15, minute=30, timezone=WIB),
+        id="screener_eod", name="Screener EOD 15:30")
+
+    # Open trade monitor — every 30 min during market hours (09:05 to 15:35)
+    for minute in [5, 35]:
+        for hour in range(9, 16):
+            if hour == 15 and minute == 35:
+                continue  # daily scan covers this slot
+            scheduler.add_job(_run_open_trade_monitor, CronTrigger(
+                day_of_week="mon-fri", hour=hour, minute=minute, timezone=WIB),
+                id=f"trade_monitor_{hour:02d}{minute:02d}")
+
     scheduler.start()
-    print("Scheduler started. Daily scan: Mon-Fri 15:35 WIB | WF refresh: Fri 16:00 | Flow: per jam 09:30-15:15")
+    print("Scheduler started. Daily scan: Mon-Fri 15:35 | WF refresh: Fri 16:00 | Flow: hourly | Monitor: every 30min")
     return scheduler
 
 if __name__ == "__main__":
