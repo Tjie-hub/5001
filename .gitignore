@@ -10,3 +10,12 @@ __pycache__/
 venv/
 .venv/
 app.log
+# Abaikan folder virtual environment Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Abaikan file sistem Obsidian yang tidak perlu
+.obsidian/workspace.json
+.obsidian/graph.json
