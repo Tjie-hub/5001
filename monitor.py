@@ -120,10 +120,12 @@ def _get_current_price(ticker: str) -> float:
     return closes[0] if closes else None
 
 
-def _check_trade(trade: dict) -> list:
+def _check_trade(trade: dict) -> dict:
     """
-    Analyse one open trade. Returns list of alert dicts if warnings found.
-    Each alert: {ticker, trade_id, alert_type, severity, message}
+    Analyse one open trade. Returns dict with keys:
+      - should_close: bool (True if stop loss hit)
+      - alerts: list of alert dicts if warnings found
+      Each alert: {ticker, trade_id, alert_type, severity, message}
     """
     ticker      = trade['ticker']
     entry_price = float(trade['entry_price'])
@@ -134,9 +136,26 @@ def _check_trade(trade: dict) -> list:
     alerts = []
     current = _get_current_price(ticker)
     if not current:
-        return alerts
+        return {'should_close': False, 'alerts': alerts}
 
     pnl_pct = (current - entry_price) / entry_price * 100
+
+    # CRITICAL: Stop loss hit — auto-close immediately
+    if current <= sl_price:
+        sl_exceeded_pct = (sl_price - current) / sl_price * 100
+        return {
+            'should_close': True,
+            'alerts': [{
+                'ticker': ticker, 'trade_id': trade_id,
+                'alert_type': 'STOPPED_OUT', 'severity': 'CRITICAL',
+                'message': (
+                    f"🚨 <b>STOP LOSS HIT — AUTO-CLOSED</b> — {ticker}\n"
+                    f"Price: {current:,.0f}  SL: {sl_price:,.0f}\n"
+                    f"PAST SL by {sl_exceeded_pct:.1f}%\n"
+                    f"Entry: {entry_price:,.0f}  P&L: {pnl_pct:+.2f}%"
+                )
+            }]
+        }
 
     # 1. Near SL (within 0.5% of SL level)
     if current <= sl_price * 1.005:
@@ -212,7 +231,7 @@ def _check_trade(trade: dict) -> list:
                 )
             })
 
-    return alerts
+    return {'should_close': False, 'alerts': alerts}
 
 
 def _evaluate_swing_trend(trade: dict) -> dict:
@@ -444,9 +463,20 @@ def check_all_open_trades():
                     total_alerts += 1
             continue
 
-        # Non-swing: existing alert flow (no auto-close)
-        alerts = _check_trade(trade)
-        for alert in alerts:
+        # Non-swing: check for stop loss hit and alerts
+        result = _check_trade(trade)
+
+        # Auto-close if stop loss is hit
+        if result['should_close']:
+            cur = _get_current_price(trade['ticker']) or float(trade['entry_price'])
+            try:
+                close_trade(int(trade['id']), float(cur), 'STOPPED_OUT', notify=False)
+                logger.info(f"[monitor] Auto-closed {trade['ticker']} (STOPPED_OUT)")
+            except Exception as e:
+                logger.error(f"[monitor] close_trade failed: {e}")
+
+        # Process all alerts (including stop loss alert)
+        for alert in result['alerts']:
             logger.info(f"[monitor] Alert {alert['alert_type']} for {alert['ticker']}")
             try:
                 log_trade_alert(
