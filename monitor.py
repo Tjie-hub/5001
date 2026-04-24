@@ -140,6 +140,23 @@ def _check_trade(trade: dict) -> dict:
 
     pnl_pct = (current - entry_price) / entry_price * 100
 
+    # CRITICAL: Take profit hit — auto-close immediately
+    if current >= tp_price:
+        tp_exceeded_pct = (current - tp_price) / tp_price * 100
+        return {
+            'should_close': True,
+            'alerts': [{
+                'ticker': ticker, 'trade_id': trade_id,
+                'alert_type': 'TARGET_REACHED', 'severity': 'INFO',
+                'message': (
+                    f"✅ <b>TAKE PROFIT HIT — AUTO-CLOSED</b> — {ticker}\n"
+                    f"Price: {current:,.0f}  TP: {tp_price:,.0f}\n"
+                    f"ABOVE TP by {tp_exceeded_pct:.1f}%\n"
+                    f"Entry: {entry_price:,.0f}  P&L: {pnl_pct:+.2f}%"
+                )
+            }]
+        }
+
     # CRITICAL: Stop loss hit — auto-close immediately
     if current <= sl_price:
         sl_exceeded_pct = (sl_price - current) / sl_price * 100
@@ -170,17 +187,6 @@ def _check_trade(trade: dict) -> dict:
             )
         })
 
-    # 2. Near TP (within 0.5% of TP level)
-    if current >= tp_price * 0.995:
-        alerts.append({
-            'ticker': ticker, 'trade_id': trade_id,
-            'alert_type': 'NEAR_TP', 'severity': 'LOW',
-            'message': (
-                f"✅ <b>APPROACHING TP</b> — {ticker}\n"
-                f"Current: {current:,.0f}  TP: {tp_price:,.0f} ({pnl_pct:+.1f}%)\n"
-                f"<i>Consider booking profit or trailing SL</i>"
-            )
-        })
 
     # 3. Momentum reversal (2 consecutive down bars after entry)
     closes = _fetch_recent_closes(ticker, 5)
