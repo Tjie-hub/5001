@@ -992,49 +992,89 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
+def calc_weekly_trend(df: pd.DataFrame) -> tuple:
+    """
+    Check weekly timeframe trend: resample daily bars to weekly, verify
+    price > weekly MA20 and slope is not sharply negative.
+
+    Returns (passes: bool, reason: str).
+    Returns (True, 'insufficient') if <100 daily bars — soft pass, don't block.
+    """
+    if len(df) < 100:
+        return True, "W:insufficient_data"
+
+    try:
+        dfc = df.copy()
+        # Ensure date index for resampling
+        if not isinstance(dfc.index, pd.DatetimeIndex):
+            dfc['date'] = pd.to_datetime(dfc['date'])
+            dfc = dfc.set_index('date')
+
+        weekly = dfc['close'].resample('W').last().dropna()
+        if len(weekly) < 22:
+            return True, "W:insufficient_weeks"
+
+        wma20    = weekly.rolling(20).mean()
+        cur_c    = weekly.iloc[-1]
+        cur_ma20 = wma20.iloc[-1]
+        if pd.isna(cur_ma20) or cur_ma20 <= 0:
+            return True, "W:ma20_nan"
+
+        # Slope over last 5 weekly bars
+        ma20_5w_ago = wma20.iloc[-6] if len(wma20) >= 6 else wma20.iloc[0]
+        slope_pct = float((cur_ma20 - ma20_5w_ago) / ma20_5w_ago * 100) if ma20_5w_ago > 0 else 0.0
+
+        if cur_c >= cur_ma20 and slope_pct >= -1.0:
+            return True, f"W:OK c={cur_c:.0f}≥ma20={cur_ma20:.0f} slope={slope_pct:+.1f}%"
+        return False, f"W:FAIL c={cur_c:.0f}<ma20={cur_ma20:.0f} slope={slope_pct:+.1f}%"
+    except Exception as _e:
+        return True, f"W:error({_e})"  # soft pass on error
+
+
 def check_current_entry_signal(ticker: str, strategy: str, df: pd.DataFrame = None) -> dict:
     """
     Cek apakah ticker memenuhi entry criteria dari strategy yang dipilih
-    pada data terbaru (last bar)
-    
-    Args:
-        ticker: Kode ticker (e.g., 'BBCA')
-        strategy: Nama strategy ('vol_weighted', 'momentum', dll)
-        df: DataFrame OHLCV ticker (optional, akan di-fetch jika None)
-    
+    pada data terbaru (last bar).
+    Includes multi-timeframe weekly trend confirmation as final gate.
+
     Returns:
-        dict: {
-            'has_signal': bool,
-            'reason': str (penjelasan kenapa pass/tidak pass),
-            'details': dict (nilai-nilai metric untuk display)
-        }
+        dict: {'has_signal': bool, 'reason': str, 'details': dict}
     """
-    # Jika df tidak diberikan, fetch dari database
     if df is None:
         df = get_ticker_data(ticker)
-    
+
     if df.empty or len(df) < 20:
         return {
             'has_signal': False,
             'reason': 'Data tidak cukup (minimum 20 bars)',
             'details': {}
         }
-    
-    # Route ke fungsi checker sesuai strategy
+
+    # Route to strategy-specific checker
     if strategy == 'vol_weighted':
-        return check_vol_weighted_signal(df)
+        result = check_vol_weighted_signal(df)
     elif strategy == 'momentum':
-        return check_momentum_signal(df)
+        result = check_momentum_signal(df)
     elif strategy == 'vwap_reversion':
-        return check_vwap_reversion_signal(df)
+        result = check_vwap_reversion_signal(df)
     elif strategy == 'conservative':
-        return check_conservative_signal(df)
+        result = check_conservative_signal(df)
     else:
         return {
             'has_signal': False,
             'reason': f'Strategy {strategy} belum didukung',
             'details': {}
         }
+
+    # Multi-timeframe gate: only check when daily signal passes
+    if result.get('has_signal'):
+        w_pass, w_reason = calc_weekly_trend(df)
+        result['details']['weekly_trend'] = w_reason
+        if not w_pass:
+            result['has_signal'] = False
+            result['reason'] = f"W-BLOCK: {w_reason} | daily: {result['reason']}"
+
+    return result
 
 
 def check_vol_weighted_signal(df: pd.DataFrame) -> dict:

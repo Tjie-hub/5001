@@ -870,6 +870,17 @@ def api_paper_summary():
     return jsonify(get_summary())
 
 
+@app.route('/api/paper/report-telegram', methods=['POST'])
+def api_paper_report_telegram():
+    """Manually trigger open trades report to Telegram."""
+    try:
+        from scheduler import open_trades_status_report
+        open_trades_status_report()
+        return jsonify({'success': True, 'message': 'Report sent to Telegram'}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/flow/monitor', methods=['GET'])
 def api_flow_monitor():
     import sqlite3
@@ -1517,6 +1528,50 @@ def telegram_webhook_status():
             return jsonify({'success': False, 'error': info.get('description')}), 400
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTOR ROTATION ENDPOINTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route('/api/sector/rotation', methods=['GET'])
+def api_sector_rotation():
+    from engine.sector_rotation import score_sectors
+    try:
+        ranked = score_sectors()
+        return jsonify({'success': True, 'sectors': ranked})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ECONOMIC CALENDAR ENDPOINTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route('/api/calendar/status', methods=['GET'])
+def api_calendar_status():
+    from engine.calendar_filter import is_blackout_day, get_upcoming_events
+    from datetime import date
+    blackout, reason = is_blackout_day()
+    return jsonify({
+        'today':         date.today().isoformat(),
+        'is_blackout':   blackout,
+        'reason':        reason,
+        'upcoming':      get_upcoming_events(14),
+    })
+
+
+@app.route('/api/calendar/events', methods=['GET'])
+def api_calendar_events():
+    from engine.calendar_filter import get_all_events, is_blackout_day
+    from datetime import date
+    blackout, reason = is_blackout_day()
+    return jsonify({
+        'today':       date.today().isoformat(),
+        'is_blackout': blackout,
+        'reason':      reason,
+        'events':      get_all_events(),
+    })
 
 
 if __name__ == "__main__":

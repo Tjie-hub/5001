@@ -30,7 +30,7 @@ def get_task_state() -> dict:
     return dict(_task_state)
 
 
-def run_intraday(trade_date: str = None, on_progress=None) -> dict:
+def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None) -> dict:
     t0 = time.time()
     if trade_date is None:
         trade_date = dt_date.today().isoformat()
@@ -39,6 +39,17 @@ def run_intraday(trade_date: str = None, on_progress=None) -> dict:
     ok, err = 0, 0
 
     ohlcv_all = scraper.fetch_lq45_ohlcv()
+    filled = sum(1 for v in ohlcv_all.values() if v.get('close'))
+    if filled == 0 and send_telegram:
+        try:
+            send_telegram(
+                f"🔴 <b>OHLCV Scraper GAGAL</b>\n\n"
+                f"Tidak ada data harga dari yfinance ({trade_date}).\n"
+                f"Screener berjalan tanpa data harga."
+            )
+        except Exception:
+            pass
+
     all_trades = scraper.fetch_all_running_trades(trade_date=trade_date)
 
     total = len(scraper.LQ45)

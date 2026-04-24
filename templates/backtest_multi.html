@@ -491,6 +491,8 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
     <button class="tab" data-tab="intraday">Intraday</button>
     <button class="tab" data-tab="paper">Paper Trades</button>
     <button class="tab" data-tab="brokerflow">Broker Flow</button>
+    <button class="tab" data-tab="sector">Sector Rotation</button>
+    <button class="tab" data-tab="calendar">Calendar</button>
     <div class="tab-indicator" id="tab-ind"></div>
   </nav>
 </div>
@@ -779,6 +781,61 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
   <div id="bf-empty" style="padding:60px;text-align:center;color:var(--text-mute);font-size:13px;">
     <div style="font-size:32px;margin-bottom:12px;opacity:.3;">📊</div>
     Enter a ticker and click Load
+  </div>
+</section>
+
+<!-- ===== SECTOR ROTATION ===== -->
+<section class="tab-panel" id="panel-sector">
+  <div class="panel-head">
+    <div><h2>Sector Rotation</h2><div class="sub">IDX sector momentum scores. OVERWEIGHT = trade freely. UNDERWEIGHT = avoid new entries.</div></div>
+    <div class="right">
+      <button class="btn btn-secondary" onclick="loadSectorRotation()">↻ Refresh</button>
+    </div>
+  </div>
+  <div id="sector-loading" style="text-align:center;padding:40px;color:var(--text-mute);display:none;">Computing sector scores…</div>
+  <div class="table-wrap" id="sector-table-wrap">
+    <table class="data" id="sector-table">
+      <thead><tr>
+        <th style="text-align:left">#</th>
+        <th style="text-align:left">Sector</th>
+        <th style="text-align:left">Weight</th>
+        <th class="right-num">Score</th>
+        <th class="right-num">5D %</th>
+        <th class="right-num">10D %</th>
+        <th class="right-num">20D %</th>
+        <th class="right-num">Tickers</th>
+      </tr></thead>
+      <tbody id="sector-tbody"></tbody>
+    </table>
+  </div>
+  <div id="sector-empty" style="display:none;text-align:center;padding:60px;color:var(--text-mute);">No sector data. Click Refresh.</div>
+</section>
+
+<!-- ===== CALENDAR ===== -->
+<section class="tab-panel" id="panel-calendar">
+  <div class="panel-head">
+    <div><h2>Economic Calendar</h2><div class="sub">BI Rate RDG and FOMC dates. Trading is paused H-1 and H+1 around each event.</div></div>
+    <div class="right">
+      <div id="cal-blackout-badge" style="display:none;padding:5px 12px;border-radius:8px;background:var(--red-dim);color:var(--red);font-size:12px;font-weight:600;">⛔ BLACKOUT TODAY</div>
+    </div>
+  </div>
+  <div id="cal-status-bar" style="margin-bottom:14px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+    <span style="color:var(--text-mute)">Status today:</span>
+    <span id="cal-status-text" style="font-weight:600;">Loading…</span>
+    <span style="color:var(--text-mute);margin-left:auto;">Next event:</span>
+    <span id="cal-next-event" style="font-weight:600;color:var(--amber)">—</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data" id="cal-table">
+      <thead><tr>
+        <th style="text-align:left">Date</th>
+        <th style="text-align:left">Event</th>
+        <th style="text-align:left">Blackout Window</th>
+        <th class="right-num">Days Away</th>
+        <th style="text-align:left">Status</th>
+      </tr></thead>
+      <tbody id="cal-tbody"></tbody>
+    </table>
   </div>
 </section>
 
@@ -1698,6 +1755,134 @@ document.querySelectorAll('.reason').forEach(b => {
     b.classList.add('on');
   });
 });
+
+/* ════════════════════════════════════════════════════
+   SECTOR ROTATION
+═══════════════════════════════════════════════════════ */
+async function loadSectorRotation() {
+  document.getElementById('sector-loading').style.display = 'block';
+  document.getElementById('sector-table-wrap').style.opacity = '0.4';
+  document.getElementById('sector-empty').style.display = 'none';
+  try {
+    const r = await fetch('/api/sector/rotation');
+    const d = await r.json();
+    if (!d.success || !d.sectors.length) {
+      document.getElementById('sector-empty').style.display = 'block';
+      return;
+    }
+    const WEIGHT_COLOR = {
+      'OVERWEIGHT':  'var(--green)',
+      'NEUTRAL':     'var(--text-dim)',
+      'UNDERWEIGHT': 'var(--red)',
+    };
+    const tbody = document.getElementById('sector-tbody');
+    tbody.innerHTML = d.sectors.map((s, i) => {
+      const wc = WEIGHT_COLOR[s.weight] || 'var(--text)';
+      const bg = s.weight === 'OVERWEIGHT' ? 'rgba(16,185,129,.04)'
+               : s.weight === 'UNDERWEIGHT' ? 'rgba(239,68,68,.04)' : '';
+      const fmt = v => v >= 0 ? `<span style="color:var(--green)">+${v.toFixed(2)}%</span>`
+                               : `<span style="color:var(--red)">${v.toFixed(2)}%</span>`;
+      return `<tr style="background:${bg}">
+        <td style="color:var(--text-mute);font-family:var(--mono)">${i+1}</td>
+        <td><strong>${s.sector}</strong></td>
+        <td><span style="color:${wc};font-weight:600;font-size:11px">${s.weight}</span></td>
+        <td class="right-num">${fmt(s.score)}</td>
+        <td class="right-num">${fmt(s.ret_5d)}</td>
+        <td class="right-num">${fmt(s.ret_10d)}</td>
+        <td class="right-num">${fmt(s.ret_20d)}</td>
+        <td class="right-num" style="color:var(--text-mute)">${s.n_tickers}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('sector-empty').style.display = 'block';
+    document.getElementById('sector-empty').textContent = 'Error: ' + e.message;
+  } finally {
+    document.getElementById('sector-loading').style.display = 'none';
+    document.getElementById('sector-table-wrap').style.opacity = '1';
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   ECONOMIC CALENDAR
+═══════════════════════════════════════════════════════ */
+async function loadCalendar() {
+  try {
+    const r = await fetch('/api/calendar/events');
+    const d = await r.json();
+
+    // Blackout badge
+    const badge = document.getElementById('cal-blackout-badge');
+    const statusEl = document.getElementById('cal-status-text');
+    if (d.is_blackout) {
+      badge.style.display = 'block';
+      statusEl.textContent = '⛔ ' + d.reason;
+      statusEl.style.color = 'var(--red)';
+    } else {
+      badge.style.display = 'none';
+      statusEl.textContent = '✅ Clear — trading allowed';
+      statusEl.style.color = 'var(--green)';
+    }
+
+    // Next upcoming event
+    const upcoming = d.events.filter(e => !e.past);
+    const nextEl = document.getElementById('cal-next-event');
+    if (upcoming.length) {
+      const nxt = upcoming[0];
+      nextEl.textContent = `${nxt.label} on ${nxt.date} (${nxt.days_away}d away)`;
+    } else {
+      nextEl.textContent = 'None in remaining year';
+    }
+
+    // Full table
+    const tbody = document.getElementById('cal-tbody');
+    tbody.innerHTML = d.events.map(ev => {
+      const past = ev.past;
+      const near = !past && ev.days_away <= 3;
+      const rowStyle = past ? 'opacity:.45' : near ? 'background:rgba(245,158,11,.04)' : '';
+      const daysText = past ? `${Math.abs(ev.days_away)}d ago`
+                     : ev.days_away === 0 ? '<strong style="color:var(--red)">TODAY</strong>'
+                     : `<span style="color:${ev.days_away<=3?'var(--amber)':'var(--text-dim)'}">in ${ev.days_away}d</span>`;
+      const labelColor = ev.label === 'BI Rate RDG' ? 'var(--indigo-2)' : 'var(--amber)';
+      return `<tr style="${rowStyle}">
+        <td class="mono">${ev.date}</td>
+        <td><span style="color:${labelColor};font-weight:600">${ev.label}</span></td>
+        <td style="color:var(--text-mute);font-size:11px">${ev.blackout_start} → ${ev.blackout_end}</td>
+        <td class="right-num">${daysText}</td>
+        <td style="font-size:11px">${past ? '<span style="color:var(--text-mute)">Past</span>' : near ? '<span style="color:var(--amber)">⚠ Approaching</span>' : '<span style="color:var(--text-mute)">Upcoming</span>'}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    console.error('Calendar load error:', e);
+  }
+}
+
+/* Auto-load when switching to sector/calendar tabs */
+const _origSwitchTab = window._switchTabHook;
+document.getElementById('tabs-nav').addEventListener('click', e => {
+  const tab = e.target.closest('[data-tab]');
+  if (!tab) return;
+  const name = tab.dataset.tab;
+  if (name === 'sector')   loadSectorRotation();
+  if (name === 'calendar') loadCalendar();
+});
+
+/* Show blackout warning in topbar if active */
+(async () => {
+  try {
+    const r = await fetch('/api/calendar/status');
+    const d = await r.json();
+    if (d.is_blackout) {
+      const topbar = document.querySelector('.top-center');
+      if (topbar) {
+        const warn = document.createElement('div');
+        warn.style.cssText = 'padding:3px 10px;border-radius:6px;background:rgba(239,68,68,.15);color:var(--red);font-size:11px;font-weight:600;border:1px solid rgba(239,68,68,.3)';
+        warn.textContent = '⛔ BLACKOUT';
+        warn.title = d.reason;
+        topbar.appendChild(warn);
+      }
+    }
+  } catch(_) {}
+})();
 </script>
 </body>
 </html>
