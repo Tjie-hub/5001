@@ -905,7 +905,7 @@ def open_trades_status_report():
 
 
 def flow_broker_report():
-    """Report at 17:15 — Flow data for top tickers from 16:00 scan."""
+    """Report at 17:15 — Flow sentiment summary with actionable trades."""
     now = datetime.now(WIB).strftime("%d/%m/%Y %H:%M")
     try:
         from flow_filter import get_flow_batch
@@ -919,29 +919,56 @@ def flow_broker_report():
         conn.close()
 
         if signals.empty:
-            msg = f"📊 <b>Flow Report — {now}</b>\n\nNo signals to analyze."
+            msg = f"📊 <b>Market Flow Sentiment — {now}</b>\n\nNo signals today."
             send_telegram(msg)
             return
 
-        tickers = signals['ticker'].head(10).tolist()
+        tickers = signals['ticker'].tolist()
 
-        msg = f"📊 <b>Flow Report — {now}</b>\n\n"
-
-        # Fetch flow data
+        # Fetch flow data for all tickers
         try:
             flow_data = get_flow_batch(tickers, token=None, delay=0.8)
-            for ticker in tickers[:5]:
-                if ticker in flow_data:
-                    f = flow_data[ticker]
-                    emoji = "🟢" if f.get('score', 0) >= 2 else "🟡" if f.get('score', 0) >= 0 else "🔴"
-                    msg += f"{emoji} <b>{ticker}</b>\n"
-                    msg += f"   Flow: {f['verdict']} ({f['score']:+.0f}) | Smart: {f['smart_money']}\n"
-                    msg += f"   Price chg: {f['price_chg_pct']:+.2f}%\n\n"
         except Exception as e:
-            msg += f"⚠️ Flow fetch error: {e}\n"
+            send_telegram(f"🔴 <b>Flow Report Error</b>\n\n<code>{str(e)[:150]}</code>")
+            return
+
+        # Categorize by sentiment
+        bullish = []
+        neutral_buy = []
+        bearish = []
+
+        for ticker, f in flow_data.items():
+            verdict = f.get('verdict', 'N/A')
+            score = f.get('score', 0)
+            smart = f.get('smart_money', 'N/A')
+
+            if verdict == 'BULLISH':
+                bullish.append((ticker, score, smart))
+            elif verdict == 'NEUTRAL' and ('BUY' in smart or score >= 1):
+                neutral_buy.append((ticker, score, smart))
+            else:
+                bearish.append((ticker, score, smart))
+
+        msg = f"📊 <b>Market Flow Sentiment — {now}</b>\n\n"
+
+        # Summary
+        msg += f"<b>Sentiment:</b> "
+        msg += f"🟢 {len(bullish)} bullish | "
+        msg += f"🟡 {len(neutral_buy)} neutral (buy) | "
+        msg += f"🔴 {len(bearish)} bearish\n\n"
+
+        # Show bullish/neutral opportunities
+        if bullish or neutral_buy:
+            msg += "<b>🟢 BUY SIGNALS:</b>\n"
+            for t, s, m in (bullish + neutral_buy)[:5]:
+                msg += f"  {t}: Smart={m} (score {s:+.0f})\n"
+        else:
+            msg += "⚠️ <b>No bullish signals today</b>\n"
+            if neutral_buy or len(neutral_buy) == 0:
+                msg += "Market showing strong selling pressure\n"
 
         send_telegram(msg)
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Flow report sent")
+        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Flow report sent ({len(bullish)} bullish, {len(neutral_buy)} neutral)")
     except Exception as e:
         logging.error(f"flow_broker_report error: {e}")
         send_telegram(f"🔴 <b>Flow Report Error</b>\n\n<code>{str(e)[:150]}</code>")
