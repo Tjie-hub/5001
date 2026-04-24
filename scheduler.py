@@ -936,12 +936,25 @@ def flow_broker_report():
         bullish = []
         neutral_buy = []
         bearish = []
+        divergence_bullish = []  # bearish flow with price up
+        divergence_bearish = []  # bullish flow with price down
 
         for ticker, f in flow_data.items():
             verdict = f.get('verdict', 'N/A')
             score = f.get('score', 0)
             smart = f.get('smart_money', 'N/A')
+            divergence = f.get('divergence', '')
+            price_chg = f.get('price_chg_pct', 0)
 
+            # Detect divergence opportunities
+            if divergence == 'BEARISH_DIV':
+                # Delta up but price down — bullish setup
+                divergence_bullish.append((ticker, score, smart, price_chg))
+            elif divergence == 'BULLISH_DIV':
+                # Delta down but price up — bearish setup
+                divergence_bearish.append((ticker, score, smart, price_chg))
+
+            # Regular categorization
             if verdict == 'BULLISH':
                 bullish.append((ticker, score, smart))
             elif verdict == 'NEUTRAL' and ('BUY' in smart or score >= 1):
@@ -955,7 +968,11 @@ def flow_broker_report():
         msg += f"<b>Sentiment:</b> "
         msg += f"🟢 {len(bullish)} bullish | "
         msg += f"🟡 {len(neutral_buy)} neutral (buy) | "
-        msg += f"🔴 {len(bearish)} bearish\n\n"
+        msg += f"🔴 {len(bearish)} bearish"
+        if divergence_bullish or divergence_bearish:
+            msg += f" | ⚡ {len(divergence_bullish) + len(divergence_bearish)} divergence\n\n"
+        else:
+            msg += "\n\n"
 
         # Show bullish/neutral opportunities
         if bullish or neutral_buy:
@@ -967,8 +984,20 @@ def flow_broker_report():
             if neutral_buy or len(neutral_buy) == 0:
                 msg += "Market showing strong selling pressure\n"
 
+        # Show divergence opportunities
+        if divergence_bullish or divergence_bearish:
+            msg += "\n<b>⚡ DIVERGENCE ALERTS:</b>\n"
+            if divergence_bullish:
+                msg += "  <b>🟢 Bullish Divergence (flow up, price down):</b>\n"
+                for t, s, m, pc in divergence_bullish[:3]:
+                    msg += f"    {t}: {pc:+.1f}% (score {s:+.0f})\n"
+            if divergence_bearish:
+                msg += "  <b>🔴 Bearish Divergence (flow down, price up):</b>\n"
+                for t, s, m, pc in divergence_bearish[:3]:
+                    msg += f"    {t}: {pc:+.1f}% (score {s:+.0f})\n"
+
         send_telegram(msg)
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Flow report sent ({len(bullish)} bullish, {len(neutral_buy)} neutral)")
+        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Flow report sent ({len(bullish)} bullish, {len(neutral_buy)} neutral, {len(divergence_bullish)+len(divergence_bearish)} divergence)")
     except Exception as e:
         logging.error(f"flow_broker_report error: {e}")
         send_telegram(f"🔴 <b>Flow Report Error</b>\n\n<code>{str(e)[:150]}</code>")
