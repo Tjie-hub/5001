@@ -51,6 +51,20 @@ def calc_vol_ratio(df: pd.DataFrame, period: int = 20) -> pd.Series:
     avg = df['volume'].rolling(period).mean()
     return df['volume'] / avg
 
+def calc_relative_strength(ticker_df: pd.DataFrame, ihsg_df: pd.DataFrame, period: int = 20) -> float:
+    """RS = (1 + ticker_return_N) / (1 + ihsg_return_N). RS > 1.0 = outperforming IHSG."""
+    if ticker_df is None or ihsg_df is None:
+        return 1.0
+    if len(ticker_df) < period + 1 or len(ihsg_df) < period + 1:
+        return 1.0
+    ticker_return = ticker_df["close"].iloc[-1] / ticker_df["close"].iloc[-period - 1] - 1
+    ihsg_return   = ihsg_df["close"].iloc[-1]  / ihsg_df["close"].iloc[-period - 1]  - 1
+    denominator   = 1 + ihsg_return
+    if denominator == 0:
+        return 1.0
+    return (1 + ticker_return) / denominator
+
+
 def calc_delta(df: pd.DataFrame) -> pd.Series:
     """Proxy delta: (close - open) / (high - low) * volume, normalized."""
     rng = (df['high'] - df['low']).replace(0, np.nan)

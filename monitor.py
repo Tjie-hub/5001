@@ -123,8 +123,9 @@ def _get_current_price(ticker: str) -> float:
 def _check_trade(trade: dict) -> dict:
     """
     Analyse one open trade. Returns dict with keys:
-      - should_close: bool (True if stop loss hit)
+      - should_close: bool (True if stop loss or TP hit)
       - alerts: list of alert dicts if warnings found
+      - trail_update: dict {new_sl, new_highest} if trailing state changed, else None
       Each alert: {ticker, trade_id, alert_type, severity, message}
     """
     ticker      = trade['ticker']
@@ -134,9 +135,28 @@ def _check_trade(trade: dict) -> dict:
     trade_id    = trade['id']
 
     alerts = []
+    trail_update = None
     current = _get_current_price(ticker)
     if not current:
-        return {'should_close': False, 'alerts': alerts}
+        return {'should_close': False, 'alerts': alerts, 'trail_update': None}
+
+    # Trailing stop — compute before SL checks so updated SL is used
+    atr14 = float(trade.get('atr14') or 0) or _fetch_atr(ticker)
+    highest = float(trade.get('highest_seen') or entry_price)
+    new_highest = max(highest, current)
+
+    if atr14 and atr14 > 0:
+        new_sl = sl_price
+        if current >= entry_price + 2 * atr14:
+            # Trail SL at 1 ATR below highest seen
+            new_sl = max(sl_price, round(new_highest - atr14))
+        elif current >= entry_price + atr14:
+            # Move SL to breakeven
+            new_sl = max(sl_price, round(entry_price))
+
+        if new_sl > sl_price or new_highest > highest:
+            trail_update = {'new_sl': new_sl, 'new_highest': new_highest}
+            sl_price = new_sl  # use updated SL for all checks below
 
     pnl_pct = (current - entry_price) / entry_price * 100
 
@@ -145,6 +165,7 @@ def _check_trade(trade: dict) -> dict:
         tp_exceeded_pct = (current - tp_price) / tp_price * 100
         return {
             'should_close': True,
+            'trail_update': trail_update,
             'alerts': [{
                 'ticker': ticker, 'trade_id': trade_id,
                 'alert_type': 'TARGET_REACHED', 'severity': 'INFO',
@@ -162,6 +183,7 @@ def _check_trade(trade: dict) -> dict:
         sl_exceeded_pct = (sl_price - current) / sl_price * 100
         return {
             'should_close': True,
+            'trail_update': trail_update,
             'alerts': [{
                 'ticker': ticker, 'trade_id': trade_id,
                 'alert_type': 'STOPPED_OUT', 'severity': 'CRITICAL',
@@ -237,7 +259,7 @@ def _check_trade(trade: dict) -> dict:
                 )
             })
 
-    return {'should_close': False, 'alerts': alerts}
+    return {'should_close': False, 'alerts': alerts, 'trail_update': trail_update}
 
 
 def _evaluate_swing_trend(trade: dict) -> dict:
@@ -469,8 +491,21 @@ def check_all_open_trades():
                     total_alerts += 1
             continue
 
-        # Non-swing: check for stop loss hit and alerts
+        # Non-swing: check for stop loss / TP, alerts, and trailing stop
         result = _check_trade(trade)
+
+        # Persist trailing stop update if SL or highest_seen changed
+        if result.get('trail_update'):
+            tu = result['trail_update']
+            try:
+                conn = get_db()
+                conn.execute(
+                    "UPDATE paper_trades SET sl_price=?, highest_seen=? WHERE id=?",
+                    (tu['new_sl'], tu['new_highest'], trade['id'])
+                )
+                conn.commit(); conn.close()
+            except Exception as e:
+                logger.error(f"[monitor] trail update failed: {e}")
 
         # Auto-close if stop loss is hit
         if result['should_close']:

@@ -12,6 +12,7 @@ import screener.calculator as calc
 import screener.vpin as vpin_mod
 import screener.vpin_multi as vpin_multi
 import screener.screener_jobs as jobs
+from data.fetcher import load_all_tickers
 
 logger = logging.getLogger(__name__)
 screener_bp = Blueprint('screener', __name__)
@@ -113,8 +114,9 @@ def api_vpin_multi():
 @screener_bp.route('/vpin/scan')
 def api_vpin_scan():
     date = request.args.get('date', dt_date.today().isoformat())
+    tickers = load_all_tickers()
     with db.get_conn() as conn:
-        results = vpin_multi.scan_vpin_signals(conn, scraper.LQ45, date)
+        results = vpin_multi.scan_vpin_signals(conn, tickers, date)
     for r in results:
         r.pop('days_data', None)
     return jsonify({'date': date, 'signals': results, 'count': len(results)})
@@ -122,7 +124,8 @@ def api_vpin_scan():
 
 @screener_bp.route('/lq45')
 def api_lq45():
-    return jsonify({'tickers': scraper.LQ45, 'count': len(scraper.LQ45)})
+    tickers = load_all_tickers()
+    return jsonify({'tickers': tickers, 'count': len(tickers)})
 
 
 @screener_bp.route('/run_log')

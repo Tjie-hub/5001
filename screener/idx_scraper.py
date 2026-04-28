@@ -13,20 +13,11 @@ import logging
 import pandas as pd
 import yfinance as yf
 from datetime import date as dt_date
+from data.fetcher import load_all_tickers
 
 logger = logging.getLogger(__name__)
 
 DELAY = 0.3   # seconds between per-ticker intraday requests
-
-# LQ45 constituents (update manually after BEI rebalancing, Feb & Aug)
-LQ45 = [
-    'AALI','ACES','ADRO','AKRA','AMMN','AMRT','ANTM','ARTO',
-    'ASII','BBCA','BBNI','BBRI','BBTN','BMRI','BRIS','BRPT',
-    'BUKA','CPIN','EMTK','EXCL','GGRM','GOTO','HRUM','ICBP',
-    'INCO','INDF','INDY','INKP','INTP','ISAT','ITMG','JPFA',
-    'KLBF','MAPI','MDKA','MEDC','MIKA','MNCN','PGAS','PTBA',
-    'SMGR','TBIG','TLKM','TOWR','UNTR','UNVR',
-]
 
 
 def _jk(ticker: str) -> str:
@@ -37,11 +28,11 @@ def _jk(ticker: str) -> str:
 
 def fetch_lq45_ohlcv(tickers: list = None) -> dict:
     """
-    Fetch today's OHLCV for all LQ45 tickers in one batch.
+    Fetch today's OHLCV for all tickers in one batch.
     Returns: {ticker: {close, open, high, low, volume}}
     """
     if tickers is None:
-        tickers = LQ45
+        tickers = load_all_tickers()
 
     logger.info(f"[scraper] Fetching OHLCV batch for {len(tickers)} tickers...")
     try:
@@ -177,7 +168,7 @@ def fetch_all_running_trades(
 ) -> dict:
     """Sequential fetch intraday 1m bars for all tickers."""
     if tickers is None:
-        tickers = LQ45
+        tickers = load_all_tickers()
     if trade_date is None:
         trade_date = dt_date.today().isoformat()
 
@@ -196,26 +187,7 @@ def fetch_all_running_trades(
     return result
 
 
-# ── 3. Broker Summary (not available) ────────────────────────────────────────
-
-def fetch_broker_summary(ticker: str, trade_date: str = None) -> list:
-    """Broker summary not available via yfinance. Returns empty list."""
-    return []
-
-
-def fetch_all_broker_summaries(
-    tickers: list = None,
-    trade_date: str = None,
-    delay: float = 0,
-    progress_cb=None,
-) -> dict:
-    """Returns empty dict — broker data not available."""
-    if tickers is None:
-        tickers = LQ45
-    return {t: [] for t in tickers}
-
-
-# ── 4. Avg Volume 20D ─────────────────────────────────────────────────────────
+# ── 3. Avg Volume 20D ─────────────────────────────────────────────────────────
 
 def fetch_avg_vol_20d(ticker: str) -> int | None:
     """Fetch 30-day daily history and compute 20D avg volume."""

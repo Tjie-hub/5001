@@ -30,34 +30,49 @@ def send_telegram(msg: str):
         print(f"Telegram error: {e}")
 
 def get_all_tickers():
+    """Return all active tickers: idx_tickers table first, fallback to ohlcv."""
     conn = sqlite3.connect(DB_PATH)
+    # Prefer the master list (populated after discovery)
+    try:
+        rows = conn.execute(
+            "SELECT ticker FROM idx_tickers WHERE status='active' ORDER BY ticker"
+        ).fetchall()
+        if rows:
+            conn.close()
+            return [r[0] for r in rows]
+    except Exception:
+        pass
+    # Fallback: tickers already in ohlcv
     tickers = [r[0] for r in conn.execute("SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker").fetchall()]
     conn.close()
     return tickers
 
 def fetch_latest():
-    """Fetch OHLCV terbaru untuk semua ticker."""
-    from data.fetcher import fetch_ticker
-    tickers = get_all_tickers()
+    """Fetch OHLCV terbaru untuk semua ticker (incremental batch)."""
+    from data.fetcher import fetch_all_incremental, load_all_tickers
     now_str = datetime.now(WIB).strftime("%H:%M")
-    print(f"[{now_str}] Fetching {len(tickers)} tickers...")
-    failed = []
-    for t in tickers:
-        if fetch_ticker(t, period="5d") == 0:
-            failed.append(t)
-    print(f"[{datetime.now(WIB).strftime('%H:%M')}] Fetch selesai. {len(tickers) - len(failed)}/{len(tickers)} berhasil.")
-    if len(failed) == len(tickers):
+    tickers = load_all_tickers()
+    print(f"[{now_str}] Incremental fetch {len(tickers)} tickers...")
+    try:
+        saved = fetch_all_incremental(category="ALL")
+        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Fetch selesai. {saved} bars saved.")
+    except Exception as e:
+        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Fetch error: {e}")
         send_telegram(
             f"🔴 <b>OHLCV Fetch GAGAL</b>\n\n"
-            f"Semua <b>{len(tickers)} tickers</b> gagal ({now_str}).\n"
-            f"Kemungkinan: yfinance error / koneksi terputus."
+            f"<b>{len(tickers)} tickers</b> @ {now_str}\n"
+            f"<code>{str(e)[:150]}</code>"
         )
-    elif len(failed) > len(tickers) // 2:
-        send_telegram(
-            f"⚠️ <b>OHLCV Fetch WARNING</b>\n\n"
-            f"<b>{len(failed)}/{len(tickers)}</b> tickers gagal ({now_str}).\n"
-            f"Contoh gagal: {', '.join(failed[:5])}"
-        )
+
+def _load_ohlcv_bulk() -> dict:
+    """Load all OHLCV in one query. Returns {ticker: DataFrame}."""
+    conn = sqlite3.connect(DB_PATH)
+    all_df = pd.read_sql('SELECT * FROM ohlcv ORDER BY ticker, date ASC', conn)
+    conn.close()
+    for c in ["open", "high", "low", "close", "volume"]:
+        all_df[c] = all_df[c].astype(float)
+    return {t: grp.reset_index(drop=True) for t, grp in all_df.groupby("ticker")}
+
 
 def refresh_wf_scores():
     """Run walk-forward semua ticker & simpan ke wf_scores table."""
@@ -65,17 +80,15 @@ def refresh_wf_scores():
     from datetime import datetime as dt
 
     tickers = get_all_tickers()
+    ohlcv_map = _load_ohlcv_bulk()
     conn = sqlite3.connect(DB_PATH)
     now_str = dt.now().strftime("%Y-%m-%d %H:%M")
     updated = 0
     for ticker in tickers:
         try:
-            df = pd.read_sql(
-                'SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
-            if len(df) < 60:
+            df = ohlcv_map.get(ticker)
+            if df is None or len(df) < 60:
                 continue
-            for c in ["open","high","low","close","volume"]:
-                df[c] = df[c].astype(float)
             result = run_walk_forward(df)
             if "error" in result:
                 continue
@@ -159,11 +172,29 @@ def check_fundamental(ticker):
 # Module-level regime classifier cache: {ticker: (date_str, RegimeClassifier)}
 _regime_clf_cache: dict = {}
 
+# Sector scores cache: (scores_list, epoch_timestamp)
+_sector_scores_cache: tuple = (None, 0.0)
+
+def _get_sector_scores_cached():
+    """Return score_sectors() cached for up to 1 hour."""
+    import time
+    from engine.sector_rotation import score_sectors
+    global _sector_scores_cache
+    scores, ts = _sector_scores_cache
+    if scores is not None and (time.time() - ts) < 3600:
+        return scores
+    scores = score_sectors()
+    _sector_scores_cache = (scores, time.time())
+    return scores
+
+# Open-trade status cache: {trade_id: {"pnl_pct": float, "status": str}}
+_last_trades_state: dict = {}
+
 def scan_momentum_signals():
     """Scan semua ticker untuk Momentum Following signal hari ini."""
-    from engine.strategies import calc_vol_ratio
+    from engine.strategies import calc_vol_ratio, calc_relative_strength
     from engine.calendar_filter import is_blackout_day
-    from engine.sector_rotation import score_sectors, is_sector_tradeable
+    from engine.sector_rotation import is_sector_tradeable
 
     # Calendar blackout gate — pause new entries on BI Rate / FOMC event days
     _blackout, _bl_reason = is_blackout_day()
@@ -172,8 +203,8 @@ def scan_momentum_signals():
         send_telegram(f"⛔ <b>Scan Paused — Blackout</b>\n\n{_bl_reason}\n\nNo new entries today.")
         return []
 
-    # Pre-compute sector scores once for entire scan
-    _sector_scores = score_sectors()
+    # Pre-compute sector scores once for entire scan (1-hour TTL cache)
+    _sector_scores = _get_sector_scores_cached()
 
     STRATEGY    = "Momentum Following"
     MIN_CONSIST = 50.0
@@ -193,6 +224,8 @@ def scan_momentum_signals():
         logging.warning(f"wf_map load error: {_e}")
 
     signals = []
+    ohlcv_map = _load_ohlcv_bulk()
+    ihsg_df = ohlcv_map.get("IHSG")
     # Regime classifier — import sekali, cache per ticker per hari
     from engine.regime_filter import RegimeClassifier
     import datetime as _dt
@@ -225,18 +258,19 @@ def scan_momentum_signals():
             continue
 
         try:
-            conn = sqlite3.connect(DB_PATH)
-            df = pd.read_sql(
-                'SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
-            conn.close()
-            if len(df) < 25:
+            df = ohlcv_map.get(ticker)
+            if df is None or len(df) < 25:
                 continue
-            for c in ["open","high","low","close","volume"]:
-                df[c] = df[c].astype(float)
             vr     = calc_vol_ratio(df)
             streak = (df["close"] > df["close"].shift(1)) & (df["close"].shift(1) > df["close"].shift(2))
             sig    = streak & (vr > 1.3)
             if sig.iloc[-1]:
+                # Relative Strength filter — skip laggards vs IHSG
+                rs = calc_relative_strength(df, ihsg_df, period=20)
+                if rs < 1.0:
+                    logging.debug(f"[scan_momentum] {ticker} skipped — RS={rs:.2f} < 1.0 (laggard)")
+                    continue
+
                 last  = df.iloc[-1]
                 prev  = df.iloc[-2]
                 chg   = (last["close"] - prev["close"]) / prev["close"] * 100
@@ -282,6 +316,7 @@ def scan_momentum_signals():
                     "wf_score":      weighted,
                     "votes":         votes,
                     "vote_labels":   vote_labels,
+                    "rs":            round(rs, 2),
                     "flow_score":    flow_data["score"] if flow_data else None,
                     "flow_sm":       flow_data["smart_money"] if flow_data else None,
                     "flow_reason":   flow_reason,
@@ -322,7 +357,9 @@ def daily_signal_scan():
             msg += f"{star}🟢 <b>{s['ticker']}</b> — Rp {s['close']:,}\n"
             msg += f"   📈 TP: Rp {tp:,} (+{tp_pct}%)\n"
             msg += f"   🛑 SL: Rp {sl:,} (-2.5%)\n"
-            msg += f"   Vol: {s['vol_ratio']}x | Chg: {s['chg_pct']:+.2f}%\n"
+            rs_val = s.get('rs', 1.0)
+            rs_emoji = '💪' if rs_val >= 1.2 else '✅' if rs_val >= 1.0 else '⚠️'
+            msg += f"   Vol: {s['vol_ratio']}x | Chg: {s['chg_pct']:+.2f}% | {rs_emoji} RS: {rs_val:.2f}\n"
             flow_emoji = chr(0x1F7E2) if (s.get("flow_score") or 0) >= 3 else chr(0x1F7E1) if (s.get("flow_score") or 0) >= 0 else chr(0x1F534)
             msg += f"   {flow_emoji} Flow: {s.get('flow_reason','N/A')}\n"
             regime = s.get('regime', 'N/A')
@@ -396,10 +433,10 @@ def run_flow_fetch():
     today_str = str(date.today())
     print(f"[{now_str}] Flow fetch dimulai...")
     try:
-        from flow_poc import main as flow_main
+        from flow_filter import main as flow_main
         import sys as _sys
         _argv = _sys.argv[:]
-        _sys.argv = ["flow_poc.py"]
+        _sys.argv = ["flow_filter.py"]
         flow_main()
         _sys.argv = _argv
         # Verifikasi data tersimpan
@@ -426,6 +463,62 @@ def run_flow_fetch():
                 f"Signal scan 15:35 akan berjalan <b>tanpa flow data</b>."
             )
 
+
+
+def run_broker_flow_fetch():
+    """Fetch broker flow data setelah 20:00 WIB saat Stockbit publish summary harian."""
+    from datetime import datetime as dt, date
+    import sqlite3
+    now_str = dt.now(WIB).strftime('%H:%M')
+    today_str = str(date.today())
+    print(f"[{now_str}] Broker flow fetch dimulai...")
+    try:
+        from stockbit_fetcher import extract_token_from_chrome, verify_token, run_flow, get_tickers
+        token = extract_token_from_chrome()
+        if not token or not verify_token(token):
+            send_telegram("🔴 <b>Broker Flow Fetch GAGAL</b>\nToken Stockbit expired atau tidak ditemukan.")
+            return
+        tickers = get_tickers("ALL")
+        # Include open paper trade tickers not already in ALL list
+        conn_pt = sqlite3.connect(DB_PATH)
+        extra = [r[0] for r in conn_pt.execute(
+            "SELECT DISTINCT ticker FROM paper_trades WHERE status='OPEN'"
+        ).fetchall()]
+        conn_pt.close()
+        extra_new = [t for t in extra if t not in tickers]
+        if extra_new:
+            print(f"[{now_str}] + {len(extra_new)} extra tickers from paper trades: {extra_new}")
+            tickers = tickers + extra_new
+        run_flow(token, tickers)
+        conn = sqlite3.connect(DB_PATH)
+        count = conn.execute(
+            "SELECT COUNT(DISTINCT ticker) FROM broker_flow WHERE trade_date=?", (today_str,)
+        ).fetchone()[0]
+        conn.close()
+        print(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow selesai. {count} tickers untuk {today_str}.")
+    except Exception as e:
+        print(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow fetch error: {e}")
+        send_telegram(f"🔴 <b>Broker Flow Fetch Error</b>\n<code>{str(e)[:200]}</code>")
+
+
+def run_news_fetch():
+    """Fetch Google News headlines per ticker, persist to news_mentions table.
+
+    Spike detection (today_count >= 3× 30d avg) is consumed by flow_broker_report.
+    """
+    from datetime import datetime as dt
+    now_str = dt.now(WIB).strftime('%H:%M')
+    print(f"[{now_str}] News fetch dimulai...")
+    try:
+        from news_filter import run_news_batch
+        saved = run_news_batch()
+        print(f"[{dt.now(WIB).strftime('%H:%M')}] News fetch selesai. {saved} tickers tersimpan.")
+    except Exception as e:
+        print(f"[{dt.now(WIB).strftime('%H:%M')}] News fetch error: {e}")
+        send_telegram(
+            f"🔴 <b>News Fetch GAGAL</b>\n\n"
+            f"<code>{str(e)[:200]}</code>"
+        )
 
 
 def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
@@ -456,9 +549,9 @@ def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
 
 def scheduled_multi_strategy_scan():
     """Multi-strategy signal scanner dengan flow filter."""
-    from engine.strategies import check_current_entry_signal, get_ticker_data
+    from engine.strategies import check_current_entry_signal
     from engine.calendar_filter import is_blackout_day
-    from engine.sector_rotation import score_sectors, is_sector_tradeable, get_ticker_sector
+    from engine.sector_rotation import is_sector_tradeable, get_ticker_sector
     from flow_filter import get_flow_batch
 
     now = datetime.now(WIB)
@@ -474,8 +567,8 @@ def scheduled_multi_strategy_scan():
 
     print(f"[{time_str}] Starting multi-strategy scan...")
 
-    # Pre-compute sector scores once
-    _sector_scores = score_sectors()
+    # Pre-compute sector scores once (1-hour TTL cache)
+    _sector_scores = _get_sector_scores_cached()
 
     strategies = ["vol_weighted", "vwap_reversion"]
     flow_threshold = 2
@@ -483,10 +576,11 @@ def scheduled_multi_strategy_scan():
 
     # Get all tickers
     tickers = get_all_tickers()
+    ohlcv_map = _load_ohlcv_bulk()
 
     # Step 1: Adaptive strategy selection per ticker
     intersection_results = []
-    
+
     for ticker in tickers:
         try:
             # Sector rotation filter
@@ -494,7 +588,7 @@ def scheduled_multi_strategy_scan():
             if not _sec_ok:
                 continue
 
-            df = get_ticker_data(ticker)
+            df = ohlcv_map.get(ticker)
             if df is None or len(df) < 20:
                 continue
 
@@ -507,7 +601,7 @@ def scheduled_multi_strategy_scan():
             combined_details = {}
             
             for strategy in best_strategies:
-                signal_check = check_current_entry_signal(ticker, strategy, df)
+                signal_check = check_current_entry_signal(ticker, strategy, df=df)
                 
                 if signal_check['has_signal']:
                     passing_strategies.append(strategy)
@@ -673,10 +767,7 @@ def scheduled_multi_strategy_scan():
         
         send_telegram(msg)
     else:
-        msg = f"📊 Multi-Strategy Scan @ {time_str}\n"
-        msg += f"No flow-confirmed signals.\n"
-        msg += f"(Strategy pass: {len(intersection_results)}, Flow threshold: +{flow_threshold})"
-        send_telegram(msg)
+        print(f"[{time_str}] No flow-confirmed signals (strategy pass: {len(intersection_results)}). Telegram suppressed.")
     print(f"[{time_str}] Multi-strategy scan complete.\n")
 
 def _run_open_trade_monitor():
@@ -777,7 +868,8 @@ def daily_fetch_report():
 
 
 def open_trades_status_report():
-    """Generate and send open trades status report to Telegram."""
+    """Send open trades status only when PnL changes ≥1% or trade count/status changes."""
+    global _last_trades_state
     try:
         from datetime import datetime as dt
         from paper_trade import get_open_trades
@@ -787,11 +879,20 @@ def open_trades_status_report():
 
         trades = get_open_trades()
 
+        # Detect trade-count change vs last run
+        prev_ids = set(_last_trades_state.keys())
+        cur_ids  = {str(t['id']) for t in trades} if trades else set()
+        count_changed = prev_ids != cur_ids
+
         if not trades:
-            msg = f"📊 <b>Open Trades Report — {time_str}</b>\n\n"
-            msg += "✅ No open trades."
-            send_telegram(msg)
-            print(f"[{time_str}] Open trades report sent (0 trades)")
+            if count_changed:
+                msg = f"📊 <b>Open Trades Report — {time_str}</b>\n\n"
+                msg += "✅ No open trades."
+                send_telegram(msg)
+                print(f"[{time_str}] Open trades report sent (0 trades)")
+                _last_trades_state = {}
+            else:
+                print(f"[{time_str}] No trades, no change — report suppressed.")
             return
 
         # Get current prices
@@ -803,9 +904,11 @@ def open_trades_status_report():
         total_pnl_rp = 0
         total_pnl_pct = 0
         trades_by_status = {'PROFIT': [], 'LOSS': [], 'BREAKEVEN': []}
+        current_state = {}  # {trade_id: {"pnl_pct": float, "status_key": str}}
 
         for i, trade in enumerate(trades, 1):
             ticker = trade['ticker']
+            trade_id = str(trade['id'])
             entry_price = trade['entry_price']
             tp_price = trade['tp_price']
             sl_price = trade['sl_price']
@@ -832,6 +935,7 @@ def open_trades_status_report():
             sl_distance = entry_price - sl_price
             pct_to_tp = (price_change / tp_distance * 100) if tp_distance > 0 else 0
             pct_to_sl = ((entry_price - current_price) / sl_distance * 100) if sl_distance > 0 else 0
+            remaining_to_tp_pct = ((tp_price - current_price) / current_price * 100) if current_price > 0 else 0
 
             # P&L calculation
             pnl_rp = price_change * lots * 100
@@ -858,10 +962,12 @@ def open_trades_status_report():
                 emoji = "⚪"
                 status_key = 'BREAKEVEN'
 
+            current_state[trade_id] = {"pnl_pct": round(pnl_pct, 2), "status_key": status_key}
+
             # Trade details
             trade_msg = f"{emoji} <b>{ticker}</b> @ Rp {current_price:,.0f}\n"
             trade_msg += f"   Entry: Rp {entry_price:,.0f} | Change: {price_change_pct:+.2f}% ({price_change:+.0f})\n"
-            trade_msg += f"   📈 TP: Rp {tp_price:,.0f} ({pct_to_tp:+.1f}%)\n"
+            trade_msg += f"   📈 TP: Rp {tp_price:,.0f} (+{remaining_to_tp_pct:.1f}% to reach | {pct_to_tp:.1f}% covered)\n"
             trade_msg += f"   🛑 SL: Rp {sl_price:,.0f}"
 
             if is_past_sl:
@@ -869,7 +975,7 @@ def open_trades_status_report():
             elif is_at_sl:
                 trade_msg += f" ⚠️ <b>AT SL</b>"
             else:
-                risk_remaining = ((entry_price - current_price) / sl_distance * 100) if sl_distance > 0 else 0
+                risk_remaining = max(0.0, ((entry_price - current_price) / sl_distance * 100) if sl_distance > 0 else 0)
                 trade_msg += f" ({risk_remaining:.1f}% risk used)"
 
             trade_msg += f"\n   💰 P&L: Rp {pnl_rp:+,.0f} ({pnl_pct:+.2f}%)\n"
@@ -881,6 +987,25 @@ def open_trades_status_report():
             trades_by_status[status_key].append((ticker, pnl_rp))
 
         conn.close()
+
+        # Check whether anything meaningful changed vs last report
+        def _should_send():
+            if count_changed:
+                return True, "trade count changed"
+            for tid, cur in current_state.items():
+                prev = _last_trades_state.get(tid)
+                if prev is None:
+                    return True, f"new trade {tid}"
+                if cur["status_key"] != prev["status_key"]:
+                    return True, f"status change on {tid}"
+                if abs(cur["pnl_pct"] - prev["pnl_pct"]) >= 1.0:
+                    return True, f"PnL moved ≥1% on {tid}"
+            return False, "no significant change"
+
+        should_send, change_reason = _should_send()
+        if not should_send:
+            print(f"[{time_str}] Open trades report suppressed ({change_reason}, {len(trades)} trades)")
+            return
 
         # Summary
         msg += f"\n<b>📈 Summary ({len(trades)} trades):</b>\n"
@@ -897,7 +1022,8 @@ def open_trades_status_report():
         msg += f"⚪ Breakeven: {len(trades_by_status['BREAKEVEN'])}\n"
 
         send_telegram(msg)
-        print(f"[{time_str}] Open trades report sent ({len(trades)} trades, P&L: {total_pnl_rp:+,.0f})")
+        _last_trades_state.update(current_state)
+        print(f"[{time_str}] Open trades report sent ({len(trades)} trades, P&L: {total_pnl_rp:+,.0f}, reason: {change_reason})")
 
     except Exception as e:
         print(f"[open_trades_status_report] Error: {e}")
@@ -909,6 +1035,13 @@ def flow_broker_report():
     now = datetime.now(WIB).strftime("%d/%m/%Y %H:%M")
     try:
         from flow_filter import get_flow_batch
+        try:
+            from news_filter import has_news_spike, get_spiking_tickers, get_today_headlines
+        except Exception as _ne:
+            logging.warning(f"news_filter import failed: {_ne}")
+            has_news_spike = lambda *a, **kw: None
+            get_spiking_tickers = lambda *a, **kw: []
+            get_today_headlines = lambda *a, **kw: []
 
         # Get today's signals (from 16:00 scan)
         conn = sqlite3.connect(DB_PATH)
@@ -931,6 +1064,13 @@ def flow_broker_report():
         except Exception as e:
             send_telegram(f"🔴 <b>Flow Report Error</b>\n\n<code>{str(e)[:150]}</code>")
             return
+
+        # News-spike lookup for the signal tickers (built by 17:00 news fetch)
+        spike_map = {}
+        for t in tickers:
+            sp = has_news_spike(t)
+            if sp and sp["is_spike"]:
+                spike_map[t] = sp
 
         # Categorize by sentiment
         bullish = []
@@ -970,15 +1110,20 @@ def flow_broker_report():
         msg += f"🟡 {len(neutral_buy)} neutral (buy) | "
         msg += f"🔴 {len(bearish)} bearish"
         if divergence_bullish or divergence_bearish:
-            msg += f" | ⚡ {len(divergence_bullish) + len(divergence_bearish)} divergence\n\n"
-        else:
-            msg += "\n\n"
+            msg += f" | ⚡ {len(divergence_bullish) + len(divergence_bearish)} divergence"
+        if spike_map:
+            msg += f" | 📰 {len(spike_map)} news-spike"
+        msg += "\n\n"
+
+        def _spike_tag(tk):
+            sp = spike_map.get(tk)
+            return f" 📰×{sp['ratio']}" if sp else ""
 
         # Show bullish/neutral opportunities
         if bullish or neutral_buy:
             msg += "<b>🟢 BUY SIGNALS:</b>\n"
             for t, s, m in (bullish + neutral_buy)[:5]:
-                msg += f"  {t}: Smart={m} (score {s:+.0f})\n"
+                msg += f"  {t}{_spike_tag(t)}: Smart={m} (score {s:+.0f})\n"
         else:
             msg += "⚠️ <b>No bullish signals today</b>\n"
             if neutral_buy or len(neutral_buy) == 0:
@@ -990,14 +1135,29 @@ def flow_broker_report():
             if divergence_bullish:
                 msg += "  <b>🟢 Bullish Divergence (flow up, price down):</b>\n"
                 for t, s, m, pc in divergence_bullish[:3]:
-                    msg += f"    {t}: {pc:+.1f}% (score {s:+.0f})\n"
+                    msg += f"    {t}{_spike_tag(t)}: {pc:+.1f}% (score {s:+.0f})\n"
             if divergence_bearish:
                 msg += "  <b>🔴 Bearish Divergence (flow down, price up):</b>\n"
                 for t, s, m, pc in divergence_bearish[:3]:
-                    msg += f"    {t}: {pc:+.1f}% (score {s:+.0f})\n"
+                    msg += f"    {t}{_spike_tag(t)}: {pc:+.1f}% (score {s:+.0f})\n"
+
+        # News-spike attention alerts — show top ratio with first headline
+        if spike_map:
+            ranked = sorted(spike_map.values(), key=lambda x: x["ratio"], reverse=True)
+            msg += "\n<b>📰 NEWS-SPIKE ATTENTION (today vs 30d avg):</b>\n"
+            for sp in ranked[:5]:
+                t = sp["ticker"]
+                heads = get_today_headlines(t)
+                first = heads[0][:80] if heads else ""
+                msg += f"  ⚡ {t}: {sp['today_count']} today vs {sp['avg_30d']:.1f} avg ({sp['ratio']}×)\n"
+                if first:
+                    msg += f"      └ {first}\n"
 
         send_telegram(msg)
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Flow report sent ({len(bullish)} bullish, {len(neutral_buy)} neutral, {len(divergence_bullish)+len(divergence_bearish)} divergence)")
+        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Flow report sent "
+              f"({len(bullish)} bullish, {len(neutral_buy)} neutral, "
+              f"{len(divergence_bullish)+len(divergence_bearish)} divergence, "
+              f"{len(spike_map)} news-spike)")
     except Exception as e:
         logging.error(f"flow_broker_report error: {e}")
         send_telegram(f"🔴 <b>Flow Report Error</b>\n\n<code>{str(e)[:150]}</code>")
@@ -1050,6 +1210,54 @@ def auto_trade_status_report():
         send_telegram(f"🔴 <b>Auto-Trade Status Error</b>\n\n<code>{str(e)[:150]}</code>")
 
 
+def _refresh_backtest_cache():
+    try:
+        from engine.walkforward_multi import run_all_strategies
+        from engine.regime_filter import detect_regime
+        from datetime import date
+        today = date.today().isoformat()
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS backtest_cache (
+                ticker TEXT NOT NULL, computed_date TEXT NOT NULL,
+                best_strategy TEXT, best_return REAL, win_rate REAL,
+                sharpe REAL, total_trades INTEGER, profitable INTEGER,
+                regime TEXT, updated_at TEXT, PRIMARY KEY (ticker, computed_date)
+            )""")
+        ohlcv_map = _load_ohlcv_bulk()
+        computed = 0
+        rows_to_insert = []
+        for ticker, df in ohlcv_map.items():
+            try:
+                if len(df) < 60:
+                    continue
+                strat_results = run_all_strategies(df, capital=50_000_000)
+                best = max(strat_results, key=lambda x: x['total_return_pct'])
+                try:
+                    regime = detect_regime(df)
+                except Exception:
+                    regime = "UNCERTAIN"
+                rows_to_insert.append((
+                    ticker, today, best['strategy'], best['total_return_pct'],
+                    best['win_rate'], best.get('sharpe', 0), best.get('total_trades', 0),
+                    int(best['total_return_pct'] > 0), regime,
+                ))
+                computed += 1
+            except Exception:
+                pass
+        conn.executemany("""
+            INSERT OR REPLACE INTO backtest_cache
+            (ticker, computed_date, best_strategy, best_return, win_rate, sharpe,
+             total_trades, profitable, regime, updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,datetime('now'))
+        """, rows_to_insert)
+        conn.commit()
+        conn.close()
+        print(f"[scheduler] Backtest cache refreshed: {computed} tickers")
+    except Exception as e:
+        print(f"[scheduler] Cache refresh error: {e}")
+
+
 def start_scheduler():
     scheduler = BackgroundScheduler(timezone=WIB)
 
@@ -1063,58 +1271,6 @@ def start_scheduler():
         day_of_week="fri", hour=16, minute=0, timezone=WIB))
 
     # Backtest cache pre-compute — daily at 08:30 WIB (before market open)
-    def _refresh_backtest_cache():
-        try:
-            import sqlite3, pandas as pd
-            from engine.walkforward_multi import run_all_strategies
-            from engine.regime_filter import detect_regime
-            from datetime import date
-            import os
-            db = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
-            today = date.today().isoformat()
-            conn = sqlite3.connect(db)
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS backtest_cache (
-                    ticker TEXT NOT NULL, computed_date TEXT NOT NULL,
-                    best_strategy TEXT, best_return REAL, win_rate REAL,
-                    sharpe REAL, total_trades INTEGER, profitable INTEGER,
-                    regime TEXT, updated_at TEXT, PRIMARY KEY (ticker, computed_date)
-                )""")
-            tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv').fetchall()]
-            conn.close()
-            computed = 0
-            for ticker in tickers:
-                try:
-                    conn = sqlite3.connect(db)
-                    df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
-                    conn.close()
-                    if len(df) < 60:
-                        continue
-                    for c in ['open','high','low','close','volume']:
-                        df[c] = df[c].astype(float)
-                    strat_results = run_all_strategies(df, capital=50_000_000)
-                    best = max(strat_results, key=lambda x: x['total_return_pct'])
-                    try:
-                        regime = detect_regime(df)
-                    except Exception:
-                        regime = "UNCERTAIN"
-                    conn = sqlite3.connect(db)
-                    conn.execute("""
-                        INSERT OR REPLACE INTO backtest_cache
-                        (ticker, computed_date, best_strategy, best_return, win_rate, sharpe, total_trades, profitable, regime, updated_at)
-                        VALUES (?,?,?,?,?,?,?,?,?,datetime('now'))
-                    """, (ticker, today, best['strategy'], best['total_return_pct'],
-                          best['win_rate'], best.get('sharpe',0), best.get('total_trades',0),
-                          int(best['total_return_pct']>0), regime))
-                    conn.commit()
-                    conn.close()
-                    computed += 1
-                except Exception:
-                    pass
-            print(f"[scheduler] Backtest cache refreshed: {computed} tickers")
-        except Exception as e:
-            print(f"[scheduler] Cache refresh error: {e}")
-
     scheduler.add_job(_refresh_backtest_cache, CronTrigger(
         day_of_week="mon-fri", hour=8, minute=30, timezone=WIB),
         id="backtest_cache_refresh", name="Backtest Cache 08:30")
@@ -1133,10 +1289,10 @@ def start_scheduler():
             id=f"multi_strategy_scan_{hour:02d}{minute:02d}", name=f"Multi-Strategy Scan {label}")
         print(f"  ✓ Multi-strategy scan @ {hour:02d}:{minute:02d} ({label})")
 
-    # Screener intraday runs — same times as multi-strategy scan
+    # Screener intraday — registered at the same times as multi-strategy scan so they run in parallel
     for hour, minute, label in scan_times:
         scheduler.add_job(_run_screener_intraday, CronTrigger(
-            hour=hour, minute=minute+1 if minute < 59 else 0,
+            hour=hour, minute=minute,
             timezone=WIB, day_of_week="mon-fri"),
             id=f"screener_intraday_{hour:02d}{minute:02d}", name=f"Screener Intraday {label}")
 
@@ -1156,32 +1312,41 @@ def start_scheduler():
             day_of_week="mon-fri", hour=hour, minute=minute, timezone=WIB),
             id=f"open_trades_report_{hour:02d}{minute:02d}", name=f"Open Trades Report {hour:02d}:{minute:02d}")
 
-    # Open trade monitor — every 30 min during market hours (09:05 to 15:35)
-    for minute in [5, 35]:
-        for hour in range(9, 16):
-            if hour == 15 and minute == 35:
-                continue  # daily scan covers this slot
-            scheduler.add_job(_run_open_trade_monitor, CronTrigger(
-                day_of_week="mon-fri", hour=hour, minute=minute, timezone=WIB),
-                id=f"trade_monitor_{hour:02d}{minute:02d}")
+    # Open trade monitor — hourly at :05 during market hours (09:05–15:05) = 7×/day
+    for hour in range(9, 16):
+        scheduler.add_job(_run_open_trade_monitor, CronTrigger(
+            day_of_week="mon-fri", hour=hour, minute=5, timezone=WIB),
+            id=f"trade_monitor_{hour:02d}05")
 
     # Auto-trading status — 09:00 WIB (morning check)
     scheduler.add_job(auto_trade_status_report, CronTrigger(
         day_of_week="mon-fri", hour=9, minute=0, timezone=WIB),
         id="auto_trade_status", name="Auto-Trade Status 09:00")
 
+    # News mentions fetch — 17:00 WIB (before flow report at 17:15)
+    scheduler.add_job(run_news_fetch, CronTrigger(
+        day_of_week="mon-fri", hour=17, minute=0, timezone=WIB),
+        id="news_fetch", name="News Mentions Fetch 17:00")
+
     # Flow & Broker report — 17:15 WIB (after 17:00 fetch)
     scheduler.add_job(flow_broker_report, CronTrigger(
         day_of_week="mon-fri", hour=17, minute=15, timezone=WIB),
         id="flow_broker_report", name="Flow & Broker Report 17:15")
 
+    # Broker flow fetch — 20:15 WIB (Stockbit publish summary setelah ~20:00 WIB)
+    scheduler.add_job(run_broker_flow_fetch, CronTrigger(
+        day_of_week="mon-fri", hour=20, minute=15, timezone=WIB),
+        id="broker_flow_fetch", name="Broker Flow Fetch 20:15")
+
     scheduler.start()
     print("Scheduler started:")
     print("  🤖 AUTO-TRADING STATUS: 09:00 (success/failed check)")
     print("  📊 SIGNAL REPORT: 16:00 (even if no signals)")
-    print("  📈 FLOW & BROKER: 17:15 (after 17:00 fetch)")
+    print("  📰 NEWS FETCH: 17:00 (Google News RSS, all tickers)")
+    print("  📈 FLOW & BROKER: 17:15 (after 17:00 fetch, with news-spike tags)")
     print("  🏦 OPEN TRADES: 10:30, 12:30, 14:30, 16:30")
     print("  🔄 DAILY FETCH: 17:30")
+    print("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
     return scheduler
 
 if __name__ == "__main__":

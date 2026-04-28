@@ -11,6 +11,7 @@ import screener.idx_scraper as scraper
 import screener.calculator as calc
 import screener.vpin as vpin_mod
 import screener.vpin_multi as vpin_multi
+from data.fetcher import load_all_tickers
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,8 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None) -
     logger.info(f"[screener] INTRADAY RUN {trade_date}")
     ok, err = 0, 0
 
-    ohlcv_all = scraper.fetch_lq45_ohlcv()
+    tickers = load_all_tickers()
+    ohlcv_all = scraper.fetch_lq45_ohlcv(tickers=tickers)
     filled = sum(1 for v in ohlcv_all.values() if v.get('close'))
     if filled == 0 and send_telegram:
         try:
@@ -50,12 +52,12 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None) -
         except Exception:
             pass
 
-    all_trades = scraper.fetch_all_running_trades(trade_date=trade_date)
+    all_trades = scraper.fetch_all_running_trades(tickers=tickers, trade_date=trade_date)
 
-    total = len(scraper.LQ45)
+    total = len(tickers)
     _task_state.update({'running': True, 'progress': 0, 'total': total, 'type': 'intraday', 'current': '', 'error': None})
 
-    for i, ticker in enumerate(scraper.LQ45):
+    for i, ticker in enumerate(tickers):
         _task_state['current'] = ticker
         _task_state['progress'] = i + 1
         try:
@@ -96,22 +98,12 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
 
     intraday_result = run_intraday(trade_date)
 
-    ok_br, err_br = 0, 0
-    all_broker = scraper.fetch_all_broker_summaries(trade_date=trade_date)
-    for ticker, rows in all_broker.items():
-        try:
-            if rows:
-                db.insert_broker_summary(rows)
-            ok_br += 1
-        except Exception as e:
-            logger.error(f"[screener] Broker error {ticker}: {e}")
-            err_br += 1
-
     # VPIN calculation
     logger.info("[screener] Calculating VPIN...")
+    tickers = load_all_tickers()
     vpin_ok = 0
     with db.get_conn() as conn:
-        for ticker in scraper.LQ45:
+        for ticker in tickers:
             try:
                 r = vpin_mod.calc_vpin(conn, ticker, trade_date)
                 if r['vpin'] is not None:
@@ -124,7 +116,7 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
                 logger.error(f"[screener] VPIN error {ticker}: {e}")
         conn.commit()
 
-        signals = vpin_multi.scan_vpin_signals(conn, scraper.LQ45, trade_date)
+        signals = vpin_multi.scan_vpin_signals(conn, tickers, trade_date)
         for sig in signals:
             if send_telegram:
                 try:
@@ -135,8 +127,8 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
     logger.info(f"[screener] VPIN: {vpin_ok} done, {len(signals)} signals")
 
     duration = round(time.time() - t0, 1)
-    ok = intraday_result['ok'] + ok_br
-    err = intraday_result['err'] + err_br
+    ok = intraday_result['ok']
+    err = intraday_result['err']
     db.log_run('eod', ok, err, duration)
     _task_state.update({'running': False, 'result': {'ok': ok, 'err': err, 'duration_s': duration}})
     return {'ok': ok, 'err': err, 'duration_s': duration, 'type': 'eod'}

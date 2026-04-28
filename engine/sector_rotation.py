@@ -77,9 +77,9 @@ def score_sectors(db_path: str = None) -> List[Dict]:
                     "SELECT close FROM ohlcv WHERE ticker=? ORDER BY date DESC LIMIT 22",
                     conn, params=(ticker,)
                 )
-                if len(df) < 6:
+                closes = df["close"].astype(float).dropna().iloc[::-1].reset_index(drop=True)
+                if len(closes) < 6:
                     continue
-                closes = df["close"].astype(float).iloc[::-1].reset_index(drop=True)
                 ret5_list.append(_calc_return(closes, 5))
                 if len(closes) >= 11:
                     ret10_list.append(_calc_return(closes, 10))

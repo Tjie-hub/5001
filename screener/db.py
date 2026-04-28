@@ -29,17 +29,6 @@ def init_screener_tables():
             );
             CREATE INDEX IF NOT EXISTS idx_ticks ON ticks(date, ticker);
 
-            CREATE TABLE IF NOT EXISTS broker_summary (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                date        TEXT    NOT NULL,
-                ticker      TEXT    NOT NULL,
-                broker_code TEXT,
-                buy_lot     INTEGER DEFAULT 0,
-                sell_lot    INTEGER DEFAULT 0,
-                net_lot     INTEGER DEFAULT 0
-            );
-            CREATE INDEX IF NOT EXISTS idx_broker ON broker_summary(date, ticker);
-
             CREATE TABLE IF NOT EXISTS daily_screen (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 date        TEXT    NOT NULL,
@@ -109,31 +98,6 @@ def get_ticks(date: str, ticker: str) -> list:
             (date, ticker)
         ).fetchall()
     return [dict(r) for r in rows]
-
-
-def insert_broker_summary(rows: list):
-    if not rows:
-        return 0
-    with get_conn() as conn:
-        conn.executemany("""
-            INSERT OR REPLACE INTO broker_summary
-                (date, ticker, broker_code, buy_lot, sell_lot, net_lot)
-            VALUES (:date, :ticker, :broker_code, :buy_lot, :sell_lot, :net_lot)
-        """, rows)
-    return len(rows)
-
-
-def get_top_brokers(date: str, ticker: str, n: int = 5) -> dict:
-    with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT * FROM broker_summary WHERE date=? AND ticker=? ORDER BY net_lot DESC",
-            (date, ticker)
-        ).fetchall()
-    rows = [dict(r) for r in rows]
-    return {
-        'top_buy': rows[:n],
-        'top_sell': rows[-n:][::-1] if len(rows) >= n else rows[::-1]
-    }
 
 
 def upsert_daily_screen(row: dict):

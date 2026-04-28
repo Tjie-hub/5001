@@ -32,6 +32,20 @@ def init_db():
             UNIQUE(ticker, date)
         );
         CREATE INDEX IF NOT EXISTS idx_ohlcv_ticker ON ohlcv(ticker);
+
+        CREATE TABLE IF NOT EXISTS idx_tickers (
+            ticker              TEXT PRIMARY KEY,
+            status              TEXT DEFAULT 'active',
+            first_seen          TEXT,
+            last_checked        TEXT,
+            last_fetch_date     TEXT,
+            last_fetch_status   TEXT,
+            fail_count          INTEGER DEFAULT 0,
+            in_idx30            INTEGER DEFAULT 0,
+            in_lq45             INTEGER DEFAULT 0,
+            in_idx80            INTEGER DEFAULT 0,
+            updated_at          TEXT
+        );
     """)
     conn.commit()
     conn.close()

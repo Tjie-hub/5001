@@ -113,6 +113,8 @@ def init_paper_table():
         conn.execute("ALTER TABLE paper_trades ADD COLUMN adx_peak REAL")
     if 'highest_seen' not in cols:
         conn.execute("ALTER TABLE paper_trades ADD COLUMN highest_seen REAL")
+    if 'atr14' not in cols:
+        conn.execute("ALTER TABLE paper_trades ADD COLUMN atr14 REAL")
     conn.commit()
     conn.close()
     pass  # tables ready
@@ -195,7 +197,7 @@ def _calc_atr_from_db(ticker: str, periods: int = 14) -> float:
 
 
 def open_trade(ticker: str, entry_price: float, strategy: str = 'Momentum Following',
-               sl_atr_mult: float = 1.0, min_rr: float = 2.0,
+               sl_atr_mult: float = 2.0, min_rr: float = 2.0,
                sl_price: float = None, tp_price: float = None, notify: bool = True):
     cfg      = get_config()
     capital  = cfg["capital"]
@@ -211,19 +213,20 @@ def open_trade(ticker: str, entry_price: float, strategy: str = 'Momentum Follow
     is_swing = (strategy or '').strip().lower() == 'swing trend'
     exit_rules_json = None
 
+    # Always compute ATR14 upfront — used for SL/TP and sizing
+    atr = _calc_atr_from_db(ticker)
+
     if sl_price is not None and sl_price > 0:
         # Explicit SL provided (e.g. from Swing Onset screener)
         sl_dist = entry_price - sl_price
         sl_pct  = sl_dist / entry_price if entry_price > 0 else 0
     else:
-        # ATR-based SL (fallback to config sl_pct)
-        atr = _calc_atr_from_db(ticker)
         if atr and atr > 0:
-            sl_dist  = atr * sl_atr_mult
-            sl_pct   = sl_dist / entry_price
+            sl_dist = atr * sl_atr_mult   # SL = entry - (2 × ATR14)
+            sl_pct  = sl_dist / entry_price
         else:
-            sl_pct   = cfg.get("sl_pct", 0.025)
-            sl_dist  = entry_price * sl_pct
+            sl_pct  = cfg.get("sl_pct", 0.025)
+            sl_dist = entry_price * sl_pct
         sl_price = round(entry_price - sl_dist)
 
     if tp_price is None or tp_price <= 0:
@@ -231,8 +234,12 @@ def open_trade(ticker: str, entry_price: float, strategy: str = 'Momentum Follow
             # TP aim only — real exit is R1–R7, not a price level. Pick 3R as display target.
             tp_price = round(entry_price + 3 * sl_dist)
         else:
-            tp_price = calc_swing_tp(ticker, entry_price, lookback=20)
-            # Re-enforce 2:1 on final values
+            # TP = entry + (3 × ATR14); fallback to fixed % if no ATR
+            if atr and atr > 0:
+                tp_price = round(entry_price + 3 * atr)
+            else:
+                tp_price = round(entry_price * 1.06)
+            # Ensure minimum 2:1 R/R
             min_tp = entry_price + sl_dist * min_rr
             tp_price = max(tp_price, round(min_tp))
 
@@ -242,11 +249,14 @@ def open_trade(ticker: str, entry_price: float, strategy: str = 'Momentum Follow
             'R4_DISTRIBUTION', 'R5_FLOW_FLIP', 'R6_BEAR_ENGULF', 'R7_TRAIL_SL'
         ])
 
-    # Lot sizing
+    # Volatility-adjusted position sizing: lots = capital_risk / (ATR14 × 100)
     cost_per_lot = entry_price * 100
     risk_rp      = capital * risk_pct
-    sl_rp        = cost_per_lot * sl_pct if sl_pct > 0 else cost_per_lot * 0.02
-    lots         = int(risk_rp / sl_rp) if sl_rp > 0 else 1
+    if atr and atr > 0:
+        lots = int(risk_rp / (atr * 100))
+    else:
+        sl_rp = cost_per_lot * sl_pct if sl_pct > 0 else cost_per_lot * 0.02
+        lots  = int(risk_rp / sl_rp) if sl_rp > 0 else 1
     max_lots     = int((capital * 0.30) / cost_per_lot)
     lots         = max(1, min(lots, max_lots))
     capital_used = lots * cost_per_lot
@@ -255,9 +265,9 @@ def open_trade(ticker: str, entry_price: float, strategy: str = 'Momentum Follow
     conn = get_db()
     conn.execute("""
         INSERT INTO paper_trades
-        (ticker, strategy, entry_date, entry_price, lots, capital_used, tp_price, sl_price, exit_rules, highest_seen, status)
-        VALUES (?,?,?,?,?,?,?,?,?,?, 'OPEN')
-    """, (ticker, strategy, now, entry_price, lots, capital_used, tp_price, sl_price, exit_rules_json, entry_price))
+        (ticker, strategy, entry_date, entry_price, lots, capital_used, tp_price, sl_price, exit_rules, highest_seen, atr14, status)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?, 'OPEN')
+    """, (ticker, strategy, now, entry_price, lots, capital_used, tp_price, sl_price, exit_rules_json, entry_price, atr))
     conn.commit()
     trade_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     conn.close()

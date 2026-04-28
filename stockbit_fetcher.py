@@ -3,15 +3,20 @@
 Stockbit Keystats Fetcher (Opsi B)
 ===================================
 - Auto-baca JWT token dari Chrome localStorage (Stockbit session)
-- Fetch keystats untuk semua ticker
+- Fetch keystats untuk semua ticker (IDX30 / LQ45 / IDX80)
 - Simpan ke walkforward.db
 
 Syarat: Chrome harus buka & login ke stockbit.com di Ubuntu
 
 Usage:
-  python3 stockbit_fetcher.py              # fetch all tickers
-  python3 stockbit_fetcher.py BBCA BRPT    # fetch specific tickers
-  python3 stockbit_fetcher.py --token XXX  # manual token override
+  python3 stockbit_fetcher.py                     # fetch all IDX80
+  python3 stockbit_fetcher.py --cat IDX30         # fetch IDX30 only
+  python3 stockbit_fetcher.py --cat LQ45          # fetch LQ45 only
+  python3 stockbit_fetcher.py BBCA BRPT           # fetch specific tickers
+  python3 stockbit_fetcher.py --token XXX         # manual token override
+
+  python3 stockbit_fetcher.py flow                # flow fetch all IDX80
+  python3 stockbit_fetcher.py flow --cat IDX30    # flow fetch IDX30 only
 
 Cron (setiap hari 08:50 WIB sebelum market):
   50 8 * * 1-5 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python3 stockbit_fetcher.py >> logs/stockbit.log 2>&1
@@ -38,20 +43,26 @@ CHROME_LOCALSTORAGE = os.path.expanduser(
 STOCKBIT_BASE = "https://exodus.stockbit.com"
 RATE_LIMIT_DELAY = 1.5  # seconds between requests
 
-# 77 tickers (LQ45 + IDX80)
-TICKERS = [
-    "ACES", "ADRO", "AKRA", "AMMN", "AMRT", "ANTM", "ARTO", "ASII",
-    "ASTR", "BBCA", "BBNI", "BBRI", "BBTN", "BBYB", "BMRI", "BNGA",
-    "BREN", "BRIS", "BRMS", "BRPT", "BTPS", "BUKA", "CMRY", "CPIN",
-    "CTRA", "DNET", "EMTK", "ERAA", "ESSA", "EXCL", "FILM", "GGRM",
-    "GOTO", "HRUM", "ICBP", "INCO", "INDF", "INKP", "INTP", "ISAT",
-    "ITMG", "JSMR", "KAEF", "KLBF", "LPPF", "LSIP", "MAPI", "MBMA",
-    "MDKA", "MEDC", "MIKA", "MNCN", "MTEL", "NCKL", "NISP", "PANI",
-    "PGAS", "PGEO", "PNBN", "PTBA", "PTPP", "PWON", "RAJA", "SCMA",
-    "SIDO", "SMGR", "SMRA", "SRTG", "SSMS", "TAPG", "TBIG", "TINS",
-    "TKIM", "TLKM", "TOWR", "TPIA", "UNTR", "UNVR", "WIKA", "WMUU",
-    "WTON",
-]
+from data.fetcher import IDX30, LQ45, IDX80, CATEGORIES, TICKERS
+
+
+def get_tickers(category: str = None) -> list:
+    """Return ticker list for a category, ALL (from DB), or IDX80 by default."""
+    if category is None:
+        return TICKERS
+    cat = category.upper()
+    if cat == "ALL":
+        try:
+            from data.fetcher import load_all_tickers
+            tickers = load_all_tickers()
+            if tickers:
+                return tickers
+        except Exception:
+            pass
+        return IDX80
+    if cat not in CATEGORIES:
+        raise ValueError(f"Unknown category '{category}'. Use: IDX30, LQ45, IDX80, ALL")
+    return CATEGORIES[cat]
 
 # Keystats fields we care about (fitem_id -> column name)
 KEYSTATS_MAP = {
@@ -313,22 +324,54 @@ def save_keystats(conn, stats):
     )
 
 
+def _parse_args(args):
+    """Parse common CLI args: --token, --cat, and positional ticker list."""
+    manual_token = None
+    category = None
+
+    if "--token" in args:
+        i = args.index("--token")
+        manual_token = args[i + 1]
+        args = [a for a in args if a != "--token" and a != manual_token]
+
+    if "--cat" in args:
+        i = args.index("--cat")
+        category = args[i + 1].upper()
+        args = [a for a in args if a != "--cat" and a != args[i + 1] if i + 1 < len(args)]
+        # clean up properly
+        raw = sys.argv[:]
+        idx_c = raw.index("--cat") if "--cat" in raw else -1
+        args = [a for j, a in enumerate(args) if a != category]
+
+    return args, manual_token, category
+
+
 def main():
     log("=" * 50)
     log("STOCKBIT KEYSTATS FETCHER")
     log("=" * 50)
 
-    # Determine tickers
-    tickers = TICKERS
-    manual_token = None
-
     args = sys.argv[1:]
+    manual_token = None
+    category = None
+
     if "--token" in args:
-        idx = args.index("--token")
-        manual_token = args[idx + 1]
+        i = args.index("--token")
+        manual_token = args[i + 1]
         args = [a for a in args if a != "--token" and a != manual_token]
+
+    if "--cat" in args:
+        i = args.index("--cat")
+        category = args[i + 1].upper()
+        args = args[:i] + args[i + 2:]
+
+    # Explicit tickers override category
     if args:
         tickers = [t.upper() for t in args]
+        label = f"{len(tickers)} custom tickers"
+    else:
+        tickers = get_tickers(category)
+        label = category or "IDX80"
 
     # Get token
     if manual_token:
@@ -344,17 +387,15 @@ def main():
         log("  2. Run with --token <JWT> for manual override")
         sys.exit(1)
 
-    # Verify
     log("Verifying token...")
     if not verify_token(token):
         log("ERROR: Token invalid or expired. Refresh Stockbit in Chrome.")
         sys.exit(1)
     log("Token OK!")
 
-    # Init DB
     conn = init_db()
     log(f"DB: {WALKFORWARD_DB}")
-    log(f"Fetching keystats for {len(tickers)} tickers...\n")
+    log(f"Category: {label} — {len(tickers)} tickers\n")
 
     success = 0
     failed = []
@@ -647,7 +688,17 @@ def run_flow(token, tickers):
                 # Broker flow
                 try:
                     bf = fetch_broker_flow(token, ticker)
+                    # Skip only if data for this trade_date already exists in DB.
+                    # This allows saving prior trading days that were missed.
+                    _bf_existing = 0
                     if bf and bf.get("broker_rows"):
+                        _bf_existing = conn.execute(
+                            "SELECT COUNT(*) FROM broker_flow WHERE ticker=? AND trade_date=?",
+                            (ticker, bf["trade_date"])
+                        ).fetchone()[0]
+                    if bf and bf.get("broker_rows") and _bf_existing > 0:
+                        log(f"  [SKIP] Broker {bf['trade_date']} already in DB")
+                    elif bf and bf.get("broker_rows"):
                         conn.executemany(
                             """INSERT OR REPLACE INTO broker_flow
                             (ticker,trade_date,broker_code,side,lot,lot_value,value,
@@ -683,49 +734,51 @@ def run_flow(token, tickers):
     conn.close()
     log(f"\nDONE: {success}/{len(tickers)} success")
 
-_original_main = main
-def main():
-    if len(sys.argv) > 1 and sys.argv[1] == "flow":
-        args = sys.argv[2:]
-        manual_token = None
-        if "--token" in args:
-            idx = args.index("--token")
-            manual_token = args[idx + 1]
-            args = [a for a in args if a != "--token" and a != manual_token]
-        tickers = [t.upper() for t in args] if args else TICKERS
-        token = manual_token or extract_token_from_chrome()
-        if not token:
-            log("ERROR: No token. Use --token <JWT>")
-            sys.exit(1)
-        if not verify_token(token):
-            log("ERROR: Token invalid/expired")
-            sys.exit(1)
-        run_flow(token, tickers)
+def _run_flow_cmd(args):
+    """Handle 'flow' subcommand with --token and --cat support."""
+    manual_token = None
+    category = None
+
+    if "--token" in args:
+        i = args.index("--token")
+        manual_token = args[i + 1]
+        args = args[:i] + args[i + 2:]
+
+    if "--cat" in args:
+        i = args.index("--cat")
+        category = args[i + 1].upper()
+        args = args[:i] + args[i + 2:]
+
+    if args:
+        tickers = [t.upper() for t in args]
     else:
-        _original_main()
+        tickers = get_tickers(category or "ALL")
+
+    token = manual_token or extract_token_from_chrome()
+    if not token:
+        log("ERROR: No token. Use --token <JWT>")
+        sys.exit(1)
+    if not verify_token(token):
+        log("ERROR: Token invalid/expired")
+        sys.exit(1)
+
+    label = category or ("custom" if args else "ALL")
+    log(f"Flow category: {label} — {len(tickers)} tickers")
+    run_flow(token, tickers)
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "flow":
-        args = sys.argv[2:]
-        manual_token = None
-        if "--token" in args:
-            idx = args.index("--token")
-            manual_token = args[idx + 1]
-            args = [a for a in args if a != "--token" and a != manual_token]
-        tickers = [t.upper() for t in args] if args else TICKERS
-        token = manual_token or extract_token_from_chrome()
-        if not token:
-            log("ERROR: No token. Use --token <JWT>")
-            sys.exit(1)
-        if not verify_token(token):
-            log("ERROR: Token invalid/expired")
-            sys.exit(1)
-        run_flow(token, tickers)
+        _run_flow_cmd(sys.argv[2:])
     else:
         main()
 
 
 # ============================================================
 # FLOW FETCHER — Fetch tradebook net flow untuk semua ticker
-# Usage: python3 stockbit_fetcher.py flow
+# Usage:
+#   python3 stockbit_fetcher.py flow              # ALL tickers
+#   python3 stockbit_fetcher.py flow --cat IDX30  # IDX30 only
+#   python3 stockbit_fetcher.py flow --cat LQ45   # LQ45 only
+#   python3 stockbit_fetcher.py flow --cat IDX80  # IDX80 only
 # ============================================================

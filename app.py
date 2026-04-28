@@ -1144,12 +1144,18 @@ def api_broker_flow(ticker):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
 
-    # Latest date if not specified
+    # Latest date if not specified — prefer broker_flow, fall back to stockbit_flow
     if not trade_date:
         row = conn.execute(
             "SELECT MAX(trade_date) FROM broker_flow WHERE ticker=?", (ticker,)
         ).fetchone()
-        trade_date = row[0] if row and row[0] else str(date.today())
+        if row and row[0]:
+            trade_date = row[0]
+        else:
+            row2 = conn.execute(
+                "SELECT MAX(trade_date) FROM stockbit_flow WHERE ticker=?", (ticker,)
+            ).fetchone()
+            trade_date = row2[0] if row2 and row2[0] else str(date.today())
 
     brokers = conn.execute("""
         SELECT broker_code, side, lot, lot_value, value, value_total,
@@ -1167,11 +1173,16 @@ def api_broker_flow(ticker):
         WHERE ticker=? AND trade_date=?
     """, (ticker, trade_date)).fetchone()
 
-    # Available dates for this ticker
-    dates = [r[0] for r in conn.execute(
+    # Available dates: union broker_flow + stockbit_flow for this ticker
+    dates_bf = [r[0] for r in conn.execute(
         "SELECT DISTINCT trade_date FROM broker_flow WHERE ticker=? ORDER BY trade_date DESC LIMIT 30",
         (ticker,)
     ).fetchall()]
+    dates_sf = [r[0] for r in conn.execute(
+        "SELECT DISTINCT trade_date FROM stockbit_flow WHERE ticker=? ORDER BY trade_date DESC LIMIT 30",
+        (ticker,)
+    ).fetchall()]
+    dates = sorted(set(dates_bf + dates_sf), reverse=True)[:30]
     conn.close()
 
     buy_rows = [dict(r) for r in brokers if r['side'] == 'BUY']
@@ -1192,10 +1203,15 @@ def api_broker_flow_dates(ticker):
     import sqlite3
     ticker = ticker.upper()
     conn = sqlite3.connect(DB_PATH)
-    dates = [r[0] for r in conn.execute(
+    dates_bf = [r[0] for r in conn.execute(
         "SELECT DISTINCT trade_date FROM broker_flow WHERE ticker=? ORDER BY trade_date DESC LIMIT 30",
-        (ticker.upper(),)
+        (ticker,)
     ).fetchall()]
+    dates_sf = [r[0] for r in conn.execute(
+        "SELECT DISTINCT trade_date FROM stockbit_flow WHERE ticker=? ORDER BY trade_date DESC LIMIT 30",
+        (ticker,)
+    ).fetchall()]
+    dates = sorted(set(dates_bf + dates_sf), reverse=True)[:30]
     conn.close()
     return jsonify({'ticker': ticker, 'dates': dates})
 
