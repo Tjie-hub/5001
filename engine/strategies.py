@@ -1168,15 +1168,14 @@ def check_vol_weighted_signal(df: pd.DataFrame) -> dict:
 def check_momentum_signal(df: pd.DataFrame) -> dict:
     """
     Momentum Following Signal Checker
-    
+
     Entry Criteria:
     - 2-day consecutive up streak
     - Volume Ratio (VR) > 1.3x
     """
-    latest = df.iloc[-1]
-    
     # Calculate streak
     df['daily_return'] = df['close'].pct_change()
+    latest = df.iloc[-1]  # capture after daily_return column is added
     streak = 0
     for i in range(len(df) - 1, max(len(df) - 10, -1), -1):
         if df.iloc[i]['daily_return'] > 0:

@@ -1613,6 +1613,113 @@ def dive(ticker):
     return render_template('dive.html', ticker=ticker.upper())
 
 
+@app.route('/api/ticker/<ticker>/full', methods=['GET'])
+def api_ticker_full(ticker):
+    import sqlite3, pandas as pd
+    from engine.strategies import check_current_entry_signal
+    from engine.regime_filter import detect_regime
+    from engine.walkforward_multi import STRATEGY_FUNCS
+
+    ticker = ticker.upper()
+    conn = sqlite3.connect(DB_PATH)
+
+    # ── OHLCV ──────────────────────────────────────────────────────────────
+    df = pd.read_sql(
+        'SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,)
+    )
+    if df.empty:
+        conn.close()
+        return jsonify({'error': f'Ticker {ticker} not found'}), 404
+
+    for c in ['open', 'high', 'low', 'close', 'volume']:
+        df[c] = df[c].astype(float)
+
+    latest = df.iloc[-1]
+    prev   = df.iloc[-2] if len(df) > 1 else latest
+    chg    = latest['close'] - prev['close']
+    chg_pct = chg / prev['close'] * 100 if prev['close'] else 0
+
+    price = {
+        'date':    str(latest['date'])[:10],
+        'open':    latest['open'],
+        'high':    latest['high'],
+        'low':     latest['low'],
+        'close':   latest['close'],
+        'volume':  int(latest['volume']),
+        'chg':     round(chg, 0),
+        'chg_pct': round(chg_pct, 2),
+    }
+
+    # ── REGIME ─────────────────────────────────────────────────────────────
+    try:
+        regime = detect_regime(df)
+    except Exception:
+        regime = 'UNKNOWN'
+
+    # ── WF SCORES + LIVE SIGNALS ───────────────────────────────────────────
+    wf_rows = conn.execute("""
+        SELECT strategy, consistency_pct, avg_return_pct, avg_sharpe, weighted_score
+        FROM wf_scores WHERE ticker=? ORDER BY weighted_score DESC
+    """, (ticker,)).fetchall()
+    wf_map = {r[0]: {'consistency_pct': r[1], 'avg_return_pct': r[2],
+                     'avg_sharpe': r[3], 'weighted_score': r[4]}
+              for r in wf_rows}
+
+    strategies = []
+    for name in STRATEGY_FUNCS:
+        sig = check_current_entry_signal(ticker, name, df=df)
+        wf  = wf_map.get(name, {})
+        strategies.append({
+            'name':            name,
+            'signal':          'BUY' if sig['has_signal'] else '—',
+            'has_signal':      sig['has_signal'],
+            'signal_reason':   sig.get('reason', ''),
+            'consistency_pct': wf.get('consistency_pct', None),
+            'avg_return_pct':  wf.get('avg_return_pct', None),
+            'avg_sharpe':      wf.get('avg_sharpe', None),
+            'weighted_score':  wf.get('weighted_score', None),
+        })
+    strategies.sort(key=lambda x: (x['has_signal'], x['weighted_score'] or 0), reverse=True)
+
+    # ── FLOW (stockbit_flow last 20 days) ──────────────────────────────────
+    flow_rows = conn.execute("""
+        SELECT trade_date, net_lot, net_value, composite_score, verdict, smart_money, last_price
+        FROM stockbit_flow WHERE ticker=? ORDER BY trade_date DESC LIMIT 20
+    """, (ticker,)).fetchall()
+    flow_history = [
+        {'date': r[0], 'net_lot': r[1], 'net_value': r[2],
+         'score': r[3], 'verdict': r[4], 'smart_money': r[5], 'price': r[6]}
+        for r in flow_rows
+    ]
+    flow_latest  = flow_history[0] if flow_history else {}
+    cum_delta_20d = [{'date': r['date'], 'net_value': r['net_value']} for r in reversed(flow_history)]
+
+    # ── BROKER FLOW (top 5 buyers/sellers latest day) ──────────────────────
+    broker_date = flow_latest.get('date') or ''
+    brokers_raw = conn.execute("""
+        SELECT broker_code, side, lot, value
+        FROM broker_flow WHERE ticker=? AND trade_date=?
+        ORDER BY side, ABS(lot) DESC
+    """, (ticker, broker_date)).fetchall()
+    top_brokers = {
+        'buyers':  [{'broker': r[0], 'lot': r[2], 'value': r[3]} for r in brokers_raw if r[1] == 'BUY'][:5],
+        'sellers': [{'broker': r[0], 'lot': r[2], 'value': r[3]} for r in brokers_raw if r[1] == 'SELL'][:5],
+        'date':    broker_date,
+    }
+
+    conn.close()
+
+    return jsonify({
+        'ticker':         ticker,
+        'price':          price,
+        'regime':         regime,
+        'strategies':     strategies,
+        'flow':           {'latest': flow_latest, 'cum_delta_20d': cum_delta_20d},
+        'broker':         top_brokers,
+        'premover_score': None,
+    })
+
+
 if __name__ == "__main__":
     init_screener_tables()
     init_flow_db()

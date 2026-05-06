@@ -9,79 +9,115 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0d0f14;
-      --card: #141720;
+      --bg:     #0d0f14;
+      --card:   #141720;
+      --card2:  #1a1e2a;
       --border: #1e2330;
-      --text: #e2e8f0;
-      --text-mute: #64748b;
+      --text:   #e2e8f0;
+      --mute:   #64748b;
       --accent: #6366f1;
-      --green: #22c55e;
-      --red: #ef4444;
-      --mono: 'JetBrains Mono', monospace;
+      --green:  #22c55e;
+      --red:    #ef4444;
+      --yellow: #eab308;
+      --mono:   'JetBrains Mono', monospace;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; }
+    a { color: var(--accent); text-decoration: none; }
 
     .topbar {
-      display: flex; align-items: center; gap: 16px;
-      padding: 14px 24px; border-bottom: 1px solid var(--border);
-      background: var(--card);
+      display: flex; align-items: center; gap: 14px;
+      padding: 12px 24px; background: var(--card); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
     }
-    .topbar a {
-      color: var(--text-mute); text-decoration: none; font-size: 13px;
-      transition: color .15s;
-    }
+    .topbar a { color: var(--mute); font-size: 13px; }
     .topbar a:hover { color: var(--text); }
-    .topbar .sep { color: var(--border); }
-    .topbar .ticker-label {
-      font-family: var(--mono); font-size: 20px; font-weight: 700;
-      color: var(--text); letter-spacing: 0.04em;
+    .sep { color: var(--border); }
+    .ticker-label { font-family: var(--mono); font-size: 20px; font-weight: 700; letter-spacing: .04em; }
+    .regime-badge {
+      padding: 2px 10px; border-radius: 4px; font-size: 11px; font-weight: 700;
+      background: var(--card2); color: var(--mute); letter-spacing: .06em;
     }
-    .topbar .badge {
-      background: var(--accent); color: #fff; font-size: 11px;
-      padding: 2px 8px; border-radius: 4px; font-weight: 600;
-    }
+    .regime-badge.TRENDING  { background: rgba(34,197,94,.15);  color: var(--green); }
+    .regime-badge.BREAKOUT  { background: rgba(99,102,241,.15); color: var(--accent); }
+    .regime-badge.RANGING   { background: rgba(234,179,8,.15);  color: var(--yellow); }
 
-    .layout { display: flex; flex-direction: column; gap: 0; }
+    .price-bar { display: flex; background: var(--card); border-bottom: 1px solid var(--border); }
+    .pc { flex: 1; padding: 10px 18px; border-right: 1px solid var(--border); }
+    .pc:last-child { border-right: none; }
+    .pc .lbl { font-size: 10px; color: var(--mute); text-transform: uppercase; letter-spacing: .06em; }
+    .pc .val { font-family: var(--mono); font-size: 15px; font-weight: 600; margin-top: 3px; }
+    .pc .val.up   { color: var(--green); }
+    .pc .val.down { color: var(--red); }
 
-    .chart-wrap {
-      width: 100%; height: 560px;
-      border-bottom: 1px solid var(--border);
-    }
-
+    .chart-wrap { height: 520px; border-bottom: 1px solid var(--border); }
     #tv_chart { width: 100%; height: 100%; }
 
-    .info-bar {
-      display: flex; gap: 0; border-bottom: 1px solid var(--border);
-      background: var(--card);
-    }
-    .info-cell {
-      flex: 1; padding: 14px 20px;
-      border-right: 1px solid var(--border);
-      font-size: 12px; color: var(--text-mute);
-    }
-    .info-cell:last-child { border-right: none; }
-    .info-cell .val {
-      font-family: var(--mono); font-size: 15px; font-weight: 600;
-      color: var(--text); margin-top: 4px;
-    }
-    .info-cell .val.up { color: var(--green); }
-    .info-cell .val.down { color: var(--red); }
+    .main { display: grid; grid-template-columns: 1fr 340px; }
+    @media (max-width: 960px) { .main { grid-template-columns: 1fr; } }
 
-    .content { padding: 24px; max-width: 1400px; margin: 0 auto; }
-
-    .section-title {
-      font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-      text-transform: uppercase; color: var(--text-mute);
-      margin-bottom: 12px; margin-top: 24px;
+    .section { padding: 20px 22px; border-bottom: 1px solid var(--border); }
+    .sec-title {
+      font-size: 10px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--mute); margin-bottom: 14px;
     }
-    .section-title:first-child { margin-top: 0; }
 
-    .hint {
-      color: var(--text-mute); font-size: 13px; padding: 32px;
-      text-align: center; background: var(--card);
-      border: 1px solid var(--border); border-radius: 8px;
+    /* strategy table */
+    .strat-table { width: 100%; border-collapse: collapse; }
+    .strat-table th {
+      text-align: left; font-size: 10px; color: var(--mute);
+      padding: 0 10px 8px 0; text-transform: uppercase; letter-spacing: .06em; font-weight: 600;
     }
+    .strat-table td { padding: 7px 10px 7px 0; border-top: 1px solid var(--border); vertical-align: middle; }
+    .strat-table tr:hover td { background: rgba(255,255,255,.02); }
+    .strat-name { font-size: 13px; font-weight: 500; }
+    .sig-buy  { color: var(--green); font-family: var(--mono); font-size: 12px; font-weight: 700; }
+    .sig-none { color: var(--mute);  font-family: var(--mono); font-size: 12px; }
+    .mono-val { font-family: var(--mono); font-size: 12px; }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .btn-trade {
+      background: rgba(99,102,241,.15); color: var(--accent);
+      border: 1px solid rgba(99,102,241,.3); border-radius: 5px;
+      padding: 4px 10px; font-size: 12px; cursor: pointer; white-space: nowrap;
+    }
+    .btn-trade:hover { background: rgba(99,102,241,.3); }
+
+    /* side panel */
+    .side { border-left: 1px solid var(--border); }
+
+    /* flow */
+    .flow-score-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .score-circle {
+      width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 16px; font-weight: 700;
+    }
+    .score-circle.pos { background: rgba(34,197,94,.15);   color: var(--green); }
+    .score-circle.neg { background: rgba(239,68,68,.15);   color: var(--red); }
+    .score-circle.neu { background: rgba(100,116,139,.15); color: var(--mute); }
+    .flow-meta .verdict { font-size: 13px; font-weight: 600; }
+    .flow-meta .sm { font-size: 11px; color: var(--mute); margin-top: 2px; }
+
+    .delta-bars { display: flex; align-items: flex-end; gap: 3px; height: 60px; margin-bottom: 14px; }
+    .delta-bar  { flex: 1; border-radius: 2px 2px 0 0; min-height: 2px; cursor: default; }
+    .delta-bar.pos { background: var(--green); }
+    .delta-bar.neg { background: var(--red); border-radius: 0 0 2px 2px; }
+
+    /* broker */
+    .broker-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+    .btab {
+      font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 4px;
+      cursor: pointer; background: var(--card2); color: var(--mute); border: none;
+    }
+    .btab.active { background: var(--accent); color: #fff; }
+    .broker-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .broker-table th { color: var(--mute); font-weight: 600; padding: 0 6px 6px 0; text-align: left; font-size: 10px; }
+    .broker-table td { padding: 4px 6px 4px 0; border-top: 1px solid var(--border); }
+    .b-buy  { color: var(--green); font-weight: 600; }
+    .b-sell { color: var(--red);   font-weight: 600; }
+
+    .loading-msg { color: var(--mute); font-size: 13px; padding: 16px 0; text-align: center; }
   </style>
 </head>
 <body>
@@ -90,57 +126,209 @@
   <a href="/">← Dashboard</a>
   <span class="sep">/</span>
   <span class="ticker-label">{{ ticker }}</span>
-  <span class="badge">DEEP DIVE</span>
+  <span class="regime-badge" id="tb-regime">…</span>
 </div>
 
-<div class="layout">
+<div class="price-bar">
+  <div class="pc"><div class="lbl">Close</div><div class="val" id="pb-close">—</div></div>
+  <div class="pc"><div class="lbl">Change</div><div class="val" id="pb-chg">—</div></div>
+  <div class="pc"><div class="lbl">Volume</div><div class="val" id="pb-vol">—</div></div>
+  <div class="pc"><div class="lbl">High</div><div class="val" id="pb-high">—</div></div>
+  <div class="pc"><div class="lbl">Low</div><div class="val" id="pb-low">—</div></div>
+  <div class="pc"><div class="lbl">Date</div><div class="val" id="pb-date">—</div></div>
+</div>
 
-  <div class="chart-wrap">
-    <div id="tv_chart"></div>
+<div class="chart-wrap"><div id="tv_chart"></div></div>
+
+<div class="main">
+
+  <div>
+    <div class="section">
+      <div class="sec-title">Strategy Signals &amp; Walk-Forward</div>
+      <div id="strat-loading" class="loading-msg">Loading…</div>
+      <table class="strat-table" id="strat-table" style="display:none">
+        <thead><tr>
+          <th>Strategy</th><th>Signal</th><th>WF%</th><th>Avg Ret</th><th>Sharpe</th><th></th>
+        </tr></thead>
+        <tbody id="strat-body"></tbody>
+      </table>
+    </div>
   </div>
 
-  <div class="info-bar">
-    <div class="info-cell">Ticker<div class="val" id="iv-ticker">{{ ticker }}</div></div>
-    <div class="info-cell">Exchange<div class="val">IDX</div></div>
-    <div class="info-cell">Timeframe<div class="val">Daily</div></div>
-    <div class="info-cell">Status<div class="val" id="iv-status">Loading…</div></div>
-  </div>
+  <div class="side">
+    <div class="section">
+      <div class="sec-title">Order Flow (20d)</div>
+      <div id="flow-loading" class="loading-msg">Loading…</div>
+      <div id="flow-content" style="display:none">
+        <div class="flow-score-row">
+          <div class="score-circle neu" id="flow-circle">—</div>
+          <div class="flow-meta">
+            <div class="verdict" id="flow-verdict">—</div>
+            <div class="sm" id="flow-sm">—</div>
+          </div>
+        </div>
+        <div class="delta-bars" id="delta-bars"></div>
+      </div>
+    </div>
 
-  <div class="content">
-    <div class="section-title">Strategy Signals</div>
-    <div class="hint">Strategy grid coming in Phase 3 — run a backtest scan from the <a href="/" style="color:var(--accent)">dashboard</a> first.</div>
-
-    <div class="section-title">Flow &amp; Order Data</div>
-    <div class="hint">Flow panel coming in Phase 3.</div>
+    <div class="section">
+      <div class="sec-title">Top Brokers</div>
+      <div id="broker-loading" class="loading-msg">Loading…</div>
+      <div id="broker-content" style="display:none">
+        <div class="broker-tabs">
+          <button class="btab active" id="btab-buy"  onclick="showBrokerTab('buy')">Buy</button>
+          <button class="btab"        id="btab-sell" onclick="showBrokerTab('sell')">Sell</button>
+        </div>
+        <table class="broker-table">
+          <thead><tr><th>Broker</th><th>Lot</th><th>Value</th></tr></thead>
+          <tbody id="broker-body"></tbody>
+        </table>
+        <div style="font-size:11px;color:var(--mute);margin-top:8px" id="broker-date"></div>
+      </div>
+    </div>
   </div>
 
 </div>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
 <script>
-  const ticker = {{ ticker | tojson }};
+  const TICKER = {{ ticker | tojson }};
+  let _broker = { buyers: [], sellers: [] };
 
   new TradingView.widget({
-    symbol: "IDX:" + ticker,
-    interval: "D",
-    timezone: "Asia/Jakarta",
-    theme: "dark",
-    style: "1",
-    locale: "id",
-    studies: [
-      "MASimple@tv-basicstudies",
-      "Volume@tv-basicstudies",
-      "BB@tv-basicstudies"
-    ],
-    container_id: "tv_chart",
-    autosize: true,
-    hide_side_toolbar: false,
-    allow_symbol_change: true,
-    save_image: false,
+    symbol: 'IDX:' + TICKER, interval: 'D', timezone: 'Asia/Jakarta',
+    theme: 'dark', style: '1', locale: 'id', autosize: true,
+    studies: ['MASimple@tv-basicstudies', 'Volume@tv-basicstudies', 'BB@tv-basicstudies'],
+    container_id: 'tv_chart', hide_side_toolbar: false,
+    allow_symbol_change: true, save_image: false,
   });
 
-  document.getElementById('iv-status').textContent = 'Chart loaded';
-</script>
+  async function loadFull() {
+    let d;
+    try {
+      const r = await fetch('/api/ticker/' + TICKER + '/full');
+      d = await r.json();
+    } catch(e) {
+      document.getElementById('strat-loading').textContent = 'Network error.';
+      return;
+    }
+    if (d.error) { document.getElementById('strat-loading').textContent = d.error; return; }
+    renderPrice(d.price, d.regime);
+    renderStrategies(d.strategies, d.price.close);
+    renderFlow(d.flow);
+    renderBroker(d.broker);
+  }
 
+  function renderPrice(p, regime) {
+    document.getElementById('pb-close').textContent = fmt(p.close);
+    const sign = p.chg >= 0 ? '+' : '';
+    const el = document.getElementById('pb-chg');
+    el.textContent = `${sign}${fmt(p.chg)} (${sign}${p.chg_pct?.toFixed(2)}%)`;
+    el.className = 'val ' + (p.chg >= 0 ? 'up' : 'down');
+    document.getElementById('pb-vol').textContent  = fmtVol(p.volume);
+    document.getElementById('pb-high').textContent = fmt(p.high);
+    document.getElementById('pb-low').textContent  = fmt(p.low);
+    document.getElementById('pb-date').textContent = p.date || '—';
+    const rb = document.getElementById('tb-regime');
+    rb.textContent = regime || '—';
+    rb.className = 'regime-badge ' + (regime || '');
+  }
+
+  function renderStrategies(strats, closePrice) {
+    document.getElementById('strat-loading').style.display = 'none';
+    const table = document.getElementById('strat-table');
+    const tbody = document.getElementById('strat-body');
+    table.style.display = '';
+    tbody.innerHTML = strats.map(s => {
+      const wf  = s.consistency_pct != null ? s.consistency_pct.toFixed(0) + '%' : '—';
+      const ret = s.avg_return_pct  != null ? (s.avg_return_pct >= 0 ? '+' : '') + s.avg_return_pct.toFixed(1) + '%' : '—';
+      const sh  = s.avg_sharpe      != null ? s.avg_sharpe.toFixed(2) : '—';
+      const rc  = s.avg_return_pct > 0 ? 'pos' : s.avg_return_pct < 0 ? 'neg' : '';
+      const sc  = s.avg_sharpe     > 0 ? 'pos' : s.avg_sharpe     < 0 ? 'neg' : '';
+      const btn = s.has_signal
+        ? `<button class="btn-trade" onclick="openTrade('${s.name}',${closePrice})">+ Trade</button>`
+        : '';
+      return `<tr>
+        <td class="strat-name">${s.name}</td>
+        <td>${s.has_signal ? '<span class="sig-buy">BUY</span>' : '<span class="sig-none">—</span>'}</td>
+        <td class="mono-val">${wf}</td>
+        <td class="mono-val ${rc}">${ret}</td>
+        <td class="mono-val ${sc}">${sh}</td>
+        <td>${btn}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderFlow(flow) {
+    document.getElementById('flow-loading').style.display = 'none';
+    document.getElementById('flow-content').style.display = '';
+    const lat = flow.latest || {};
+    const score = lat.score;
+    const circ = document.getElementById('flow-circle');
+    circ.textContent = score != null ? (score >= 0 ? '+' : '') + score : '—';
+    circ.className = 'score-circle ' + (score > 0 ? 'pos' : score < 0 ? 'neg' : 'neu');
+    document.getElementById('flow-verdict').textContent = (lat.verdict || '—').replace(/[🟢🔴]/g,'').trim();
+    document.getElementById('flow-sm').textContent = 'Smart Money: ' + (lat.smart_money || '—');
+
+    const bars = document.getElementById('delta-bars');
+    bars.innerHTML = '';
+    const hist = flow.cum_delta_20d || [];
+    const maxAbs = Math.max(...hist.map(h => Math.abs(h.net_value || 0)), 1);
+    hist.forEach(h => {
+      const v = h.net_value || 0;
+      const pct = Math.abs(v) / maxAbs * 100;
+      const bar = document.createElement('div');
+      bar.className = 'delta-bar ' + (v >= 0 ? 'pos' : 'neg');
+      bar.style.height = Math.max(pct, 3) + '%';
+      bar.title = h.date + ': ' + fmtM(v);
+      bars.appendChild(bar);
+    });
+  }
+
+  function renderBroker(broker) {
+    document.getElementById('broker-loading').style.display = 'none';
+    document.getElementById('broker-content').style.display = '';
+    _broker = broker;
+    document.getElementById('broker-date').textContent = 'Data: ' + (broker.date || '—');
+    showBrokerTab('buy');
+  }
+
+  function showBrokerTab(side) {
+    document.getElementById('btab-buy').className  = 'btab' + (side === 'buy'  ? ' active' : '');
+    document.getElementById('btab-sell').className = 'btab' + (side === 'sell' ? ' active' : '');
+    const rows = side === 'buy' ? _broker.buyers : _broker.sellers;
+    const cls  = side === 'buy' ? 'b-buy' : 'b-sell';
+    const tbody = document.getElementById('broker-body');
+    if (!rows?.length) {
+      tbody.innerHTML = '<tr><td colspan="3" style="color:var(--mute);padding:8px 0">No data</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r =>
+      `<tr><td class="${cls}">${r.broker}</td><td>${(r.lot||0).toLocaleString('id')}</td><td>${fmtM(r.value)}</td></tr>`
+    ).join('');
+  }
+
+  function openTrade(strategy, price) {
+    alert('Open trade:\n' + TICKER + ' | ' + strategy + ' | ' + fmt(price) + '\n\nGunakan tombol "+ Open Trade" di dashboard.');
+  }
+
+  function fmt(v)    { return v != null ? v.toLocaleString('id') : '—'; }
+  function fmtVol(v) {
+    if (!v) return '—';
+    if (v >= 1e9) return (v/1e9).toFixed(1)+'B';
+    if (v >= 1e6) return (v/1e6).toFixed(1)+'M';
+    if (v >= 1e3) return (v/1e3).toFixed(0)+'K';
+    return v.toString();
+  }
+  function fmtM(v) {
+    if (v == null) return '—';
+    const abs = Math.abs(v), s = v < 0 ? '-' : '';
+    if (abs >= 1e9) return s+(abs/1e9).toFixed(1)+'B';
+    if (abs >= 1e6) return s+(abs/1e6).toFixed(1)+'M';
+    return s+abs.toLocaleString('id');
+  }
+
+  loadFull();
+</script>
 </body>
 </html>
