@@ -210,6 +210,19 @@ def scan_momentum_signals():
     MIN_CONSIST = 50.0
     BLACKLIST   = 33.0
 
+    # Load filter toggles from config (1=on, 0=off)
+    try:
+        from paper_trade import get_config as _get_cfg
+        _cfg = _get_cfg()
+    except Exception:
+        _cfg = {}
+    _f_fundamental = int(_cfg.get("filter_fundamental", 1))
+    _f_sector      = int(_cfg.get("filter_sector",      1))
+    _f_flow        = int(_cfg.get("filter_flow",        1))
+    _f_rs          = int(_cfg.get("filter_rs",          1))
+    _f_regime      = int(_cfg.get("filter_regime",      1))
+    _f_vpin        = int(_cfg.get("filter_vpin",        0))
+
     tickers = get_all_tickers()
     wf_map = {}
     try:
@@ -241,21 +254,46 @@ def scan_momentum_signals():
         if wf and wf["consistency_pct"] < BLACKLIST:
             continue
         # Fundamental filter
-        fund_ok, fund_reason = check_fundamental(ticker)
-        if not fund_ok:
-            continue
+        if _f_fundamental:
+            fund_ok, fund_reason = check_fundamental(ticker)
+            if not fund_ok:
+                continue
+        else:
+            flow_reason = "fundamental filter OFF"
 
         # Sector rotation filter — skip UNDERWEIGHT sectors
-        _sec_ok, _sec_reason = is_sector_tradeable(ticker, _sector_scores)
-        if not _sec_ok:
-            logging.debug(f"[scan_momentum] {ticker} blocked by sector: {_sec_reason}")
-            continue
+        if _f_sector:
+            _sec_ok, _sec_reason = is_sector_tradeable(ticker, _sector_scores)
+            if not _sec_ok:
+                logging.debug(f"[scan_momentum] {ticker} blocked by sector: {_sec_reason}")
+                continue
+        else:
+            _sec_reason = "sector filter OFF"
 
         # Flow confirmation filter
         from flow_filter import flow_confirms_signal
-        flow_ok, flow_reason, flow_data = flow_confirms_signal(ticker, "BUY")
-        if not flow_ok:
-            continue
+        if _f_flow:
+            flow_ok, flow_reason, flow_data = flow_confirms_signal(ticker, "BUY")
+            if not flow_ok:
+                continue
+        else:
+            flow_ok, flow_reason, flow_data = True, "flow filter OFF", None
+
+        # VPIN filter — require BUY-side multi-day VPIN signal
+        _vpin_signal = "N/A"
+        if _f_vpin:
+            try:
+                import sqlite3 as _sqlite3
+                from screener.vpin_multi import calc_vpin_multi as _calc_vpin_multi
+                _vpin_conn = _sqlite3.connect(DB_PATH)
+                _vpin_multi = _calc_vpin_multi(_vpin_conn, ticker, _today_str)
+                _vpin_conn.close()
+                _vpin_signal = _vpin_multi['signal'] if _vpin_multi else 'NO_SIGNAL'
+                if _vpin_signal not in ('STRONG_BUY', 'BUY', 'ACCUMULATION'):
+                    logging.debug(f"[scan_momentum] {ticker} blocked by VPIN: {_vpin_signal}")
+                    continue
+            except Exception as _ve:
+                logging.warning(f"[scan_momentum] VPIN filter error [{ticker}]: {_ve}")
 
         try:
             df = ohlcv_map.get(ticker)
@@ -267,7 +305,7 @@ def scan_momentum_signals():
             if sig.iloc[-1]:
                 # Relative Strength filter — skip laggards vs IHSG
                 rs = calc_relative_strength(df, ihsg_df, period=20)
-                if rs < 1.0:
+                if _f_rs and rs < 1.0:
                     logging.debug(f"[scan_momentum] {ticker} skipped — RS={rs:.2f} < 1.0 (laggard)")
                     continue
 
@@ -302,7 +340,7 @@ def scan_momentum_signals():
                     except Exception as _me:
                         logging.warning(f"macro overlay error [{ticker}]: {_me}")
                 # Regime filter: skip UNCERTAIN
-                if regime_info and regime_info[0] == "UNCERTAIN":
+                if _f_regime and regime_info and regime_info[0] == "UNCERTAIN":
                     continue
                 from engine.sector_rotation import get_ticker_sector
                 _sector_entry = next((s for s in _sector_scores if s["sector"] == get_ticker_sector(ticker)), None)
@@ -326,6 +364,7 @@ def scan_momentum_signals():
                     "sector":        _sec_reason.split(" ")[0] if _sec_reason else "Unknown",
                     "sector_weight": _sector_entry["weight"] if _sector_entry else "NEUTRAL",
                     "sector_score":  _sector_entry["score"] if _sector_entry else 0,
+                    "vpin_signal":   _vpin_signal if _f_vpin else "filter OFF",
                 })
         except Exception as _te:
             logging.exception(f"scan error [{ticker}]: {_te}")
@@ -370,7 +409,12 @@ def daily_signal_scan():
             if _mr and _mr != 'macro OK':
                 msg += f" ⚠️ {_mr}"
             msg += "\n"
-            msg += f"   🗳 Votes: {s.get('votes',0)}/4 [{vlbl}]\n\n"
+            msg += f"   🗳 Votes: {s.get('votes',0)}/4 [{vlbl}]\n"
+            _vs = s.get('vpin_signal', 'filter OFF')
+            if _vs not in ('filter OFF', 'N/A'):
+                _ve = '🔥🔥' if _vs == 'STRONG_BUY' else '🔥' if _vs == 'BUY' else '🟡'
+                msg += f"   {_ve} VPIN: {_vs}\n"
+            msg += "\n"
         msg += f"Total: {len(signals)} sinyal hari ini"
     else:
         msg = f"📊 <b>Momentum Signal — {now}</b>\n\nTidak ada sinyal Momentum hari ini."
@@ -840,16 +884,40 @@ def daily_fetch_report():
             f"SELECT COUNT(DISTINCT ticker) FROM (SELECT ticker, COUNT(DISTINCT date) as cnt FROM ohlcv WHERE date >= '{five_days_ago}' GROUP BY ticker HAVING cnt >= 4)"
         ).fetchone()[0]
 
+        # Flow fetch counts for today
+        today_str = now.strftime("%Y-%m-%d")
+        try:
+            flow_conn = sqlite3.connect(DB_PATH)
+            flow_ticker_count = flow_conn.execute(
+                "SELECT COUNT(DISTINCT ticker) FROM stockbit_flow WHERE trade_date=?", (today_str,)
+            ).fetchone()[0]
+            broker_ticker_count = flow_conn.execute(
+                "SELECT COUNT(DISTINCT ticker) FROM broker_flow WHERE trade_date=?", (today_str,)
+            ).fetchone()[0]
+            flow_conn.close()
+        except Exception:
+            flow_ticker_count = 0
+            broker_ticker_count = 0
+
         conn.close()
 
+        flow_ok = flow_ticker_count > 0
+        broker_ok = broker_ticker_count > 0
+
         # Build report message
-        msg = f"📊 <b>Daily OHLCV Fetch Report — {date_str} {time_str}</b>\n\n"
-        msg += f"✅ <b>Status:</b>\n"
+        msg = f"📊 <b>Daily Fetch Report — {date_str} {time_str}</b>\n\n"
+        msg += f"<b>OHLCV:</b>\n"
         msg += f"  • Total tickers: <b>{total_tickers}</b>\n"
-        msg += f"  • Latest data date: <b>{latest_date}</b>\n"
+        msg += f"  • Latest date: <b>{latest_date}</b>\n"
         msg += f"  • Updated today: <b>{latest_count}/{total_tickers}</b>\n"
         msg += f"  • Complete (5-day): <b>{complete_tickers}/{total_tickers}</b>\n"
         msg += f"  • Avg records/ticker: <b>{avg_records:.0f}</b>\n"
+
+        msg += f"\n<b>Flow:</b>\n"
+        flow_emoji = "✅" if flow_ok else "❌"
+        msg += f"  {flow_emoji} Stockbit flow: <b>{flow_ticker_count} tickers</b>\n"
+        broker_emoji = "✅" if broker_ok else "❌"
+        msg += f"  {broker_emoji} Broker flow: <b>{broker_ticker_count} tickers</b>\n"
 
         if stale_count > 0:
             msg += f"\n⚠️ <b>Stale Data ({stale_count} tickers):</b>\n"
@@ -930,20 +998,20 @@ def open_trades_status_report():
             price_change = current_price - entry_price
             price_change_pct = (price_change / entry_price * 100) if entry_price > 0 else 0
 
-            # % to TP and SL
-            tp_distance = tp_price - entry_price
-            sl_distance = entry_price - sl_price
+            # % to TP and SL (guard against NULL tp_price / sl_price in DB)
+            tp_distance = (tp_price - entry_price) if tp_price is not None else 0
+            sl_distance = (entry_price - sl_price) if sl_price is not None else 0
             pct_to_tp = (price_change / tp_distance * 100) if tp_distance > 0 else 0
             pct_to_sl = ((entry_price - current_price) / sl_distance * 100) if sl_distance > 0 else 0
-            remaining_to_tp_pct = ((tp_price - current_price) / current_price * 100) if current_price > 0 else 0
+            remaining_to_tp_pct = ((tp_price - current_price) / current_price * 100) if (tp_price is not None and current_price > 0) else 0
 
             # P&L calculation
             pnl_rp = price_change * lots * 100
             pnl_pct = (price_change / entry_price * 100) if entry_price > 0 else 0
 
             # Check if trade is at risk
-            is_past_sl = current_price < sl_price
-            is_at_sl = abs(current_price - sl_price) < 1  # Within 1 Rp
+            is_past_sl = (sl_price is not None) and (current_price < sl_price)
+            is_at_sl = (sl_price is not None) and (abs(current_price - sl_price) < 1)
 
             # Emoji based on status
             if is_past_sl:
@@ -967,14 +1035,20 @@ def open_trades_status_report():
             # Trade details
             trade_msg = f"{emoji} <b>{ticker}</b> @ Rp {current_price:,.0f}\n"
             trade_msg += f"   Entry: Rp {entry_price:,.0f} | Change: {price_change_pct:+.2f}% ({price_change:+.0f})\n"
-            trade_msg += f"   📈 TP: Rp {tp_price:,.0f} (+{remaining_to_tp_pct:.1f}% to reach | {pct_to_tp:.1f}% covered)\n"
-            trade_msg += f"   🛑 SL: Rp {sl_price:,.0f}"
+            if tp_price is not None:
+                trade_msg += f"   📈 TP: Rp {tp_price:,.0f} (+{remaining_to_tp_pct:.1f}% to reach | {pct_to_tp:.1f}% covered)\n"
+            else:
+                trade_msg += f"   📈 TP: N/A\n"
+            if sl_price is not None:
+                trade_msg += f"   🛑 SL: Rp {sl_price:,.0f}"
+            else:
+                trade_msg += f"   🛑 SL: N/A"
 
             if is_past_sl:
                 trade_msg += f" ⚠️ <b>PAST SL by {(sl_price - current_price):,.0f}</b>"
             elif is_at_sl:
                 trade_msg += f" ⚠️ <b>AT SL</b>"
-            else:
+            elif sl_price is not None:
                 risk_remaining = max(0.0, ((entry_price - current_price) / sl_distance * 100) if sl_distance > 0 else 0)
                 trade_msg += f" ({risk_remaining:.1f}% risk used)"
 
@@ -982,7 +1056,7 @@ def open_trades_status_report():
 
             msg += trade_msg
 
-            total_capital += capital
+            total_capital += (capital or 0)
             total_pnl_rp += pnl_rp
             trades_by_status[status_key].append((ticker, pnl_rp))
 
@@ -1083,24 +1157,25 @@ def flow_broker_report():
             verdict = f.get('verdict', 'N/A')
             score = f.get('score', 0)
             smart = f.get('smart_money', 'N/A')
+            value_smart = f.get('value_smart_money', 'N/A')
             divergence = f.get('divergence', '')
             price_chg = f.get('price_chg_pct', 0)
 
             # Detect divergence opportunities
             if divergence == 'BEARISH_DIV':
                 # Delta up but price down — bullish setup
-                divergence_bullish.append((ticker, score, smart, price_chg))
+                divergence_bullish.append((ticker, score, smart, value_smart, price_chg))
             elif divergence == 'BULLISH_DIV':
                 # Delta down but price up — bearish setup
-                divergence_bearish.append((ticker, score, smart, price_chg))
+                divergence_bearish.append((ticker, score, smart, value_smart, price_chg))
 
             # Regular categorization
             if verdict == 'BULLISH':
-                bullish.append((ticker, score, smart))
+                bullish.append((ticker, score, smart, value_smart))
             elif verdict == 'NEUTRAL' and ('BUY' in smart or score >= 1):
-                neutral_buy.append((ticker, score, smart))
+                neutral_buy.append((ticker, score, smart, value_smart))
             else:
-                bearish.append((ticker, score, smart))
+                bearish.append((ticker, score, smart, value_smart))
 
         msg = f"📊 <b>Market Flow Sentiment — {now}</b>\n\n"
 
@@ -1119,11 +1194,17 @@ def flow_broker_report():
             sp = spike_map.get(tk)
             return f" 📰×{sp['ratio']}" if sp else ""
 
+        def _smart_tag(lot_sm, val_sm):
+            """Show value_smart_money in brackets when it differs from lot-based."""
+            if val_sm and val_sm != 'N/A' and val_sm != lot_sm:
+                return f"{lot_sm} [💰{val_sm}]"
+            return lot_sm
+
         # Show bullish/neutral opportunities
         if bullish or neutral_buy:
             msg += "<b>🟢 BUY SIGNALS:</b>\n"
-            for t, s, m in (bullish + neutral_buy)[:5]:
-                msg += f"  {t}{_spike_tag(t)}: Smart={m} (score {s:+.0f})\n"
+            for t, s, m, vm in (bullish + neutral_buy)[:5]:
+                msg += f"  {t}{_spike_tag(t)}: Smart={_smart_tag(m, vm)} (score {s:+.0f})\n"
         else:
             msg += "⚠️ <b>No bullish signals today</b>\n"
             if neutral_buy or len(neutral_buy) == 0:
@@ -1134,12 +1215,12 @@ def flow_broker_report():
             msg += "\n<b>⚡ DIVERGENCE ALERTS:</b>\n"
             if divergence_bullish:
                 msg += "  <b>🟢 Bullish Divergence (flow up, price down):</b>\n"
-                for t, s, m, pc in divergence_bullish[:3]:
-                    msg += f"    {t}{_spike_tag(t)}: {pc:+.1f}% (score {s:+.0f})\n"
+                for t, s, m, vm, pc in divergence_bullish[:3]:
+                    msg += f"    {t}{_spike_tag(t)}: {pc:+.1f}% Smart={_smart_tag(m, vm)} (score {s:+.0f})\n"
             if divergence_bearish:
                 msg += "  <b>🔴 Bearish Divergence (flow down, price up):</b>\n"
-                for t, s, m, pc in divergence_bearish[:3]:
-                    msg += f"    {t}{_spike_tag(t)}: {pc:+.1f}% (score {s:+.0f})\n"
+                for t, s, m, vm, pc in divergence_bearish[:3]:
+                    msg += f"    {t}{_spike_tag(t)}: {pc:+.1f}% Smart={_smart_tag(m, vm)} (score {s:+.0f})\n"
 
         # News-spike attention alerts — show top ratio with first headline
         if spike_map:
@@ -1258,6 +1339,20 @@ def _refresh_backtest_cache():
         print(f"[scheduler] Cache refresh error: {e}")
 
 
+def run_premover_eod():
+    """EOD pre-breakout scan — runs at 16:30 after data fetch."""
+    from engine.premover_detector import run_scan
+    now_str = datetime.now(WIB).strftime('%H:%M')
+    print(f"[{now_str}] Pre-mover EOD scan dimulai...")
+    try:
+        new_setups = run_scan(DB_PATH, send_alert_fn=send_telegram)
+        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan selesai. "
+              f"{len(new_setups)} new setups.")
+    except Exception as e:
+        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan error: {e}")
+        send_telegram(f"🔴 <b>Pre-mover Scan Error</b>\n<code>{str(e)[:200]}</code>")
+
+
 def start_scheduler():
     scheduler = BackgroundScheduler(timezone=WIB)
 
@@ -1338,6 +1433,11 @@ def start_scheduler():
         day_of_week="mon-fri", hour=20, minute=15, timezone=WIB),
         id="broker_flow_fetch", name="Broker Flow Fetch 20:15")
 
+    # Pre-mover EOD scan — 16:30 WIB (after data fetch + signal scan at 16:00)
+    scheduler.add_job(run_premover_eod, CronTrigger(
+        day_of_week="mon-fri", hour=16, minute=30, timezone=WIB),
+        id="premover_eod", name="Pre-mover EOD Scan 16:30")
+
     scheduler.start()
     print("Scheduler started:")
     print("  🤖 AUTO-TRADING STATUS: 09:00 (success/failed check)")
@@ -1347,6 +1447,7 @@ def start_scheduler():
     print("  🏦 OPEN TRADES: 10:30, 12:30, 14:30, 16:30")
     print("  🔄 DAILY FETCH: 17:30")
     print("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
+    print("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
     return scheduler
 
 if __name__ == "__main__":

@@ -1733,6 +1733,32 @@ def api_ticker_full(ticker):
 
     conn.close()
 
+    # ── PRE-MOVER SCORE (live, not cached) ────────────────────────────────
+    from engine.premover_detector import score_ticker as _score_ticker
+    import sqlite3 as _sq3
+    _flow_conn = _sq3.connect(DB_PATH)
+    try:
+        _frow = _flow_conn.execute("""
+            SELECT composite_score FROM stockbit_flow
+            WHERE ticker=? ORDER BY trade_date DESC LIMIT 1
+        """, (ticker,)).fetchone()
+    except Exception:
+        _frow = None
+    finally:
+        _flow_conn.close()
+    _ihsg_conn = _sq3.connect(DB_PATH)
+    try:
+        _ihsg_df = pd.read_sql(
+            'SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC',
+            _ihsg_conn, params=('IHSG',)
+        )
+    except Exception:
+        _ihsg_df = None
+    finally:
+        _ihsg_conn.close()
+    _pm = _score_ticker(df, ihsg_df=_ihsg_df if (_ihsg_df is not None and not _ihsg_df.empty) else None,
+                        flow_score=_frow[0] if _frow else None)
+
     return jsonify({
         'ticker':         ticker,
         'price':          price,
@@ -1740,8 +1766,42 @@ def api_ticker_full(ticker):
         'strategies':     strategies,
         'flow':           {'latest': flow_latest, 'cum_delta_20d': cum_delta_20d},
         'broker':         top_brokers,
-        'premover_score': None,
+        'premover':       {
+            'score':   _pm['score'],
+            'reasons': _pm['reasons'],
+            'adx':     _pm['adx'],
+            'near_52w':  _pm['near_52w'],
+            'atr_ratio': _pm['atr_ratio'],
+            'vol_dryup': _pm['vol_dryup'],
+            'rs':        _pm['rs'],
+        },
     })
+
+
+@app.route('/api/premover/watchlist', methods=['GET'])
+def api_premover_watchlist():
+    from engine.premover_detector import get_watchlist
+    min_score = int(request.args.get('min_score', 50))
+    days      = int(request.args.get('days', 5))
+    items = get_watchlist(DB_PATH, min_score=min_score, days=days)
+    return jsonify({'count': len(items), 'watchlist': items})
+
+
+@app.route('/api/premover/run', methods=['POST'])
+def api_premover_run():
+    from engine.premover_detector import run_scan
+    from scheduler import send_telegram as _tg
+
+    def _bg():
+        try:
+            new = run_scan(DB_PATH, send_alert_fn=_tg)
+            print(f"[premover] Manual scan done: {len(new)} new setups")
+        except Exception as e:
+            print(f"[premover] Manual scan error: {e}")
+
+    threading.Thread(target=_bg, daemon=True).start()
+    return jsonify({'status': 'started',
+                    'message': 'Pre-mover scan running. Check /api/premover/watchlist for results.'})
 
 
 if __name__ == "__main__":
