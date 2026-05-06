@@ -1613,6 +1613,30 @@ def dive(ticker):
     return render_template('dive.html', ticker=ticker.upper())
 
 
+@app.route('/api/fastmover/summary', methods=['GET'])
+def api_fastmover_summary():
+    from engine.fastmover_study import get_summary
+    return jsonify(get_summary(DB_PATH))
+
+
+@app.route('/api/fastmover/run', methods=['POST'])
+def api_fastmover_run():
+    import threading
+    from engine.fastmover_study import run_study
+
+    def _run():
+        try:
+            result = run_study(DB_PATH)
+            print(f"[fastmover] Study complete: {result['total']} events, "
+                  f"{result['inserted_this_run']} inserted")
+        except Exception as e:
+            print(f"[fastmover] Study error: {e}")
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    return jsonify({'status': 'started', 'message': 'Fast-mover study running in background. Check /api/fastmover/summary for results.'})
+
+
 @app.route('/api/ticker/<ticker>/full', methods=['GET'])
 def api_ticker_full(ticker):
     import sqlite3, pandas as pd
