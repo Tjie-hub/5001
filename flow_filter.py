@@ -180,6 +180,23 @@ def _analyze(ticker, bars):
     last_30 = sum(b["delta"] for b in market_bars[-30:])
     accelerating = last_30 > first_30
 
+    # 6. Value-Weighted Flow (IDR) — detects institutional smart money
+    # net_value is in raw IDR from Stockbit (positive=net buy, negative=net sell)
+    total_net_value = sum(b["net_value"] for b in market_bars)
+    opening_net_value = sum(b["net_value"] for b in market_bars if "09:00" <= b["time"] <= "09:30")
+    closing_net_value = sum(b["net_value"] for b in market_bars if "14:30" <= b["time"] <= "15:00")
+
+    if opening_net_value > 0 and closing_net_value > 0:
+        value_smart_money = "STRONG_BUY"
+    elif opening_net_value < 0 and closing_net_value < 0:
+        value_smart_money = "STRONG_SELL"
+    elif opening_net_value > 0 and closing_net_value < 0:
+        value_smart_money = "MORNING_TRAP"
+    elif opening_net_value < 0 and closing_net_value > 0:
+        value_smart_money = "ACCUMULATION"
+    else:
+        value_smart_money = "NEUTRAL"
+
     # Composite Score
     score = 0
     if imbalance == "BUY": score += 2
@@ -194,6 +211,9 @@ def _analyze(ticker, bars):
     elif smart_money == "MORNING_TRAP": score -= 1
     if accelerating: score += 1
     else: score -= 1
+    # Value confirmation: +1/-1 when IDR flow agrees with lot flow (stronger institutional signal)
+    if value_smart_money in ("STRONG_BUY", "ACCUMULATION"): score += 1
+    elif value_smart_money in ("STRONG_SELL", "MORNING_TRAP"): score -= 1
 
     verdict = "BULLISH" if score >= 3 else "BEARISH" if score <= -3 else "NEUTRAL"
 
@@ -220,6 +240,11 @@ def _analyze(ticker, bars):
         "total_sell_lot": sum(b["sell_lot"] for b in market_bars),
         "top_imbalance": sorted(imbalances, key=lambda x: x["ratio"], reverse=True)[:3],
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        # Value-weighted (IDR) fields
+        "total_net_value": total_net_value,
+        "opening_net_value": opening_net_value,
+        "closing_net_value": closing_net_value,
+        "value_smart_money": value_smart_money,
     }
 
 
@@ -258,6 +283,81 @@ def get_flow_from_db(ticker, trade_date=None):
         return None
 
 
+def get_foreign_accumulation(ticker, days=5, db_path=None):
+    """Net foreign (Asing) flow score over last N trading dates.
+
+    Returns dict or None if fewer than `days` dates exist for this ticker.
+    Keys: ticker, foreign_net_lots, avg_daily_vol_lots, score_pct, dates_used, latest_date
+    score_pct = (foreign_net_5d / avg_daily_vol) x 100  -- positive = net buy
+    """
+    if db_path is None:
+        db_path = _DB_PATH
+    try:
+        conn = sqlite3.connect(db_path)
+        dates = [r[0] for r in conn.execute(
+            """SELECT DISTINCT trade_date FROM broker_flow
+               WHERE investor_type='Asing' AND ticker=?
+               ORDER BY trade_date DESC LIMIT ?""",
+            (ticker, days)
+        ).fetchall()]
+
+        if len(dates) < days:
+            conn.close()
+            return None
+
+        placeholders = ",".join("?" * len(dates))
+        net_lots = conn.execute(
+            f"SELECT SUM(lot) FROM broker_flow"
+            f" WHERE investor_type='Asing' AND ticker=? AND trade_date IN ({placeholders})",
+            [ticker] + dates
+        ).fetchone()[0] or 0
+
+        avg_vol = conn.execute(
+            f"SELECT AVG(volume) FROM ohlcv WHERE ticker=? AND date IN ({placeholders})",
+            [ticker] + dates
+        ).fetchone()[0]
+        conn.close()
+
+        avg_vol_lots = (avg_vol / 100) if avg_vol else 0
+        score_pct = round((net_lots / avg_vol_lots * 100), 2) if avg_vol_lots > 0 else 0.0
+
+        return {
+            "ticker": ticker,
+            "foreign_net_lots": net_lots,
+            "avg_daily_vol_lots": round(avg_vol_lots),
+            "score_pct": score_pct,
+            "dates_used": len(dates),
+            "latest_date": dates[0],
+        }
+    except Exception:
+        return None
+
+
+def get_top_foreign_accumulation(tickers=None, days=5, top_n=10, db_path=None):
+    """Return top N tickers ranked by foreign accumulation score_pct.
+
+    If tickers is None, queries all tickers that have Asing data.
+    Returns list of dicts (same shape as get_foreign_accumulation), sorted desc by score_pct.
+    """
+    if db_path is None:
+        db_path = _DB_PATH
+    if tickers is None:
+        conn = sqlite3.connect(db_path)
+        tickers = [r[0] for r in conn.execute(
+            "SELECT DISTINCT ticker FROM broker_flow WHERE investor_type='Asing'"
+        ).fetchall()]
+        conn.close()
+
+    results = []
+    for t in tickers:
+        r = get_foreign_accumulation(t, days=days, db_path=db_path)
+        if r is not None:
+            results.append(r)
+
+    results.sort(key=lambda x: x["score_pct"], reverse=True)
+    return results[:top_n]
+
+
 def save_results_to_db(results, db_path=None):
     """Persist analyze() results into stockbit_flow table."""
     if db_path is None:
@@ -287,7 +387,7 @@ def save_results_to_db(results, db_path=None):
             r["score"], verdict_emoji, r["smart_money"],
             r.get("total_buy_lot", 0), r.get("total_sell_lot", 0),
             r.get("cum_delta", 0),
-            0, 0,
+            r.get("total_net_value", 0), 0,
             datetime.now().strftime("%Y-%m-%d %H:%M"),
         ))
         saved += 1
