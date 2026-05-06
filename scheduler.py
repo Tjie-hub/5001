@@ -545,6 +545,48 @@ def run_broker_flow_fetch():
         send_telegram(f"🔴 <b>Broker Flow Fetch Error</b>\n<code>{str(e)[:200]}</code>")
 
 
+def run_foreign_snapshot():
+    """14:30 WIB — Pre-close foreign accumulation watchlist alert.
+
+    Uses the most recently available broker_flow (Asing) data (fetched nightly at 20:15).
+    Sends top 5 buy + top 5 sell tickers ranked by 5-day score_pct.
+    """
+    from datetime import datetime as dt
+    now_str = dt.now(WIB).strftime('%H:%M')
+    print(f"[{now_str}] Foreign snapshot dimulai...")
+    try:
+        from flow_filter import get_top_foreign_accumulation
+        all_results = get_top_foreign_accumulation(top_n=9999)
+        top_buy = [r for r in all_results if r["score_pct"] > 0][:5]
+        top_sell = sorted(all_results, key=lambda x: x["score_pct"])[:5]
+        top_sell = [r for r in top_sell if r["score_pct"] < 0]
+
+        latest = all_results[0]["latest_date"] if all_results else "N/A"
+        msg = f"🏛️ <b>Foreign Flow Snapshot — {dt.now(WIB).strftime('%d/%m %H:%M')}</b>\n"
+        msg += f"<i>Data: {latest} | 5-day net / avg vol</i>\n\n"
+
+        if top_buy:
+            msg += "<b>🟢 Top Foreign Accumulation:</b>\n"
+            for r in top_buy:
+                msg += f"  {r['ticker']}: {r['score_pct']:+.1f}% ({r['foreign_net_lots']:+,.0f} lots)\n"
+        else:
+            msg += "<b>🟢 No significant foreign buying</b>\n"
+
+        if top_sell:
+            msg += "\n<b>🔴 Top Foreign Distribution:</b>\n"
+            for r in top_sell:
+                msg += f"  {r['ticker']}: {r['score_pct']:+.1f}% ({r['foreign_net_lots']:+,.0f} lots)\n"
+        else:
+            msg += "\n<b>🔴 No significant foreign selling</b>\n"
+
+        send_telegram(msg)
+        print(f"[{dt.now(WIB).strftime('%H:%M')}] Foreign snapshot sent ({len(top_buy)} buy, {len(top_sell)} sell)")
+    except Exception as e:
+        import logging
+        logging.error(f"run_foreign_snapshot error: {e}")
+        send_telegram(f"🔴 <b>Foreign Snapshot Error</b>\n<code>{str(e)[:200]}</code>")
+
+
 def run_news_fetch():
     """Fetch Google News headlines per ticker, persist to news_mentions table.
 
@@ -1407,6 +1449,11 @@ def start_scheduler():
             day_of_week="mon-fri", hour=hour, minute=minute, timezone=WIB),
             id=f"open_trades_report_{hour:02d}{minute:02d}", name=f"Open Trades Report {hour:02d}:{minute:02d}")
 
+    # Foreign accumulation snapshot — 14:30 WIB (pre-close watchlist)
+    scheduler.add_job(run_foreign_snapshot, CronTrigger(
+        day_of_week="mon-fri", hour=14, minute=30, timezone=WIB),
+        id="foreign_snapshot", name="Foreign Snapshot 14:30")
+
     # Open trade monitor — hourly at :05 during market hours (09:05–15:05) = 7×/day
     for hour in range(9, 16):
         scheduler.add_job(_run_open_trade_monitor, CronTrigger(
@@ -1445,6 +1492,7 @@ def start_scheduler():
     print("  📰 NEWS FETCH: 17:00 (Google News RSS, all tickers)")
     print("  📈 FLOW & BROKER: 17:15 (after 17:00 fetch, with news-spike tags)")
     print("  🏦 OPEN TRADES: 10:30, 12:30, 14:30, 16:30")
+    print("  🏛️ FOREIGN SNAPSHOT: 14:30 (pre-close foreign accumulation watchlist)")
     print("  🔄 DAILY FETCH: 17:30")
     print("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
     print("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
