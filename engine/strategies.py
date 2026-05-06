@@ -1073,6 +1073,8 @@ def check_current_entry_signal(ticker: str, strategy: str, df: pd.DataFrame = No
         result = check_vwap_reversion_signal(df)
     elif strategy == 'conservative':
         result = check_conservative_signal(df)
+    elif strategy == 'Trend Following Breakout':
+        result = check_trend_following_breakout_signal(df)
     else:
         return {
             'has_signal': False,
@@ -1608,5 +1610,182 @@ def strategy_swing_trend(df: pd.DataFrame,
         'equity':          equity,
         'final_capital':   capital,
         'initial_capital': initial_capital,
+    }
+
+
+# ── Strategi 9: Trend-Following Breakout ─────────────────────────────────────
+
+def strategy_trend_following_breakout(df: pd.DataFrame,
+                                      capital: float = 50_000_000,
+                                      filters: list = None) -> dict:
+    """
+    Trend-Following Breakout — catch high-momentum breakouts, let runners run.
+
+    Entry (all required):
+      1. close > prior 20-bar Donchian high (breakout)
+      2. volume > 1.8× MA20(volume)
+      3. ATR(14) > 0.5× 60-bar median ATR  (volatility expanding)
+      4. close > MA50                        (regime filter)
+    Exit:
+      - ATR trailing stop: max(prev_stop, close − 2.5×ATR)  [ratchets up only]
+      - OR close < MA20
+    Sizing: risk 0.5% of capital; SL = 2.5×ATR; max 30% capital per trade.
+    """
+    strategy_name  = 'Trend Following Breakout'
+    initial_capital = capital
+
+    if len(df) < 65:
+        return {'strategy': strategy_name, 'trades': [],
+                'equity': [capital] * len(df),
+                'final_capital': capital, 'initial_capital': capital}
+
+    ma20        = df['close'].rolling(20).mean()
+    ma50        = df['close'].rolling(50).mean()
+    atr         = calc_atr(df, 14)
+    avg_vol     = df['volume'].rolling(20).mean()
+    donchian20  = df['high'].rolling(20).max().shift(1)   # prior 20-bar high
+    atr60_med   = atr.rolling(60).median()
+
+    equity      = [capital]
+    trades      = []
+    in_trade    = False
+    entry_price = 0.0
+    trail_stop  = 0.0
+    lots        = 0
+    entry_date  = ''
+
+    for i in range(65, len(df)):
+        row     = df.iloc[i]
+        date    = str(row['date'])[:10]
+        cur_atr = atr.iloc[i]
+        cur_ma20 = ma20.iloc[i]
+
+        if in_trade:
+            low_i = row['low']
+            new_stop = row['close'] - 2.5 * cur_atr
+            trail_stop = max(trail_stop, new_stop)
+
+            exit_reason = None
+            exit_price  = None
+            if low_i <= trail_stop:
+                exit_price  = apply_costs(trail_stop, 'SELL')
+                exit_reason = 'TRAIL_SL'
+            elif row['close'] < cur_ma20:
+                exit_price  = apply_costs(row['close'], 'SELL')
+                exit_reason = 'MA20_BREAK'
+            elif i == len(df) - 1:
+                exit_price  = apply_costs(row['close'], 'SELL')
+                exit_reason = 'EOD'
+
+            if exit_reason:
+                gross   = (exit_price - entry_price) * lots * 100
+                pnl_pct = (exit_price - entry_price) / entry_price
+                capital += gross
+                trades.append(Trade(
+                    entry_date=entry_date, exit_date=date,
+                    entry_price=entry_price, exit_price=exit_price,
+                    lots=lots, direction='BUY', exit_reason=exit_reason,
+                    pnl_rp=gross, pnl_pct=pnl_pct * 100,
+                    strategy=strategy_name
+                ))
+                in_trade = False
+        else:
+            if (pd.isna(cur_atr) or pd.isna(cur_ma20)
+                    or pd.isna(ma50.iloc[i])
+                    or pd.isna(donchian20.iloc[i])
+                    or pd.isna(atr60_med.iloc[i])
+                    or pd.isna(avg_vol.iloc[i])):
+                equity.append(capital)
+                continue
+
+            cond_breakout = row['close'] > donchian20.iloc[i]
+            cond_volume   = row['volume'] > 1.8 * avg_vol.iloc[i]
+            cond_atr_exp  = cur_atr > 0.5 * atr60_med.iloc[i]
+            cond_regime   = row['close'] > ma50.iloc[i]
+
+            if cond_breakout and cond_volume and cond_atr_exp and cond_regime:
+                entry_price = apply_costs(row['close'], 'BUY')
+                sl_dist     = 2.5 * cur_atr
+                sl_pct      = sl_dist / entry_price
+                if sl_pct <= 0.001:
+                    equity.append(capital)
+                    continue
+                lots = lot_size(capital, entry_price, 0.005, sl_pct)
+                cost = entry_price * lots * 100
+                if cost <= capital and lots > 0:
+                    trail_stop  = entry_price - sl_dist
+                    in_trade    = True
+                    entry_date  = date
+
+        equity.append(capital)
+
+    return {
+        'strategy':        strategy_name,
+        'trades':          trades,
+        'equity':          equity,
+        'final_capital':   capital,
+        'initial_capital': initial_capital,
+    }
+
+
+def check_trend_following_breakout_signal(df: pd.DataFrame) -> dict:
+    """Live signal checker for Trend Following Breakout (last bar only)."""
+    if len(df) < 65:
+        return {'has_signal': False, 'reason': 'Data tidak cukup (65 bars)', 'details': {}}
+
+    ma20       = df['close'].rolling(20).mean()
+    ma50       = df['close'].rolling(50).mean()
+    atr        = calc_atr(df, 14)
+    avg_vol    = df['volume'].rolling(20).mean()
+    donchian20 = df['high'].rolling(20).max().shift(1)
+    atr60_med  = atr.rolling(60).median()
+
+    latest     = df.iloc[-1]
+    cur_atr    = atr.iloc[-1]
+    cur_ma20   = ma20.iloc[-1]
+    cur_ma50   = ma50.iloc[-1]
+    cur_don    = donchian20.iloc[-1]
+    cur_atr60  = atr60_med.iloc[-1]
+    cur_avvol  = avg_vol.iloc[-1]
+
+    if any(pd.isna(v) for v in [cur_atr, cur_ma20, cur_ma50, cur_don, cur_atr60, cur_avvol]):
+        return {'has_signal': False, 'reason': 'Indikator belum siap (NaN)', 'details': {}}
+
+    cond_breakout = latest['close'] > cur_don
+    cond_volume   = latest['volume'] > 1.8 * cur_avvol
+    cond_atr_exp  = cur_atr > 0.5 * cur_atr60
+    cond_regime   = latest['close'] > cur_ma50
+
+    vol_ratio = latest['volume'] / cur_avvol if cur_avvol > 0 else 0
+
+    details = {
+        'close':         latest['close'],
+        'donchian20':    round(cur_don, 0),
+        'vol_ratio':     round(vol_ratio, 2),
+        'atr':           round(cur_atr, 2),
+        'atr60_median':  round(cur_atr60, 2),
+        'ma20':          round(cur_ma20, 0),
+        'ma50':          round(cur_ma50, 0),
+        'cond_breakout': cond_breakout,
+        'cond_volume':   cond_volume,
+        'cond_atr_exp':  cond_atr_exp,
+        'cond_regime':   cond_regime,
+    }
+
+    if cond_breakout and cond_volume and cond_atr_exp and cond_regime:
+        return {
+            'has_signal': True,
+            'reason': f"TFB: breakout D20={cur_don:.0f}, VR={vol_ratio:.1f}x, ATR expanding",
+            'details': details,
+        }
+
+    missing = [k for k, v in {
+        'breakout': cond_breakout, 'volume': cond_volume,
+        'atr_exp': cond_atr_exp, 'regime': cond_regime
+    }.items() if not v]
+    return {
+        'has_signal': False,
+        'reason': f"TFB: kondisi belum terpenuhi ({', '.join(missing)})",
+        'details': details,
     }
     print(f"Details: {result['details']}")

@@ -16,6 +16,7 @@ from .strategies import (
     strategy_nr7_breakout,
     strategy_orb,
     strategy_swing_trend,
+    strategy_trend_following_breakout,
     Trade
 )
 from engine.regime_filter import strategy_regime_adaptive, RegimeClassifier
@@ -152,15 +153,16 @@ def walk_forward_split(df: pd.DataFrame,
 
 
 STRATEGY_FUNCS = {
-    'vol_weighted':            strategy_vol_weighted,
-    'momentum':                strategy_momentum,
-    'vwap_reversion':          strategy_vwap_reversion,
-    'conservative':            strategy_conservative,
-    'Volume Profile POC':      strategy_volume_profile_poc,
-    'Inside Bar Breakout':     strategy_inside_bar_breakout,
-    'NR7 Breakout':            strategy_nr7_breakout,
-    'ORB':                     strategy_orb,
-    'Swing Trend':             strategy_swing_trend,
+    'vol_weighted':              strategy_vol_weighted,
+    'momentum':                  strategy_momentum,
+    'vwap_reversion':            strategy_vwap_reversion,
+    'conservative':              strategy_conservative,
+    'Volume Profile POC':        strategy_volume_profile_poc,
+    'Inside Bar Breakout':       strategy_inside_bar_breakout,
+    'NR7 Breakout':              strategy_nr7_breakout,
+    'ORB':                       strategy_orb,
+    'Swing Trend':               strategy_swing_trend,
+    'Trend Following Breakout':  strategy_trend_following_breakout,
 }
 
 
