@@ -1275,6 +1275,27 @@ def flow_broker_report():
                 if first:
                     msg += f"      └ {first}\n"
 
+        # Foreign accumulation top 5 — appended to evening report
+        try:
+            from flow_filter import get_top_foreign_accumulation
+            fa_all = get_top_foreign_accumulation(top_n=9999)
+            fa_buy = [r for r in fa_all if r["score_pct"] > 0][:5]
+            fa_sell = sorted(fa_all, key=lambda x: x["score_pct"])[:5]
+            fa_sell = [r for r in fa_sell if r["score_pct"] < 0]
+            if fa_buy or fa_sell:
+                fa_date = fa_all[0]["latest_date"] if fa_all else "N/A"
+                msg += f"\n<b>🏛️ Foreign Flow (5d, data: {fa_date}):</b>\n"
+                if fa_buy:
+                    msg += "  <b>Buy:</b> "
+                    msg += " | ".join(f"{r['ticker']} {r['score_pct']:+.1f}%" for r in fa_buy)
+                    msg += "\n"
+                if fa_sell:
+                    msg += "  <b>Sell:</b> "
+                    msg += " | ".join(f"{r['ticker']} {r['score_pct']:+.1f}%" for r in fa_sell)
+                    msg += "\n"
+        except Exception as _fa_err:
+            pass  # non-critical — don't break the main report
+
         send_telegram(msg)
         print(f"[{datetime.now(WIB).strftime('%H:%M')}] Flow report sent "
               f"({len(bullish)} bullish, {len(neutral_buy)} neutral, "
