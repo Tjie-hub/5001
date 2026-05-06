@@ -479,6 +479,24 @@ def api_paper_config():
     return jsonify(cfg)
 
 
+@app.route('/api/paper/config', methods=['POST'])
+def api_paper_config_set():
+    from paper_trade import init_paper_table, get_db
+    init_paper_table()
+    body = request.get_json(force=True)
+    allowed = {'capital', 'tp_pct', 'sl_pct', 'risk_pct', 'max_open',
+               'filter_fundamental', 'filter_sector', 'filter_flow',
+               'filter_rs', 'filter_regime', 'filter_vpin'}
+    conn = get_db()
+    for key, value in body.items():
+        if key in allowed:
+            conn.execute("INSERT OR REPLACE INTO paper_config (key, value) VALUES (?, ?)",
+                         (key, str(value)))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
 @app.route('/api/backtest/multi_quick_scan', methods=['POST'])
 def api_multi_quick_scan():
     """Quick scan - support multiple strategies with intersection mode"""
@@ -1588,6 +1606,11 @@ def api_calendar_events():
         'reason':      reason,
         'events':      get_all_events(),
     })
+
+
+@app.route('/dive/<ticker>')
+def dive(ticker):
+    return render_template('dive.html', ticker=ticker.upper())
 
 
 if __name__ == "__main__":

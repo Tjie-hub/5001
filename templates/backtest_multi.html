@@ -454,6 +454,18 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
   .drawer-charts { grid-template-columns:1fr; }
   .summary-bar   { grid-template-columns:repeat(2,1fr); }
 }
+.ftoggle {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:6px 12px; border-radius:20px; cursor:pointer;
+  border:1px solid var(--border); background:var(--bg-elev);
+  font-size:12px; font-weight:500; user-select:none;
+  transition:background .15s, border-color .15s;
+}
+.ftoggle.on  { background:rgba(16,185,129,.13); border-color:var(--green); color:var(--green); }
+.ftoggle.off { color:var(--text-mute); }
+.ftoggle .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; transition:background .15s; }
+.ftoggle.on  .dot { background:var(--green); }
+.ftoggle.off .dot { background:var(--text-mute); }
 </style>
 </head>
 <body>
@@ -697,6 +709,15 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
     <div class="kpi accent"><div class="kpk">Win Rate</div><div class="kpv" id="p-winrate">—</div><div class="kps">Closed trades</div></div>
     <div class="kpi green" id="pnl-kpi"><div class="kpk">Total P&amp;L</div><div class="kpv" id="p-pnl">—</div><div class="kps">Risk/Trade: <span id="p-risk">—</span>%</div></div>
     <div class="kpi" id="ret-kpi"><div class="kpk">Return %</div><div class="kpv" id="p-return">—</div></div>
+  </div>
+
+  <!-- Scan Filter Toggles -->
+  <div style="margin:12px 0 6px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-weight:600;font-size:13px;">Scan Filters</span>
+      <span style="font-size:11px;color:var(--text-mute);">Toggle ON/OFF untuk scan momentum signal</span>
+    </div>
+    <div id="filter-toggles" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
   </div>
 
   <div class="panel-head" style="margin-top:6px;"><h2 style="font-size:14px;">Open Positions</h2></div>
@@ -1317,6 +1338,7 @@ function renderScanResults(data) {
       <div class="card-actions">
         <button class="btn-action buy" onclick="openTrade('${r.ticker}',${r.close||0})">+ Open Trade</button>
         <button class="btn-action" onclick="gotoBacktest('${r.ticker}')">Backtest →</button>
+        <button class="btn-action" onclick="window.open('/dive/${r.ticker}','_blank')">Dive ↗</button>
       </div>`;
     grid.appendChild(card);
   });
@@ -1385,6 +1407,7 @@ function renderSwingOnset(data) {
       <div class="card-actions">
         <button class="btn-action buy" onclick="openTrade('${r.ticker}',${r.close||0},${r.initial_sl_hint||0},${r.tp_projection||0},'Swing Trend')">+ Paper Trade</button>
         <button class="btn-action" onclick="gotoBacktest('${r.ticker}')">Backtest →</button>
+        <button class="btn-action" onclick="window.open('/dive/${r.ticker}','_blank')">Dive ↗</button>
       </div>`;
     grid.appendChild(card);
   });
@@ -1566,6 +1589,44 @@ async function precomputeBacktest() {
     toast(`Cache ready: ${data.computed} tickers, ${data.errors} errors`, 'success');
   } catch(e) { toast('Precompute failed: '+e.message, 'error'); }
 }
+const SCAN_FILTERS = [
+  { key: 'filter_fundamental', label: 'Fundamental' },
+  { key: 'filter_sector',      label: 'Sector Rotation' },
+  { key: 'filter_flow',        label: 'Flow (Stockbit)' },
+  { key: 'filter_rs',          label: 'Relative Strength' },
+  { key: 'filter_regime',      label: 'Regime' },
+  { key: 'filter_vpin',        label: 'VPIN' },
+];
+
+function renderFilterToggles(cfg) {
+  const wrap = document.getElementById('filter-toggles');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  SCAN_FILTERS.forEach(f => {
+    const on = (cfg[f.key] || 0) >= 1;
+    const el = document.createElement('div');
+    el.className = 'ftoggle ' + (on ? 'on' : 'off');
+    el.dataset.key = f.key;
+    el.dataset.val = on ? '1' : '0';
+    el.innerHTML = `<span class="dot"></span>${f.label}`;
+    el.addEventListener('click', async () => {
+      const newVal = el.dataset.val === '1' ? 0 : 1;
+      el.dataset.val = newVal;
+      el.className = 'ftoggle ' + (newVal ? 'on' : 'off');
+      try {
+        await fetch('/api/paper/config', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ [f.key]: newVal })
+        });
+      } catch(e) {
+        console.error('filter save error', e);
+      }
+    });
+    wrap.appendChild(el);
+  });
+}
+
 async function loadPaperTrades() {
   try {
     const [data, cfg] = await Promise.all([
@@ -1583,6 +1644,7 @@ async function loadPaperTrades() {
       document.getElementById('p-capital').textContent  = 'Rp'+(cfg.capital/1e6).toFixed(0)+'M';
       document.getElementById('p-maxopen').textContent  = cfg.max_open||5;
       document.getElementById('p-risk').textContent     = ((cfg.risk_pct||0.02)*100).toFixed(0);
+      renderFilterToggles(cfg);
     }
     const openBody = document.getElementById('paper-open-body');
     openBody.innerHTML = '';

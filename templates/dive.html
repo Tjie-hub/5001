@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deep Dive — {{ ticker }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --card: #141720;
+      --border: #1e2330;
+      --text: #e2e8f0;
+      --text-mute: #64748b;
+      --accent: #6366f1;
+      --green: #22c55e;
+      --red: #ef4444;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+    .topbar {
+      display: flex; align-items: center; gap: 16px;
+      padding: 14px 24px; border-bottom: 1px solid var(--border);
+      background: var(--card);
+    }
+    .topbar a {
+      color: var(--text-mute); text-decoration: none; font-size: 13px;
+      transition: color .15s;
+    }
+    .topbar a:hover { color: var(--text); }
+    .topbar .sep { color: var(--border); }
+    .topbar .ticker-label {
+      font-family: var(--mono); font-size: 20px; font-weight: 700;
+      color: var(--text); letter-spacing: 0.04em;
+    }
+    .topbar .badge {
+      background: var(--accent); color: #fff; font-size: 11px;
+      padding: 2px 8px; border-radius: 4px; font-weight: 600;
+    }
+
+    .layout { display: flex; flex-direction: column; gap: 0; }
+
+    .chart-wrap {
+      width: 100%; height: 560px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #tv_chart { width: 100%; height: 100%; }
+
+    .info-bar {
+      display: flex; gap: 0; border-bottom: 1px solid var(--border);
+      background: var(--card);
+    }
+    .info-cell {
+      flex: 1; padding: 14px 20px;
+      border-right: 1px solid var(--border);
+      font-size: 12px; color: var(--text-mute);
+    }
+    .info-cell:last-child { border-right: none; }
+    .info-cell .val {
+      font-family: var(--mono); font-size: 15px; font-weight: 600;
+      color: var(--text); margin-top: 4px;
+    }
+    .info-cell .val.up { color: var(--green); }
+    .info-cell .val.down { color: var(--red); }
+
+    .content { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+    .section-title {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-mute);
+      margin-bottom: 12px; margin-top: 24px;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    .hint {
+      color: var(--text-mute); font-size: 13px; padding: 32px;
+      text-align: center; background: var(--card);
+      border: 1px solid var(--border); border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/">← Dashboard</a>
+  <span class="sep">/</span>
+  <span class="ticker-label">{{ ticker }}</span>
+  <span class="badge">DEEP DIVE</span>
+</div>
+
+<div class="layout">
+
+  <div class="chart-wrap">
+    <div id="tv_chart"></div>
+  </div>
+
+  <div class="info-bar">
+    <div class="info-cell">Ticker<div class="val" id="iv-ticker">{{ ticker }}</div></div>
+    <div class="info-cell">Exchange<div class="val">IDX</div></div>
+    <div class="info-cell">Timeframe<div class="val">Daily</div></div>
+    <div class="info-cell">Status<div class="val" id="iv-status">Loading…</div></div>
+  </div>
+
+  <div class="content">
+    <div class="section-title">Strategy Signals</div>
+    <div class="hint">Strategy grid coming in Phase 3 — run a backtest scan from the <a href="/" style="color:var(--accent)">dashboard</a> first.</div>
+
+    <div class="section-title">Flow &amp; Order Data</div>
+    <div class="hint">Flow panel coming in Phase 3.</div>
+  </div>
+
+</div>
+
+<script src="https://s3.tradingview.com/tv.js"></script>
+<script>
+  const ticker = {{ ticker | tojson }};
+
+  new TradingView.widget({
+    symbol: "IDX:" + ticker,
+    interval: "D",
+    timezone: "Asia/Jakarta",
+    theme: "dark",
+    style: "1",
+    locale: "id",
+    studies: [
+      "MASimple@tv-basicstudies",
+      "Volume@tv-basicstudies",
+      "BB@tv-basicstudies"
+    ],
+    container_id: "tv_chart",
+    autosize: true,
+    hide_side_toolbar: false,
+    allow_symbol_change: true,
+    save_image: false,
+  });
+
+  document.getElementById('iv-status').textContent = 'Chart loaded';
+</script>
+
+</body>
+</html>
