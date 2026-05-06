@@ -385,6 +385,7 @@ def save_results_to_db(results, db_path=None):
     existing_cols = {r[1] for r in conn.execute("PRAGMA table_info(stockbit_flow)").fetchall()}
     if "foreign_score" not in existing_cols:
         conn.execute("ALTER TABLE stockbit_flow ADD COLUMN foreign_score REAL")
+        conn.commit()
     saved = 0
     for r in results:
         # Re-emoji verdict for DB consistency with legacy rows
