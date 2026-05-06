@@ -382,15 +382,20 @@ def save_results_to_db(results, db_path=None):
             PRIMARY KEY (ticker, trade_date)
         )
     """)
+    existing_cols = {r[1] for r in conn.execute("PRAGMA table_info(stockbit_flow)").fetchall()}
+    if "foreign_score" not in existing_cols:
+        conn.execute("ALTER TABLE stockbit_flow ADD COLUMN foreign_score REAL")
     saved = 0
     for r in results:
         # Re-emoji verdict for DB consistency with legacy rows
         verdict_emoji = {"BULLISH": "🟢 BULLISH", "BEARISH": "🔴 BEARISH", "NEUTRAL": "🟡 NEUTRAL"}.get(r["verdict"], r["verdict"])
+        fa = get_foreign_accumulation(r["ticker"], db_path=db_path)
+        foreign_score = fa["score_pct"] if fa else None
         conn.execute("""
             INSERT OR REPLACE INTO stockbit_flow
             (ticker, trade_date, composite_score, verdict, smart_money,
-             buy_lot, sell_lot, net_lot, net_value, last_price, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             buy_lot, sell_lot, net_lot, net_value, last_price, updated_at, foreign_score)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             r["ticker"], trade_date,
             r["score"], verdict_emoji, r["smart_money"],
@@ -398,6 +403,7 @@ def save_results_to_db(results, db_path=None):
             r.get("cum_delta", 0),
             r.get("total_net_value", 0), 0,
             datetime.now().strftime("%Y-%m-%d %H:%M"),
+            foreign_score,
         ))
         saved += 1
     conn.commit()
