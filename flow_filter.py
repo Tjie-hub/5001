@@ -466,6 +466,14 @@ def flow_confirms_signal(ticker, signal_direction="BUY", token=None):
     score = flow["score"]
     sm = flow["smart_money"]
 
+    # Foreign accumulation adjustment (±1 when Asing net flow > 2% of avg daily vol)
+    fa = get_foreign_accumulation(ticker)
+    if fa is not None:
+        if fa["score_pct"] > 2:
+            score += 1
+        elif fa["score_pct"] < -2:
+            score -= 1
+
     if signal_direction == "BUY":
         if score <= -3:
             return False, f"FLOW_BEARISH (score={score})", flow
