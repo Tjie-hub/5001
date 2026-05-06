@@ -312,13 +312,16 @@ def get_foreign_accumulation(ticker, days=5, db_path=None):
             [ticker] + dates
         ).fetchone()[0] or 0
 
-        avg_vol = conn.execute(
-            f"SELECT AVG(volume) FROM ohlcv WHERE ticker=? AND date IN ({placeholders})",
+        ohlcv_row = conn.execute(
+            f"SELECT AVG(volume), COUNT(*) FROM ohlcv WHERE ticker=? AND date IN ({placeholders})",
             [ticker] + dates
-        ).fetchone()[0]
+        ).fetchone()
+        avg_vol = ohlcv_row[0]
+        ohlcv_count = ohlcv_row[1]
         conn.close()
 
         avg_vol_lots = (avg_vol / 100) if avg_vol else 0
+        # Use actual ohlcv count (not days) to normalise — avoids inflated scores when dates are missing
         score_pct = round((net_lots / avg_vol_lots * 100), 2) if avg_vol_lots > 0 else 0.0
 
         return {
@@ -327,9 +330,11 @@ def get_foreign_accumulation(ticker, days=5, db_path=None):
             "avg_daily_vol_lots": round(avg_vol_lots),
             "score_pct": score_pct,
             "dates_used": len(dates),
+            "ohlcv_dates": ohlcv_count,
             "latest_date": dates[0],
         }
-    except Exception:
+    except Exception as e:
+        print(f"[ForeignFlow] get_foreign_accumulation({ticker}) failed: {e}")
         return None
 
 
@@ -342,11 +347,15 @@ def get_top_foreign_accumulation(tickers=None, days=5, top_n=10, db_path=None):
     if db_path is None:
         db_path = _DB_PATH
     if tickers is None:
-        conn = sqlite3.connect(db_path)
-        tickers = [r[0] for r in conn.execute(
-            "SELECT DISTINCT ticker FROM broker_flow WHERE investor_type='Asing'"
-        ).fetchall()]
-        conn.close()
+        try:
+            conn = sqlite3.connect(db_path)
+            tickers = [r[0] for r in conn.execute(
+                "SELECT DISTINCT ticker FROM broker_flow WHERE investor_type='Asing'"
+            ).fetchall()]
+            conn.close()
+        except Exception as e:
+            print(f"[ForeignFlow] get_top_foreign_accumulation ticker query failed: {e}")
+            return []
 
     results = []
     for t in tickers:
