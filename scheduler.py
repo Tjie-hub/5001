@@ -582,7 +582,6 @@ def run_foreign_snapshot():
         send_telegram(msg)
         print(f"[{dt.now(WIB).strftime('%H:%M')}] Foreign snapshot sent ({len(top_buy)} buy, {len(top_sell)} sell)")
     except Exception as e:
-        import logging
         logging.error(f"run_foreign_snapshot error: {e}")
         send_telegram(f"🔴 <b>Foreign Snapshot Error</b>\n<code>{str(e)[:200]}</code>")
 
