@@ -92,6 +92,22 @@ def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
 
+def send_telegram(msg):
+    token = os.environ.get("TELEGRAM_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        log("Telegram not configured")
+        return
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": msg, "parse_mode": "HTML"},
+            timeout=10,
+        )
+    except Exception as e:
+        log(f"Telegram send failed: {e}")
+
+
 def extract_token_from_chrome():
     """Scan Chrome LevelDB localStorage files for Stockbit JWT token."""
     # Try read from .stockbit_token file FIRST
@@ -172,6 +188,45 @@ def verify_token(token):
         timeout=10,
     )
     return r.status_code == 200
+
+
+def ensure_valid_token(manual_token=None):
+    """Return a valid token, running auto_token refresh/login if needed."""
+    if manual_token:
+        log("Using manual token")
+        if verify_token(manual_token):
+            return manual_token
+        log("ERROR: Manual token invalid")
+        return None
+
+    token = extract_token_from_chrome()
+    if token and verify_token(token):
+        log("Token OK!")
+        return token
+
+    log("Token invalid/missing — running auto_token refresh...")
+    try:
+        import auto_token as at
+        new_token = at.auto_refresh()
+        if new_token and at.verify_token(new_token):
+            token_file = os.path.join(_HERE, ".stockbit_token")
+            with open(token_file, "w") as f:
+                f.write(new_token)
+            log("✅ Token refreshed via auto_token")
+            return new_token
+
+        log("Auto refresh failed — trying credential login...")
+        new_token = at.credential_login()
+        if new_token and at.verify_token(new_token):
+            token_file = os.path.join(_HERE, ".stockbit_token")
+            with open(token_file, "w") as f:
+                f.write(new_token)
+            log("✅ Token obtained via credential login")
+            return new_token
+    except Exception as e:
+        log(f"auto_token error: {e}")
+
+    return None
 
 
 def fetch_keystats(token, ticker):
@@ -373,25 +428,12 @@ def main():
         tickers = get_tickers(category)
         label = category or "IDX80"
 
-    # Get token
-    if manual_token:
-        token = manual_token
-        log("Using manual token")
-    else:
-        token = extract_token_from_chrome()
-
+    # Get token — auto-refresh/login if invalid
+    token = ensure_valid_token(manual_token)
     if not token:
-        log("ERROR: No token available.")
-        log("Options:")
-        log("  1. Open Chrome & login to stockbit.com, then re-run")
-        log("  2. Run with --token <JWT> for manual override")
+        log("ERROR: Could not obtain a valid token (auto-refresh and credential login both failed).")
+        log("Manual option: run with --token <JWT>")
         sys.exit(1)
-
-    log("Verifying token...")
-    if not verify_token(token):
-        log("ERROR: Token invalid or expired. Refresh Stockbit in Chrome.")
-        sys.exit(1)
-    log("Token OK!")
 
     conn = init_db()
     log(f"DB: {WALKFORWARD_DB}")
@@ -543,6 +585,15 @@ def init_flow_db():
             avg_accdist         TEXT,
             updated_at          TEXT,
             PRIMARY KEY (ticker, trade_date)
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS ohlcv_cache (
+            ticker      TEXT NOT NULL,
+            tf          TEXT NOT NULL,
+            fetched_at  REAL NOT NULL,
+            data        TEXT NOT NULL,
+            PRIMARY KEY (ticker, tf)
         )
     """)
     conn.commit()
@@ -733,6 +784,19 @@ def run_flow(token, tickers):
         time.sleep(RATE_LIMIT_DELAY)
     conn.close()
     log(f"\nDONE: {success}/{len(tickers)} success")
+    if success == len(tickers):
+        send_telegram(
+            f"✅ <b>Flow & Broker Fetch DONE</b>\n"
+            f"Sukses: {success}/{len(tickers)} tickers\n"
+            f"Waktu: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+    else:
+        send_telegram(
+            f"⚠️ <b>Flow & Broker Fetch SELESAI (ada gagal)</b>\n"
+            f"Sukses: {success}/{len(tickers)} tickers\n"
+            f"Gagal: {len(tickers) - success} tickers\n"
+            f"Waktu: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
 
 def _run_flow_cmd(args):
     """Handle 'flow' subcommand with --token and --cat support."""
@@ -754,12 +818,11 @@ def _run_flow_cmd(args):
     else:
         tickers = get_tickers(category or "ALL")
 
-    token = manual_token or extract_token_from_chrome()
+    # Get token — auto-refresh/login if invalid
+    token = ensure_valid_token(manual_token)
     if not token:
-        log("ERROR: No token. Use --token <JWT>")
-        sys.exit(1)
-    if not verify_token(token):
-        log("ERROR: Token invalid/expired")
+        log("ERROR: Could not obtain a valid token")
+        send_telegram("❌ <b>Flow Fetch GAGAL</b>\nToken tidak ditemukan/expired. Auto-login juga gagal.")
         sys.exit(1)
 
     label = category or ("custom" if args else "ALL")
