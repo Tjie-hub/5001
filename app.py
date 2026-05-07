@@ -1778,6 +1778,67 @@ def api_ticker_full(ticker):
     })
 
 
+@app.route('/api/ticker/<ticker>/ohlcv', methods=['GET'])
+def api_ohlcv_cache(ticker):
+    import sqlite3, json, time
+    import yfinance as yf
+
+    ticker = ticker.upper()
+    tf = request.args.get('tf', '1h').lower()
+    if tf not in ('1h', '1w'):
+        return jsonify({'error': 'tf must be 1h or 1w'}), 400
+
+    ttl = 900 if tf == '1h' else 86400  # 15 min or 24h
+    now = time.time()
+
+    conn = sqlite3.connect(DB_PATH)
+    row = conn.execute(
+        'SELECT fetched_at, data FROM ohlcv_cache WHERE ticker=? AND tf=?',
+        (ticker, tf)
+    ).fetchone()
+
+    if row and (now - row[0]) < ttl:
+        conn.close()
+        return jsonify(json.loads(row[1]))
+
+    # cache miss or expired — fetch from yfinance
+    try:
+        if tf == '1h':
+            df = yf.Ticker(ticker + '.JK').history(period='60d', interval='1h', timeout=10)
+        else:
+            df = yf.Ticker(ticker + '.JK').history(period='2y', interval='1wk', timeout=10)
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': str(e)}), 502
+
+    if df is None or df.empty:
+        conn.close()
+        return jsonify({'error': f'No data for {ticker}'}), 404
+
+    candles = []
+    for ts, row_df in df.iterrows():
+        t = int(ts.timestamp())
+        candles.append({
+            'time':   t,
+            'open':   round(float(row_df['Open']),  2),
+            'high':   round(float(row_df['High']),  2),
+            'low':    round(float(row_df['Low']),   2),
+            'close':  round(float(row_df['Close']), 2),
+            'volume': int(row_df['Volume']),
+        })
+
+    payload = {'tf': tf, 'ticker': ticker, 'candles': candles}
+    data_str = json.dumps(payload)
+
+    conn.execute(
+        'INSERT OR REPLACE INTO ohlcv_cache (ticker, tf, fetched_at, data) VALUES (?,?,?,?)',
+        (ticker, tf, now, data_str)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify(payload)
+
+
 @app.route('/api/premover/watchlist', methods=['GET'])
 def api_premover_watchlist():
     from engine.premover_detector import get_watchlist
