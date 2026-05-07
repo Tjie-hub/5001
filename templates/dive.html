@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     :root {
       --bg:     #0d0f14;
@@ -58,6 +59,17 @@
     .pc .val.up   { color: var(--green); }
     .pc .val.down { color: var(--red); }
 
+    .tf-bar {
+      display: flex; gap: 6px; padding: 8px 14px;
+      background: var(--card); border-bottom: 1px solid var(--border);
+    }
+    .tf-btn {
+      font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 5px;
+      border: 1px solid var(--border); cursor: pointer; letter-spacing: .05em;
+      background: var(--card2); color: var(--mute); transition: all .15s;
+    }
+    .tf-btn:hover { color: var(--text); border-color: var(--accent); }
+    .tf-btn.active { background: rgba(99,102,241,.2); color: var(--accent); border-color: var(--accent); }
     .chart-wrap { height: 520px; border-bottom: 1px solid var(--border); }
     #tv_chart { width: 100%; height: 100%; }
 
@@ -147,7 +159,16 @@
   <div class="pc"><div class="lbl">Date</div><div class="val" id="pb-date">—</div></div>
 </div>
 
-<div class="chart-wrap"><div id="tv_chart"></div></div>
+<div class="tf-bar">
+  <button class="tf-btn" id="tf-1h" onclick="setTf('60')">1H</button>
+  <button class="tf-btn active" id="tf-1d" onclick="setTf('D')">1D</button>
+  <button class="tf-btn" id="tf-1w" onclick="setTf('W')">1W</button>
+</div>
+<div id="tv_chart_wrap" class="chart-wrap"><div id="tv_chart"></div></div>
+<div id="lw_chart_wrap" class="chart-wrap" style="display:none;position:relative;">
+  <div id="lw_loading" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:13px;background:var(--bg);z-index:2;">Loading…</div>
+  <div id="lw_chart" style="width:100%;height:100%;"></div>
+</div>
 
 <div class="main">
 
@@ -203,14 +224,98 @@
 <script>
   const TICKER = {{ ticker | tojson }};
   let _broker = { buyers: [], sellers: [] };
+  let _currentTf = 'D';
+  let _lwChart = null;
 
-  new TradingView.widget({
-    symbol: 'IDX:' + TICKER, interval: 'D', timezone: 'Asia/Jakarta',
-    theme: 'dark', style: '1', locale: 'id', autosize: true,
-    studies: ['MASimple@tv-basicstudies', 'Volume@tv-basicstudies', 'BB@tv-basicstudies'],
-    container_id: 'tv_chart', hide_side_toolbar: false,
-    allow_symbol_change: true, save_image: false,
-  });
+  function buildWidget() {
+    document.getElementById('tv_chart').innerHTML = '';
+    new TradingView.widget({
+      symbol: 'IDX:' + TICKER, interval: 'D', timezone: 'Asia/Jakarta',
+      theme: 'dark', style: '1', locale: 'id', autosize: true,
+      studies: ['MASimple@tv-basicstudies', 'Volume@tv-basicstudies', 'BB@tv-basicstudies'],
+      container_id: 'tv_chart', hide_side_toolbar: false,
+      allow_symbol_change: true, save_image: false,
+    });
+  }
+
+  function setTf(interval) {
+    if (interval === _currentTf) return;
+    _currentTf = interval;
+    const map = { '60': 'tf-1h', 'D': 'tf-1d', 'W': 'tf-1w' };
+    ['tf-1h', 'tf-1d', 'tf-1w'].forEach(id => {
+      document.getElementById(id).classList.toggle('active', id === map[interval]);
+    });
+    if (interval === 'D') {
+      document.getElementById('lw_chart_wrap').style.display = 'none';
+      document.getElementById('tv_chart_wrap').style.display = '';
+      buildWidget();
+    } else {
+      document.getElementById('tv_chart_wrap').style.display = 'none';
+      document.getElementById('lw_chart_wrap').style.display = '';
+      fetchAndRender(interval === '60' ? '1h' : '1w');
+    }
+  }
+
+  async function fetchAndRender(tf) {
+    const loading = document.getElementById('lw_loading');
+    const container = document.getElementById('lw_chart');
+    loading.style.display = 'flex';
+    container.innerHTML = '';
+    if (_lwChart) { _lwChart.remove(); _lwChart = null; }
+
+    let data;
+    try {
+      const r = await fetch('/api/ticker/' + TICKER + '/ohlcv?tf=' + tf);
+      data = await r.json();
+    } catch(e) {
+      loading.style.display = 'none';
+      container.innerHTML = '<div style="color:var(--mute);padding:20px;text-align:center">Network error</div>';
+      return;
+    }
+    if (data.error) {
+      loading.style.display = 'none';
+      container.innerHTML = '<div style="color:var(--mute);padding:20px;text-align:center">' + data.error + '</div>';
+      return;
+    }
+
+    loading.style.display = 'none';
+    _lwChart = LightweightCharts.createChart(container, {
+      autoSize: true,
+      layout: { background: { color: '#0d0f14' }, textColor: '#e2e8f0' },
+      grid: { vertLines: { color: '#1e2330' }, horzLines: { color: '#1e2330' } },
+      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+      timeScale: { borderColor: '#1e2330', timeVisible: true, secondsVisible: false },
+      rightPriceScale: { borderColor: '#1e2330' },
+    });
+
+    const candles = _lwChart.addCandlestickSeries({
+      upColor: '#22c55e', downColor: '#ef4444',
+      borderUpColor: '#22c55e', borderDownColor: '#ef4444',
+      wickUpColor: '#22c55e', wickDownColor: '#ef4444',
+    });
+
+    const volPane = _lwChart.addHistogramSeries({
+      color: '#26a69a',
+      priceFormat: { type: 'volume' },
+      priceScaleId: 'vol',
+    });
+    _lwChart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+
+    const candleData = data.candles.map(c => ({
+      time: c.time, open: c.open, high: c.high, low: c.low, close: c.close
+    }));
+    const volData = data.candles.map(c => ({
+      time: c.time,
+      value: c.volume,
+      color: c.close >= c.open ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)',
+    }));
+
+    candles.setData(candleData);
+    volPane.setData(volData);
+    _lwChart.timeScale().fitContent();
+  }
+
+  buildWidget();
 
   async function loadFull() {
     let d;
