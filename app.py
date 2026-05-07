@@ -1792,51 +1792,50 @@ def api_ohlcv_cache(ticker):
     now = time.time()
 
     conn = sqlite3.connect(DB_PATH)
-    row = conn.execute(
-        'SELECT fetched_at, data FROM ohlcv_cache WHERE ticker=? AND tf=?',
-        (ticker, tf)
-    ).fetchone()
-
-    if row and (now - row[0]) < ttl:
-        conn.close()
-        return jsonify(json.loads(row[1]))
-
-    # cache miss or expired — fetch from yfinance
     try:
-        if tf == '1h':
-            df = yf.Ticker(ticker + '.JK').history(period='60d', interval='1h', timeout=10)
-        else:
-            df = yf.Ticker(ticker + '.JK').history(period='2y', interval='1wk', timeout=10)
-    except Exception as e:
+        row = conn.execute(
+            'SELECT fetched_at, data FROM ohlcv_cache WHERE ticker=? AND tf=?',
+            (ticker, tf)
+        ).fetchone()
+
+        if row and (now - row[0]) < ttl:
+            return jsonify(json.loads(row[1]))
+
+        # cache miss or expired — fetch from yfinance
+        try:
+            if tf == '1h':
+                df = yf.Ticker(ticker + '.JK').history(period='60d', interval='1h', timeout=10)
+            else:
+                df = yf.Ticker(ticker + '.JK').history(period='2y', interval='1wk', timeout=10)
+        except Exception as e:
+            app.logger.error(f'[ohlcv_cache] yfinance error {ticker}/{tf}: {e}')
+            return jsonify({'error': 'Failed to fetch market data'}), 502
+
+        if df is None or df.empty:
+            return jsonify({'error': f'No data for {ticker}'}), 404
+
+        candles = []
+        for ts, r in df.iterrows():
+            candles.append({
+                'time':   int(ts.timestamp()),
+                'open':   round(float(r['Open']),  2),
+                'high':   round(float(r['High']),  2),
+                'low':    round(float(r['Low']),   2),
+                'close':  round(float(r['Close']), 2),
+                'volume': int(r['Volume']),
+            })
+
+        payload = {'tf': tf, 'ticker': ticker, 'candles': candles}
+        data_str = json.dumps(payload)
+
+        conn.execute(
+            'INSERT OR REPLACE INTO ohlcv_cache (ticker, tf, fetched_at, data) VALUES (?,?,?,?)',
+            (ticker, tf, now, data_str)
+        )
+        conn.commit()
+        return jsonify(payload)
+    finally:
         conn.close()
-        return jsonify({'error': str(e)}), 502
-
-    if df is None or df.empty:
-        conn.close()
-        return jsonify({'error': f'No data for {ticker}'}), 404
-
-    candles = []
-    for ts, row_df in df.iterrows():
-        t = int(ts.timestamp())
-        candles.append({
-            'time':   t,
-            'open':   round(float(row_df['Open']),  2),
-            'high':   round(float(row_df['High']),  2),
-            'low':    round(float(row_df['Low']),   2),
-            'close':  round(float(row_df['Close']), 2),
-            'volume': int(row_df['Volume']),
-        })
-
-    payload = {'tf': tf, 'ticker': ticker, 'candles': candles}
-    data_str = json.dumps(payload)
-
-    conn.execute(
-        'INSERT OR REPLACE INTO ohlcv_cache (ticker, tf, fetched_at, data) VALUES (?,?,?,?)',
-        (ticker, tf, now, data_str)
-    )
-    conn.commit()
-    conn.close()
-    return jsonify(payload)
 
 
 @app.route('/api/premover/watchlist', methods=['GET'])
