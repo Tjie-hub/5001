@@ -1785,10 +1785,10 @@ def api_ohlcv_cache(ticker):
 
     ticker = ticker.upper()
     tf = request.args.get('tf', '1h').lower()
-    if tf not in ('1h', '1w'):
-        return jsonify({'error': 'tf must be 1h or 1w'}), 400
+    if tf not in ('1h', '1d', '1w'):
+        return jsonify({'error': 'tf must be 1h, 1d or 1w'}), 400
 
-    ttl = 900 if tf == '1h' else 86400  # 15 min or 24h
+    ttl = 900 if tf == '1h' else (14400 if tf == '1d' else 86400)  # 15min / 4h / 24h
     now = time.time()
 
     conn = sqlite3.connect(DB_PATH)
@@ -1805,6 +1805,8 @@ def api_ohlcv_cache(ticker):
         try:
             if tf == '1h':
                 df = yf.Ticker(ticker + '.JK').history(period='60d', interval='1h', timeout=10)
+            elif tf == '1d':
+                df = yf.Ticker(ticker + '.JK').history(period='2y', interval='1d', timeout=10)
             else:
                 df = yf.Ticker(ticker + '.JK').history(period='2y', interval='1wk', timeout=10)
         except Exception as e:
