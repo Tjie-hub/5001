@@ -1725,16 +1725,22 @@ def api_ticker_full(ticker):
         FROM broker_flow WHERE ticker=? AND trade_date=?
         ORDER BY side, ABS(lot) DESC
     """, (ticker, broker_date)).fetchall()
+    broker_dates = [r[0] for r in conn.execute("""
+        SELECT DISTINCT trade_date FROM broker_flow
+        WHERE ticker=? ORDER BY trade_date DESC LIMIT 30
+    """, (ticker,)).fetchall()]
     top_brokers = {
         'buyers':  [{'broker': r[0], 'lot': r[2], 'value': r[3]} for r in brokers_raw if r[1] == 'BUY'][:5],
         'sellers': [{'broker': r[0], 'lot': r[2], 'value': r[3]} for r in brokers_raw if r[1] == 'SELL'][:5],
         'date':    broker_date,
+        'dates':   broker_dates,
     }
 
     conn.close()
 
     # ── PRE-MOVER SCORE (live, not cached) ────────────────────────────────
     from engine.premover_detector import score_ticker as _score_ticker
+    from engine.premover_detector import score_ticker_reversal as _score_reversal
     import sqlite3 as _sq3
     _flow_conn = _sq3.connect(DB_PATH)
     try:
@@ -1758,6 +1764,7 @@ def api_ticker_full(ticker):
         _ihsg_conn.close()
     _pm = _score_ticker(df, ihsg_df=_ihsg_df if (_ihsg_df is not None and not _ihsg_df.empty) else None,
                         flow_score=_frow[0] if _frow else None)
+    _pm_rev = _score_reversal(df, flow_score=_frow[0] if _frow else None)
 
     return jsonify({
         'ticker':         ticker,
@@ -1775,7 +1782,42 @@ def api_ticker_full(ticker):
             'vol_dryup': _pm['vol_dryup'],
             'rs':        _pm['rs'],
         },
+        'premover_reversal': {
+            'score':      _pm_rev['score'],
+            'reasons':    _pm_rev.get('reasons', []),
+            'vol_ratio':  _pm_rev.get('vol_ratio'),
+            'near_low':   _pm_rev.get('near_low'),
+            'above_3ma':  _pm_rev.get('above_3ma'),
+            'green_day':  _pm_rev.get('green_day'),
+            'atr_ratio':  _pm_rev.get('atr_ratio'),
+        },
     })
+
+
+@app.route('/api/ticker/<ticker>/broker', methods=['GET'])
+def api_ticker_broker(ticker):
+    import sqlite3
+    date = request.args.get('date', '')
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        if not date:
+            row = conn.execute(
+                "SELECT DISTINCT trade_date FROM broker_flow WHERE ticker=? ORDER BY trade_date DESC LIMIT 1",
+                (ticker,)
+            ).fetchone()
+            date = row[0] if row else ''
+        rows = conn.execute("""
+            SELECT broker_code, side, lot, value
+            FROM broker_flow WHERE ticker=? AND trade_date=?
+            ORDER BY side, ABS(lot) DESC
+        """, (ticker, date)).fetchall()
+        return jsonify({
+            'date':    date,
+            'buyers':  [{'broker': r[0], 'lot': r[2], 'value': r[3]} for r in rows if r[1] == 'BUY'][:5],
+            'sellers': [{'broker': r[0], 'lot': r[2], 'value': r[3]} for r in rows if r[1] == 'SELL'][:5],
+        })
+    finally:
+        conn.close()
 
 
 @app.route('/api/ticker/<ticker>/ohlcv', methods=['GET'])
@@ -1818,8 +1860,9 @@ def api_ohlcv_cache(ticker):
 
         candles = []
         for ts, r in df.iterrows():
+            t = (int(ts.timestamp()) + 25200) if tf == '1h' else ts.strftime('%Y-%m-%d')
             candles.append({
-                'time':   int(ts.timestamp()),
+                'time':   t,
                 'open':   round(float(r['Open']),  2),
                 'high':   round(float(r['High']),  2),
                 'low':    round(float(r['Low']),   2),
@@ -1843,9 +1886,11 @@ def api_ohlcv_cache(ticker):
 @app.route('/api/premover/watchlist', methods=['GET'])
 def api_premover_watchlist():
     from engine.premover_detector import get_watchlist
-    min_score = int(request.args.get('min_score', 50))
-    days      = int(request.args.get('days', 5))
-    items = get_watchlist(DB_PATH, min_score=min_score, days=days)
+    min_score    = int(request.args.get('min_score', 50))
+    days         = int(request.args.get('days', 5))
+    pattern_type = request.args.get('pattern_type', None)
+    items = get_watchlist(DB_PATH, min_score=min_score, days=days,
+                          pattern_type=pattern_type)
     return jsonify({'count': len(items), 'watchlist': items})
 
 
