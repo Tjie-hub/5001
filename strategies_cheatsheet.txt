@@ -72,29 +72,257 @@ Size: qty = (50M × 30%) ÷ entry_price
 ───────────────────────────────────────────────────────────────────────
 SCHEDULER  (Mon-Fri WIB)
 ───────────────────────────────────────────────────────────────────────
-08:40 Token refresh   08:50 OHLCV fetch
-09:05 Scan #1   10:05 Scan #2   11:05 Scan #3
-13:35 Scan #4   14:35 Scan #5   16:40 EOD flow fetch
+08:30  Backtest cache refresh
+09:00  Auto-trade status report (Telegram)
+09:05  Trade monitor start  ─┐
+09:30  Flow fetch            │
+09:05  Multi-strategy scan + Screener intraday (parallel)
+10:05  Multi-strategy scan + Screener intraday
+10:30  Flow fetch  |  Open trades status report (Telegram)
+11:05  Multi-strategy scan + Screener intraday
+11:30  Flow fetch
+12:30  Flow fetch  |  Open trades status report (Telegram)
+13:30  Flow fetch
+13:35  Multi-strategy scan + Screener intraday
+14:30  Flow fetch  |  Open trades status report (Telegram)
+14:35  Multi-strategy scan + Screener intraday
+15:05  Trade monitor end
+15:15  Flow fetch (last intraday)
+15:30  Screener EOD VPIN batch
+16:00  Signal report (Telegram, always)  +  WF score refresh (Fri only)
+16:30  Open trades status report (Telegram)
+17:00  News fetch (Google News RSS, all tickers)
+17:15  Flow & Broker report (Telegram, with news-spike tags)
+17:30  Daily fetch report
+20:15  Broker flow fetch (after Stockbit EOD publish)
 
 ───────────────────────────────────────────────────────────────────────
-URLS & COMMANDS
+AGENTS / SCRIPTS — Manual run commands
+───────────────────────────────────────────────────────────────────────
+
+🟢 CORE SERVICES
+───────────────────────────────────────────────────────────────────────
+app.py              Main Flask server on port 5001
+  Manual:  python3 app.py
+  Prod:    ./start.sh (uses venv + systemd)
+
+scheduler.py        All background jobs & auto-scans
+  Once:    python3 scheduler.py --once
+  Loop:    python3 scheduler.py (blocking, all jobs)
+
+───────────────────────────────────────────────────────────────────────
+🟡 DATA FETCHERS  (all commands manual below)
+───────────────────────────────────────────────────────────────────────
+auto_token.py       Stockbit API token refresh/check
+  Manual:  python3 auto_token.py
+  Check:   python3 auto_token.py --check
+  Login:   python3 auto_token.py --login
+
+screener/idx_scraper.py  Fetch tradebook OHLCV from Stockbit (972 tickers)
+  All:     python3 << 'EOF'
+           from screener.idx_scraper import fetch_all_stockbit, save_ohlcv_to_db
+           from data.fetcher import load_all_tickers
+           from pathlib import Path
+           from datetime import date
+           token = Path(".stockbit_token").read_text().strip()
+           tickers = load_all_tickers()
+           ohlcv_all, ticks_all = fetch_all_stockbit(tickers, token)
+           save_ohlcv_to_db(ohlcv_all, date.today().isoformat())
+           print(f"Done: saved {len(ohlcv_all)} tickers")
+           EOF
+
+data/fetcher.py     Incremental OHLCV fetch via yfinance
+  Manual:  python3 << 'EOF'
+           from data.fetcher import fetch_all_incremental
+           saved = fetch_all_incremental(category="ALL")
+           print(f"Saved {saved} bars")
+           EOF
+
+screener/idx_scraper.py (flow)  Fetch Stockbit order flow + broker data
+  Manual:  python3 << 'EOF'
+           from screener.idx_scraper import fetch_all_stockbit
+           from data.fetcher import load_all_tickers
+           from pathlib import Path
+           token = Path(".stockbit_token").read_text().strip()
+           tickers = load_all_tickers()
+           ohlcv_all, ticks_all = fetch_all_stockbit(tickers, token)
+           print(f"Got {len(ticks_all)} tickers' tradebook ticks")
+           EOF
+
+───────────────────────────────────────────────────────────────────────
+🔵 ANALYSIS & REPORTS
+───────────────────────────────────────────────────────────────────────
+analyze_flow_edge.py  Validate flow score edge vs paper trades
+  Default: python3 analyze_flow_edge.py
+  Sweep:   python3 analyze_flow_edge.py --sweep
+  Range:   python3 analyze_flow_edge.py --since 2026-04-20
+  Export:  python3 analyze_flow_edge.py --csv report.csv
+
+generate_live_status.py  Live dashboard status
+  Manual:  python3 generate_live_status.py
+  JSON:    python3 generate_live_status.py --json
+  Host:    python3 generate_live_status.py --host 192.168.31.120
+
+update_fetch_report.py  Refresh FETCH_REPORT.md with latest DB stats
+  Manual:  python3 update_fetch_report.py
+
+test_telegram.py    Test Telegram bot connectivity
+  Manual:  python3 test_telegram.py
+
+───────────────────────────────────────────────────────────────────────
+⚪ TRADE ENGINE (imported, no standalone run)
+───────────────────────────────────────────────────────────────────────
+paper_trade.py      Paper trading engine (used by scheduler + API)
+  Lib:     Imported only — called via scheduler.py or app.py
+  Init:    python3 paper_trade.py (creates DB table if missing)
+
+monitor.py          Trade monitor (checks SL/TP, flow reversals, VPIN)
+  Lib:     Imported only — run via scheduler._run_open_trade_monitor()
+  Cmd:     N/A (runs as scheduled job)
+
+───────────────────────────────────────────────────────────────────────
+URLS & DASHBOARD
 ───────────────────────────────────────────────────────────────────────
 Dashboard  http://192.168.31.120:5001/backtest/multi
 Bot        @idx_signal_ggc_bot
 
-systemctl status idx-walkforward-5001
-journalctl -u idx-walkforward-5001 -f
+───────────────────────────────────────────────────────────────────────
+MANUAL RUN COMMANDS (copy & paste)
+───────────────────────────────────────────────────────────────────────
 
-# Manual scan
+🔧 SERVICE CONTROL
+───────────────────────────────────────────────────────────────────────
+# Start Flask server (manual)
+python3 app.py
+
+# Run scheduler once (all jobs)
+python3 scheduler.py
+
+# Run one scheduler cycle
+python3 scheduler.py --once
+
+# View systemd logs (if using systemd)
+journalctl -u idx-walkforward-5001 -f
+journalctl -u idx-walkforward-5001 --since today
+
+───────────────────────────────────────────────────────────────────────
+🔄 DATA FETCH COMMANDS
+───────────────────────────────────────────────────────────────────────
+
+# Stockbit token refresh
+python3 auto_token.py
+
+# Check token validity
+python3 auto_token.py --check
+
+# Stockbit token interactive login
+python3 auto_token.py --login
+
+# Fetch OHLCV from Stockbit (all 972 tickers, save to DB)
+python3 << 'EOF'
+from screener.idx_scraper import fetch_all_stockbit, save_ohlcv_to_db
+from data.fetcher import load_all_tickers
+from pathlib import Path
+from datetime import date
+token = Path(".stockbit_token").read_text().strip()
+tickers = load_all_tickers()
+print(f"Fetching {len(tickers)} tickers...")
+ohlcv_all, ticks_all = fetch_all_stockbit(tickers, token)
+filled = sum(1 for v in ohlcv_all.values() if v.get('close'))
+print(f"Got data for {filled} tickers")
+saved = save_ohlcv_to_db(ohlcv_all, date.today().isoformat())
+print(f"✅ Saved {saved} rows to DB")
+EOF
+
+# Fetch OHLCV from yfinance (incremental, all tickers)
+python3 << 'EOF'
+from data.fetcher import fetch_all_incremental
+saved = fetch_all_incremental(category="ALL")
+print(f"✅ Saved {saved} bars to DB")
+EOF
+
+# Fetch Stockbit tradebook ticks (flow data)
+python3 << 'EOF'
+from screener.idx_scraper import fetch_all_stockbit
+from data.fetcher import load_all_tickers
+from pathlib import Path
+token = Path(".stockbit_token").read_text().strip()
+tickers = load_all_tickers()
+ohlcv_all, ticks_all = fetch_all_stockbit(tickers, token)
+total_ticks = sum(len(v) for v in ticks_all.values())
+print(f"✅ Got {total_ticks} tradebook ticks across {len(ticks_all)} tickers")
+EOF
+
+───────────────────────────────────────────────────────────────────────
+📊 ANALYSIS COMMANDS
+───────────────────────────────────────────────────────────────────────
+
+# Analyze flow edge (bucket by score thresholds)
+python3 analyze_flow_edge.py
+
+# Flow edge with cutoff sweep optimization
+python3 analyze_flow_edge.py --sweep
+
+# Flow edge since specific date
+python3 analyze_flow_edge.py --since 2026-04-20
+
+# Export flow edge to CSV
+python3 analyze_flow_edge.py --csv report.csv
+
+# Live system status
+python3 generate_live_status.py
+
+# Live status as JSON
+python3 generate_live_status.py --json
+
+# Update FETCH_REPORT.md
+python3 update_fetch_report.py
+
+# Test Telegram connectivity
+python3 test_telegram.py
+
+───────────────────────────────────────────────────────────────────────
+🌐 API ENDPOINTS (Flask running on port 5001)
+───────────────────────────────────────────────────────────────────────
+
+# System status & config
+curl http://192.168.31.120:5001/api/paper/summary
+curl http://192.168.31.120:5001/api/paper/config
+
+# Calendar (blackout dates)
+curl http://192.168.31.120:5001/api/calendar/status
+curl http://192.168.31.120:5001/api/calendar/events
+
+# Sector rotation (OVERWEIGHT/NEUTRAL/UNDERWEIGHT)
+curl http://192.168.31.120:5001/api/sector/rotation
+
+# Flow monitor & check
+curl http://192.168.31.120:5001/api/flow/monitor
+curl -X POST http://192.168.31.120:5001/api/flow/check \
+  -H "Content-Type: application/json" -d '{"ticker":"BBCA"}'
+
+# Broker flow data
+curl http://192.168.31.120:5001/api/broker-flow/BBCA
+curl http://192.168.31.120:5001/api/broker-flow/dates/BBCA
+
+# Manual scan (all strategies)
 curl -X POST http://192.168.31.120:5001/api/backtest/scan_all \
   -H "Content-Type: application/json" \
   -d '{"filter_mode":"signals_only"}'
 
-# Check today's blackout
-curl http://192.168.31.120:5001/api/calendar/status
+# Trigger scheduler immediately
+curl -X POST http://192.168.31.120:5001/api/scheduler/run
 
-# Sector ranking
-curl http://192.168.31.120:5001/api/sector/rotation
+# Screener
+curl -X POST http://192.168.31.120:5001/api/screener/run
+curl http://192.168.31.120:5001/api/screener/status
+curl http://192.168.31.120:5001/api/screener/results
+curl http://192.168.31.120:5001/api/screener/vpin/scan
+
+# Telegram
+curl http://192.168.31.120:5001/telegram/status
+curl http://192.168.31.120:5001/telegram/start-polling
+curl http://192.168.31.120:5001/telegram/stop-polling
 
 ───────────────────────────────────────────────────────────────────────
 COMMON MISTAKES

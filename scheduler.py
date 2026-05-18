@@ -301,8 +301,28 @@ def scan_momentum_signals():
                 continue
             vr     = calc_vol_ratio(df)
             streak = (df["close"] > df["close"].shift(1)) & (df["close"].shift(1) > df["close"].shift(2))
-            sig    = streak & (vr > 1.3)
+            sig    = streak & (vr > 1.3) & (vr <= 5.0)
             if sig.iloc[-1]:
+                # Signal quality gate — block 'watch' (100% loss rate in audit)
+                try:
+                    _sig_conn = sqlite3.connect(DB_PATH)
+                    _sig_row = _sig_conn.execute(
+                        "SELECT signal, delta FROM daily_screen WHERE ticker=? AND date=?",
+                        (ticker, _today_str)
+                    ).fetchone()
+                    _sig_conn.close()
+                    if _sig_row:
+                        _sig_label, _delta = _sig_row
+                        if _sig_label == 'watch':
+                            logging.debug(f"[scan_momentum] {ticker} blocked by signal=watch (100% loss rate)")
+                            continue
+                        # Delta confirmation: low delta + non-bullish → skip
+                        if _sig_label != 'bullish' and _delta is not None and _delta < 50_000:
+                            logging.debug(f"[scan_momentum] {ticker} blocked by low delta ({_delta})")
+                            continue
+                except Exception:
+                    pass  # no screen data today — soft pass
+
                 # Relative Strength filter — skip laggards vs IHSG
                 rs = calc_relative_strength(df, ihsg_df, period=20)
                 if _f_rs and rs < 1.0:

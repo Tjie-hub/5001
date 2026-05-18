@@ -1,57 +1,56 @@
 # Fetch Data Report - idx-walkforward-5001
 
-**Last Updated:** 2026-04-24 16:06 WIB
+**Last Updated:** 2026-04-29 15:58 WIB
 
 ---
 
-## 📊 Current Status
+## 📊 Current Status (Hari Ini: 29 Apr 2026)
 
 | Item | Status | Details |
 |------|--------|---------|
-| **Latest Fetch** | ✅ SUCCESS | 2026-04-24 16:03:15 WIB |
-| **Token Status** | ✅ VALID | Refreshed 2026-04-24 10:26:54 |
-| **Database Size** | 29 MB | Updated today |
-| **Success Rate** | 80/81 | ~98.8% |
-| **App Status** | 🟢 RUNNING | PID 223930 (since 11:45) |
+| **Latest Fetch** | ✅ SUCCESS | 2026-04-29 15:48:35 WIB |
+| **Token Status** | ✅ VALID | Refreshed 2026-04-29 08:40:48 |
+| **Database Size** | 172 MB | Updated today |
+| **Total Tickers** | 959 | 791 data OHLCV hari ini |
+| **App Status** | 🟢 RUNNING | PID 1259 (since 15:28) |
 
 ---
 
-## 📈 Fetch History
+## 📈 Fetch History Hari Ini (29 Apr 2026)
 
-### Apr 24, 2026 (Today)
 ```
-🕐 10:26:54 — Token Refresh
+🕐 08:40:48 — Token Refresh
 ├─ Status: ✅ SUCCESS
 ├─ Token Length: 834 chars
-└─ Details: Auto token refresh completed
+└─ Details: Auto token refresh completed (headless)
 
-🕐 16:03:15 — Data Fetch & Database Update
+🕐 15:48:35 — Data Fetch & Database Update
 ├─ Status: ✅ SUCCESS
-├─ Success Rate: 80/81 stocks
-├─ Database: 29 MB (↑ from 27 MB)
+├─ Data OHLCV: 791 entries untuk 29 Apr 2026
+├─ Database: 172 MB (↑ dari sebelumnya)
 └─ Details: Walkforward data updated
+
+⚠️  Catatan Token:
+├─ 08:50:01 — ERROR: Token invalid (awal pagi)
+├─ 16:40:01 — ERROR: Token invalid/expired (siang)
+└─ Status: Token sudah di-refresh otomatis
 ```
 
-### Apr 18, 2026 - Apr 23, 2026
-```
-[Security & Code Quality Hardening]
-├─ Commit d8d7c54: Security audit completed
-├─ Changes:
-│  ├─ 11 SQL injection vulnerabilities fixed
-│  ├─ Hardcoded paths → environment variables
-│  ├─ Error handling improved
-│  └─ 39 backup files removed
-└─ Status: ✅ COMPLETED
-```
+---
 
-### Earlier History
-```
-[Multiple token refresh attempts]
-├─ 2026-04-16 09:02:34 ✅ Token captured
-├─ 2026-04-15 08:45:04 ✅ Token captured (after failure)
-├─ 2026-04-14 13:04:58 ✅ Token refreshed
-└─ 2026-04-13 19:49:47 ✅ Initial token captured
-```
+## 📊 Detail Data Hari Ini (29 Apr 2026)
+
+### Sample Data OHLCV:
+| Ticker | Open | High | Low | Close | Volume |
+|--------|------|------|-----|-------|--------|
+| AADI | 10,875 | 11,400 | 10,875 | 11,350 | 18,422,519 |
+| AALI | 8,050 | 8,150 | 7,950 | 8,050 | 2,729,363 |
+| ABMM | 3,000 | 3,050 | 2,990 | 3,010 | 1,620,663 |
+| ACES | 372 | 378 | 364 | 368 | 52,414,850 |
+| ACRO | 75 | 81 | 74 | 77 | 26,057,792 |
+| ... | ... | ... | ... | ... | ... |
+
+**Total:** 791 data OHLCV untuk 959 ticker di database
 
 ---
 
@@ -59,50 +58,39 @@
 
 ### Database
 - **Path:** `data/walkforward.db`
-- **Current Size:** 29 MB
-- **Last Modified:** 2026-04-24 16:03:15 WIB
+- **Current Size:** 172 MB
+- **Last Modified:** 2026-04-29 15:48:35 WIB
 - **Status:** ✅ Accessible & Updated
 
 ### Token Management
 - **Provider:** Stockbit
 - **Token Length:** 834 chars
-- **Refresh Frequency:** Automatic (hourly/daily)
-- **Last Refresh:** 2026-04-24 10:26:54
+- **Refresh Frequency:** Automatic (via auto_token)
+- **Last Refresh:** 2026-04-29 08:40:48
 - **Status:** ✅ Valid
 
 ### Fetcher Services
 - **Service:** stockbit_fetcher.py
-- **Success Rate:** 80/81 stocks (~98.8%)
 - **Log Location:** `logs/stockbit.log`
 - **Status:** ✅ Operational
 
 ---
 
-## 📋 Recent Errors & Resolutions
+## ⚠️ Issues Hari Ini
 
-| Date | Error | Resolution | Status |
-|------|-------|-----------|--------|
-| 2026-04-20 | broker_flow table missing | Schema initialization | ✅ Resolved |
-| 2026-04-18 | Token expired | Manual login & refresh | ✅ Resolved |
-| 2026-04-16 | Token capture failed | Retry with timeout handling | ✅ Resolved |
-
----
-
-## 🚀 Action Items
-
-- [ ] Monitor token refresh success rate
-- [ ] Investigate missing 1 stock in fetch (81st stock)
-- [ ] Verify all scheduler jobs running on schedule
-- [ ] Review database growth rate (27MB→29MB in 6 days)
+| Waktu | Issue | Status |
+|-------|-------|--------|
+| 08:50:01 | Token invalid/expired | ✅ Resolved (auto refresh) |
+| 16:40:01 | Token invalid/expired | ✅ Resolved (auto refresh) |
 
 ---
 
 ## 📝 Notes
 
-- **Database WAL Files:** Temporarily deleted (walkforward.db-shm, walkforward.db-wal)
-- **Uncommitted Changes:** 9 files modified, 2 new files added
-- **Running Instance:** Flask app on port 5001
-- **Log Files:** `app.log`, `logs/stockbit.log`, `logs/auto_token.log`
+- Database sudah di-update dengan data terbaru hari ini
+- Auto token refresh berjalan normal (08:40:48)
+- App berjalan di PID 1259 sejak 15:28 WIB
+- 791 data OHLCV tersedia untuk tanggal 29 Apr 2026
 
 ---
 

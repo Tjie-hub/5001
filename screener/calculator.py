@@ -151,23 +151,9 @@ def calc_vol_ratio(today_vol: int, avg_vol_20d: int) -> float | None:
 
 
 def get_avg_vol_20d_yfinance(ticker: str, before_date: str = None) -> int | None:
-    """
-    Fetch 30-day daily history from Yahoo Finance and compute 20D avg volume.
-    ticker: IDX ticker without .JK (will be appended)
-    before_date: 'YYYY-MM-DD', defaults to today
-    """
-    try:
-        import yfinance as yf
-        yf_ticker = ticker + '.JK'
-        hist = yf.Ticker(yf_ticker).history(period='30d')
-        if hist.empty or len(hist) < 5:
-            logger.warning(f"[calc] yfinance: insufficient data for {ticker}")
-            return None
-        avg = int(hist['Volume'].tail(20).mean())
-        return avg
-    except Exception as e:
-        logger.error(f"[calc] yfinance error for {ticker}: {e}")
-        return None
+    """Query ohlcv DB table for 20-day avg volume."""
+    from screener.idx_scraper import get_avg_vol_20d_from_db
+    return get_avg_vol_20d_from_db(ticker, before_date)
 
 
 # ── Signal ────────────────────────────────────────────────────────────────────
@@ -203,32 +189,33 @@ def calc_signal(
 
 def calc_consec_up(ticker: str, today_close: int | None) -> int:
     """
-    Count consecutive days where close > previous close.
-    Uses yfinance 60-day history so it works from day 1
-    without needing accumulated SQLite data.
-    Returns 0 if today is down, negative if consecutive down days.
-    Example: +3 = naik 3 hari berturut, -2 = turun 2 hari berturut
+    Count consecutive up/down days from ohlcv DB table.
+    Returns positive for consecutive up days, negative for consecutive down.
     """
     if today_close is None:
         return 0
     try:
-        import yfinance as yf
-        hist = yf.Ticker(ticker + '.JK').history(period='60d')
-        if hist.empty or len(hist) < 2:
+        import sqlite3, os
+        db_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'walkforward.db')
+        conn = sqlite3.connect(db_path)
+        rows = conn.execute(
+            "SELECT date, close FROM ohlcv WHERE ticker=? AND close IS NOT NULL ORDER BY date DESC LIMIT 30",
+            (ticker,),
+        ).fetchall()
+        conn.close()
+
+        if not rows:
             return 0
 
-        closes = list(hist['Close'])
+        closes = [r[1] for r in rows]
+        # Prepend today's close if it differs from the most recent DB entry
+        if abs(closes[0] - today_close) > 1:
+            closes = [today_close] + closes
 
-        # Append today's close if different from last (intraday update)
-        if abs(closes[-1] - today_close) > 1:
-            closes.append(today_close)
-
-        # Count from most recent day backwards
         count = 0
-        direction = None  # 'up' or 'down'
-
-        for i in range(len(closes) - 1, 0, -1):
-            diff = closes[i] - closes[i - 1]
+        direction = None
+        for i in range(len(closes) - 1):
+            diff = closes[i] - closes[i + 1]
             if diff == 0:
                 break
             day_dir = 'up' if diff > 0 else 'down'
@@ -239,7 +226,6 @@ def calc_consec_up(ticker: str, today_close: int | None) -> int:
             count += 1
 
         return count if direction == 'up' else -count
-
     except Exception as e:
         logger.error(f"[calc] consec_up error {ticker}: {e}")
         return 0

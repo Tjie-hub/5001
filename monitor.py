@@ -312,14 +312,16 @@ def _evaluate_swing_trend(trade: dict) -> dict:
     new_highest = max(highest, float(df['high'].iloc[-1]))
     new_adx_peak = max(adx_peak, adx_now) if adx_now is not None else adx_peak
 
-    # Trailed SL logic: raise to latest higher-low pivot; BE lock after +10%
+    # Trailed SL logic: raise to latest higher-low pivot (only after 1 ATR)
     _, lows_idx = find_swing_points(df, n=2)
     new_sl = sl_price
     if lows_idx:
         candidate = float(df['low'].iloc[lows_idx[-1]])
-        if candidate > new_sl and candidate < cur:
+        atr_ok = (new_highest - entry_price) > (calc_atr(df, 14).iloc[-1] if len(df) >= 14 else 0)
+        if candidate > new_sl and candidate < cur and atr_ok:
             new_sl = candidate
-    if new_highest >= entry_price * 1.10 and new_sl < entry_price:
+    # BE lock after +8%
+    if new_highest >= entry_price * 1.08 and new_sl < entry_price:
         new_sl = entry_price
 
     # R7: trailed SL hit
@@ -336,55 +338,47 @@ def _evaluate_swing_trend(trade: dict) -> dict:
             'new_highest': new_highest, 'new_adx_peak': new_adx_peak,
         }
 
-    # R1: close<MA20 AND slope<0
-    if ma20_now and slope_now is not None and cur < ma20_now and slope_now < 0:
-        return {
-            'action': 'CLOSE', 'reason': 'R1_MA_BREAK', 'new_sl': new_sl,
-            'message': (
-                f"🔴 <b>R1 MA-BREAK</b> — {ticker}\n"
-                f"Close {cur:,.0f} < MA20 {ma20_now:,.0f}; slope {slope_now:+.2f}%\n"
-                f"<i>Trend broken — auto-close</i>"
-            ),
-            'new_highest': new_highest, 'new_adx_peak': new_adx_peak,
-        }
-
-    # R2: close < most-recent swing-low pivot
-    if lows_idx:
-        recent_low = float(df['low'].iloc[lows_idx[-1]])
-        if cur < recent_low:
+    # R1: close<MA20, slope neg 2 days, volume confirmation
+    if ma20_now and slope_now is not None:
+        slope_prev = float(slope.iloc[-2]) if len(slope) >= 2 and not pd.isna(slope.iloc[-2]) else 0
+        slope_neg_2d = slope_now < 0 and slope_prev < 0
+        vr_i = vr.iloc[-1] if not pd.isna(vr.iloc[-1]) else 0
+        if cur < ma20_now and slope_neg_2d and vr_i >= 1.3:
             return {
-                'action': 'CLOSE', 'reason': 'R2_LOWER_LOW', 'new_sl': new_sl,
+                'action': 'CLOSE', 'reason': 'R1_MA_BREAK', 'new_sl': new_sl,
                 'message': (
-                    f"🔴 <b>R2 LOWER-LOW</b> — {ticker}\n"
-                    f"Close {cur:,.0f} < prev swing-low {recent_low:,.0f}\n"
-                    f"<i>Structural break — auto-close</i>"
+                    f"🔴 <b>R1 MA-BREAK</b> — {ticker}\n"
+                    f"Close {cur:,.0f} < MA20 {ma20_now:,.0f}; slope 2d neg, VR {vr_i:.1f}x\n"
+                    f"<i>Trend broken — auto-close</i>"
                 ),
                 'new_highest': new_highest, 'new_adx_peak': new_adx_peak,
             }
 
-    # R3: ADX peak >25, now <20
-    if new_adx_peak > 25 and adx_now is not None and adx_now < 20:
-        return {
-            'action': 'CLOSE', 'reason': 'R3_ADX_FADE', 'new_sl': new_sl,
-            'message': (
-                f"⚠️ <b>R3 ADX-FADE</b> — {ticker}\n"
-                f"ADX {adx_now:.1f} (peak {new_adx_peak:.1f}) — momentum gone\n"
-                f"<i>Trend strength collapsed — auto-close</i>"
-            ),
-            'new_highest': new_highest, 'new_adx_peak': new_adx_peak,
-        }
+    # R3: ADX collapse (percentage drop from peak)
+    if new_adx_peak > 25 and adx_now is not None:
+        adx_drop_pct = (new_adx_peak - adx_now) / new_adx_peak
+        if adx_drop_pct > 0.20:
+            return {
+                'action': 'CLOSE', 'reason': 'R3_ADX_FADE', 'new_sl': new_sl,
+                'message': (
+                    f"⚠️ <b>R3 ADX-FADE</b> — {ticker}\n"
+                    f"ADX {adx_now:.1f} (peak {new_adx_peak:.1f}, drop {adx_drop_pct:.0%})\n"
+                    f"<i>Momentum collapsed — auto-close</i>"
+                ),
+                'new_highest': new_highest, 'new_adx_peak': new_adx_peak,
+            }
 
-    # R4: 3 consecutive lower closes on vr>=1.3
-    if len(df) >= 4:
+    # R4: 3-of-4 lower closes on vr>=1.8
+    if len(df) >= 5:
         c = df['close'].values
-        vr_i = vr.iloc[-1]
-        three_down = c[-1] < c[-2] < c[-3] < c[-4]
-        if three_down and not pd.isna(vr_i) and vr_i >= 1.3:
+        vr_i = vr.iloc[-1] if not pd.isna(vr.iloc[-1]) else 0
+        three_of_four = sum([c[-1] < c[-2], c[-2] < c[-3], c[-3] < c[-4], c[-4] < c[-5]]) >= 3
+        if three_of_four and vr_i >= 1.8:
             return {
                 'action': 'CLOSE', 'reason': 'R4_DISTRIBUTION', 'new_sl': new_sl,
                 'message': (
                     f"⚠️ <b>R4 DISTRIBUTION</b> — {ticker}\n"
-                    f"3 lower closes, VR {vr_i:.1f}×\n"
+                    f"3/4 lower closes, VR {vr_i:.1f}x\n"
                     f"<i>Distribution detected — auto-close</i>"
                 ),
                 'new_highest': new_highest, 'new_adx_peak': new_adx_peak,
@@ -476,7 +470,7 @@ def check_all_open_trades():
                     logger.error(f"[monitor] trail update failed: {e}")
 
             if result['action'] == 'CLOSE':
-                cur = _get_current_price(trade['ticker']) or float(trade['entry_price'])
+                cur = _get_current_price(trade['ticker']) or float(trade.get('sl_price') or trade['entry_price'])
                 try:
                     close_trade(int(trade['id']), float(cur), result['reason'], notify=False)
                     logger.info(f"[monitor] Auto-closed {trade['ticker']} ({result['reason']})")
@@ -509,7 +503,7 @@ def check_all_open_trades():
 
         # Auto-close if stop loss is hit
         if result['should_close']:
-            cur = _get_current_price(trade['ticker']) or float(trade['entry_price'])
+            cur = _get_current_price(trade['ticker']) or float(trade.get('sl_price') or trade['entry_price'])
             try:
                 close_trade(int(trade['id']), float(cur), 'STOPPED_OUT', notify=False)
                 logger.info(f"[monitor] Auto-closed {trade['ticker']} (STOPPED_OUT)")

@@ -19,3 +19,20 @@ __pycache__/
 # Abaikan file sistem Obsidian yang tidak perlu
 .obsidian/workspace.json
 .obsidian/graph.json
+.obsidian/
+
+# Database files (regenerable from data pipeline; too large for git)
+*.db
+*.db.bak*
+*.sqlite
+
+# Local backup files
+*.bak
+*.bak2
+
+# Claude Code local state (per-developer)
+.claude/settings.json
+.claude/settings.local.json
+
+# claude-mem persistent memory (per-developer)
+memory/

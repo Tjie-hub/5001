@@ -171,7 +171,7 @@ def score_swing_onset(df: pd.DataFrame, flow_row=None) -> dict:
             score += w
         components[name] = {'passed': bool(passed), 'weight': w, 'detail': detail}
 
-    verdict = 'SWING_ONSET' if score >= 60 else ('WATCH' if score >= 40 else 'SKIP')
+    verdict = 'SWING_ONSET' if score >= 65 else ('WATCH' if score >= 40 else 'SKIP')
 
     # Initial-SL hint = max(last swing low, MA50, entry - 1.5*ATR)
     atr = calc_atr(df, 14).iloc[-1]

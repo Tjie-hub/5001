@@ -10,15 +10,20 @@ Usage:
 import sys, os, time, requests
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
 
 # ── Config ──
 BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
+
 TOKEN_FILE = BASE_DIR / ".stockbit_token"
 STATE_DIR = BASE_DIR / ".playwright_state"
 LOG_FILE = BASE_DIR / "logs" / "auto_token.log"
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+STOCKBIT_USER = os.environ.get("STOCKBIT_USER")
+STOCKBIT_PASS = os.environ.get("STOCKBIT_PASS")
 
 STOCKBIT_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
@@ -212,6 +217,96 @@ def _capture_from_page(page, navigate=True):
     return captured_token
 
 
+# ── Mode 2b: Credential Login (headless, auto fallback) ──
+def credential_login():
+    """Auto-fill login form headlessly using STOCKBIT_USER / STOCKBIT_PASS from .env."""
+    if not STOCKBIT_USER or not STOCKBIT_PASS:
+        log("ERROR: STOCKBIT_USER / STOCKBIT_PASS not set in .env")
+        return None
+
+    if STOCKBIT_USER == "your_email@example.com":
+        log("ERROR: STOCKBIT_USER is still placeholder — update .env first")
+        return None
+
+    from playwright.sync_api import sync_playwright
+
+    log(f"Credential login started (headless) for {STOCKBIT_USER}")
+
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+
+    with sync_playwright() as p:
+        context = p.chromium.launch_persistent_context(
+            user_data_dir=str(STATE_DIR),
+            headless=True,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-gpu",
+                "--no-sandbox",
+                "--no-first-run",
+                "--no-default-browser-check",
+            ],
+            user_agent=STOCKBIT_HEADERS["User-Agent"],
+            viewport={"width": 1280, "height": 720},
+        )
+
+        token = None
+        try:
+            page = context.pages[0] if context.pages else context.new_page()
+
+            # Intercept token BEFORE navigating
+            captured_token = None
+
+            def on_request(request):
+                nonlocal captured_token
+                auth = request.headers.get("authorization", "")
+                if auth.startswith("Bearer ") and "exodus.stockbit.com" in request.url:
+                    captured_token = auth[7:]
+
+            page.on("request", on_request)
+
+            page.goto("https://stockbit.com/login", wait_until="domcontentloaded", timeout=45000)
+
+            # Fill credentials
+            page.wait_for_selector("input[type='email'], input[name='username'], input[placeholder*='Email' i]", timeout=15000)
+            email_input = page.locator("input[type='email'], input[name='username'], input[placeholder*='Email' i]").first
+            email_input.fill(STOCKBIT_USER)
+
+            page.wait_for_selector("input[type='password']", timeout=10000)
+            page.locator("input[type='password']").first.fill(STOCKBIT_PASS)
+
+            # Submit
+            page.locator("button[type='submit'], button:has-text('Login'), button:has-text('Masuk')").first.click()
+
+            # Wait for redirect away from login page
+            try:
+                page.wait_for_url(lambda url: "login" not in url, timeout=20000)
+                log("Login redirect detected")
+            except Exception:
+                log("No redirect detected — checking for errors")
+                if page.locator("text=Invalid, text=salah, text=incorrect").count() > 0:
+                    log("ERROR: Wrong credentials")
+                    return None
+
+            # Navigate to symbol page to capture token
+            time.sleep(3)
+            page.goto("https://stockbit.com/symbol/BBCA", wait_until="networkidle", timeout=45000)
+            time.sleep(5)
+
+            if not captured_token:
+                page.evaluate("window.scrollBy(0, 300)")
+                time.sleep(3)
+
+            page.remove_listener("request", on_request)
+            token = captured_token
+
+        except Exception as e:
+            log(f"Credential login error: {e}")
+        finally:
+            context.close()
+
+    return token
+
+
 # ── Mode 3: Check existing token ──
 def check_token():
     if not TOKEN_FILE.exists():
@@ -281,17 +376,29 @@ def main():
             # Token lama masih jalan, tidak perlu alert
             return
 
+    # Coba credential login sebagai last resort
+    log("Trying credential login as fallback...")
+    send_telegram("⚠️ <b>Auto Token</b>: session expired, mencoba credential login...")
+
+    token = credential_login()
+    if token and verify_token(token):
+        TOKEN_FILE.write_text(token)
+        log("✅ Credential login berhasil — token saved")
+        send_telegram("✅ <b>Auto Token</b>: credential login berhasil, token diperbarui.")
+        return
+
     # Benar-benar gagal
-    log("❌ Token capture GAGAL dan token lama expired")
+    log("❌ Token capture GAGAL dan credential login juga gagal")
     send_telegram(
         "⚠️ <b>Stockbit Auto Token GAGAL</b>\n\n"
-        "Token expired, auto-refresh gagal.\n"
+        "Session expired + credential login gagal.\n"
+        "Kemungkinan: password berubah atau ada CAPTCHA.\n\n"
         "Refresh manual sebelum 08:50:\n"
         "1. CRD → Chrome → stockbit.com/symbol/BBCA\n"
         "2. F12 → Network → Fetch/XHR → refresh\n"
         "3. Copy Bearer token\n"
         "4. <code>echo 'TOKEN' > ~/.stockbit_token</code>\n\n"
-        "Atau re-login session:\n"
+        "Atau re-login:\n"
         "<code>python3 auto_token.py --login</code>"
     )
     sys.exit(1)

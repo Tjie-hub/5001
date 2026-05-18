@@ -102,6 +102,13 @@ def init_paper_table():
         ("sl_pct",     "0.025"),
         ("risk_pct",   "0.02"),
         ("max_open",   "5"),
+        # Filter toggles: 1=on, 0=off
+        ("filter_fundamental", "1"),
+        ("filter_sector",      "1"),
+        ("filter_flow",        "1"),
+        ("filter_rs",          "1"),
+        ("filter_regime",      "1"),
+        ("filter_vpin",        "0"),  # off by default
     ]
     for k, v in configs:
         conn.execute("INSERT OR IGNORE INTO paper_config (key,value) VALUES (?,?)", (k,v))
@@ -209,6 +216,18 @@ def open_trade(ticker: str, entry_price: float, strategy: str = 'Momentum Follow
         return {"error": f"Max {max_open} posisi sudah terbuka"}
     if any(t["ticker"] == ticker for t in open_trades):
         return {"error": f"{ticker} sudah ada posisi terbuka"}
+
+    # Cooldown: skip re-entry if ticker was stopped out at a loss within 3 days
+    _conn = get_db()
+    _recent_sl = _conn.execute("""
+        SELECT exit_date FROM paper_trades
+        WHERE ticker=? AND exit_reason='STOPPED_OUT' AND pnl_pct < 0
+          AND exit_date >= date('now','localtime','-3 days')
+        ORDER BY exit_date DESC LIMIT 1
+    """, (ticker,)).fetchone()
+    _conn.close()
+    if _recent_sl:
+        return {"error": f"{ticker} cooldown 3 hari setelah SL loss (exit {_recent_sl[0]})"}
 
     is_swing = (strategy or '').strip().lower() == 'swing trend'
     exit_rules_json = None

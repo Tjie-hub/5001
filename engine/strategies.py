@@ -102,6 +102,27 @@ def apply_costs(price: float, side: str) -> float:
     else:
         return price * (1 - COMMISSION_SELL - SLIPPAGE)
 
+
+def _watch_signal_block(df: pd.DataFrame) -> pd.Series:
+    """
+    Approximate daily_screen 'watch' / non-bullish signal block using OHLCV data.
+    Matches scheduler.py scan_momentum_signals() logic:
+      - daily_screen signal == 'watch' → block
+      - signal != 'bullish' AND delta < 50_000 → block
+    Returns True for bars that should be BLOCKED (watch / low-conviction).
+    """
+    vr = calc_vol_ratio(df, 20)
+    delta_proxy = calc_delta(df)
+    typical_price = (df['high'] + df['low'] + df['close']) / 3
+
+    vr_elevated = vr > 1.5
+    # 'bullish' in daily_screen = delta > 0 AND price > vwap
+    # Using typical_price as session-VWAP proxy
+    is_bullish = (delta_proxy > 0) & (df['close'] > typical_price)
+
+    # Block watch: VR elevated but not clearly bullish
+    return vr_elevated & ~is_bullish
+
 # ─────────────────────────────────────────────
 # FILTER LIBRARY (on/off kombinasi bebas)
 # ─────────────────────────────────────────────
@@ -280,10 +301,13 @@ def strategy_momentum(df: pd.DataFrame, capital: float = 50_000_000, filters: li
     Entry: 2 hari berturut close > close[-1] + Vol Ratio > 1.3x
     Exit:  SL = ATR×1.2 (trailing), TP = ATR×2.4 (2:1 R/R minimum)
     """
-    vr      = calc_vol_ratio(df, 20)
-    streak2 = (df['close'] > df['close'].shift(1)) & \
-              (df['close'].shift(1) > df['close'].shift(2))
-    sig     = streak2 & (vr > 1.3)
+    vr        = calc_vol_ratio(df, 20)
+    streak2   = (df['close'] > df['close'].shift(1)) & \
+                (df['close'].shift(1) > df['close'].shift(2))
+    # Watch block + VR cap: match live scheduler.py behavior
+    # Live also checks daily_screen signal and caps VR at 5.0x
+    watch_block = _watch_signal_block(df)
+    sig = streak2 & (vr > 1.3) & (vr <= 5.0) & ~watch_block
     return run_strategy(df, sig, atr_sl_mult=1.2, atr_tp_mult=2.4, min_rr=2.0,
                         strategy_name='Momentum Following',
                         initial_capital=capital, trail_sl=True,
@@ -1379,21 +1403,26 @@ def _bearish_engulfing(df: pd.DataFrame, i: int) -> bool:
 def strategy_swing_trend(df: pd.DataFrame,
                          capital: float = 50_000_000,
                          filters: list = None,
-                         risk_per_trade: float = 0.01) -> dict:
+                         risk_per_trade: float = 0.01,
+                         flow_data: dict = None) -> dict:
     """
     Swing-Trend Strategy — ride early-stage uptrends; exit on trend reversal.
 
-    Entry: trend-onset (ADX rising 20<adx<35, MA20 slope up, reclaimed MA50,
-           HH/HL pivots, vol_ratio>=1.5, close>open, not overextended).
+    Entry: trend-onset (ADX rising ROC>15%, 20<adx<30, MA20 slope up,
+           reclaimed MA50, HH/HL pivots, 1.5<=vol_ratio<=5.0,
+           close>open, not overextended, score>=60).
     Initial SL: max(last swing-low, MA50, entry - 1.5*ATR14).
-    No fixed TP. Exit on any reverse-trend trigger:
-      R1 close<MA20 & MA20 slope flips negative
-      R2 close < most-recent swing-low pivot
-      R3 ADX(14) < 20 after having been > 25 during trade
-      R4 3 consecutive lower closes, vol_ratio >= 1.3
-      R5 (live only) flow composite_score <= -2 for 2d
+    Partial TP: close 50% position at 1.5x RR.
+    Exit on any reverse-trend trigger:
+      R1 close<MA20 & slope neg 2d & VR>=1.3
+      R3 ADX drop >20% from peak
+      R4 3-of-4 lower closes, vol_ratio >= 1.8
+      R5 flow composite_score <= -2 for 2d (jika flow_data tersedia)
       R6 bearish engulfing, volume > 1.8x avg20
-      R7 trailed SL hit (raised to each new HL pivot; break-even after +10%)
+      R7 trailed SL hit (raised to each new HL pivot after 1 ATR; BE at +8%)
+
+    flow_data: optional dict {date_str: composite_score} untuk R5 exit.
+               Jika None, R5 tidak diaktifkan.
     """
     from engine.regime_filter import calc_adx, calc_ma_slope
     from engine.swing_screener import find_swing_points
@@ -1431,6 +1460,8 @@ def strategy_swing_trend(df: pd.DataFrame,
     lots        = 0
     adx_peak    = 0.0
     highest_seen = 0.0
+    entry_sl_price = 0.0
+    partial_done = False
 
     for i in range(1, len(df)):
         row  = df.iloc[i]
@@ -1445,15 +1476,37 @@ def strategy_swing_trend(df: pd.DataFrame,
             if not pd.isna(adx.iloc[i]):
                 adx_peak = max(adx_peak, float(adx.iloc[i]))
 
-            # Raise SL to latest HL pivot
+            # Partial TP at 1.5x RR — close 50% position
+            if not partial_done and entry_sl_price > 0:
+                rr_dist = entry_price - entry_sl_price
+                rr_target = entry_price + 1.5 * rr_dist
+                if highest_seen >= rr_target:
+                    partial_lots = lots // 2
+                    if partial_lots > 0:
+                        partial_pnl = round((rr_target - entry_price) * partial_lots * 100)
+                        capital += partial_pnl
+                        trades.append(Trade(
+                            entry_date=entry_date, exit_date=date,
+                            entry_price=entry_price, exit_price=rr_target,
+                            lots=partial_lots, direction='BUY',
+                            exit_reason='PARTIAL_TP',
+                            pnl_rp=partial_pnl,
+                            pnl_pct=(rr_target - entry_price) / entry_price * 100,
+                            strategy=f"{strategy_name}[PARTIAL_TP]"
+                        ))
+                        lots -= partial_lots
+                        partial_done = True
+
+            # Raise SL to latest HL pivot (only after 1 ATR from entry)
             lows_seen = [p for p in lows_idx_all if p <= i]
             if lows_seen:
                 new_hl = float(df['low'].iloc[lows_seen[-1]])
-                if new_hl > sl_level:
+                atr_ok = not pd.isna(atr.iloc[i]) and (highest_seen - entry_price) > atr.iloc[i]
+                if new_hl > sl_level and atr_ok:
                     sl_level = new_hl
 
-            # Break-even lock after +10%
-            if highest_seen >= entry_price * 1.10 and sl_level < entry_price:
+            # Break-even lock after +8%
+            if highest_seen >= entry_price * 1.08 and sl_level < entry_price:
                 sl_level = entry_price
 
             exit_reason = None
@@ -1464,32 +1517,42 @@ def strategy_swing_trend(df: pd.DataFrame,
                 exit_price  = apply_costs(sl_level, 'SELL')
                 exit_reason = 'R7_TRAIL_SL'
 
-            # R1 — close < MA20 and slope flipped negative
+            # R1 — close < MA20, slope negative 2 days, volume confirmation
             if exit_reason is None and not pd.isna(ma20.iloc[i]) and not pd.isna(slope.iloc[i]):
-                if cur < ma20.iloc[i] and slope.iloc[i] < 0:
+                slope_neg_2d = slope.iloc[i] < 0 and (pd.isna(slope.iloc[i-1]) or slope.iloc[i-1] < 0)
+                vr_ok = not pd.isna(vr.iloc[i]) and vr.iloc[i] >= 1.3
+                if cur < ma20.iloc[i] and slope_neg_2d and vr_ok:
                     exit_price  = apply_costs(cur, 'SELL')
                     exit_reason = 'R1_MA_BREAK'
 
-            # R2 — close below most recent swing-low pivot
-            if exit_reason is None and lows_seen:
-                recent_low = float(df['low'].iloc[lows_seen[-1]])
-                if cur < recent_low:
+            # R3 — ADX collapse (percentage drop from peak)
+            if exit_reason is None and adx_peak > 25 and not pd.isna(adx.iloc[i]):
+                adx_drop_pct = (adx_peak - adx.iloc[i]) / adx_peak
+                if adx_drop_pct > 0.20:
                     exit_price  = apply_costs(cur, 'SELL')
-                    exit_reason = 'R2_LOWER_LOW'
+                    exit_reason = 'R3_ADX_FADE'
 
-            # R3 — ADX collapse (was >25, now <20)
-            if exit_reason is None and adx_peak > 25 and not pd.isna(adx.iloc[i]) and adx.iloc[i] < 20:
-                exit_price  = apply_costs(cur, 'SELL')
-                exit_reason = 'R3_ADX_FADE'
-
-            # R4 — 3 consecutive lower closes on >=1.3 vol
-            if exit_reason is None and i >= 3:
-                c0, c1, c2, c3 = df['close'].iloc[i], df['close'].iloc[i-1], df['close'].iloc[i-2], df['close'].iloc[i-3]
-                three_down = c0 < c1 < c2 < c3
-                vr_hot = (not pd.isna(vr.iloc[i])) and vr.iloc[i] >= 1.3
-                if three_down and vr_hot:
+            # R4 — 3-of-4 lower closes on >=1.8 vol
+            if exit_reason is None and i >= 4:
+                c0, c1, c2, c3, c4 = df['close'].iloc[i], df['close'].iloc[i-1], df['close'].iloc[i-2], df['close'].iloc[i-3], df['close'].iloc[i-4]
+                three_of_four = sum([c0 < c1, c1 < c2, c2 < c3, c3 < c4]) >= 3
+                vr_hot = (not pd.isna(vr.iloc[i])) and vr.iloc[i] >= 1.8
+                if three_of_four and vr_hot:
                     exit_price  = apply_costs(cur, 'SELL')
                     exit_reason = 'R4_DISTRIBUTION'
+
+            # R5 — flow flip (jika data tersedia)
+            if exit_reason is None and flow_data is not None:
+                date_i = str(df['date'].iloc[i])[:10]
+                date_i_minus_1 = str(df['date'].iloc[i-1])[:10] if i > 0 else date_i
+                scores = []
+                for d in [date_i, date_i_minus_1]:
+                    cs = flow_data.get(d)
+                    if cs is not None:
+                        scores.append(cs)
+                if len(scores) == 2 and all(s <= -2 for s in scores):
+                    exit_price  = apply_costs(cur, 'SELL')
+                    exit_reason = 'R5_FLOW_FLIP'
 
             # R6 — bearish engulfing on high volume
             if exit_reason is None and _bearish_engulfing(df, i):
@@ -1532,7 +1595,8 @@ def strategy_swing_trend(df: pd.DataFrame,
             if pd.isna(slope_i) or pd.isna(slope_5):
                 equity.append(capital); continue
 
-            gate_adx   = (adx_i > adx_prev) and (20 < adx_i < 35)
+            adx_roc = (adx_i - adx_prev) / adx_prev if adx_prev > 0 else 0
+            gate_adx   = (20 < adx_i < 30) and adx_roc > 0.15
             gate_slope = (slope_i > 0) and (slope_i > slope_5)
 
             if pd.isna(ma50.iloc[i]):
@@ -1549,7 +1613,7 @@ def strategy_swing_trend(df: pd.DataFrame,
                 df['low'].iloc[lows_so_far[-1]]  > df['low'].iloc[lows_so_far[-2]]
             )
 
-            gate_vol = (not pd.isna(vr.iloc[i])) and vr.iloc[i] >= 1.5
+            gate_vol = (not pd.isna(vr.iloc[i])) and 1.5 <= vr.iloc[i] <= 5.0
             bullish_close = df['close'].iloc[i] > df['open'].iloc[i]
 
             ma20_i = ma20.iloc[i]
@@ -1570,7 +1634,7 @@ def strategy_swing_trend(df: pd.DataFrame,
             score +=  5 if gate_extend  else 0
             # flow_confirms not evaluable in offline backtest -> max achievable = 90
 
-            if score >= 50 and bullish_close and pullback_reclaim:
+            if score >= 60 and bullish_close and pullback_reclaim and not _watch_signal_block(df).iloc[i]:
                 # Enter next bar open
                 next_i = i + 1
                 if next_i >= len(df):
@@ -1595,8 +1659,9 @@ def strategy_swing_trend(df: pd.DataFrame,
                 if cost > capital:
                     equity.append(capital); continue
 
-                sl_level     = initial_sl
-                entry_date   = str(df.iloc[next_i]['date'])[:10]
+                sl_level       = initial_sl
+                entry_sl_price = initial_sl
+                entry_date     = str(df.iloc[next_i]['date'])[:10]
                 adx_peak     = float(adx_i)
                 highest_seen = entry_price
                 in_trade     = True

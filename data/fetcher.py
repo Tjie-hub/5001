@@ -103,13 +103,22 @@ def _save_df(ticker, df) -> int:
         "Low": "low", "Close": "close", "Volume": "volume",
     })
     df["date"] = df["date"].astype(str).str[:10]
+    import math
     conn = get_db()
     saved = 0
     for _, row in df.iterrows():
+        close_val = row["close"]
+        if close_val is None or (isinstance(close_val, float) and math.isnan(close_val)):
+            continue  # skip incomplete intraday rows
         try:
             conn.execute(
-                "INSERT OR IGNORE INTO ohlcv (ticker,date,open,high,low,close,volume) VALUES (?,?,?,?,?,?,?)",
-                (ticker, row["date"], row["open"], row["high"], row["low"], row["close"], row["volume"]),
+                """INSERT INTO ohlcv (ticker,date,open,high,low,close,volume)
+                   VALUES (?,?,?,?,?,?,?)
+                   ON CONFLICT(ticker,date) DO UPDATE SET
+                     open=excluded.open, high=excluded.high, low=excluded.low,
+                     close=excluded.close, volume=excluded.volume
+                   WHERE ohlcv.close IS NULL""",
+                (ticker, row["date"], row["open"], row["high"], row["low"], close_val, row["volume"]),
             )
             saved += 1
         except Exception:
