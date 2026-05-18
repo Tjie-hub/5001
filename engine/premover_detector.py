@@ -303,7 +303,24 @@ def score_ticker_reversal(df: pd.DataFrame, flow_score: float = None) -> dict:
 
 def _upsert_setup(conn: sqlite3.Connection, ticker: str, detected_at: str,
                   pattern_type: str, result: dict) -> bool:
-    """Insert or ignore a setup into watchlist_premover. Returns True if new."""
+    """Insert or ignore a setup into watchlist_premover. Returns True if new.
+
+    Cooldown: suppress alert if same (ticker, pattern) was detected in the
+    last 3 days AND the current close has not risen >10% above that prior
+    alert's close. Prevents alert fatigue while still re-firing when the
+    move actually starts.
+    """
+    cur_close = result.get('close')
+    prior = conn.execute("""
+        SELECT close_price FROM watchlist_premover
+        WHERE ticker = ? AND pattern_type = ?
+          AND detected_at >= date(?, '-3 days')
+          AND detected_at < ?
+        ORDER BY detected_at DESC LIMIT 1
+    """, (ticker, pattern_type, detected_at, detected_at)).fetchone()
+    if prior and prior[0] and cur_close and cur_close <= prior[0] * 1.10:
+        return False
+
     if pattern_type == 'CONTINUATION':
         conn.execute("""
             INSERT OR IGNORE INTO watchlist_premover
