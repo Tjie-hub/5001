@@ -77,6 +77,37 @@ def _init_table(conn: sqlite3.Connection):
         CREATE UNIQUE INDEX IF NOT EXISTS idx_premover_unique
         ON watchlist_premover(ticker, detected_at, pattern_type)
     """)
+
+    # pattern_metrics: join of alerts to the first paper trade opened within
+    # 10 days of the alert. Always-fresh; no sync drift vs a materialized table.
+    conn.execute('DROP VIEW IF EXISTS pattern_metrics')
+    conn.execute("""
+        CREATE VIEW pattern_metrics AS
+        SELECT
+            w.id           AS alert_id,
+            w.ticker,
+            w.pattern_type,
+            w.detected_at  AS alerted_at,
+            w.score,
+            w.fired,
+            w.fired_at,
+            p.id           AS trade_id,
+            p.entry_date,
+            p.entry_price,
+            p.exit_date,
+            p.exit_price,
+            p.status       AS trade_status,
+            p.pnl_pct,
+            p.exit_reason
+        FROM watchlist_premover w
+        LEFT JOIN paper_trades p ON p.id = (
+            SELECT id FROM paper_trades
+            WHERE ticker = w.ticker
+              AND entry_date >= w.detected_at
+              AND entry_date <= date(w.detected_at, '+10 days')
+            ORDER BY entry_date ASC LIMIT 1
+        )
+    """)
     conn.commit()
 
 
@@ -494,3 +525,39 @@ def mark_fired(db_path: str, ticker: str):
     """, (ticker,))
     conn.commit()
     conn.close()
+
+
+def daily_pattern_summary(db_path: str, days: int = 1) -> str:
+    """Aggregate pattern_metrics over the last N days into a human summary.
+
+    Returns a multi-line string suitable for logging or Telegram. Lines are
+    one-per-pattern_type ordered by alert count desc. Returns an empty
+    string when there are no alerts in the window.
+    """
+    conn = sqlite3.connect(db_path)
+    _init_table(conn)
+    rows = conn.execute("""
+        SELECT
+            pattern_type,
+            COUNT(*)                                              AS alerts,
+            COUNT(trade_id)                                       AS traded,
+            SUM(CASE WHEN pnl_pct > 0 THEN 1 ELSE 0 END)          AS winning,
+            AVG(CASE WHEN pnl_pct IS NOT NULL THEN pnl_pct END)   AS avg_pnl
+        FROM pattern_metrics
+        WHERE alerted_at >= date('now', ?)
+        GROUP BY pattern_type
+        ORDER BY alerts DESC
+    """, (f'-{days} days',)).fetchall()
+    conn.close()
+
+    if not rows:
+        return ''
+
+    lines = []
+    for pattern, alerts, traded, winning, avg_pnl in rows:
+        avg_txt = f"{avg_pnl:+.1f}% avg" if avg_pnl is not None else "no PnL yet"
+        lines.append(
+            f"{pattern}: {alerts} alerts, {traded} traded, "
+            f"{winning or 0} winning ({avg_txt})"
+        )
+    return '\n'.join(lines)
