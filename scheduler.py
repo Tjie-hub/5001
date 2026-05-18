@@ -1435,6 +1435,21 @@ def run_premover_eod():
         send_telegram(f"🔴 <b>Pre-mover Scan Error</b>\n<code>{str(e)[:200]}</code>")
 
 
+def run_pattern_summary():
+    """Daily roll-up of premover alert→trade conversion. Runs after EOD scan."""
+    from engine.premover_detector import daily_pattern_summary
+    try:
+        body = daily_pattern_summary(DB_PATH, days=1)
+        if not body:
+            print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pattern summary: no alerts today.")
+            return
+        msg = f"📊 <b>Premover Pattern Summary (today)</b>\n<pre>{body}</pre>"
+        send_telegram(msg)
+        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pattern summary sent.")
+    except Exception as e:
+        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pattern summary error: {e}")
+
+
 def start_scheduler():
     scheduler = BackgroundScheduler(timezone=WIB)
 
@@ -1525,6 +1540,11 @@ def start_scheduler():
         day_of_week="mon-fri", hour=16, minute=30, timezone=WIB),
         id="premover_eod", name="Pre-mover EOD Scan 16:30")
 
+    # Pattern conversion summary — 16:45 WIB (after premover EOD)
+    scheduler.add_job(run_pattern_summary, CronTrigger(
+        day_of_week="mon-fri", hour=16, minute=45, timezone=WIB),
+        id="pattern_summary", name="Pattern Summary 16:45")
+
     scheduler.start()
     print("Scheduler started:")
     print("  🤖 AUTO-TRADING STATUS: 09:00 (success/failed check)")
@@ -1536,6 +1556,7 @@ def start_scheduler():
     print("  🔄 DAILY FETCH: 17:30")
     print("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
     print("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
+    print("  📊 PATTERN SUMMARY: 16:45 (alert→trade conversion)")
     return scheduler
 
 if __name__ == "__main__":
