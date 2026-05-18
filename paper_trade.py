@@ -291,6 +291,13 @@ def open_trade(ticker: str, entry_price: float, strategy: str = 'Momentum Follow
     trade_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     conn.close()
 
+    # Acknowledge premover alerts for this ticker (close the detection→execution loop)
+    try:
+        from engine.premover_detector import mark_fired
+        mark_fired(DB_PATH, ticker)
+    except Exception as e:
+        print(f"[open_trade] mark_fired failed for {ticker}: {e}")
+
     # Notify Telegram
     if notify:
         try:
