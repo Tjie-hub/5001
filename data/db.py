@@ -50,3 +50,59 @@ def init_db():
     conn.commit()
     conn.close()
     print("DB initialized.")
+    init_agent_firm_tables()
+
+def init_agent_firm_tables():
+    """Idempotent migration for Phase 1 agent firm tables. Safe to call repeatedly."""
+    conn = get_db()
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS agent_decisions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            scan_time TEXT NOT NULL,
+            ticker TEXT NOT NULL,
+            strategy TEXT NOT NULL,
+            quant_score REAL,
+            decision TEXT NOT NULL,
+            confidence REAL,
+            size_hint REAL,
+            rationale TEXT,
+            overridden INTEGER DEFAULT 0,
+            tokens_in INTEGER,
+            tokens_out INTEGER,
+            cost_usd REAL,
+            duration_s REAL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(scan_time, ticker, strategy)
+        );
+        CREATE INDEX IF NOT EXISTS idx_agent_decisions_ticker_date
+            ON agent_decisions(ticker, scan_time);
+
+        CREATE TABLE IF NOT EXISTS agent_traces (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            decision_id INTEGER REFERENCES agent_decisions(id) ON DELETE CASCADE,
+            role TEXT NOT NULL,
+            prompt_version TEXT,
+            output TEXT,
+            tools_called TEXT,
+            tokens_in INTEGER,
+            tokens_out INTEGER,
+            duration_s REAL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_agent_traces_decision
+            ON agent_traces(decision_id);
+
+        CREATE TABLE IF NOT EXISTS scheduled_signals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            scan_time TEXT NOT NULL,
+            ticker TEXT NOT NULL
+        );
+    """)
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(scheduled_signals)")}
+    if "agent_decision_id" not in cols:
+        conn.execute(
+            "ALTER TABLE scheduled_signals ADD COLUMN agent_decision_id INTEGER "
+            "REFERENCES agent_decisions(id)"
+        )
+    conn.commit()
+    conn.close()
