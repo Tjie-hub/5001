@@ -206,7 +206,7 @@ def scan_momentum_signals():
     # Pre-compute sector scores once for entire scan (1-hour TTL cache)
     _sector_scores = _get_sector_scores_cached()
 
-    STRATEGY    = "Momentum Following"
+    STRATEGY    = "momentum"
     MIN_CONSIST = 50.0
     BLACKLIST   = 33.0
 
@@ -301,7 +301,10 @@ def scan_momentum_signals():
                 continue
             vr     = calc_vol_ratio(df)
             streak = (df["close"] > df["close"].shift(1)) & (df["close"].shift(1) > df["close"].shift(2))
-            sig    = streak & (vr > 1.3) & (vr <= 5.0)
+            # Holiday/weekend gap-up: 1 strong up day after a gap > 1 day works
+            _date_diff = pd.to_datetime(df["date"]).diff().dt.days
+            _gap_up = (df["close"] > df["close"].shift(1)) & (_date_diff > 1)
+            sig    = (streak | _gap_up) & (vr > 1.3) & (vr <= 5.0)
             if sig.iloc[-1]:
                 # Signal quality gate — block 'watch' (100% loss rate in audit)
                 try:
