@@ -220,6 +220,75 @@ def fetch_ihsg(period: str = "2y"):
     return _save_df("IHSG", df)
 
 
+def _purge_duplicate_non_trading_days():
+    """
+    Remove OHLCV rows for non-trading days (weekends/holidays) where yfinance
+    fills with the last available data.
+
+    Two-pass strategy:
+      1. Per-ticker: remove rows where close + volume exactly match previous
+         (catches weekends + most holidays).
+      2. Per-date: if >= 95% of tickers have the same close as previous trading
+         day (within 0.1%), the entire date is a non-trading day — purge all rows.
+         This catches holidays where yfinance returns slightly different volumes.
+    """
+    conn = get_db()
+
+    # Pass 1: per-ticker exact match (close + volume)
+    tickers = [r["ticker"] for r in conn.execute(
+        "SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker"
+    ).fetchall()]
+    purged = 0
+    for t in tickers:
+        rows = conn.execute(
+            "SELECT rowid, date, close, volume FROM ohlcv WHERE ticker=? ORDER BY date",
+            (t,)
+        ).fetchall()
+        for i in range(1, len(rows)):
+            prev = rows[i - 1]
+            cur = rows[i]
+            if cur["close"] == prev["close"] and cur["volume"] == prev["volume"]:
+                conn.execute("DELETE FROM ohlcv WHERE rowid=?", (cur[0],))
+                purged += 1
+    if purged:
+        print(f"  Pass 1: purged {purged} exact-match duplicate rows")
+
+    # Pass 2: date-level close-match check
+    all_dates = [r["date"] for r in conn.execute(
+        "SELECT DISTINCT date FROM ohlcv ORDER BY date"
+    ).fetchall()]
+
+    purged_total = 0
+    for date in all_dates:
+        rows = conn.execute(
+            """SELECT a.ticker, a.close,
+                      b.close AS prev_close
+               FROM ohlcv a
+               LEFT JOIN ohlcv b ON a.ticker = b.ticker
+                   AND b.date = (SELECT MAX(c.date) FROM ohlcv c
+                                 WHERE c.ticker = a.ticker AND c.date < a.date)
+               WHERE a.date = ? AND b.ticker IS NOT NULL""",
+            (date,)
+        ).fetchall()
+        if not rows:
+            continue
+        total = len(rows)
+        same_close = sum(
+            1 for r in rows
+            if r["prev_close"] is not None
+            and r["close"] == r["prev_close"]
+        )
+        if total > 0 and same_close / total >= 0.95:
+            conn.execute("DELETE FROM ohlcv WHERE date=?", (date,))
+            purged_total += total
+            print(f"  Pass 2: purged {date} ({total} rows, {same_close}/{total} same close)")
+
+    conn.commit()
+    conn.close()
+    if purged_total:
+        print(f"  Total: {purged_total} holiday rows removed")
+
+
 def fetch_all_incremental(category: str = None):
     """
     Delta-only fetch: only pull bars newer than each ticker's MAX(date) in DB.
@@ -286,6 +355,12 @@ def fetch_all_incremental(category: str = None):
         df_ihsg = yf.download("^JKSE", start=ihsg_start, auto_adjust=True, progress=False)
         if not df_ihsg.empty:
             total_saved += _save_df("IHSG", df_ihsg)
+
+    # Strip non-trading-day duplicates (holiday/weekend fills from yfinance)
+    try:
+        _purge_duplicate_non_trading_days()
+    except Exception as e:
+        print(f"  [purge skipped: {e}]")
 
     print(f"Done: {total_saved} new bars saved")
     return total_saved
