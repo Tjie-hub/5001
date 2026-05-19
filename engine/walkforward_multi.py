@@ -210,8 +210,20 @@ def run_walk_forward(df: pd.DataFrame, capital: float = 50_000_000, filters: lis
 
     wf_results = {name: [] for name in STRATEGY_FUNCS}
 
+    # Warmup tail prepended to each test_df so indicator-heavy strategies
+    # (TFB needs 60-bar ATR median, Swing Trend needs 50-bar MA) can compute
+    # indicators when the test slice (~65 bars) is shorter than their warmup.
+    # Trades opened during the warmup portion are filtered out post-hoc.
+    WARMUP_BARS = 75
+
     for w in windows:
         test_df = w['test']
+        train_df = w['train']
+        test_start_str = w['test_start']
+
+        warmup_tail = train_df.tail(WARMUP_BARS) if len(train_df) >= WARMUP_BARS else train_df
+        extended_df = pd.concat([warmup_tail, test_df], ignore_index=True)
+
         # Train regime classifier on train_df for this window
         regime_clf = RegimeClassifier()
         train_result = regime_clf.train(w['train'])
@@ -220,12 +232,25 @@ def run_walk_forward(df: pd.DataFrame, capital: float = 50_000_000, filters: lis
 
         for name, func in STRATEGY_FUNCS.items():
             if name == 'Regime Adaptive':
-                raw = func(test_df, capital=capital, filters=filters,
+                raw = func(extended_df, capital=capital, filters=filters,
                            classifier=regime_clf if regime_clf else None)
             elif func.__name__ == "strategy_vwma_breakout_pullback":
-                raw = func(test_df, capital=capital)
+                raw = func(extended_df, capital=capital)
             else:
-                raw = func(test_df, capital=capital, filters=filters)
+                raw = func(extended_df, capital=capital, filters=filters)
+
+            # Filter to test-window-only trades; rebuild equity & final_capital.
+            kept = [t for t in raw['trades'] if t.entry_date >= test_start_str]
+            new_equity = [capital]
+            cur_cap = capital
+            for t in kept:
+                cur_cap += t.pnl_rp
+                new_equity.append(cur_cap)
+            raw['trades'] = kept
+            raw['equity'] = new_equity
+            raw['final_capital'] = cur_cap
+            raw['initial_capital'] = capital
+
             metrics = compute_metrics(raw)
             metrics['window']      = w['window']
             metrics['test_start']  = w['test_start']
@@ -258,7 +283,10 @@ def run_walk_forward(df: pd.DataFrame, capital: float = 50_000_000, filters: lis
             'windows':             window_list
         }
 
-    # Rank: weighted score (win_rate 30% + return 30% + sharpe 20% + consistency 20%)
+    # Rank: weighted score — profit-first (return 40%, others 15% each).
+    # Rebalanced 2026-05-18: pure consistency was picking strategies that
+    # bleed money (vwap_reversion, vol_weighted, conservative) over the
+    # actually-profitable ones (TFB, momentum, NR7 Breakout).
     ranked = _rank_strategies(summary)
 
     return {
@@ -290,11 +318,11 @@ def _rank_strategies(summary: dict) -> List[dict]:
 
     for i, r in enumerate(rows):
         r['score'] = round(
-            wr[i]   * 0.25 +
-            ret[i]  * 0.25 +
-            sh[i]   * 0.20 +
-            cons[i] * 0.20 +
-            dd[i]   * 0.10, 3
+            wr[i]   * 0.15 +
+            ret[i]  * 0.40 +
+            sh[i]   * 0.15 +
+            cons[i] * 0.15 +
+            dd[i]   * 0.15, 3
         )
 
     return sorted(rows, key=lambda x: x['score'], reverse=True)
