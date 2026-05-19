@@ -11,16 +11,24 @@ Output:
 """
 from __future__ import annotations
 
+import json
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 from playwright.sync_api import ConsoleMessage, Page, sync_playwright
 
 BASE = "http://127.0.0.1:5001"
 TICKER = "BRPT"
-STRATEGIES = ["Momentum", "Flow", "VWAPReversion", "Conservative"]
 TF_BUTTONS = [("tf-1h", "1H"), ("tf-1d", "1D"), ("tf-1w", "1W")]
+
+
+def fetch_strategy_keys() -> list[str]:
+    """Pull the canonical strategy list from the running server."""
+    with urllib.request.urlopen(f"{BASE}/api/strategy/list", timeout=10) as resp:
+        data = json.loads(resp.read().decode())
+    return [s["key"] for s in data.get("strategies", [])]
 OUT = Path("out")
 OUT.mkdir(exist_ok=True)
 
@@ -82,6 +90,15 @@ def main() -> int:
     console_log: list[str] = []
     console_errors: list[str] = []
 
+    try:
+        strategies = fetch_strategy_keys()
+    except Exception as e:
+        print(f"FATAL: could not load /api/strategy/list: {e}", file=sys.stderr)
+        return 2
+    if not strategies:
+        print("FATAL: /api/strategy/list returned 0 strategies", file=sys.stderr)
+        return 2
+
     def on_console(msg: ConsoleMessage) -> None:
         line = f"[{msg.type}] {msg.text}"
         console_log.append(line)
@@ -114,17 +131,31 @@ def main() -> int:
         report_lines.append(f"**Candles loaded (1D default):** {n_candles}")
         report_lines.append("")
 
+        # Dropdown is populated async from /api/strategy/list — wait for options
+        page.wait_for_function(
+            f"() => document.querySelectorAll('#strat-select option').length >= {len(strategies) + 1}",
+            timeout=10000,
+        )
+
         # ── Test 1: Each strategy on default 1D timeframe ───────────────────
-        report_lines.append("## Test 1 — Each strategy on 1D")
+        report_lines.append(f"## Test 1 — Each strategy on 1D ({len(strategies)} strategies)")
         report_lines.append("")
         report_lines.append("| Strategy | Active state | Marker count badge |")
         report_lines.append("|---|---|---|")
         t1_results = []
-        for strat in STRATEGIES:
+        for strat in strategies:
             r = select_strategy(page, strat)
+            # Markers fetched async — give the network call a beat to settle
+            page.wait_for_timeout(400)
+            r["count_text"] = (
+                page.locator("#strat-count").inner_text()
+                if page.locator("#strat-count").is_visible()
+                else "(hidden)"
+            )
             t1_results.append(r)
             report_lines.append(f"| {r['key']} | `{r['active']}` | {r['count_text']} |")
-            page.screenshot(path=str(OUT / f"dive_smoketest_1D_{strat}.png"), clip={"x": 0, "y": 0, "width": 1440, "height": 600})
+            safe_name = strat.replace(" ", "_").replace("/", "_")
+            page.screenshot(path=str(OUT / f"dive_smoketest_1D_{safe_name}.png"), clip={"x": 0, "y": 0, "width": 1440, "height": 600})
 
         # ── Test 2: Clear via empty option ──────────────────────────────────
         report_lines.append("")
@@ -141,8 +172,10 @@ def main() -> int:
         report_lines.append("## Test 3 — Auto-rerun on timeframe switch")
         report_lines.append("")
         # Set active strategy first
-        select_strategy(page, "Conservative")
-        report_lines.append(f"Set active strategy: Conservative")
+        tf_strategy = "conservative" if "conservative" in strategies else strategies[0]
+        select_strategy(page, tf_strategy)
+        page.wait_for_timeout(400)
+        report_lines.append(f"Set active strategy: {tf_strategy}")
         report_lines.append("")
         report_lines.append("| TF | Candles | Active after switch | Marker count |")
         report_lines.append("|---|---:|---|---|")
@@ -184,7 +217,7 @@ def main() -> int:
         verdict = "✅ PASS" if (all_strategies_ran and no_errors) else "❌ FAIL"
         report_lines.append(f"**{verdict}**")
         report_lines.append("")
-        report_lines.append(f"- All 4 strategies set _activeStrategy correctly: {all_strategies_ran}")
+        report_lines.append(f"- All {len(strategies)} strategies set _activeStrategy correctly: {all_strategies_ran}")
         report_lines.append(f"- Zero console errors: {no_errors}")
 
         browser.close()

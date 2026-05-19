@@ -394,10 +394,6 @@
   <div class="strat-overlay">
     <select id="strat-select" class="strat-select" onchange="runSelectedStrategy()">
       <option value="">— Strategy —</option>
-      <option value="Momentum">Momentum Following</option>
-      <option value="Flow">Order Flow</option>
-      <option value="VWAPReversion">VWAP Reversion</option>
-      <option value="Conservative">Conservative</option>
     </select>
     <button id="strat-run" class="strat-run" onclick="runSelectedStrategy()">▶ Run</button>
     <span id="strat-count" class="strat-count" style="display:none">0</span>
@@ -670,7 +666,7 @@
     _lwChart.timeScale().fitContent();
 
     // Re-apply active strategy markers after data reload (TF switch)
-    if (_activeStrategy && typeof strategies !== 'undefined' && strategies[_activeStrategy]) {
+    if (_activeStrategy) {
       setTimeout(() => runSelectedStrategy(), 50);
     }
   }
@@ -678,155 +674,31 @@
   fetchAndRender('1d');
 
   // ═══════════════════════════════════════════════════════════════
-  // STRATEGY REGISTRY — client-side marker generation
-  // Each strategy: { name, description, run(candles) → markers[] }
-  // Marker: { time, position, color, shape, text, size }
+  // STRATEGY MARKERS — fetched from canonical server engine
+  // Dropdown auto-populated from /api/strategy/list
+  // Markers fetched on selection from /api/strategy/markers/<key>/<ticker>
+  // Daily timeframe only (engine strategies are daily-bar).
   // ═══════════════════════════════════════════════════════════════
-  const strategies = {
+  const _markerCache = {};   // key → markers[]
 
-    Momentum: {
-      name: 'Momentum Following',
-      description: '2 consecutive higher closes + volume ratio > 1.3x',
-      run(candles) {
-        const markers = [];
-        const N = candles.length;
-        if (N < 22) return markers;
-        const avgVol = [];
-        for (let i = 0; i < N; i++) {
-          let sum = 0, count = 0;
-          for (let j = Math.max(0, i - 19); j <= i; j++) { sum += candles[j].volume; count++; }
-          avgVol.push(sum / count);
-        }
-        for (let i = 2; i < N; i++) {
-          const c0 = candles[i], c1 = candles[i-1], c2 = candles[i-2];
-          const streak2 = c1.close > c2.close && c0.close > c1.close;
-          const volOk = avgVol[i] > 0 && c0.volume / avgVol[i] > 1.3;
-          if (streak2 && volOk) {
-            markers.push({ time: c0.time, position: 'belowBar', color: '#22c55e', shape: 'arrowUp', text: 'M', size: 2 });
-          }
-        }
-        return markers;
-      },
-    },
+  async function populateStrategyDropdown() {
+    const select = document.getElementById('strat-select');
+    if (!select) return;
+    try {
+      const r = await fetch('/api/strategy/list');
+      const data = await r.json();
+      (data.strategies || []).forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.key;
+        opt.textContent = s.label;
+        select.appendChild(opt);
+      });
+    } catch (e) {
+      console.warn('[Strategy] dropdown load failed:', e);
+    }
+  }
 
-    Flow: {
-      name: 'Order Flow',
-      description: 'Delta-based: 3+ consecutive positive-delta bars',
-      run(candles) {
-        const markers = [];
-        const N = candles.length;
-        if (N < 5) return markers;
-        const deltas = candles.map(c => {
-          const range = c.high - c.low;
-          if (range === 0) return 0;
-          return ((c.close - c.open) / range) * c.volume;
-        });
-        let streak = 0;
-        for (let i = 0; i < N; i++) {
-          streak = deltas[i] > 0 ? streak + 1 : 0;
-          if (streak === 3) {
-            markers.push({ time: candles[i].time, position: 'belowBar', color: '#6366f1', shape: 'arrowUp', text: 'F', size: 2 });
-          }
-        }
-        return markers;
-      },
-    },
-
-    VWAPReversion: {
-      name: 'VWAP Reversion',
-      description: 'Price > 1.5% below VWAP + volume spike',
-      run(candles) {
-        const markers = [];
-        const N = candles.length;
-        if (N < 60) return markers;
-        let cumTPVol = 0, cumVol = 0;
-        const vwap = [];
-        for (let i = 0; i < N; i++) {
-          const tp = (candles[i].high + candles[i].low + candles[i].close) / 3;
-          cumTPVol += tp * candles[i].volume;
-          cumVol += candles[i].volume;
-          vwap.push(cumTPVol / cumVol);
-        }
-        const avgVol = [];
-        for (let i = 0; i < N; i++) {
-          let sum = 0;
-          for (let j = Math.max(0, i - 19); j <= i; j++) sum += candles[j].volume;
-          avgVol.push(sum / Math.min(i + 1, 20));
-        }
-        for (let i = 60; i < N; i++) {
-          const c = candles[i];
-          const dist = (c.close - vwap[i]) / vwap[i];
-          const volOk = avgVol[i] > 0 && c.volume / avgVol[i] > 1.3;
-          if (dist < -0.015 && volOk) {
-            markers.push({ time: c.time, position: 'belowBar', color: '#eab308', shape: 'arrowUp', text: 'V', size: 2 });
-          }
-        }
-        return markers;
-      },
-    },
-
-    Conservative: {
-      name: 'Conservative',
-      description: 'VR > 1.3 + bullish + above MA20 + ATR normal',
-      run(candles) {
-        const markers = [];
-        const N = candles.length;
-        if (N < 25) return markers;
-        const ma20 = [], avgVol = [], atr = [], atrMA = [];
-        for (let i = 0; i < N; i++) {
-          let smaSum = 0, vSum = 0;
-          for (let j = Math.max(0, i - 19); j <= i; j++) { smaSum += candles[j].close; vSum += candles[j].volume; }
-          const w = Math.min(i + 1, 20);
-          ma20.push(smaSum / w);
-          avgVol.push(vSum / w);
-        }
-        for (let i = 0; i < N; i++) {
-          const tr = i === 0
-            ? candles[i].high - candles[i].low
-            : Math.max(
-                candles[i].high - candles[i].low,
-                Math.abs(candles[i].high - candles[i-1].close),
-                Math.abs(candles[i].low  - candles[i-1].close)
-              );
-          if (i < 14) {
-            let sum = 0;
-            for (let j = 0; j <= i; j++) {
-              const t = j === 0
-                ? candles[j].high - candles[j].low
-                : Math.max(
-                    candles[j].high - candles[j].low,
-                    Math.abs(candles[j].high - candles[j-1].close),
-                    Math.abs(candles[j].low  - candles[j-1].close)
-                  );
-              sum += t;
-            }
-            atr.push(sum / (i + 1));
-          } else {
-            atr.push((atr[i-1] * 13 + tr) / 14);
-          }
-        }
-        for (let i = 0; i < N; i++) {
-          let sum = 0;
-          for (let j = Math.max(0, i - 9); j <= i; j++) sum += atr[j];
-          atrMA.push(sum / Math.min(i + 1, 10));
-        }
-        for (let i = 24; i < N; i++) {
-          const c = candles[i];
-          const vr = avgVol[i] > 0 ? c.volume / avgVol[i] : 0;
-          const bullish = c.close > c.open;
-          const aboveMA = c.close > ma20[i];
-          const atrOk = atr[i] < atrMA[i] * 1.5;
-          if (vr > 1.3 && bullish && aboveMA && atrOk) {
-            markers.push({ time: c.time, position: 'belowBar', color: '#06b6d4', shape: 'arrowUp', text: 'C', size: 2 });
-          }
-        }
-        return markers;
-      },
-    },
-
-  };
-
-  function runSelectedStrategy() {
+  async function runSelectedStrategy() {
     const select = document.getElementById('strat-select');
     const countEl = document.getElementById('strat-count');
     const key = select ? select.value : '';
@@ -840,26 +712,48 @@
       return;
     }
 
-    const strategy = strategies[key];
-    if (!strategy) {
-      console.warn('Unknown strategy:', key);
-      return;
-    }
-    if (!_rawCandles.length) {
-      console.warn('Chart not ready.');
+    if (_currentTf !== 'D') {
+      _candleSeries.setMarkers([]);
+      if (countEl) {
+        countEl.textContent = 'daily only';
+        countEl.style.display = 'inline-block';
+      }
       return;
     }
 
-    _candleSeries.setMarkers([]);
-    const markers = strategy.run(_rawCandles);
+    let markers = _markerCache[key];
+    if (!markers) {
+      if (countEl) {
+        countEl.textContent = '…';
+        countEl.style.display = 'inline-block';
+      }
+      try {
+        const url = '/api/strategy/markers/' + encodeURIComponent(key) + '/' + TICKER;
+        const r = await fetch(url);
+        const data = await r.json();
+        if (data.error) {
+          console.warn('[Strategy]', key, data.error);
+          if (countEl) countEl.textContent = 'error';
+          return;
+        }
+        markers = data.markers || [];
+        _markerCache[key] = markers;
+      } catch (e) {
+        console.warn('[Strategy] fetch failed:', e);
+        if (countEl) countEl.textContent = 'error';
+        return;
+      }
+    }
+
     _candleSeries.setMarkers(markers);
-
     if (countEl) {
       countEl.textContent = markers.length + ' signals';
       countEl.style.display = 'inline-block';
     }
-    console.log('[Strategy] ' + strategy.name + ' — ' + markers.length + ' markers');
+    console.log('[Strategy] ' + key + ' — ' + markers.length + ' markers');
   }
+
+  populateStrategyDropdown();
 
   async function loadFull() {
     let d;

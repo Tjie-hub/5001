@@ -1820,6 +1820,90 @@ def api_ticker_broker(ticker):
         conn.close()
 
 
+STRATEGY_MARKER_META = {
+    'vol_weighted':             {'label': 'Vol-Weighted Entry',      'color': '#a78bfa', 'text': 'VW'},
+    'momentum':                 {'label': 'Momentum Following',      'color': '#22c55e', 'text': 'M'},
+    'vwap_reversion':           {'label': 'VWAP Reversion',          'color': '#eab308', 'text': 'V'},
+    'conservative':             {'label': 'Conservative Confirm',    'color': '#06b6d4', 'text': 'C'},
+    'Volume Profile POC':       {'label': 'Volume Profile POC',      'color': '#f97316', 'text': 'P'},
+    'Inside Bar Breakout':      {'label': 'Inside Bar Breakout',     'color': '#ec4899', 'text': 'I'},
+    'NR7 Breakout':             {'label': 'NR7 Breakout',            'color': '#14b8a6', 'text': 'N'},
+    'ORB':                      {'label': 'Opening Range Breakout',  'color': '#8b5cf6', 'text': 'O'},
+    'Swing Trend':              {'label': 'Swing Trend',             'color': '#3b82f6', 'text': 'S'},
+    'Trend Following Breakout': {'label': 'Trend Following Breakout','color': '#ef4444', 'text': 'T'},
+}
+
+
+@app.route('/api/strategy/list', methods=['GET'])
+def api_strategy_list():
+    from engine.walkforward_multi import STRATEGY_FUNCS
+    items = []
+    for key in STRATEGY_FUNCS:
+        meta = STRATEGY_MARKER_META.get(key, {'label': key, 'color': '#94a3b8', 'text': '•'})
+        items.append({'key': key, **meta})
+    return jsonify({'strategies': items})
+
+
+@app.route('/api/strategy/markers/<path:strategy>/<ticker>', methods=['GET'])
+def api_strategy_markers(strategy, ticker):
+    """Return historical entry markers for a strategy on a ticker.
+
+    Runs the canonical engine/strategies.py function with effectively unlimited
+    capital, then projects each Trade.entry_date into a Lightweight Charts marker.
+    Daily timeframe only — engine strategies operate on daily bars.
+    """
+    import sqlite3
+    import pandas as pd
+    from engine.walkforward_multi import STRATEGY_FUNCS
+
+    ticker = ticker.upper()
+    if strategy not in STRATEGY_FUNCS:
+        return jsonify({'error': f'Unknown strategy: {strategy}'}), 400
+
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        df = pd.read_sql(
+            'SELECT date, open, high, low, close, volume FROM ohlcv '
+            'WHERE ticker=? ORDER BY date ASC',
+            conn, params=(ticker,)
+        )
+    finally:
+        conn.close()
+
+    if df.empty:
+        return jsonify({'error': f'No data for {ticker}'}), 404
+
+    for c in ['open', 'high', 'low', 'close', 'volume']:
+        df[c] = df[c].astype(float)
+
+    func = STRATEGY_FUNCS[strategy]
+    try:
+        result = func(df, capital=1e13)
+    except Exception as e:
+        app.logger.error(f'[strategy_markers] {strategy}/{ticker}: {e}')
+        return jsonify({'error': f'Strategy execution failed: {e}'}), 500
+
+    meta = STRATEGY_MARKER_META.get(strategy, {'color': '#94a3b8', 'text': '•'})
+    markers = [
+        {
+            'time':     str(t.entry_date)[:10],
+            'position': 'belowBar',
+            'color':    meta['color'],
+            'shape':    'arrowUp',
+            'text':     meta['text'],
+            'size':     2,
+        }
+        for t in result.get('trades', [])
+    ]
+
+    return jsonify({
+        'strategy': strategy,
+        'ticker':   ticker,
+        'count':    len(markers),
+        'markers':  markers,
+    })
+
+
 @app.route('/api/ticker/<ticker>/ohlcv', methods=['GET'])
 def api_ohlcv_cache(ticker):
     import sqlite3, json, time
