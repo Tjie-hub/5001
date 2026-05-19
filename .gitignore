@@ -24,7 +24,12 @@ __pycache__/
 # Database files (regenerable from data pipeline; too large for git)
 *.db
 *.db.bak*
+*.db-shm
+*.db-wal
 *.sqlite
+
+# Generated outputs (smoketest screenshots, backtest reports, etc.)
+out/
 
 # Local backup files
 *.bak
