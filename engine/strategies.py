@@ -1099,6 +1099,18 @@ def check_current_entry_signal(ticker: str, strategy: str, df: pd.DataFrame = No
         result = check_conservative_signal(df)
     elif strategy == 'Trend Following Breakout':
         result = check_trend_following_breakout_signal(df)
+    elif strategy == 'Volume Profile POC':
+        result = check_volume_profile_poc_signal(df)
+    elif strategy == 'Inside Bar Breakout':
+        result = check_inside_bar_breakout_signal(df)
+    elif strategy == 'NR7 Breakout':
+        result = check_nr7_breakout_signal(df)
+    elif strategy == 'ORB':
+        result = check_orb_signal(df)
+    elif strategy == 'Swing Trend':
+        result = check_swing_trend_signal(df)
+    elif strategy == 'vwma_breakout_pullback':
+        result = check_vwma_breakout_pullback_signal(df)
     else:
         return {
             'has_signal': False,
@@ -1596,7 +1608,7 @@ def strategy_swing_trend(df: pd.DataFrame,
                 equity.append(capital); continue
 
             adx_roc = (adx_i - adx_prev) / adx_prev if adx_prev > 0 else 0
-            gate_adx   = (20 < adx_i < 30) and adx_roc > 0.15
+            gate_adx   = (18 < adx_i < 32) and adx_roc > 0.05
             gate_slope = (slope_i > 0) and (slope_i > slope_5)
 
             if pd.isna(ma50.iloc[i]):
@@ -1620,21 +1632,22 @@ def strategy_swing_trend(df: pd.DataFrame,
             distance = (df['close'].iloc[i] - ma20_i) / ma20_i * 100 if ma20_i else 100
             gate_extend = distance < 8.0
 
-            # Pullback-reclaim of MA20 (any of last 3 bars was <= MA20)
-            ma20_win = ma20.iloc[max(0, i-3):i+1]
-            c_win    = df['close'].iloc[max(0, i-3):i+1]
+            # Pullback-reclaim of MA20 (any of last 5 bars was <= MA20) — score-only, not hard gate
+            ma20_win = ma20.iloc[max(0, i-5):i+1]
+            c_win    = df['close'].iloc[max(0, i-5):i+1]
             pullback_reclaim = (c_win <= ma20_win).any() and (df['close'].iloc[i] > ma20_i)
 
             score = 0
-            score += 25 if gate_adx     else 0
-            score += 20 if gate_slope   else 0
-            score += 15 if gate_reclaim else 0
-            score += 15 if gate_hhhl    else 0
-            score += 10 if gate_vol     else 0
-            score +=  5 if gate_extend  else 0
-            # flow_confirms not evaluable in offline backtest -> max achievable = 90
+            score += 25 if gate_adx         else 0
+            score += 20 if gate_slope       else 0
+            score += 15 if gate_reclaim     else 0
+            score += 15 if gate_hhhl        else 0
+            score += 10 if gate_vol         else 0
+            score += 10 if pullback_reclaim else 0
+            score +=  5 if gate_extend      else 0
+            # flow_confirms not evaluable in offline backtest -> max achievable = 100
 
-            if score >= 60 and bullish_close and pullback_reclaim and not _watch_signal_block(df).iloc[i]:
+            if score >= 50 and bullish_close and not _watch_signal_block(df).iloc[i]:
                 # Enter next bar open
                 next_i = i + 1
                 if next_i >= len(df):
@@ -1852,4 +1865,312 @@ def check_trend_following_breakout_signal(df: pd.DataFrame) -> dict:
         'reason': f"TFB: kondisi belum terpenuhi ({', '.join(missing)})",
         'details': details,
     }
-    print(f"Details: {result['details']}")
+
+
+def check_volume_profile_poc_signal(df: pd.DataFrame) -> dict:
+    """Volume Profile POC bounce — last bar = signal bar, entry pending next open > today high."""
+    if len(df) < 25:
+        return {'has_signal': False, 'reason': 'Data tidak cukup (25 bars)', 'details': {}}
+
+    avg_vol = df['volume'].rolling(20).mean()
+    last = df.iloc[-1]
+    last_i = len(df) - 1
+
+    cur_avg_vol = avg_vol.iloc[-1]
+    if pd.isna(cur_avg_vol) or cur_avg_vol == 0:
+        return {'has_signal': False, 'reason': 'Avg volume tidak tersedia', 'details': {}}
+
+    window = df.iloc[max(0, last_i - 20):last_i]
+    poc, hvn = _get_poc_hvn(window)
+    if poc is None:
+        return {'has_signal': False, 'reason': 'POC tidak dapat dihitung', 'details': {}}
+
+    body = abs(last['close'] - last['open'])
+    lower_wick = min(last['open'], last['close']) - last['low']
+    wick_ok = lower_wick >= body * 0.5
+    poc_low, poc_high = poc * 0.985, poc * 1.015
+    touch_poc = (last['low'] <= poc_high) and (last['low'] >= poc_low)
+    close_above = last['close'] > poc
+    low_vol = last['volume'] < cur_avg_vol
+
+    details = {
+        'close': float(last['close']),
+        'low': float(last['low']),
+        'high': float(last['high']),
+        'poc': round(float(poc), 2),
+        'avg_volume_20d': int(cur_avg_vol),
+        'volume': int(last['volume']),
+        'touch_poc': bool(touch_poc),
+        'close_above_poc': bool(close_above),
+        'low_volume': bool(low_vol),
+        'wick_ok': bool(wick_ok),
+    }
+    if touch_poc and close_above and low_vol and wick_ok:
+        return {
+            'has_signal': True,
+            'reason': f"POC bounce: low touched POC {poc:.2f}, close above, low-vol + long wick (entry pending next open > {last['high']:.2f})",
+            'details': details,
+        }
+    missing = [k for k, v in {'touch_poc': touch_poc, 'close_above': close_above, 'low_vol': low_vol, 'wick': wick_ok}.items() if not v]
+    return {'has_signal': False, 'reason': f"POC: kondisi belum terpenuhi ({', '.join(missing)})", 'details': details}
+
+
+def check_inside_bar_breakout_signal(df: pd.DataFrame) -> dict:
+    """Inside Bar Breakout — last bar = inside bar, entry pending next open > today high."""
+    if len(df) < 22:
+        return {'has_signal': False, 'reason': 'Data tidak cukup (22 bars)', 'details': {}}
+
+    last = df.iloc[-1]
+    prev = df.iloc[-2]
+    inside = (last['high'] < prev['high']) and (last['low'] > prev['low'])
+
+    details = {
+        'last_high': float(last['high']),
+        'last_low': float(last['low']),
+        'prev_high': float(prev['high']),
+        'prev_low': float(prev['low']),
+        'is_inside_bar': bool(inside),
+    }
+    if inside:
+        return {
+            'has_signal': True,
+            'reason': f"Inside bar formed (entry pending next open > {last['high']:.2f})",
+            'details': details,
+        }
+    return {'has_signal': False, 'reason': 'Bukan inside bar (last H/L tidak di dalam prev H/L)', 'details': details}
+
+
+def check_nr7_breakout_signal(df: pd.DataFrame) -> dict:
+    """NR7 Breakout — last bar range is the narrowest of the last 7 bars."""
+    if len(df) < 22:
+        return {'has_signal': False, 'reason': 'Data tidak cukup (22 bars)', 'details': {}}
+
+    ranges = df['high'] - df['low']
+    avg_vol5 = df['volume'].rolling(5).mean()
+    last = df.iloc[-1]
+    last_range = ranges.iloc[-1]
+    window7 = ranges.iloc[-7:]
+    is_nr7 = bool(last_range == window7.min())
+
+    cur_avg_vol5 = avg_vol5.iloc[-1]
+    vol_ok = True if pd.isna(cur_avg_vol5) else bool(last['volume'] >= cur_avg_vol5 * 0.8)
+
+    details = {
+        'last_range': round(float(last_range), 4),
+        'min_7d_range': round(float(window7.min()), 4),
+        'is_nr7': is_nr7,
+        'volume': int(last['volume']),
+        'avg_volume_5d': int(cur_avg_vol5) if not pd.isna(cur_avg_vol5) else None,
+        'volume_ok': vol_ok,
+        'high': float(last['high']),
+    }
+    if is_nr7 and vol_ok:
+        return {
+            'has_signal': True,
+            'reason': f"NR7 setup: range {last_range:.2f} = narrowest of 7 (entry pending next open > {last['high']:.2f})",
+            'details': details,
+        }
+    missing = [k for k, v in {'nr7': is_nr7, 'volume': vol_ok}.items() if not v]
+    return {'has_signal': False, 'reason': f"NR7: kondisi belum terpenuhi ({', '.join(missing)})", 'details': details}
+
+
+def check_orb_signal(df: pd.DataFrame) -> dict:
+    """Opening Range Breakout (daily approx) — close > open + ATR*0.5 with volume spike."""
+    if len(df) < 22:
+        return {'has_signal': False, 'reason': 'Data tidak cukup (22 bars)', 'details': {}}
+
+    atr_ser = (df['high'] - df['low']).rolling(14).mean()
+    avg_vol = df['volume'].rolling(20).mean()
+    last = df.iloc[-1]
+    cur_atr = atr_ser.iloc[-1]
+    cur_avg_vol = avg_vol.iloc[-1]
+
+    if pd.isna(cur_atr) or pd.isna(cur_avg_vol) or cur_avg_vol == 0:
+        return {'has_signal': False, 'reason': 'ATR/avg volume belum siap', 'details': {}}
+
+    or_high = last['open'] + cur_atr * 0.5
+    breakout = bool(last['close'] > or_high)
+    vol_spike = bool(last['volume'] > cur_avg_vol * 1.5)
+    vol_ratio = last['volume'] / cur_avg_vol if cur_avg_vol > 0 else 0
+
+    details = {
+        'open': float(last['open']),
+        'close': float(last['close']),
+        'or_high': round(float(or_high), 2),
+        'atr14': round(float(cur_atr), 2),
+        'volume': int(last['volume']),
+        'avg_volume_20d': int(cur_avg_vol),
+        'vol_ratio': round(float(vol_ratio), 2),
+        'cond_breakout': breakout,
+        'cond_volume': vol_spike,
+    }
+    if breakout and vol_spike:
+        return {
+            'has_signal': True,
+            'reason': f"ORB: close {last['close']:.2f} > OR_high {or_high:.2f}, VR={vol_ratio:.1f}x",
+            'details': details,
+        }
+    missing = [k for k, v in {'breakout': breakout, 'volume': vol_spike}.items() if not v]
+    return {'has_signal': False, 'reason': f"ORB: kondisi belum terpenuhi ({', '.join(missing)})", 'details': details}
+
+
+def check_vwma_breakout_pullback_signal(df: pd.DataFrame) -> dict:
+    """VWMA Breakout Pullback — 1-bar power candle or 2-bar breakout+rejection."""
+    if len(df) < 22:
+        return {'has_signal': False, 'reason': 'Data tidak cukup (22 bars)', 'details': {}}
+
+    vwma = calc_vwma(df, 20)
+    avg_vol = df['volume'].rolling(20).mean()
+    vr = df['volume'] / avg_vol
+
+    last = df.iloc[-1]
+    prev = df.iloc[-2]
+    cur_vwma = vwma.iloc[-1]
+    prev_vwma = vwma.iloc[-2]
+    if pd.isna(cur_vwma) or pd.isna(prev_vwma):
+        return {'has_signal': False, 'reason': 'VWMA belum siap', 'details': {}}
+
+    def _wick_ok(bar):
+        body = abs(bar['close'] - bar['open'])
+        lw = min(bar['open'], bar['close']) - bar['low']
+        return lw >= body * 0.5
+
+    setup_1bar = bool(
+        last['open'] < cur_vwma and
+        last['close'] > cur_vwma and
+        not pd.isna(vr.iloc[-1]) and vr.iloc[-1] >= 1.5 and
+        _wick_ok(last)
+    )
+    breakout_prev = bool(
+        prev['close'] > prev_vwma and
+        not pd.isna(vr.iloc[-2]) and vr.iloc[-2] >= 1.5
+    )
+    rejection_last = bool(
+        last['low'] <= cur_vwma and
+        last['close'] > cur_vwma and
+        last['volume'] < prev['volume'] and
+        _wick_ok(last)
+    )
+    setup_2bar = breakout_prev and rejection_last
+
+    if len(df) >= 4:
+        c0, c1, c2, c3 = df['close'].iloc[-1], df['close'].iloc[-2], df['close'].iloc[-3], df['close'].iloc[-4]
+        if (c0 > c1) and (c1 > c2) and (c2 > c3):
+            setup_2bar = False
+
+    has_signal = bool(setup_1bar or setup_2bar)
+    details = {
+        'close': float(last['close']),
+        'high': float(last['high']),
+        'vwma20': round(float(cur_vwma), 2),
+        'vr_last': round(float(vr.iloc[-1]), 2) if not pd.isna(vr.iloc[-1]) else None,
+        'vr_prev': round(float(vr.iloc[-2]), 2) if not pd.isna(vr.iloc[-2]) else None,
+        'setup_1bar': setup_1bar,
+        'setup_2bar': setup_2bar,
+    }
+    if has_signal:
+        kind = '1-bar power' if setup_1bar else '2-bar pullback'
+        return {
+            'has_signal': True,
+            'reason': f"VWMA BPB {kind} (entry pending next open > {last['high']:.2f})",
+            'details': details,
+        }
+    return {'has_signal': False, 'reason': 'VWMA BPB: setup belum terbentuk', 'details': details}
+
+
+def check_swing_trend_signal(df: pd.DataFrame) -> dict:
+    """Swing Trend onset — scored gates on last bar, entry pending next open."""
+    if len(df) < 56:
+        return {'has_signal': False, 'reason': 'Data tidak cukup (56 bars)', 'details': {}}
+
+    try:
+        from engine.regime_filter import calc_adx, calc_ma_slope
+        from engine.swing_screener import find_swing_points
+    except ImportError as e:
+        return {'has_signal': False, 'reason': f'Import error: {e}', 'details': {}}
+
+    adx = calc_adx(df, 14)
+    slope = calc_ma_slope(df, 20, 5)
+    ma20 = df['close'].rolling(20).mean()
+    ma50 = df['close'].rolling(50).mean()
+    avg_vol = df['volume'].rolling(20).mean()
+    vr = df['volume'] / avg_vol
+
+    i = len(df) - 1
+    adx_i, adx_prev = adx.iloc[i], adx.iloc[i - 1]
+    if pd.isna(adx_i) or pd.isna(adx_prev):
+        return {'has_signal': False, 'reason': 'ADX belum siap', 'details': {}}
+    slope_i = slope.iloc[i]
+    slope_5 = slope.iloc[i - 5] if i >= 5 else float('nan')
+    if pd.isna(slope_i) or pd.isna(slope_5):
+        return {'has_signal': False, 'reason': 'Slope MA20 belum siap', 'details': {}}
+    if pd.isna(ma50.iloc[i]):
+        return {'has_signal': False, 'reason': 'MA50 belum siap', 'details': {}}
+
+    adx_roc = (adx_i - adx_prev) / adx_prev if adx_prev > 0 else 0
+    gate_adx = bool((18 < adx_i < 32) and adx_roc > 0.05)
+    gate_slope = bool((slope_i > 0) and (slope_i > slope_5))
+
+    above_ma50_now = df['close'].iloc[i] > ma50.iloc[i]
+    was_below = (df['close'].iloc[max(0, i - 5):i] <= ma50.iloc[max(0, i - 5):i]).any()
+    gate_reclaim = bool(above_ma50_now and was_below)
+
+    highs_idx, lows_idx = find_swing_points(df, n=2)
+    highs_so_far = [p for p in highs_idx if p <= i]
+    lows_so_far = [p for p in lows_idx if p <= i]
+    gate_hhhl = bool(
+        len(highs_so_far) >= 2 and len(lows_so_far) >= 2 and
+        df['high'].iloc[highs_so_far[-1]] > df['high'].iloc[highs_so_far[-2]] and
+        df['low'].iloc[lows_so_far[-1]] > df['low'].iloc[lows_so_far[-2]]
+    )
+
+    gate_vol = bool((not pd.isna(vr.iloc[i])) and 1.5 <= vr.iloc[i] <= 5.0)
+    bullish_close = bool(df['close'].iloc[i] > df['open'].iloc[i])
+
+    ma20_i = ma20.iloc[i]
+    distance = (df['close'].iloc[i] - ma20_i) / ma20_i * 100 if ma20_i else 100
+    gate_extend = bool(distance < 8.0)
+
+    ma20_win = ma20.iloc[max(0, i - 5):i + 1]
+    c_win = df['close'].iloc[max(0, i - 5):i + 1]
+    pullback_reclaim = bool((c_win <= ma20_win).any() and (df['close'].iloc[i] > ma20_i))
+
+    score = 0
+    score += 25 if gate_adx else 0
+    score += 20 if gate_slope else 0
+    score += 15 if gate_reclaim else 0
+    score += 15 if gate_hhhl else 0
+    score += 10 if gate_vol else 0
+    score += 10 if pullback_reclaim else 0
+    score += 5 if gate_extend else 0
+    watch_block = bool(_watch_signal_block(df).iloc[i])
+
+    details = {
+        'adx': round(float(adx_i), 2),
+        'adx_roc_pct': round(float(adx_roc * 100), 2),
+        'slope_ma20': round(float(slope_i), 4),
+        'close': float(df['close'].iloc[i]),
+        'ma20': round(float(ma20_i), 2),
+        'ma50': round(float(ma50.iloc[i]), 2),
+        'distance_ma20_pct': round(float(distance), 2),
+        'vr': round(float(vr.iloc[i]), 2) if not pd.isna(vr.iloc[i]) else None,
+        'score': int(score),
+        'gate_adx': gate_adx, 'gate_slope': gate_slope,
+        'gate_reclaim': gate_reclaim, 'gate_hhhl': gate_hhhl,
+        'gate_vol': gate_vol, 'gate_extend': gate_extend,
+        'bullish_close': bullish_close,
+        'pullback_reclaim': pullback_reclaim,
+        'watch_block': watch_block,
+    }
+    if score >= 50 and bullish_close and not watch_block:
+        pb_tag = "pullback-reclaim MA20" if pullback_reclaim else "no pullback (score-only)"
+        return {
+            'has_signal': True,
+            'reason': f"Swing-Trend onset: score {score}/100, ADX {adx_i:.1f}, {pb_tag} (entry pending next open)",
+            'details': details,
+        }
+    missing = []
+    if score < 50: missing.append(f'score {score}<50')
+    if not bullish_close: missing.append('not bullish close')
+    if watch_block: missing.append('watch-block')
+    return {'has_signal': False, 'reason': f"Swing-Trend: {', '.join(missing) or 'kondisi belum terpenuhi'}", 'details': details}
