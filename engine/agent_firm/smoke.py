@@ -32,7 +32,7 @@ _CANNED = SignalCandidate(
     indicators={"vwma_above": True, "ma50_above": True},
 )
 
-_MAX_DURATION_S = 90.0
+_MAX_DURATION_S = 150.0
 _COST_MIN = 0.0001
 _COST_MAX = 0.05
 
