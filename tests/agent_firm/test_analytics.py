@@ -101,3 +101,23 @@ def test_cohort_summary_empty_db(tmp_path):
     assert result["approve"]["n"] == 0
     assert result["veto"]["n"] == 0
     assert result["baseline"]["n"] == 0
+
+
+def test_cohort_summary_identical_returns_no_crash(tmp_path):
+    db = _make_db(tmp_path)
+    conn = sqlite3.connect(db)
+    # Seed an approve decision with 3 trades all having identical pnl
+    for i, ticker in enumerate(["BBRI", "TLKM", "ASII"]):
+        conn.execute(
+            "INSERT INTO agent_decisions (scan_time, ticker, strategy, decision) VALUES (?,?,?,?)",
+            (f"2026-05-{10+i:02d}T10:00:00", ticker, "vol_weighted", "approve"),
+        )
+        conn.execute(
+            "INSERT INTO paper_trades (ticker, entry_date, pnl_pct, status) VALUES (?,?,?,?)",
+            (ticker, f"2026-05-{10+i:02d}", 5.0, "CLOSED"),
+        )
+    conn.commit()
+    conn.close()
+    result = cohort_summary(db)
+    assert result["approve"]["n"] == 3
+    assert result["approve"]["sharpe"] == 0.0  # stdev = 0, sharpe = 0 not crash
