@@ -1,49 +1,157 @@
-"""Agent firm orchestrator. Phase 1: Technical -> Risk.
+"""Agent firm orchestrator. Phase 2: LangGraph DAG, 7 agents.
 
 Public API:
-  evaluate(candidates) -> list[AgentDecision]     # sync, scheduler-facing
-  evaluate_async(candidates, client) -> ...       # async, for tests
+  evaluate(candidates) -> list[AgentDecision]      # sync, scheduler-facing
+  evaluate_async(candidates, client) -> ...        # async, for tests
 """
 
 import asyncio
 import json
 import time
 
+from langgraph.graph import END, StateGraph
+
 from . import config
-from .agents import risk, technical
+from .agents import bear, bull, flow, news, regime, risk, technical
 from .client import DeepSeekClient
-from .schemas import AgentDecision, AgentResult, SignalCandidate
+from .schemas import AgentDecision, AgentResult, AgentState, SignalCandidate
+from .tools import news_lookup
+from .tools.sqlite_query import query
 
 
-async def _evaluate_one(
-    candidate: SignalCandidate,
-    client: DeepSeekClient,
-) -> AgentDecision:
+# ── Context pre-fetch ────────────────────────────────────────────────────────
+
+def _build_context(state: AgentState) -> dict:
     import data.db as _db
     db_path = str(_db.DB_PATH)
+    ticker = state["candidate"].ticker
+    context = {
+        "ohlcv": query(
+            db_path,
+            "SELECT date, open, high, low, close, volume FROM ohlcv "
+            "WHERE ticker=? ORDER BY date DESC LIMIT 60",
+            (ticker,),
+        ),
+        "broker_flow": query(
+            db_path,
+            "SELECT trade_date, broker_code, side, lot_value, investor_type FROM broker_flow "
+            "WHERE ticker=? AND trade_date >= date('now', '-14 days') ORDER BY trade_date DESC",
+            (ticker,),
+        ),
+        "stockbit_flow": query(
+            db_path,
+            "SELECT trade_date, buy_lot, sell_lot, net_lot, net_value, verdict, "
+            "smart_money, foreign_score, composite_score FROM stockbit_flow "
+            "WHERE ticker=? AND trade_date >= date('now', '-14 days') ORDER BY trade_date DESC",
+            (ticker,),
+        ),
+        "stockbit_flow_bars": query(
+            db_path,
+            "SELECT trade_date, bar_time, buy_lot, sell_lot, delta, net_value "
+            "FROM stockbit_flow_bars "
+            "WHERE ticker=? AND trade_date >= date('now', '-7 days') "
+            "ORDER BY trade_date DESC, bar_time",
+            (ticker,),
+        ),
+        "wf_scores": query(
+            db_path,
+            "SELECT strategy, consistency_pct, avg_return_pct, avg_sharpe, weighted_score "
+            "FROM wf_scores WHERE ticker=? ORDER BY weighted_score DESC",
+            (ticker,),
+        ),
+        "sector_data": query(
+            db_path,
+            "SELECT date, signal, vpin_label, vol_ratio FROM daily_screen "
+            "WHERE ticker=? ORDER BY date DESC LIMIT 10",
+            (ticker,),
+        ),
+        "news_mentions": news_lookup.lookup(db_path, ticker, days=7),
+        "open_trades": query(
+            db_path,
+            "SELECT ticker, entry_price, lots, tp_price, sl_price "
+            "FROM paper_trades WHERE status='OPEN'",
+        ),
+    }
+    return {"db_path": db_path, "context": context}
 
-    start = time.monotonic()
-    technical_result = await technical.run(candidate, client, db_path)
-    risk_result = await risk.run(candidate, [technical_result], client)
 
-    if risk_result.status == "failed":
+# ── Analyst nodes ─────────────────────────────────────────────────────────────
+
+async def _run_analysts(state: AgentState) -> dict:
+    client = state["client"]
+    candidate = state["candidate"]
+    ctx = state["context"]
+    db_path = state["db_path"]
+    t, f, r, n = await asyncio.gather(
+        technical.run(candidate, client, db_path),
+        flow.run(candidate, client, ctx),
+        regime.run(candidate, client, ctx),
+        news.run(candidate, client, ctx),
+    )
+    return {
+        "technical_result": t,
+        "flow_result": f,
+        "regime_result": r,
+        "news_result": n,
+    }
+
+
+async def _run_bull(state: AgentState) -> dict:
+    analysts = [
+        state["technical_result"],
+        state["flow_result"],
+        state["regime_result"],
+        state["news_result"],
+    ]
+    result = await bull.run(state["candidate"], analysts, state["client"])
+    return {"bull_result": result}
+
+
+async def _run_bear(state: AgentState) -> dict:
+    analysts = [
+        state["technical_result"],
+        state["flow_result"],
+        state["regime_result"],
+        state["news_result"],
+    ]
+    result = await bear.run(state["candidate"], analysts, state["bull_result"], state["client"])
+    return {"bear_result": result}
+
+
+async def _run_risk(state: AgentState) -> dict:
+    all_results = [
+        state["technical_result"],
+        state["flow_result"],
+        state["regime_result"],
+        state["news_result"],
+        state["bull_result"],
+        state["bear_result"],
+    ]
+    result = await risk.run(state["candidate"], all_results, state["client"])
+
+    if result.status == "failed":
         decision_str = "degraded"
         confidence = None
         size_hint = None
         rationale = "Agent firm degraded — quant signal passed through"
     else:
-        out = risk_result.output or {}
+        out = result.output or {}
         decision_str = out.get("decision", "degraded")
         confidence = out.get("confidence")
         size_hint = out.get("size_hint")
         rationale = out.get("rationale")
 
-    traces = [technical_result, risk_result]
+    traces = [
+        state["technical_result"], state["flow_result"],
+        state["regime_result"], state["news_result"],
+        state["bull_result"], state["bear_result"], result,
+    ]
     tokens_in = sum(t.tokens_in for t in traces)
     tokens_out = sum(t.tokens_out for t in traces)
     cost_usd = DeepSeekClient._calc_cost(tokens_in, tokens_out)
+    candidate = state["candidate"]
 
-    return AgentDecision(
+    decision = AgentDecision(
         ticker=candidate.ticker,
         strategy=candidate.strategy,
         scan_time=candidate.scan_time,
@@ -56,9 +164,42 @@ async def _evaluate_one(
         tokens_in=tokens_in,
         tokens_out=tokens_out,
         cost_usd=cost_usd,
-        duration_s=time.monotonic() - start,
+        duration_s=0.0,
     )
+    return {"risk_result": result, "decision": decision}
 
+
+# ── Persist node ──────────────────────────────────────────────────────────────
+
+def _persist_node(state: AgentState) -> dict:
+    _persist(state["decision"])
+    return {}
+
+
+# ── Graph compilation ─────────────────────────────────────────────────────────
+
+def _build_graph():
+    g = StateGraph(AgentState)
+    g.add_node("build_context", _build_context)
+    g.add_node("run_analysts", _run_analysts)
+    g.add_node("run_bull", _run_bull)
+    g.add_node("run_bear", _run_bear)
+    g.add_node("run_risk", _run_risk)
+    g.add_node("persist", _persist_node)
+    g.set_entry_point("build_context")
+    g.add_edge("build_context", "run_analysts")
+    g.add_edge("run_analysts", "run_bull")
+    g.add_edge("run_bull", "run_bear")
+    g.add_edge("run_bear", "run_risk")
+    g.add_edge("run_risk", "persist")
+    g.add_edge("persist", END)
+    return g.compile()
+
+
+_GRAPH = _build_graph()
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
 
 async def evaluate_async(
     candidates: list[SignalCandidate],
@@ -66,12 +207,25 @@ async def evaluate_async(
 ) -> list[AgentDecision]:
     if client is None:
         client = DeepSeekClient()
-    decisions = await asyncio.gather(
-        *[_evaluate_one(c, client) for c in candidates]
-    )
-    for d in decisions:
-        _persist(d)
-    return list(decisions)
+    initial_states = [
+        AgentState(
+            candidate=c,
+            db_path="",
+            context={},
+            client=client,
+            technical_result=None,
+            flow_result=None,
+            regime_result=None,
+            news_result=None,
+            bull_result=None,
+            bear_result=None,
+            risk_result=None,
+            decision=None,
+        )
+        for c in candidates
+    ]
+    results = await asyncio.gather(*[_GRAPH.ainvoke(s) for s in initial_states])
+    return [r["decision"] for r in results]
 
 
 def evaluate(
@@ -92,6 +246,8 @@ def evaluate(
         ]
     return asyncio.run(evaluate_async(candidates, client))
 
+
+# ── Persistence ───────────────────────────────────────────────────────────────
 
 def _persist(decision: AgentDecision) -> int:
     import data.db as _db

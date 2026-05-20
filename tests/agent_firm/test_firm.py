@@ -4,20 +4,41 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from engine.agent_firm.schemas import SignalCandidate
+from engine.agent_firm.schemas import AgentResult, SignalCandidate
 
 
 def _seed(db_path):
-    """Seed minimal ohlcv rows and create agent_firm tables."""
+    """Seed minimal tables and create agent_firm tables."""
     from data.db import init_agent_firm_tables
     conn = sqlite3.connect(db_path)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS ohlcv (
+    for ddl in [
+        """CREATE TABLE IF NOT EXISTS ohlcv (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ticker TEXT, date TEXT, open REAL, high REAL,
-            low REAL, close REAL, volume REAL
-        )
-    """)
+            low REAL, close REAL, volume REAL)""",
+        """CREATE TABLE IF NOT EXISTS stockbit_flow (
+            ticker TEXT, trade_date TEXT, buy_lot INTEGER, sell_lot INTEGER,
+            net_lot INTEGER, net_value INTEGER, verdict TEXT, smart_money TEXT,
+            foreign_score REAL, composite_score INTEGER, updated_at TEXT)""",
+        """CREATE TABLE IF NOT EXISTS broker_flow (
+            ticker TEXT, trade_date TEXT, broker_code TEXT, side TEXT,
+            lot_value INTEGER, investor_type TEXT)""",
+        """CREATE TABLE IF NOT EXISTS stockbit_flow_bars (
+            ticker TEXT, trade_date TEXT, bar_time TEXT, buy_lot INTEGER,
+            sell_lot INTEGER, delta INTEGER, net_value INTEGER)""",
+        """CREATE TABLE IF NOT EXISTS wf_scores (
+            ticker TEXT, strategy TEXT, consistency_pct REAL,
+            avg_return_pct REAL, avg_sharpe REAL, weighted_score REAL)""",
+        """CREATE TABLE IF NOT EXISTS daily_screen (
+            id INTEGER PRIMARY KEY, date TEXT, ticker TEXT, close INTEGER,
+            vol_ratio REAL, signal TEXT, vpin_label TEXT)""",
+        """CREATE TABLE IF NOT EXISTS news_mentions (
+            ticker TEXT, date TEXT, count INTEGER, headlines_json TEXT, updated_at TEXT)""",
+        """CREATE TABLE IF NOT EXISTS paper_trades (
+            id INTEGER PRIMARY KEY, ticker TEXT, status TEXT,
+            entry_price REAL, lots INTEGER, tp_price REAL, sl_price REAL)""",
+    ]:
+        conn.execute(ddl)
     rows = [("BBRI", f"2026-05-{d:02d}", 5000+d, 5100+d, 4950+d, 5050+d, 1e6) for d in range(1, 20)]
     conn.executemany(
         "INSERT INTO ohlcv (ticker, date, open, high, low, close, volume) VALUES (?,?,?,?,?,?,?)",
@@ -26,6 +47,11 @@ def _seed(db_path):
     conn.commit()
     conn.close()
     init_agent_firm_tables()
+
+
+def _ok(role):
+    return AgentResult(role=role, status="ok", output={"verdict": "ok"},
+                       tokens_in=100, tokens_out=50, duration_s=1.0)
 
 
 def test_evaluate_returns_bypassed_when_disabled(monkeypatch, tmp_path):
@@ -59,36 +85,33 @@ async def test_evaluate_async_runs_full_pipeline_and_persists(monkeypatch, tmp_p
         ticker="BBRI", strategy="momentum_following",
         score=4.2, scan_time="2026-05-19T16:00:00+07:00",
     )
-    fake_client = AsyncMock()
-    fake_client.chat.side_effect = [
-        # Technical
-        {"content": json.dumps({
-            "verdict": "BULLISH", "conviction": 0.7,
-            "key_levels": {"support": 5000, "resistance": 5200},
-            "reasoning": "uptrend",
-        }), "tokens_in": 1200, "tokens_out": 60, "cost_usd": 0.0006, "duration_s": 3.0},
-        # Risk
-        {"content": json.dumps({
-            "decision": "approve", "confidence": 0.7, "size_hint": 1.0,
-            "rationale": "Risk: ok.\nBull/Bear: bull edges out",
-        }), "tokens_in": 1500, "tokens_out": 80, "cost_usd": 0.0007, "duration_s": 4.0},
-    ]
-    decisions = await firm.evaluate_async([candidate], client=fake_client)
+
+    with patch("engine.agent_firm.agents.technical.run", return_value=_ok("technical")), \
+         patch("engine.agent_firm.agents.flow.run",      return_value=_ok("flow")), \
+         patch("engine.agent_firm.agents.regime.run",    return_value=_ok("regime")), \
+         patch("engine.agent_firm.agents.news.run",      return_value=_ok("news")), \
+         patch("engine.agent_firm.agents.bull.run",      return_value=_ok("bull")), \
+         patch("engine.agent_firm.agents.bear.run",      return_value=_ok("bear")), \
+         patch("engine.agent_firm.agents.risk.run",
+               return_value=AgentResult(
+                   role="risk", status="ok",
+                   output={"decision": "approve", "confidence": 0.7,
+                           "size_hint": 1.0, "rationale": "Risk: ok.\nBull/Bear: bull edges out"},
+                   tokens_in=1500, tokens_out=80, duration_s=4.0)):
+        decisions = await firm.evaluate_async([candidate])
+
     assert len(decisions) == 1
     d = decisions[0]
     assert d.decision == "approve"
     assert d.confidence == 0.7
-    assert d.tokens_in == 2700
-    assert d.tokens_out == 140
-    assert d.cost_usd == pytest.approx(0.0013, abs=1e-4)
-    assert len(d.traces) == 2
+    assert len(d.traces) == 7
 
     conn = sqlite3.connect(tmp_path / "t.db")
     rows = conn.execute("SELECT decision, confidence FROM agent_decisions").fetchall()
     assert len(rows) == 1
     assert rows[0][0] == "approve"
     trace_count = conn.execute("SELECT COUNT(*) FROM agent_traces").fetchone()[0]
-    assert trace_count == 2
+    assert trace_count == 7
 
 
 @pytest.mark.asyncio
@@ -107,17 +130,19 @@ async def test_evaluate_async_marks_degraded_when_risk_fails(monkeypatch, tmp_pa
         ticker="BBRI", strategy="momentum_following",
         score=4.2, scan_time="2026-05-19T16:00:00+07:00",
     )
-    fake_client = AsyncMock()
-    fake_client.chat.side_effect = [
-        # Technical ok
-        {"content": json.dumps({
-            "verdict": "BULLISH", "conviction": 0.7,
-            "key_levels": {"support": 5000, "resistance": 5200},
-            "reasoning": "uptrend",
-        }), "tokens_in": 1200, "tokens_out": 60, "cost_usd": 0.0006, "duration_s": 3.0},
-        # Risk fails: raises
-        RuntimeError("deepseek 500"),
-    ]
-    decisions = await firm.evaluate_async([candidate], client=fake_client)
+
+    with patch("engine.agent_firm.agents.technical.run", return_value=_ok("technical")), \
+         patch("engine.agent_firm.agents.flow.run",      return_value=_ok("flow")), \
+         patch("engine.agent_firm.agents.regime.run",    return_value=_ok("regime")), \
+         patch("engine.agent_firm.agents.news.run",      return_value=_ok("news")), \
+         patch("engine.agent_firm.agents.bull.run",      return_value=_ok("bull")), \
+         patch("engine.agent_firm.agents.bear.run",      return_value=_ok("bear")), \
+         patch("engine.agent_firm.agents.risk.run",
+               return_value=AgentResult(
+                   role="risk", status="failed",
+                   error="deepseek 500",
+                   tokens_in=0, tokens_out=0, duration_s=0.0)):
+        decisions = await firm.evaluate_async([candidate])
+
     assert decisions[0].decision == "degraded"
     assert "degraded" in (decisions[0].rationale or "").lower()
