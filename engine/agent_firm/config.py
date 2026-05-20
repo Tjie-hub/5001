@@ -27,6 +27,9 @@ PRICE_OUTPUT_PER_M = float(os.getenv("AGENT_FIRM_PRICE_OUT", "0.870"))
 
 PER_AGENT_TIMEOUT_S = float(os.getenv("AGENT_FIRM_AGENT_TIMEOUT", "75"))
 
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
+TAVILY_MAX_RESULTS = int(os.getenv("AGENT_FIRM_TAVILY_MAX", "5"))
+
 
 def is_active() -> bool:
     if not FIRM_ENABLED:

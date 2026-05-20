@@ -42,3 +42,19 @@ def test_pricing_defaults(monkeypatch):
     assert cfg.PRICE_INPUT_PER_M == pytest.approx(0.435)
     assert cfg.PRICE_OUTPUT_PER_M == pytest.approx(0.870)
     assert cfg.MODEL_ID == "deepseek-v4-pro"
+
+
+def test_tavily_config_defaults(monkeypatch):
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
+    monkeypatch.delenv("AGENT_FIRM_TAVILY_MAX", raising=False)
+    cfg = reload_config()
+    assert cfg.TAVILY_API_KEY == ""
+    assert cfg.TAVILY_MAX_RESULTS == 5
+
+
+def test_tavily_config_from_env(monkeypatch):
+    monkeypatch.setenv("TAVILY_API_KEY", "tvly-test-key")
+    monkeypatch.setenv("AGENT_FIRM_TAVILY_MAX", "3")
+    cfg = reload_config()
+    assert cfg.TAVILY_API_KEY == "tvly-test-key"
+    assert cfg.TAVILY_MAX_RESULTS == 3

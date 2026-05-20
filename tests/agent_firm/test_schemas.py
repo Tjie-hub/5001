@@ -1,4 +1,23 @@
-from engine.agent_firm.schemas import SignalCandidate, AgentResult, AgentDecision
+from engine.agent_firm.schemas import SignalCandidate, AgentResult, AgentDecision, AgentState
+
+
+def test_agent_state_has_required_keys():
+    # TypedDict — verify it can be instantiated as a plain dict with expected keys
+    state: AgentState = {
+        "candidate": None,
+        "db_path": "/tmp/t.db",
+        "context": {},
+        "client": None,
+        "technical_result": None,
+        "flow_result": None,
+        "regime_result": None,
+        "news_result": None,
+        "bull_result": None,
+        "bear_result": None,
+        "risk_result": None,
+        "decision": None,
+    }
+    assert state["db_path"] == "/tmp/t.db"
 
 
 def test_signal_candidate_minimal():

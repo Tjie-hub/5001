@@ -7,7 +7,7 @@ Decision lifecycle:
   degraded — Risk Manager call failed; signal proceeds (fail-open)
 """
 
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, TypedDict
 
 from pydantic import BaseModel, Field
 
@@ -49,3 +49,18 @@ class AgentDecision(BaseModel):
     tokens_out: int = 0
     cost_usd: float = 0.0
     duration_s: float = 0.0
+
+
+class AgentState(TypedDict):
+    candidate: SignalCandidate
+    db_path: str
+    context: dict[str, Any]
+    client: Any  # DeepSeekClient — in-memory only, not serialized
+    technical_result: Optional[AgentResult]
+    flow_result: Optional[AgentResult]
+    regime_result: Optional[AgentResult]
+    news_result: Optional[AgentResult]
+    bull_result: Optional[AgentResult]
+    bear_result: Optional[AgentResult]
+    risk_result: Optional[AgentResult]
+    decision: Optional[AgentDecision]
