@@ -2,9 +2,13 @@ from engine.agent_firm.schemas import SignalCandidate, AgentResult, AgentDecisio
 
 
 def test_agent_state_has_required_keys():
+    c = SignalCandidate(
+        ticker="BBRI", strategy="vol_weighted",
+        score=3.0, scan_time="2026-05-20T10:00:00+07:00",
+    )
     # TypedDict — verify it can be instantiated as a plain dict with expected keys
     state: AgentState = {
-        "candidate": None,
+        "candidate": c,
         "db_path": "/tmp/t.db",
         "context": {},
         "client": None,
