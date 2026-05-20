@@ -2378,8 +2378,8 @@ After Phase 2 is deployed, set in the systemd service or `.env`:
 ```
 AGENT_FIRM_ENABLED=true
 AGENT_FIRM_ENFORCE=false
-TAVILY_API_KEY=REDACTED_TAVILY_KEY
-DEEPSEEK_API_KEY=REDACTED_DEEPSEEK_KEY
+TAVILY_API_KEY=<your-tavily-key>
+DEEPSEEK_API_KEY=<your-deepseek-key>
 ```
 
 After 30 trading days, run the shadow validation query:
