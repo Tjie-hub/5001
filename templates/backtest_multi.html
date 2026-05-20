@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1440" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>IDX Strategy Suite</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -469,6 +469,27 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
 </style>
 </head>
 <body>
+<div id="agent-firm-badge" style="position:fixed;top:8px;right:8px;z-index:9999;
+     font:12px/1.4 system-ui,sans-serif;padding:4px 8px;border-radius:6px;
+     background:#222;color:#888;border:1px solid #444;">
+  Agent firm: <span id="agent-firm-state">…</span>
+</div>
+<script>
+  fetch('/api/agent/status').then(r => r.json()).then(s => {
+    const el = document.getElementById('agent-firm-state');
+    const badge = document.getElementById('agent-firm-badge');
+    if (s.active) {
+      el.textContent = s.enforce ? 'ENFORCE' : 'SHADOW';
+      badge.style.color = s.enforce ? '#fff' : '#fc0';
+      badge.style.borderColor = s.enforce ? '#0c0' : '#fc0';
+    } else {
+      el.textContent = 'OFF';
+      el.style.color = '#888';
+    }
+  }).catch(() => {
+    document.getElementById('agent-firm-state').textContent = 'ERR';
+  });
+</script>
 
 <!-- Topbar -->
 <header class="topbar">

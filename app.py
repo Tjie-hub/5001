@@ -767,6 +767,16 @@ def api_signals_today():
     signals = scan_momentum_signals()
     return jsonify({"count": len(signals), "signals": signals})
 
+@app.route("/api/agent/status", methods=["GET"])
+def agent_status():
+    from engine.agent_firm import config as _agent_config
+    return jsonify({
+        "enabled": _agent_config.FIRM_ENABLED,
+        "enforce": _agent_config.FIRM_ENFORCE,
+        "active": _agent_config.is_active(),
+        "model": _agent_config.MODEL_ID,
+    })
+
 @app.route("/api/scheduler/run", methods=["POST"])
 def api_run_scan():
     signals = daily_signal_scan()
