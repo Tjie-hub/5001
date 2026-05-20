@@ -173,3 +173,54 @@ def test_agent_agreement_empty(tmp_path):
     db = _make_db(tmp_path)
     result = agent_agreement(db)
     assert result == []
+
+
+from engine.agent_firm.analytics import decision_log
+
+
+def _seed_log_data(db_path):
+    conn = sqlite3.connect(db_path)
+    # 3 approve decisions with matching closed paper trades
+    for i, ticker in enumerate(["BBRI", "TLKM", "ASII"]):
+        conn.execute(
+            "INSERT INTO agent_decisions (scan_time, ticker, strategy, decision, confidence, size_hint, rationale) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (f"2026-05-{10+i:02d}T10:00:00", ticker, "vol_weighted", "approve",
+             0.75, 1.0, "Risk: aligned.\nBull/Bear: bull case."),
+        )
+        conn.execute(
+            "INSERT INTO paper_trades (ticker, entry_date, pnl_pct, status) VALUES (?,?,?,?)",
+            (ticker, f"2026-05-{10+i:02d}", 2.5, "CLOSED"),
+        )
+    # 1 veto decision with NO matching paper trade
+    conn.execute(
+        "INSERT INTO agent_decisions (scan_time, ticker, strategy, decision, confidence, size_hint, rationale) "
+        "VALUES (?,?,?,?,?,?,?)",
+        ("2026-05-15T10:00:00", "BMRI", "vol_weighted", "veto", 0.6, 0.0, "Risk: distributing."),
+    )
+    conn.commit()
+    conn.close()
+
+
+def test_decision_log_returns_rows(tmp_path):
+    db = _make_db(tmp_path)
+    _seed_log_data(db)
+    result = decision_log(db)
+    assert len(result) == 4
+    assert all("ticker" in r for r in result)
+    assert all("decision" in r for r in result)
+
+
+def test_decision_log_no_paper_trade_outcome_is_none(tmp_path):
+    db = _make_db(tmp_path)
+    _seed_log_data(db)
+    result = decision_log(db)
+    veto_row = next(r for r in result if r["decision"] == "veto")
+    assert veto_row["outcome"] is None
+    assert veto_row["pnl_pct"] is None
+
+
+def test_decision_log_empty_db(tmp_path):
+    db = _make_db(tmp_path)
+    result = decision_log(db)
+    assert result == []

@@ -115,3 +115,32 @@ def _is_aligned(role: str, output: dict, decision: str) -> bool:
     if role == "bear":
         return not is_approve
     return False
+
+
+def decision_log(db_path: str, limit: int = 100) -> list[dict[str, Any]]:
+    """Chronological log of decisions with matched paper trade outcomes."""
+    try:
+        with sqlite3.connect(db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("""
+                SELECT
+                    DATE(ad.scan_time) AS date,
+                    ad.ticker,
+                    ad.strategy,
+                    ad.decision,
+                    ad.confidence,
+                    ad.size_hint,
+                    ad.rationale,
+                    pt.status   AS outcome,
+                    pt.pnl_pct
+                FROM agent_decisions ad
+                LEFT JOIN paper_trades pt
+                    ON ad.ticker = pt.ticker
+                   AND DATE(ad.scan_time) = pt.entry_date
+                ORDER BY ad.created_at DESC
+                LIMIT ?
+            """, (limit,)).fetchall()
+            return [dict(r) for r in rows]
+    except Exception as _e:
+        logging.getLogger(__name__).debug("decision_log error: %s", _e)
+        return []
