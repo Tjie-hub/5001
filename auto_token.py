@@ -7,7 +7,7 @@ Usage:
   python3 auto_token.py --check    # Cek apakah token masih valid
 """
 
-import sys, os, time, requests
+import sys, os, time, requests, base64, json
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
@@ -30,6 +30,8 @@ STOCKBIT_HEADERS = {
     "Origin": "https://stockbit.com",
     "Referer": "https://stockbit.com/",
 }
+
+MAX_STATE_MB = 500  # warn if browser state grows past this
 
 
 # ── Helpers ──
@@ -69,6 +71,65 @@ def verify_token(token):
         return r.status_code == 200
     except Exception:
         return False
+
+
+def jwt_expiry(token):
+    """Return remaining hours until JWT expiry, or -1 if unreadable."""
+    try:
+        payload = token.split(".")[1]
+        payload += "=" * (4 - len(payload) % 4)
+        data = json.loads(base64.urlsafe_b64decode(payload))
+        return (data.get("exp", 0) - time.time()) / 3600
+    except Exception:
+        return -1
+
+
+def should_skip_refresh():
+    """Return True if current token is still fresh — skip Playwright entirely."""
+    if not TOKEN_FILE.exists():
+        return False
+    token = TOKEN_FILE.read_text().strip()
+    if not token:
+        return False
+    remaining = jwt_expiry(token)
+    if remaining > 6:
+        if verify_token(token):
+            log(f"Token still fresh ({remaining:.1f}h remaining), skipping refresh")
+            return True
+    return False
+
+
+def cleanup_zombies():
+    """Kill orphaned chromium processes older than 5 minutes."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "chromium.*--disable-blink-features"],
+            capture_output=True, text=True
+        )
+        if result.stdout.strip():
+            pids = result.stdout.strip().split()
+            log(f"Cleaning up {len(pids)} zombie chromium process(es)")
+            for pid in pids:
+                try:
+                    os.kill(int(pid), 9)
+                except ProcessLookupError:
+                    pass
+    except Exception:
+        pass
+
+
+def check_state_size():
+    """Log warning if browser state directory is too large."""
+    if not STATE_DIR.exists():
+        return
+    try:
+        total = sum(f.stat().st_size for f in STATE_DIR.rglob("*") if f.is_file())
+        mb = total / (1024 * 1024)
+        if mb > MAX_STATE_MB:
+            log(f"⚠ Browser state is {mb:.0f}MB (limit={MAX_STATE_MB}MB) — consider recreating session")
+    except Exception:
+        pass
 
 
 # ── Mode 1: Initial Login (non-headless, via CRD) ──
@@ -168,12 +229,13 @@ def auto_refresh():
             page = context.pages[0] if context.pages else context.new_page()
             token = _capture_from_page(page)
 
-            # Kalau gagal, coba sekali lagi dengan navigasi ulang
-            # (listener harus aktif SEBELUM page.goto agar tidak miss request)
+            # Retry dengan page baru kalau gagal
             if not token:
-                log("First attempt failed, retrying...")
+                log("First attempt failed, retrying with fresh page...")
                 try:
-                    token = _capture_from_page(page, navigate=True)
+                    new_page = context.new_page()
+                    token = _capture_from_page(new_page)
+                    new_page.close()
                 except Exception as e:
                     log(f"Retry error: {e}")
         finally:
@@ -185,6 +247,7 @@ def auto_refresh():
 def _capture_from_page(page, navigate=True):
     """Navigate to Stockbit and intercept JWT from network requests."""
     captured_token = None
+    deadline = time.time() + 55  # hard timeout — prevent hanging
 
     def on_request(request):
         nonlocal captured_token
@@ -199,16 +262,16 @@ def _capture_from_page(page, navigate=True):
         if navigate:
             page.goto(
                 "https://stockbit.com/symbol/BBCA",
-                wait_until="networkidle",
-                timeout=45000,
+                wait_until="domcontentloaded",
+                timeout=30000,
             )
-        # Tunggu API calls lazy-load
-        time.sleep(5)
+        # Active wait — check token every 1s, bail at deadline
+        while not captured_token and time.time() < deadline:
+            time.sleep(1)
 
-        # Scroll untuk trigger lebih banyak API calls kalau belum dapat
         if not captured_token:
             page.evaluate("window.scrollBy(0, 300)")
-            time.sleep(3)
+            time.sleep(2)
 
     except Exception as e:
         log(f"Capture error: {e}")
@@ -253,7 +316,6 @@ def credential_login():
         try:
             page = context.pages[0] if context.pages else context.new_page()
 
-            # Intercept token BEFORE navigating
             captured_token = None
 
             def on_request(request):
@@ -266,7 +328,19 @@ def credential_login():
 
             page.goto("https://stockbit.com/login", wait_until="domcontentloaded", timeout=45000)
 
-            # Fill credentials
+            # Detect session redirect: if still logged in, /login redirects to /stream
+            if "login" not in page.url:
+                log("Session masih valid — capture token dari halaman stream")
+                time.sleep(3)
+                page.goto("https://stockbit.com/symbol/BBCA", wait_until="domcontentloaded", timeout=45000)
+                time.sleep(8)
+                if not captured_token:
+                    page.evaluate("window.scrollBy(0, 300)")
+                    time.sleep(2)
+                page.remove_listener("request", on_request)
+                return captured_token
+
+            # Actually on login page — fill credentials
             page.wait_for_selector("input[type='email'], input[name='username'], input[placeholder*='Email' i]", timeout=15000)
             email_input = page.locator("input[type='email'], input[name='username'], input[placeholder*='Email' i]").first
             email_input.fill(STOCKBIT_USER)
@@ -285,16 +359,17 @@ def credential_login():
                 log("No redirect detected — checking for errors")
                 if page.locator("text=Invalid, text=salah, text=incorrect").count() > 0:
                     log("ERROR: Wrong credentials")
+                    page.remove_listener("request", on_request)
                     return None
 
             # Navigate to symbol page to capture token
             time.sleep(3)
-            page.goto("https://stockbit.com/symbol/BBCA", wait_until="networkidle", timeout=45000)
-            time.sleep(5)
+            page.goto("https://stockbit.com/symbol/BBCA", wait_until="domcontentloaded", timeout=45000)
+            time.sleep(8)
 
             if not captured_token:
                 page.evaluate("window.scrollBy(0, 300)")
-                time.sleep(3)
+                time.sleep(2)
 
             page.remove_listener("request", on_request)
             token = captured_token
@@ -360,12 +435,18 @@ def main():
     log("STOCKBIT AUTO TOKEN")
     log("=" * 40)
 
+    # Hardening: skip if token is still fresh
+    if should_skip_refresh():
+        return
+
+    check_state_size()
+    cleanup_zombies()
+
     token = auto_refresh()
 
     if token and verify_token(token):
         TOKEN_FILE.write_text(token)
         log(f"✅ Token refreshed (len={len(token)})")
-        # Silent success — hanya Telegram kalau gagal, supaya tidak spam
         return
 
     # Gagal capture — cek token lama masih valid?
@@ -373,7 +454,6 @@ def main():
         old_token = TOKEN_FILE.read_text().strip()
         if old_token and verify_token(old_token):
             log("⚠ Capture gagal, tapi token lama masih valid")
-            # Token lama masih jalan, tidak perlu alert
             return
 
     # Coba credential login sebagai last resort
@@ -385,6 +465,7 @@ def main():
         TOKEN_FILE.write_text(token)
         log("✅ Credential login berhasil — token saved")
         send_telegram("✅ <b>Auto Token</b>: credential login berhasil, token diperbarui.")
+        cleanup_zombies()
         return
 
     # Benar-benar gagal
@@ -401,6 +482,7 @@ def main():
         "Atau re-login:\n"
         "<code>python3 auto_token.py --login</code>"
     )
+    cleanup_zombies()
     sys.exit(1)
 
 
