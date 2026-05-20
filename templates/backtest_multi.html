@@ -1283,8 +1283,8 @@ function updateIndicator() {
 let _auditLoaded = false;
 function loadAuditData() {
   if (_auditLoaded) return;
+  _auditLoaded = true;
   fetch('/api/agent/audit').then(r => r.json()).then(data => {
-    _auditLoaded = true;
     document.getElementById('audit-loading').style.display = 'none';
     document.getElementById('audit-content').style.display = 'block';
 
