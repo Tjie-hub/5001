@@ -530,6 +530,7 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
     <button class="tab" data-tab="brokerflow">Broker Flow</button>
     <button class="tab" data-tab="sector">Sector Rotation</button>
     <button class="tab" data-tab="calendar">Calendar</button>
+    <button class="tab" data-tab="audit">Agent Audit</button>
     <div class="tab-indicator" id="tab-ind"></div>
   </nav>
 </div>
@@ -885,6 +886,42 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
   </div>
 </section>
 
+<section class="tab-panel" id="panel-audit">
+  <div id="audit-loading" style="padding:24px 0;color:var(--text-dim);font-size:13px">Loading…</div>
+  <div id="audit-content" style="display:none">
+
+    <!-- Cohort Cards -->
+    <div id="audit-cohorts" style="display:flex;gap:12px;margin-bottom:18px"></div>
+
+    <!-- Agent Agreement -->
+    <div style="margin-bottom:6px;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em">Agent Agreement</div>
+    <div class="table-wrap" style="margin-bottom:16px">
+      <table class="data small">
+        <thead>
+          <tr><th>Role</th><th>Decisions</th><th>Aligned</th><th>Agreement%</th></tr>
+        </thead>
+        <tbody id="audit-agreement-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Decision Log -->
+    <div style="margin-bottom:6px;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em">Decision Log</div>
+    <div class="table-wrap">
+      <table class="data small">
+        <thead>
+          <tr>
+            <th>Date</th><th>Ticker</th><th>Strategy</th>
+            <th>Decision</th><th>Conf</th><th>Size</th>
+            <th>Outcome</th><th>P&amp;L%</th>
+          </tr>
+        </thead>
+        <tbody id="audit-log-body"></tbody>
+      </table>
+    </div>
+
+  </div>
+</section>
+
 </main>
 
 <!-- Close Position Modal -->
@@ -1234,6 +1271,7 @@ function setActiveTab(name) {
   requestAnimationFrame(updateIndicator);
   if (name === 'monitor' || name === 'closed') loadMonitorData();
   if (name === 'paper')    loadPaperTrades();
+  if (name === 'audit')    loadAuditData();
   if (name === 'intraday') loadScreenerResults();
 }
 function updateIndicator() {
@@ -1241,6 +1279,78 @@ function updateIndicator() {
   if (!active || !indicator) return;
   indicator.style.width     = active.offsetWidth + 'px';
   indicator.style.transform = `translateX(${active.offsetLeft}px)`;
+}
+let _auditLoaded = false;
+function loadAuditData() {
+  if (_auditLoaded) return;
+  fetch('/api/agent/audit').then(r => r.json()).then(data => {
+    _auditLoaded = true;
+    document.getElementById('audit-loading').style.display = 'none';
+    document.getElementById('audit-content').style.display = 'block';
+
+    // Cohort Cards
+    const cohorts = document.getElementById('audit-cohorts');
+    cohorts.innerHTML = '';
+    const palette = {approve:'var(--green)',veto:'var(--red)',baseline:'var(--text-dim)'};
+    ['approve','veto','baseline'].forEach(k => {
+      const c = (data.cohorts||{})[k] || {};
+      const col = palette[k];
+      const sign = (c.avg_return_pct||0) >= 0 ? '+' : '';
+      cohorts.innerHTML += `<div style="flex:1;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+        <div style="font-size:10px;color:${col};font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">${k}</div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.8">
+          n = ${c.n||0}<br>
+          win ${((c.win_rate||0)*100).toFixed(0)}%<br>
+          avg ${sign}${(c.avg_return_pct||0).toFixed(2)}%<br>
+          Sharpe ${(c.sharpe||0).toFixed(2)}
+        </div>
+      </div>`;
+    });
+
+    // Agreement Table
+    const agBody = document.getElementById('audit-agreement-body');
+    agBody.innerHTML = '';
+    if ((data.agreement||[]).length) {
+      data.agreement.forEach(r => {
+        agBody.innerHTML += `<tr><td>${r.role}</td><td>${r.decisions}</td><td>${r.aligned}</td><td>${r.agreement_pct}%</td></tr>`;
+      });
+    } else {
+      agBody.innerHTML = '<tr><td colspan="4" style="color:var(--text-dim)">No data yet</td></tr>';
+    }
+
+    // Decision Log
+    const logBody = document.getElementById('audit-log-body');
+    logBody.innerHTML = '';
+    if ((data.log||[]).length) {
+      data.log.forEach((r, i) => {
+        const dCol = r.decision === 'approve' ? 'var(--green)' : r.decision === 'veto' ? 'var(--red)' : 'var(--text-dim)';
+        const pnl  = r.pnl_pct != null ? (r.pnl_pct >= 0 ? '+' : '') + parseFloat(r.pnl_pct).toFixed(2) + '%' : '—';
+        const pCol = r.pnl_pct > 0 ? 'var(--green)' : r.pnl_pct < 0 ? 'var(--red)' : 'var(--text-dim)';
+        logBody.innerHTML += `
+          <tr style="cursor:pointer" onclick="toggleRationale(${i})">
+            <td>${r.date||'—'}</td>
+            <td>${r.ticker}</td>
+            <td style="color:var(--text-dim)">${r.strategy}</td>
+            <td style="color:${dCol};font-weight:600">${r.decision}</td>
+            <td>${r.confidence != null ? (r.confidence*100).toFixed(0)+'%' : '—'}</td>
+            <td>${r.size_hint != null ? parseFloat(r.size_hint).toFixed(1)+'x' : '—'}</td>
+            <td>${r.outcome||'—'}</td>
+            <td style="color:${pCol}">${pnl}</td>
+          </tr>
+          <tr id="rationale-${i}" style="display:none">
+            <td colspan="8" style="color:var(--text-dim);font-size:11px;padding:8px 14px;white-space:pre-wrap;background:var(--surface-2)">${(r.rationale||'(no rationale)').replace(/</g,'&lt;')}</td>
+          </tr>`;
+      });
+    } else {
+      logBody.innerHTML = '<tr><td colspan="8" style="color:var(--text-dim)">No decisions yet</td></tr>';
+    }
+  }).catch(() => {
+    document.getElementById('audit-loading').textContent = 'Failed to load audit data.';
+  });
+}
+function toggleRationale(i) {
+  const el = document.getElementById('rationale-' + i);
+  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
 }
 tabButtons.forEach(b => b.addEventListener('click', () => setActiveTab(b.dataset.tab)));
 window.addEventListener('resize', updateIndicator);
