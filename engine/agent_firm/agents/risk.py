@@ -7,8 +7,8 @@ from pathlib import Path
 from ..client import DeepSeekClient
 from ..schemas import AgentResult, SignalCandidate
 
-_PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "risk_v1.md"
-PROMPT_VERSION = "v1"
+_PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "risk_v2.md"
+PROMPT_VERSION = "v2"
 
 
 def _load_prompt() -> str:
