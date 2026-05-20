@@ -478,8 +478,12 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
   fetch('/api/agent/status').then(r => r.json()).then(s => {
     const el = document.getElementById('agent-firm-state');
     const badge = document.getElementById('agent-firm-badge');
+    const st = s.today_stats || {};
+    const statsLine = st.evaluated
+      ? ` | ${st.evaluated} eval · ${st.approved} ✓ · ${st.vetoed} ✗ · $${(st.cost_usd||0).toFixed(4)}`
+      : '';
     if (s.active) {
-      el.textContent = s.enforce ? 'ENFORCE' : 'SHADOW';
+      el.textContent = (s.enforce ? 'ENFORCE' : 'SHADOW') + statsLine;
       badge.style.color = s.enforce ? '#fff' : '#fc0';
       badge.style.borderColor = s.enforce ? '#0c0' : '#fc0';
     } else {

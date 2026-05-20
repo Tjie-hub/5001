@@ -770,11 +770,35 @@ def api_signals_today():
 @app.route("/api/agent/status", methods=["GET"])
 def agent_status():
     from engine.agent_firm import config as _agent_config
+    import sqlite3, datetime
+    today = datetime.date.today().isoformat()
+    stats = {"evaluated": 0, "approved": 0, "vetoed": 0, "cost_usd": 0.0}
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        row = conn.execute(
+            "SELECT COUNT(*), "
+            "SUM(CASE WHEN decision='approve' THEN 1 ELSE 0 END), "
+            "SUM(CASE WHEN decision='veto' THEN 1 ELSE 0 END), "
+            "COALESCE(SUM(cost_usd), 0.0) "
+            "FROM agent_decisions WHERE DATE(created_at) = ?",
+            (today,),
+        ).fetchone()
+        conn.close()
+        if row and row[0]:
+            stats = {
+                "evaluated": row[0] or 0,
+                "approved": row[1] or 0,
+                "vetoed": row[2] or 0,
+                "cost_usd": round(row[3] or 0.0, 4),
+            }
+    except Exception:
+        pass
     return jsonify({
         "enabled": _agent_config.FIRM_ENABLED,
         "enforce": _agent_config.FIRM_ENFORCE,
         "active": _agent_config.is_active(),
         "model": _agent_config.MODEL_ID,
+        "today_stats": stats,
     })
 
 @app.route("/api/scheduler/run", methods=["POST"])
