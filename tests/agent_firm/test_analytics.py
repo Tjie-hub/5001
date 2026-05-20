@@ -1,0 +1,103 @@
+import json
+import sqlite3
+import pytest
+from engine.agent_firm.analytics import cohort_summary
+
+
+def _make_db(tmp_path):
+    db = tmp_path / "t.db"
+    conn = sqlite3.connect(db)
+    conn.executescript("""
+        CREATE TABLE agent_decisions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            scan_time TEXT NOT NULL,
+            ticker TEXT NOT NULL,
+            strategy TEXT NOT NULL,
+            quant_score REAL,
+            decision TEXT NOT NULL,
+            confidence REAL,
+            size_hint REAL,
+            rationale TEXT,
+            tokens_in INTEGER,
+            tokens_out INTEGER,
+            cost_usd REAL,
+            duration_s REAL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE agent_traces (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            decision_id INTEGER REFERENCES agent_decisions(id),
+            role TEXT NOT NULL,
+            prompt_version TEXT,
+            output TEXT,
+            tools_called TEXT,
+            tokens_in INTEGER,
+            tokens_out INTEGER,
+            duration_s REAL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE paper_trades (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticker TEXT NOT NULL,
+            strategy TEXT,
+            entry_date TEXT,
+            entry_price REAL,
+            lots INTEGER,
+            tp_price REAL,
+            sl_price REAL,
+            exit_date TEXT,
+            exit_price REAL,
+            exit_reason TEXT,
+            pnl_rp REAL,
+            pnl_pct REAL,
+            status TEXT DEFAULT 'OPEN'
+        );
+    """)
+    conn.commit()
+    conn.close()
+    return str(db)
+
+
+def _seed_cohort_data(db_path):
+    conn = sqlite3.connect(db_path)
+    # 3 approved decisions → positive trades
+    for i, (ticker, pnl) in enumerate([("BBRI", 3.2), ("TLKM", 2.1), ("ASII", 1.5)]):
+        conn.execute(
+            "INSERT INTO agent_decisions (scan_time, ticker, strategy, decision) VALUES (?,?,?,?)",
+            (f"2026-05-{10+i:02d}T10:00:00", ticker, "vol_weighted", "approve"),
+        )
+        conn.execute(
+            "INSERT INTO paper_trades (ticker, entry_date, pnl_pct, status) VALUES (?,?,?,?)",
+            (ticker, f"2026-05-{10+i:02d}", pnl, "CLOSED"),
+        )
+    # 2 veto decisions → negative trades
+    for i, (ticker, pnl) in enumerate([("BMRI", -1.8), ("UNVR", -2.3)]):
+        conn.execute(
+            "INSERT INTO agent_decisions (scan_time, ticker, strategy, decision) VALUES (?,?,?,?)",
+            (f"2026-05-{13+i:02d}T10:00:00", ticker, "vol_weighted", "veto"),
+        )
+        conn.execute(
+            "INSERT INTO paper_trades (ticker, entry_date, pnl_pct, status) VALUES (?,?,?,?)",
+            (ticker, f"2026-05-{13+i:02d}", pnl, "CLOSED"),
+        )
+    conn.commit()
+    conn.close()
+
+
+def test_cohort_summary_approve_beats_baseline(tmp_path):
+    db = _make_db(tmp_path)
+    _seed_cohort_data(db)
+    result = cohort_summary(db)
+    assert result["approve"]["n"] == 3
+    assert result["veto"]["n"] == 2
+    assert result["baseline"]["n"] == 5  # all 5 closed trades
+    assert result["approve"]["avg_return_pct"] > result["baseline"]["avg_return_pct"]
+    assert result["veto"]["avg_return_pct"] < 0
+
+
+def test_cohort_summary_empty_db(tmp_path):
+    db = _make_db(tmp_path)
+    result = cohort_summary(db)
+    assert result["approve"]["n"] == 0
+    assert result["veto"]["n"] == 0
+    assert result["baseline"]["n"] == 0
