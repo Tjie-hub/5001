@@ -777,7 +777,36 @@ def scheduled_multi_strategy_scan():
         print(f"[{time_str}] Saved {len(flow_confirmed)} signals to DB")
     except Exception as e:
         print(f"[{time_str}] DB save error: {e}")
-    
+
+    # ── Agent Firm evaluation (shadow mode) ──────────────────────────────────
+    try:
+        from engine.agent_firm import config as _firm_cfg
+        from engine.agent_firm import firm as _firm
+        from engine.agent_firm.schemas import SignalCandidate as _SC
+        if _firm_cfg.is_active() and flow_confirmed:
+            _candidates = [
+                _SC(
+                    ticker=r["ticker"],
+                    strategy=(r["strategies"][0] if r.get("strategies") else "multi"),
+                    score=float((r.get("flow") or {}).get("score") or 0),
+                    scan_time=f"{date_str} {time_str}",
+                    flow_verdict=(r.get("flow") or {}).get("verdict"),
+                    foreign_score=None,
+                    indicators={},
+                )
+                for r in flow_confirmed
+            ]
+            _decisions = _firm.evaluate(_candidates)
+            if _firm_cfg.FIRM_ENFORCE:
+                _approved = {d.ticker for d in _decisions if d.decision == "approve"}
+                flow_confirmed = [r for r in flow_confirmed if r["ticker"] in _approved]
+            print(f"[{time_str}] Agent firm: {len(_decisions)} evaluated"
+                  f" ({sum(1 for d in _decisions if d.decision=='approve')} approved"
+                  f", {sum(1 for d in _decisions if d.decision=='veto')} vetoed)")
+    except Exception as _firm_err:
+        print(f"[{time_str}] Agent firm error (fail-open): {_firm_err}")
+    # ── End agent firm ────────────────────────────────────────────────────────
+
     # Step 7: Auto-open paper trades for flow-confirmed signals
     auto_trade_results = []
     if len(flow_confirmed) > 0:
