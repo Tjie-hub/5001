@@ -801,6 +801,25 @@ def agent_status():
         "today_stats": stats,
     })
 
+@app.route("/api/agent/audit", methods=["GET"])
+def agent_audit():
+    try:
+        from engine.agent_firm.analytics import agent_agreement, cohort_summary, decision_log
+        return jsonify({
+            "cohorts":   cohort_summary(DB_PATH),
+            "agreement": agent_agreement(DB_PATH),
+            "log":       decision_log(DB_PATH, limit=100),
+        })
+    except Exception as e:
+        return jsonify({
+            "error":     str(e),
+            "cohorts":   {"approve": {"n":0,"win_rate":0.0,"avg_return_pct":0.0,"sharpe":0.0},
+                          "veto":    {"n":0,"win_rate":0.0,"avg_return_pct":0.0,"sharpe":0.0},
+                          "baseline":{"n":0,"win_rate":0.0,"avg_return_pct":0.0,"sharpe":0.0}},
+            "agreement": [],
+            "log":       [],
+        })
+
 @app.route("/api/scheduler/run", methods=["POST"])
 def api_run_scan():
     signals = daily_signal_scan()
