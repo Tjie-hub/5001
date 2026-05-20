@@ -121,3 +121,55 @@ def test_cohort_summary_identical_returns_no_crash(tmp_path):
     result = cohort_summary(db)
     assert result["approve"]["n"] == 3
     assert result["approve"]["sharpe"] == 0.0  # stdev = 0, sharpe = 0 not crash
+
+
+from engine.agent_firm.analytics import agent_agreement
+
+
+def _seed_agreement_data(db_path):
+    conn = sqlite3.connect(db_path)
+    # 1 approve decision with 6 traces (4 analysts + bull + bear)
+    cur = conn.execute(
+        "INSERT INTO agent_decisions (scan_time, ticker, strategy, decision) VALUES (?,?,?,?)",
+        ("2026-05-20T10:00:00", "BBRI", "vol_weighted", "approve"),
+    )
+    did = cur.lastrowid
+    traces = [
+        ("technical", json.dumps({"verdict": "BULLISH", "conviction": 0.7})),
+        ("flow",      json.dumps({"flow_verdict": "ACCUMULATING"})),
+        ("regime",    json.dumps({"regime_call": "TRENDING"})),
+        ("news",      json.dumps({"sentiment": "BULLISH"})),
+        ("bull",      json.dumps({"bull_case": "Strong flow."})),
+        ("bear",      json.dumps({"bear_case": "Rate risk."})),
+    ]
+    for role, output in traces:
+        conn.execute(
+            "INSERT INTO agent_traces (decision_id, role, output) VALUES (?,?,?)",
+            (did, role, output),
+        )
+    conn.commit()
+    conn.close()
+
+
+def test_agent_agreement_counts_roles(tmp_path):
+    db = _make_db(tmp_path)
+    _seed_agreement_data(db)
+    result = agent_agreement(db)
+    roles = [r["role"] for r in result]
+    assert set(roles) == {"technical", "flow", "regime", "news", "bull", "bear"}
+    # All analyst traces are bullish-aligned with approve decision
+    for r in result:
+        assert r["decisions"] == 1
+    # bear is aligned with veto, not approve → agreement_pct 0.0
+    bear_row = next(r for r in result if r["role"] == "bear")
+    assert bear_row["agreement_pct"] == 0.0
+    # bull, technical, flow, regime, news all aligned with approve → 100%
+    for role in ["bull", "technical", "flow", "regime", "news"]:
+        row = next(r for r in result if r["role"] == role)
+        assert row["agreement_pct"] == 100.0
+
+
+def test_agent_agreement_empty(tmp_path):
+    db = _make_db(tmp_path)
+    result = agent_agreement(db)
+    assert result == []

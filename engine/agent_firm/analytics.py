@@ -55,3 +55,63 @@ def _stats(pnls: list[float]) -> dict[str, Any]:
         "avg_return_pct": round(avg, 4),
         "sharpe": round(sharpe, 4),
     }
+
+
+def agent_agreement(db_path: str) -> list[dict[str, Any]]:
+    """Per-agent directional alignment with the final risk decision."""
+    try:
+        with sqlite3.connect(db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("""
+                SELECT at.role, at.output, ad.decision
+                FROM agent_traces at
+                JOIN agent_decisions ad ON at.decision_id = ad.id
+                WHERE ad.decision IN ('approve', 'veto')
+            """).fetchall()
+    except Exception as _e:
+        logging.getLogger(__name__).debug("agent_agreement error: %s", _e)
+        return []
+
+    from collections import defaultdict
+    counts: dict[str, dict[str, int]] = defaultdict(lambda: {"decisions": 0, "aligned": 0})
+
+    for row in rows:
+        role = row["role"]
+        decision = row["decision"]
+        counts[role]["decisions"] += 1
+        try:
+            output = json.loads(row["output"] or "{}")
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if _is_aligned(role, output, decision):
+            counts[role]["aligned"] += 1
+
+    result = []
+    for role in ["technical", "flow", "regime", "news", "bull", "bear"]:
+        if role in counts:
+            d = counts[role]["decisions"]
+            a = counts[role]["aligned"]
+            result.append({
+                "role": role,
+                "decisions": d,
+                "aligned": a,
+                "agreement_pct": round(a / d * 100, 1) if d > 0 else 0.0,
+            })
+    return result
+
+
+def _is_aligned(role: str, output: dict, decision: str) -> bool:
+    is_approve = decision == "approve"
+    if role == "technical":
+        return (output.get("verdict") == "BULLISH") == is_approve
+    if role == "flow":
+        return (output.get("flow_verdict") == "ACCUMULATING") == is_approve
+    if role == "regime":
+        return (output.get("regime_call") == "TRENDING") == is_approve
+    if role == "news":
+        return (output.get("sentiment") == "BULLISH") == is_approve
+    if role == "bull":
+        return is_approve
+    if role == "bear":
+        return not is_approve
+    return False
