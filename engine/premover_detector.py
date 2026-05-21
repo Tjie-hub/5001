@@ -64,6 +64,7 @@ def _init_table(conn: sqlite3.Connection):
     ]:
         if col not in existing_cols:
             try:
+                assert col.replace('_', '').isalnum(), f"unsafe column: {col}"
                 conn.execute(f'ALTER TABLE watchlist_premover ADD COLUMN {col} {col_def}')
             except Exception:
                 pass

@@ -1,4 +1,5 @@
 import os
+import logging
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify
 from engine.strategies import check_current_entry_signal, get_ticker_data
@@ -20,10 +21,20 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
 WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/telegram/updates")
+TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
 
 app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.urandom(32)
 app.register_blueprint(backtest_multi_bp)
 app.register_blueprint(screener_bp, url_prefix='/api/screener')
+
+@app.after_request
+def set_security_headers(response):
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
 
 
 def attach_flow_data(results, include_flow=True, flow_threshold=2):
@@ -171,7 +182,8 @@ def api_scan_all():
                 'flow_reason': flow_reason,
             })
         except Exception as e:
-            results.append({'ticker': ticker, 'error': str(e), 'best_return': -999})
+            logging.exception("scan_all error for %s", ticker)
+            results.append({'ticker': ticker, 'error': 'scan error', 'best_return': -999})
     
     # Load wf_scores untuk enrichment
     wf_map = {}
@@ -811,8 +823,9 @@ def agent_audit():
             "log":       decision_log(DB_PATH, limit=100),
         })
     except Exception as e:
+        logging.exception("agent audit error")
         return jsonify({
-            "error":     str(e),
+            "error":     "internal error",
             "cohorts":   {"approve": {"n":0,"win_rate":0.0,"avg_return_pct":0.0,"sharpe":0.0},
                           "veto":    {"n":0,"win_rate":0.0,"avg_return_pct":0.0,"sharpe":0.0},
                           "baseline":{"n":0,"win_rate":0.0,"avg_return_pct":0.0,"sharpe":0.0}},
@@ -887,7 +900,8 @@ def api_swing_onset():
                 'flow': flow_map.get(ticker),
             })
         except Exception as e:
-            results.append({'ticker': ticker, 'error': str(e)})
+            logging.exception("signal scan error for %s", ticker)
+            results.append({'ticker': ticker, 'error': 'scan error'})
 
     results.sort(key=lambda r: r.get('score', 0), reverse=True)
     onsets = [r for r in results if r.get('verdict') == 'SWING_ONSET']
@@ -949,7 +963,8 @@ def api_paper_report_telegram():
         open_trades_status_report()
         return jsonify({'success': True, 'message': 'Report sent to Telegram'}), 200
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception("paper report telegram error")
+        return jsonify({'success': False, 'error': 'internal error'}), 500
 
 
 @app.route('/api/flow/monitor', methods=['GET'])
@@ -995,7 +1010,7 @@ def api_signals_custom():
     import datetime as _dt
 
     body = request.get_json(force=True)
-    tickers_input = [t.strip().upper() for t in body.get('tickers', '').split(',') if t.strip()]
+    tickers_input = [t.strip().upper() for t in body.get('tickers', '').split(',') if t.strip()][:100]
     use_fundamental = body.get('use_fundamental', True)
     use_flow        = body.get('use_flow', True)
     use_consist     = body.get('use_consist', True)
@@ -1200,9 +1215,10 @@ def check_flow():
         })
         
     except Exception as e:
+        logging.exception("api error")
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'internal error'
         }), 500
 
 
@@ -1402,22 +1418,25 @@ def handle_flow_command(chat_id):
 @app.route('/telegram/updates', methods=['POST'])
 def telegram_webhook():
     """Handle Telegram webhook updates."""
+    if TELEGRAM_WEBHOOK_SECRET:
+        incoming = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+        if not hmac.compare_digest(incoming, TELEGRAM_WEBHOOK_SECRET):
+            return jsonify({'ok': False}), 403
     try:
         data = request.get_json()
-        
+
         if data and 'message' in data:
             message = data['message']
             handle_telegram_message(message)
         elif data and 'callback_query' in data:
-            # Handle button clicks
             callback = data['callback_query']
             chat_id = callback['from']['id']
             send_telegram_reply(chat_id, "Button clicked! Coming soon...")
-        
+
         return jsonify({'ok': True}), 200
     except Exception as e:
         print(f"Webhook error: {e}")
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return jsonify({'ok': False}), 500
 
 @app.route('/telegram/setup', methods=['GET'])
 def setup_telegram_webhook():
@@ -1448,9 +1467,10 @@ def setup_telegram_webhook():
                 'error': error
             }), 400
     except Exception as e:
+        logging.exception("api error")
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'internal error'
         }), 500
 
 
@@ -1580,9 +1600,10 @@ def telegram_poll_updates():
             'updates': updates
         }), 200
     except Exception as e:
+        logging.exception("api error")
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'internal error'
         }), 500
 
 @app.route('/telegram/status', methods=['GET'])
@@ -1614,7 +1635,8 @@ def telegram_webhook_status():
         else:
             return jsonify({'success': False, 'error': info.get('description')}), 400
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception("telegram status error")
+        return jsonify({'success': False, 'error': 'internal error'}), 500
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1628,7 +1650,8 @@ def api_sector_rotation():
         ranked = score_sectors()
         return jsonify({'success': True, 'sectors': ranked})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logging.exception("sector rotation error")
+        return jsonify({'success': False, 'error': 'internal error'}), 500
 
 
 # ─────────────────────────────────────────────────────────────────────────────

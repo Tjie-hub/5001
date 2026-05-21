@@ -74,6 +74,7 @@ def init_screener_tables():
             ('vpin_buckets', 'INTEGER'),
         ]:
             try:
+                assert col.replace('_', '').isalnum(), f"unsafe column: {col}"
                 conn.execute(f"ALTER TABLE daily_screen ADD COLUMN {col} {defn}")
             except Exception:
                 pass
