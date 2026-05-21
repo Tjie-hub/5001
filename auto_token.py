@@ -282,7 +282,7 @@ def _capture_from_page(page, navigate=True):
 
 # ── Mode 2b: Credential Login (headless, auto fallback) ──
 def credential_login():
-    """Auto-fill login form headlessly using STOCKBIT_USER / STOCKBIT_PASS from .env."""
+    """Auto-fill login form headlessly using credentials from .env."""
     if not STOCKBIT_USER or not STOCKBIT_PASS:
         log("ERROR: STOCKBIT_USER / STOCKBIT_PASS not set in .env")
         return None
