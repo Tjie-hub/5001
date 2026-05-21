@@ -797,7 +797,7 @@ def scheduled_multi_strategy_scan():
                 for r in flow_confirmed
             ]
             _decisions = _firm.evaluate(_candidates)
-            if _firm_cfg.FIRM_ENFORCE:
+            if _firm_cfg.get_enforce():
                 _approved = {d.ticker for d in _decisions if d.decision == "approve"}
                 flow_confirmed = [r for r in flow_confirmed if r["ticker"] in _approved]
             print(f"[{time_str}] Agent firm: {len(_decisions)} evaluated"
