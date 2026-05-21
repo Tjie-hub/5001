@@ -475,24 +475,64 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
   Agent firm: <span id="agent-firm-state">…</span>
 </div>
 <script>
-  fetch('/api/agent/status').then(r => r.json()).then(s => {
+function updateFirmPill(active, enforce) {
+  const off = document.getElementById('firm-off');
+  const shadow = document.getElementById('firm-shadow');
+  const enf = document.getElementById('firm-enforce');
+  const pill = document.getElementById('firm-pill');
+  if (!off) return;
+  [off, shadow, enf].forEach(b => { b.style.background='#111'; b.style.color='#555'; b.style.fontWeight=''; });
+  if (!active) {
+    off.style.background='#1f1f1f'; off.style.color='#fff'; off.style.fontWeight='700';
+    pill.style.borderColor='#333';
+  } else if (enforce) {
+    enf.style.background='#052e16'; enf.style.color='#4ade80'; enf.style.fontWeight='700';
+    pill.style.borderColor='#16a34a';
+  } else {
+    shadow.style.background='#2d2200'; shadow.style.color='#fbbf24'; shadow.style.fontWeight='700';
+    pill.style.borderColor='#92400e';
+  }
+}
+
+function setFirmMode(mode) {
+  if (mode === 'enforce' && !confirm('Switch to ENFORCE?\n\nVetoed tickers will be dropped from paper trade signals.')) return;
+  fetch('/api/agent/config', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({mode})
+  })
+  .then(r => r.ok ? r.json() : Promise.reject())
+  .then(s => {
+    updateFirmPill(s.active, s.enforce);
     const el = document.getElementById('agent-firm-state');
     const badge = document.getElementById('agent-firm-badge');
-    const st = s.today_stats || {};
-    const statsLine = st.evaluated
-      ? ` | ${st.evaluated} eval · ${st.approved} ✓ · ${st.vetoed} ✗ · $${(st.cost_usd||0).toFixed(4)}`
-      : '';
-    if (s.active) {
-      el.textContent = (s.enforce ? 'ENFORCE' : 'SHADOW') + statsLine;
-      badge.style.color = s.enforce ? '#fff' : '#fc0';
-      badge.style.borderColor = s.enforce ? '#0c0' : '#fc0';
-    } else {
-      el.textContent = 'OFF';
-      el.style.color = '#888';
+    if (el && badge) {
+      if (!s.active) { el.textContent='OFF'; el.style.color='#888'; badge.style.color='#888'; badge.style.borderColor='#444'; }
+      else { el.textContent = s.enforce ? 'ENFORCE' : 'SHADOW'; badge.style.color = s.enforce ? '#fff' : '#fc0'; badge.style.borderColor = s.enforce ? '#0c0' : '#fc0'; }
     }
-  }).catch(() => {
-    document.getElementById('agent-firm-state').textContent = 'ERR';
-  });
+  })
+  .catch(() => { if (typeof showToast === 'function') showToast('Agent firm update failed', 'error'); });
+}
+
+fetch('/api/agent/status').then(r => r.json()).then(s => {
+  const el = document.getElementById('agent-firm-state');
+  const badge = document.getElementById('agent-firm-badge');
+  const st = s.today_stats || {};
+  const statsLine = st.evaluated
+    ? ` | ${st.evaluated} eval · ${st.approved} ✓ · ${st.vetoed} ✗ · $${(st.cost_usd||0).toFixed(4)}`
+    : '';
+  if (s.active) {
+    el.textContent = (s.enforce ? 'ENFORCE' : 'SHADOW') + statsLine;
+    badge.style.color = s.enforce ? '#fff' : '#fc0';
+    badge.style.borderColor = s.enforce ? '#0c0' : '#fc0';
+  } else {
+    el.textContent = 'OFF';
+    el.style.color = '#888';
+  }
+  updateFirmPill(s.active, s.enforce);
+}).catch(() => {
+  document.getElementById('agent-firm-state').textContent = 'ERR';
+});
 </script>
 
 <!-- Topbar -->
@@ -515,6 +555,11 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
     <button class="icon-btn" title="Tweaks" id="tweaks-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
     </button>
+    <div id="firm-pill" style="display:flex;border:1px solid #333;border-radius:5px;overflow:hidden;font-size:10px;margin-right:2px;">
+      <button id="firm-off"     onclick="setFirmMode('off')"     style="padding:3px 9px;border:none;cursor:pointer;background:#1f1f1f;color:#fff;font-weight:700;">OFF</button>
+      <button id="firm-shadow"  onclick="setFirmMode('shadow')"  style="padding:3px 9px;border:none;cursor:pointer;border-left:1px solid #333;background:#111;color:#555;">SHADOW</button>
+      <button id="firm-enforce" onclick="setFirmMode('enforce')" style="padding:3px 9px;border:none;cursor:pointer;border-left:1px solid #333;background:#111;color:#555;">ENFORCE</button>
+    </div>
   </div>
 </header>
 
