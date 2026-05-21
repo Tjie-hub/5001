@@ -31,8 +31,21 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 TAVILY_MAX_RESULTS = int(os.getenv("AGENT_FIRM_TAVILY_MAX", "5"))
 
 
+_runtime: dict | None = None
+
+
+def set_mode(enabled: bool, enforce: bool) -> None:
+    global _runtime
+    _runtime = {"enabled": enabled, "enforce": enforce}
+
+
+def get_enforce() -> bool:
+    return _runtime["enforce"] if _runtime is not None else FIRM_ENFORCE
+
+
 def is_active() -> bool:
-    if not FIRM_ENABLED:
+    enabled = _runtime["enabled"] if _runtime is not None else FIRM_ENABLED
+    if not enabled:
         return False
     if KILL_SWITCH_FILE.exists():
         return False
