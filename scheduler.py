@@ -14,8 +14,8 @@ load_dotenv()
 
 WIB = pytz.timezone("Asia/Jakarta")
 
-TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN", "REDACTED_TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "5919142813")
+TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN", "")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
 

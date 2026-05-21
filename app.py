@@ -16,9 +16,9 @@ import time
 
 load_dotenv()
 DB_PATH = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "REDACTED_TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "5919142813")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "http://192.168.31.214:5001")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
 WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/telegram/updates")
 
 app = Flask(__name__)
