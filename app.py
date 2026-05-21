@@ -807,10 +807,24 @@ def agent_status():
         pass
     return jsonify({
         "enabled": _agent_config.FIRM_ENABLED,
-        "enforce": _agent_config.FIRM_ENFORCE,
+        "enforce": _agent_config.get_enforce(),
         "active": _agent_config.is_active(),
         "model": _agent_config.MODEL_ID,
         "today_stats": stats,
+    })
+
+@app.route("/api/agent/config", methods=["POST"])
+def agent_config():
+    from engine.agent_firm import config as _agent_config
+    data = request.get_json(silent=True) or {}
+    mode = data.get("mode")
+    if mode not in ("off", "shadow", "enforce"):
+        return jsonify({"error": "mode must be off, shadow, or enforce"}), 400
+    _agent_config.set_mode(enabled=mode in ("shadow", "enforce"), enforce=mode == "enforce")
+    return jsonify({
+        "enabled": mode in ("shadow", "enforce"),
+        "enforce": _agent_config.get_enforce(),
+        "active": _agent_config.is_active(),
     })
 
 @app.route("/api/agent/audit", methods=["GET"])
