@@ -759,12 +759,18 @@ def api_multi_quick_scan():
                 flow_threshold
             )
 
+        # Flatten results into single array (frontend expects array, not dict)
+        flat_results = []
+        for strategy_results in results_by_strategy.values():
+            flat_results.extend(strategy_results)
+
         return jsonify({
             'success': True,
-            'results': results_by_strategy,
+            'results': flat_results,
             'summary': {
                 'total_tickers_scanned': len(tickers),
                 'total_signals': sum(len(r) for r in results_by_strategy.values()),
+                'tickers_with_signal': len(set(r['ticker'] for r in flat_results if r.get('has_signal', False))),
                 'filter_mode': filter_mode,
                 'strategies': strategies,
                 'intersection_mode': False,
@@ -807,24 +813,10 @@ def agent_status():
         pass
     return jsonify({
         "enabled": _agent_config.FIRM_ENABLED,
-        "enforce": _agent_config.get_enforce(),
+        "enforce": _agent_config.FIRM_ENFORCE,
         "active": _agent_config.is_active(),
         "model": _agent_config.MODEL_ID,
         "today_stats": stats,
-    })
-
-@app.route("/api/agent/config", methods=["POST"])
-def agent_config():
-    from engine.agent_firm import config as _agent_config
-    data = request.get_json(silent=True) or {}
-    mode = data.get("mode")
-    if mode not in ("off", "shadow", "enforce"):
-        return jsonify({"error": "mode must be off, shadow, or enforce"}), 400
-    _agent_config.set_mode(enabled=mode in ("shadow", "enforce"), enforce=mode == "enforce")
-    return jsonify({
-        "enabled": mode in ("shadow", "enforce"),
-        "enforce": _agent_config.get_enforce(),
-        "active": _agent_config.is_active(),
     })
 
 @app.route("/api/agent/audit", methods=["GET"])
