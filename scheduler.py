@@ -800,8 +800,9 @@ def scheduled_multi_strategy_scan():
         _wl_conn = _sql.connect(DB_PATH)
         _wl_ensure(_wl_conn)
 
-        # Expire stale active entries at the start of each scan
-        _expired = _wl_expire(_wl_conn, scan_date=date_str, max_calendar_days=30)
+        # Expire stale active entries at the start of each scan (60d: median
+        # BEAR->BULL recovery on IDX is ~59 cal days; 30d expired ~80% unpromoted)
+        _expired = _wl_expire(_wl_conn, scan_date=date_str, max_calendar_days=60)
         if _expired:
             print(f"[{time_str}] Watchlist expired: {_expired}")
 

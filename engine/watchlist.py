@@ -145,11 +145,14 @@ def promote_watchlist(
 def expire_stale(
     conn: sqlite3.Connection,
     scan_date: str,
-    max_calendar_days: int = 30,
+    max_calendar_days: int = 60,
 ) -> List[str]:
     """
     Expire active entries older than max_calendar_days.
     Returns list of expired tickers.
+
+    Default 60 days: measured median BEAR->BULL recovery on IDX is ~59 calendar
+    days, so a 30-day window expired ~80% of entries before they could promote.
     """
     cur = conn.execute(
         """UPDATE regime_watchlist
