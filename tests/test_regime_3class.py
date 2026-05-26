@@ -83,3 +83,61 @@ def test_detect_bear():
     from engine.regime_filter import detect_regime
     closes = [148 - i * 0.6 for i in range(80)]   # steady downtrend → ADX>25, slope<−1%
     assert detect_regime(_make_ohlcv(closes)) == 'BEAR'
+
+
+# ── RegimeClassifier ──────────────────────────────────────────────────────────
+
+def _rich_df(n=220):
+    """Mixed-regime df long enough for multinomial training (all 3 classes)."""
+    up   = [100 + i * 0.5 for i in range(80)]
+    flat = [140.0 + 0.2 * (i % 3 - 1) for i in range(60)]
+    down = [140 - i * 0.5 for i in range(80)]
+    closes = (up + flat + down)[:n]
+    return _make_ohlcv(closes)
+
+
+def test_classifier_trains_3class():
+    from engine.regime_filter import RegimeClassifier
+    clf = RegimeClassifier()
+    metrics = clf.train(_rich_df())
+    assert 'error' not in metrics, metrics.get('error')
+    assert clf.is_trained
+    assert set(clf.model.classes_).issubset({'BULL', 'BEAR', 'SIDEWAYS'})
+
+
+def test_classifier_predict_valid_label():
+    from engine.regime_filter import RegimeClassifier
+    clf = RegimeClassifier()
+    clf.train(_rich_df())
+    regime, conf = clf.predict(_rich_df())
+    assert regime in ('BULL', 'BEAR', 'SIDEWAYS')
+    assert 0.0 <= conf <= 1.0
+
+
+def test_classifier_feature_importance_per_class():
+    from engine.regime_filter import RegimeClassifier
+    clf = RegimeClassifier()
+    metrics = clf.train(_rich_df())
+    fi = metrics['feature_importance']
+    assert isinstance(fi, dict)
+    for cls in clf.model.classes_:
+        assert cls in fi
+        assert isinstance(fi[cls], dict)
+        assert len(fi[cls]) == len(clf.feature_cols)
+
+
+def test_classifier_untrained_falls_back_to_rule():
+    from engine.regime_filter import RegimeClassifier
+    clf = RegimeClassifier()
+    regime, conf = clf.predict(_rich_df())
+    assert regime in ('BULL', 'BEAR', 'SIDEWAYS')
+    assert conf == 0.0
+
+
+def test_classifier_class_counts_in_metrics():
+    from engine.regime_filter import RegimeClassifier
+    clf = RegimeClassifier()
+    metrics = clf.train(_rich_df())
+    cc = metrics['class_counts']
+    assert set(cc.keys()).issubset({'BULL', 'BEAR', 'SIDEWAYS'})
+    assert sum(cc.values()) == metrics['n_samples']

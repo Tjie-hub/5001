@@ -231,86 +231,73 @@ class RegimeClassifier:
         """
         Train on full df. Returns training metrics.
         """
-        raise NotImplementedError(
-            "RegimeClassifier.train not yet updated for 3-class string labels. "
-            "See Task 2 (multinomial LogReg) in the implementation plan."
-        )
         from sklearn.linear_model import LogisticRegression
         from sklearn.preprocessing import StandardScaler
-        from sklearn.metrics import accuracy_score, classification_report
+        from sklearn.metrics import accuracy_score
 
         features = build_regime_features(df)
-        labels = label_regime_from_future(df, forward_days, trend_threshold)
+        labels   = label_regime_from_future(df, forward_days, trend_threshold)
 
-        # Align features and labels, drop unlabeled
+        # join on index, drop unlabeled (last forward_days rows) and NaN features
         aligned = features.join(labels.rename('label')).dropna()
-        aligned = aligned[aligned['label'] >= 0]
 
-        if len(aligned) < 50:
+        if len(aligned) < 60:
             return {'error': 'Not enough labeled data', 'n_samples': len(aligned)}
 
         X = aligned[self.feature_cols].values
         y = aligned['label'].values
 
-        # Standardize
-        self.scaler = StandardScaler()
-        X_scaled = self.scaler.fit_transform(X)
+        self.scaler  = StandardScaler()
+        X_scaled     = self.scaler.fit_transform(X)
 
-        # Train — simple logistic regression, L2 regularization
         self.model = LogisticRegression(
-            C=1.0, max_iter=500, class_weight='balanced', random_state=42
+            C=1.0, max_iter=500, class_weight='balanced',
+            random_state=42,
         )
         self.model.fit(X_scaled, y)
-        self.is_trained = True
-        self.train_accuracy = accuracy_score(y, self.model.predict(X_scaled))
-        # Baseline: majority class ratio
-        self.majority_baseline = max(np.bincount(y.astype(int)) / len(y))
+        self.is_trained   = True
+        y_pred            = self.model.predict(X_scaled)
+        self.train_accuracy = accuracy_score(y, y_pred)
 
-        # Training metrics
-        y_pred = self.model.predict(X_scaled)
-        acc = accuracy_score(y, y_pred)
+        unique, counts = np.unique(y, return_counts=True)
+        self.majority_baseline = float(counts.max() / len(y))
+
+        feature_importance = {
+            cls: dict(zip(self.feature_cols, [round(float(c), 4) for c in coef]))
+            for cls, coef in zip(self.model.classes_, self.model.coef_)
+        }
 
         return {
-            'accuracy': round(acc, 4),
-            'n_samples': len(aligned),
-            'n_trending': int(y.sum()),
-            'n_not_trending': int((y == 0).sum()),
-            'feature_importance': dict(zip(
-                self.feature_cols,
-                [round(c, 4) for c in self.model.coef_[0]]
-            ))
+            'accuracy':           round(self.train_accuracy, 4),
+            'n_samples':          int(len(aligned)),
+            'class_counts':       dict(zip(unique.tolist(), counts.tolist())),
+            'feature_importance': feature_importance,
         }
 
     def predict(self, df: pd.DataFrame) -> Tuple[str, float]:
         """
         Predict regime for latest bar.
         Returns: (regime_str, confidence)
-          regime_str: "TRENDING" / "SIDEWAYS" / "UNCERTAIN"
-          confidence: 0.0 - 1.0
+          regime_str: 'BULL' / 'BEAR' / 'SIDEWAYS'
+          confidence: max predict_proba score
+        Falls back to rule-based detect_regime if untrained or confidence < 0.45.
         """
         if not self.is_trained:
-            # Fallback to rule-based
             return detect_regime(df), 0.0
 
         features = build_regime_features(df)
         if len(features) == 0:
-            return "UNCERTAIN", 0.0
+            return 'SIDEWAYS', 0.0
 
-        X = features[self.feature_cols].iloc[[-1]].values
+        X        = features[self.feature_cols].iloc[[-1]].values
         X_scaled = self.scaler.transform(X)
+        proba    = self.model.predict_proba(X_scaled)[0]
+        idx      = int(proba.argmax())
+        conf     = float(proba[idx])
 
-        proba = self.model.predict_proba(X_scaled)[0]
-        pred_class = self.model.predict(X_scaled)[0]
-
-        confidence = max(proba)
-
-        # Kalau model lebih buruk dari naive baseline → pakai rule-based
-        if self.train_accuracy < (self.majority_baseline - 0.05) or confidence < 0.52:
-            return "UNCERTAIN", confidence
-        elif pred_class == 1:
-            return "TRENDING", confidence
-        else:
-            return "SIDEWAYS", confidence
+        if conf < 0.45:                            # low confidence → rule-based fallback
+            return detect_regime(df), conf
+        return str(self.model.classes_[idx]), conf
 
 
 # ── Strategi 6: Regime Adaptive Strategy ──────────────────────────────
