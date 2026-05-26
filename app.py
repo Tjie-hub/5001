@@ -137,7 +137,7 @@ def api_scan_all():
                 final_regime = detect_regime(df)
                 regime_conf = 0
             except Exception:
-                final_regime = "UNCERTAIN"
+                final_regime = "SIDEWAYS"
                 regime_conf = 0
             # Check current entry signal
             signal_check = check_current_entry_signal(ticker, strategy, df)
@@ -305,7 +305,7 @@ def api_quick_scan():
             cached = cache_map.get(ticker)
             if cached:
                 best = cached
-                regime = cached.get('regime', 'UNCERTAIN')
+                regime = cached.get('regime', 'SIDEWAYS')
             else:
                 # Fallback: run backtest live
                 try:
@@ -324,7 +324,7 @@ def api_quick_scan():
                 try:
                     regime = detect_regime(df)
                 except Exception:
-                    regime = "UNCERTAIN"
+                    regime = "SIDEWAYS"
 
             # Build result with both signal and backtest data
             result = {
@@ -463,7 +463,7 @@ def api_precompute():
             try:
                 regime = detect_regime(df)
             except Exception:
-                regime = "UNCERTAIN"
+                regime = "SIDEWAYS"
 
             conn = sqlite3.connect(DB_PATH)
             conn.execute("""
@@ -590,7 +590,7 @@ def api_multi_quick_scan():
 
             # Run backtest untuk get metrics
             best = None
-            regime = "UNCERTAIN"
+            regime = "SIDEWAYS"
             try:
                 conn = sqlite3.connect(DB_PATH)
                 df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
@@ -696,7 +696,7 @@ def api_multi_quick_scan():
                 regime = detect_regime(df)
             except Exception:
                 best = None
-                regime = "UNCERTAIN"
+                regime = "SIDEWAYS"
 
             for strategy in strategies:
                 if strategy in signals:
@@ -1114,8 +1114,8 @@ def api_signals_custom():
             row["regime"] = regime_label
             row["regime_conf"] = round(regime_conf, 2)
 
-            if use_regime and regime_label == "UNCERTAIN":
-                row["fail_reason"] = f"REGIME: UNCERTAIN ({round(regime_conf*100)}%)"
+            if use_regime and regime_label not in ("BULL", "SIDEWAYS"):
+                row["fail_reason"] = f"REGIME: {regime_label} ({round(regime_conf*100)}%)"
                 results.append(row)
                 continue
 
@@ -1149,7 +1149,7 @@ def api_signals_custom():
             msg += f"⚙️ Filter aktif: <i>{filter_str}</i> | VR≥{vr_min}x\n"
             msg += f"✅ {len(passed)} lolos / {len(results)} ticker\n\n"
             for r in passed:
-                regime_emoji = "📈" if r.get("regime") == "TRENDING" else "📉" if r.get("regime") == "SIDEWAYS" else "❓"
+                regime_emoji = "📈" if r.get("regime") == "BULL" else "🐻" if r.get("regime") == "BEAR" else "➡️" if r.get("regime") == "SIDEWAYS" else "❓"
                 msg += f"🟢 <b>{r['ticker']}</b> Rp {r.get('close',0):,}\n"
                 msg += f"   VR: {r.get('vr','?')}x | {regime_emoji} {r.get('regime','N/A')} ({round(r.get('regime_conf',0)*100)}%)\n"
                 if r.get('flow') and r['flow'] != 'SKIP':
