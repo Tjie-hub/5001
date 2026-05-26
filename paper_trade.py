@@ -109,6 +109,10 @@ def init_paper_table():
         ("filter_rs",          "1"),
         ("filter_regime",      "1"),
         ("filter_vpin",        "0"),  # off by default
+        # DD circuit breaker — hysteresis: trigger at threshold, auto-reset at recover
+        ("entries_blocked",    "0"),    # 1 = new entries blocked by circuit breaker
+        ("dd_threshold_pct",   "8.0"),  # block new entries when 30d DD >= this %
+        ("dd_recover_pct",     "5.0"),  # auto-unblock when DD recovers <= this %
     ]
     for k, v in configs:
         conn.execute("INSERT OR IGNORE INTO paper_config (key,value) VALUES (?,?)", (k,v))
@@ -180,6 +184,26 @@ def check_trend(ticker: str) -> str:
         return 'UNKNOWN'
 
 
+def calc_ara_arb_levels(price: float) -> dict:
+    """
+    IDX Auto Rejection thresholds per BEI Peng-00009/BEI.POP/03-2023 (symmetric).
+    Tier: <=200 -> ±35%; 200-5000 -> ±25%; >5000 -> ±20%.
+    Returns {ara_pct, arb_pct, ara_price, arb_price}. Sub-Rp50 treated as tier 1.
+    """
+    if price <= 200:
+        pct = 0.35
+    elif price <= 5000:
+        pct = 0.25
+    else:
+        pct = 0.20
+    return {
+        "ara_pct":   pct,
+        "arb_pct":   pct,
+        "ara_price": price * (1 + pct),
+        "arb_price": price * (1 - pct),
+    }
+
+
 def _calc_atr_from_db(ticker: str, periods: int = 14) -> float:
     """Fetch ATR from stored OHLCV. Returns None if insufficient data."""
     import pandas as pd
@@ -203,13 +227,46 @@ def _calc_atr_from_db(ticker: str, periods: int = 14) -> float:
         return None
 
 
-def open_trade(ticker: str, entry_price: float, strategy: str = 'Momentum Following',
+def get_backtest_best(ticker: str):
+    """Most recent backtest_cache row for a ticker, or None.
+
+    Columns of interest: best_strategy, best_return (total_return_pct, %),
+    win_rate (0-100). Used for strategy selection and the entry quality gate.
+    """
+    try:
+        conn = get_db()
+        row = conn.execute(
+            "SELECT best_strategy, best_return, win_rate FROM backtest_cache "
+            "WHERE ticker=? ORDER BY computed_date DESC LIMIT 1",
+            (ticker,),
+        ).fetchone()
+        conn.close()
+        return row
+    except Exception:
+        return None
+
+
+def get_best_strategy_for_ticker(ticker: str) -> str:
+    """Backtest-optimal strategy for a ticker; Momentum Following if no cache."""
+    row = get_backtest_best(ticker)
+    if row and row["best_strategy"]:
+        return row["best_strategy"]
+    return "Momentum Following"
+
+
+def open_trade(ticker: str, entry_price: float, strategy: str = None,
                sl_atr_mult: float = 2.0, min_rr: float = 2.0,
                sl_price: float = None, tp_price: float = None, notify: bool = True):
+    # Default to the backtest-optimal strategy for this ticker, not a blanket
+    # 'Momentum Following'. Explicit callers (swing screener, manual API) win.
+    strategy = strategy or get_best_strategy_for_ticker(ticker)
     cfg      = get_config()
     capital  = cfg["capital"]
     risk_pct = cfg["risk_pct"]
     max_open = int(cfg["max_open"])
+
+    if cfg.get("entries_blocked", 0) >= 1:
+        return {"error": "Entries blocked: DD circuit breaker active. See /api/paper/dd_status."}
 
     open_trades = get_open_trades()
     if len(open_trades) >= max_open:
@@ -262,6 +319,33 @@ def open_trade(ticker: str, entry_price: float, strategy: str = 'Momentum Follow
             min_tp = entry_price + sl_dist * min_rr
             tp_price = max(tp_price, round(min_tp))
 
+    # IDX ARA/ARB cap: TP above ARA won't fill (stock halts at limit) and SL below
+    # ARB similarly unfillable. Apply with 0.5% safety margin from the limit.
+    _ar = calc_ara_arb_levels(entry_price)
+    if tp_price >= _ar["ara_price"]:
+        _orig_tp = tp_price
+        tp_price = round(_ar["ara_price"] * 0.995)
+        print(f"[paper_trade] {ticker}: TP capped {_orig_tp:,.0f} -> {tp_price:,.0f} (ARA Rp {_ar['ara_price']:,.0f})")
+    if sl_price <= _ar["arb_price"]:
+        _orig_sl = sl_price
+        sl_price = round(_ar["arb_price"] * 1.005)
+        sl_dist = entry_price - sl_price
+        sl_pct  = sl_dist / entry_price if entry_price > 0 else 0
+        print(f"[paper_trade] {ticker}: SL capped {_orig_sl:,.0f} -> {sl_price:,.0f} (ARB Rp {_ar['arb_price']:,.0f})")
+
+    # After capping, re-validate min_rr — skip entry if capped TP can't deliver enough
+    # reward vs the SL distance (no realistic edge under IDX auto-rejection rules).
+    # Swing Trend exits via R1-R7 not price TP, so skip the gate.
+    if not is_swing:
+        capped_reward = tp_price - entry_price
+        capped_risk   = entry_price - sl_price
+        if capped_risk > 0 and capped_reward / capped_risk < min_rr:
+            return {"error": (
+                f"{ticker} skipped: capped TP Rp {tp_price:,.0f} gives R/R "
+                f"{capped_reward/capped_risk:.2f} < min {min_rr} (entry Rp {entry_price:,.0f}, "
+                f"ARA Rp {_ar['ara_price']:,.0f})"
+            )}
+
     if is_swing:
         exit_rules_json = json.dumps([
             'R1_MA_BREAK', 'R2_LOWER_LOW', 'R3_ADX_FADE',
@@ -290,13 +374,6 @@ def open_trade(ticker: str, entry_price: float, strategy: str = 'Momentum Follow
     conn.commit()
     trade_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     conn.close()
-
-    # Acknowledge premover alerts for this ticker (close the detection→execution loop)
-    try:
-        from engine.premover_detector import mark_fired
-        mark_fired(DB_PATH, ticker)
-    except Exception as e:
-        print(f"[open_trade] mark_fired failed for {ticker}: {e}")
 
     # Notify Telegram
     if notify:
@@ -393,6 +470,110 @@ def get_summary():
         "total_pnl_rp":  total_pnl,
         "total_return_pct": round(total_pnl / 50_000_000 * 100, 2)
     }
+
+def _set_config(key: str, value) -> None:
+    """Update a paper_config key. Value is coerced to str for storage."""
+    conn = get_db()
+    conn.execute("INSERT OR REPLACE INTO paper_config (key, value) VALUES (?, ?)",
+                 (key, str(value)))
+    conn.commit()
+    conn.close()
+
+
+def compute_drawdown(days: int = 30) -> dict:
+    """
+    Realized-equity drawdown from closed trades in the last `days`.
+    Equity series = capital_base + cumulative PnL (chronological by exit_date).
+    Returns {peak, current, dd_pct, n_trades, capital_base}.
+    Empty/insufficient data => dd_pct = 0.
+    """
+    cfg = get_config()
+    capital_base = cfg["capital"]
+
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT exit_date, pnl_rp FROM paper_trades
+        WHERE status='CLOSED' AND exit_date IS NOT NULL
+          AND exit_date >= date('now','localtime', ?)
+        ORDER BY exit_date ASC, id ASC
+    """, (f"-{int(days)} days",)).fetchall()
+    conn.close()
+
+    if not rows:
+        return {"peak": capital_base, "current": capital_base, "dd_pct": 0.0,
+                "n_trades": 0, "capital_base": capital_base}
+
+    equity = capital_base
+    peak   = capital_base
+    for r in rows:
+        equity += (r["pnl_rp"] or 0)
+        if equity > peak:
+            peak = equity
+    dd_pct = (peak - equity) / peak * 100 if peak > 0 else 0.0
+    return {"peak": peak, "current": equity, "dd_pct": round(dd_pct, 2),
+            "n_trades": len(rows), "capital_base": capital_base}
+
+
+def is_entries_blocked() -> bool:
+    """Quick check used by entry gates."""
+    cfg = get_config()
+    return cfg.get("entries_blocked", 0) >= 1
+
+
+def check_dd_circuit_breaker(send_alert: bool = True) -> dict:
+    """
+    Evaluate 30-day realized DD vs threshold; toggle entries_blocked on state change.
+    Hysteresis: trigger when dd_pct >= dd_threshold_pct, reset when dd_pct <= dd_recover_pct.
+    Returns drawdown dict + 'blocked', 'state_changed', 'threshold_pct', 'recover_pct'.
+    """
+    cfg       = get_config()
+    threshold = cfg.get("dd_threshold_pct", 8.0)
+    recover   = cfg.get("dd_recover_pct", 5.0)
+    currently_blocked = cfg.get("entries_blocked", 0) >= 1
+
+    dd = compute_drawdown(days=30)
+    state_changed = False
+    new_blocked   = currently_blocked
+
+    if not currently_blocked and dd["dd_pct"] >= threshold:
+        _set_config("entries_blocked", "1")
+        new_blocked = True
+        state_changed = True
+        if send_alert:
+            try:
+                from scheduler import send_telegram
+                send_telegram(
+                    f"🛑 <b>DD CIRCUIT BREAKER ACTIVATED</b>\n"
+                    f"Drawdown: <b>-{dd['dd_pct']:.2f}%</b> (threshold {threshold:.1f}%)\n"
+                    f"Peak:    Rp {dd['peak']:,.0f}\n"
+                    f"Current: Rp {dd['current']:,.0f}\n"
+                    f"Closed trades (30d): {dd['n_trades']}\n"
+                    f"New entries blocked. Auto-reset on DD ≤ {recover:.1f}%."
+                )
+            except Exception as e:
+                print(f"[circuit_breaker] telegram error: {e}")
+    elif currently_blocked and dd["dd_pct"] <= recover:
+        _set_config("entries_blocked", "0")
+        new_blocked = False
+        state_changed = True
+        if send_alert:
+            try:
+                from scheduler import send_telegram
+                send_telegram(
+                    f"✅ <b>DD CIRCUIT BREAKER RESET</b>\n"
+                    f"DD recovered to -{dd['dd_pct']:.2f}% (≤ {recover:.1f}%).\n"
+                    f"Equity: Rp {dd['current']:,.0f}\n"
+                    f"New entries re-enabled."
+                )
+            except Exception as e:
+                print(f"[circuit_breaker] telegram error: {e}")
+
+    dd["blocked"]       = new_blocked
+    dd["state_changed"] = state_changed
+    dd["threshold_pct"] = threshold
+    dd["recover_pct"]   = recover
+    return dd
+
 
 if __name__ == "__main__":
     init_paper_table()

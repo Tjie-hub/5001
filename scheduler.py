@@ -14,13 +14,13 @@ load_dotenv()
 
 WIB = pytz.timezone("Asia/Jakarta")
 
-TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN", "")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
 
 def send_telegram(msg: str):
-    if "ISI_" in TELEGRAM_TOKEN:
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID or "ISI_" in TELEGRAM_TOKEN:
         print(f"[Telegram skip] {msg}")
         return
     try:
@@ -187,6 +187,43 @@ def _get_sector_scores_cached():
     _sector_scores_cache = (scores, time.time())
     return scores
 
+# ── sectors.app overlay (env-gated) ──────────────────────────────────
+# SECTORS_APP_MODE: off (default) | shadow | enforce
+#   off     → internal sector_rotation only (legacy behavior)
+#   shadow  → internal decides; log when sectors.app disagrees
+#   enforce → both must agree to greenlight
+def _sector_verdict(ticker, scored):
+    mode = os.getenv("SECTORS_APP_MODE", "off").strip().lower()
+    if mode == "off":
+        from engine.sector_rotation import is_sector_tradeable
+        return is_sector_tradeable(ticker, scored)
+
+    try:
+        from engine.sectors_app_filter import combined_sector_verdict, _lookup_sector
+        from engine.sector_rotation import is_sector_tradeable, get_ticker_sector
+    except Exception:
+        from engine.sector_rotation import is_sector_tradeable
+        return is_sector_tradeable(ticker, scored)
+
+    internal_ok, internal_reason = is_sector_tradeable(ticker, scored)
+
+    if mode == "shadow":
+        sa = _lookup_sector(get_ticker_sector(ticker))
+        sa_chg = sa.get("chg_30d") if sa else None
+        if sa_chg is not None:
+            sa_ok = sa_chg > -15.0
+            if sa_ok != internal_ok:
+                logging.info(
+                    f"[sectors.app SHADOW] {ticker} disagreement — "
+                    f"internal={internal_ok} ({internal_reason}); "
+                    f"sectors.app 30d={sa_chg:+.2f}% (ok={sa_ok})"
+                )
+        return internal_ok, internal_reason
+
+    # enforce
+    return combined_sector_verdict(ticker, scored)
+
+
 # Open-trade status cache: {trade_id: {"pnl_pct": float, "status": str}}
 _last_trades_state: dict = {}
 
@@ -206,7 +243,7 @@ def scan_momentum_signals():
     # Pre-compute sector scores once for entire scan (1-hour TTL cache)
     _sector_scores = _get_sector_scores_cached()
 
-    STRATEGY    = "momentum"
+    STRATEGY    = "Momentum Following"
     MIN_CONSIST = 50.0
     BLACKLIST   = 33.0
 
@@ -262,8 +299,10 @@ def scan_momentum_signals():
             flow_reason = "fundamental filter OFF"
 
         # Sector rotation filter — skip UNDERWEIGHT sectors
+        # Routed through _sector_verdict so SECTORS_APP_MODE can layer
+        # sectors.app data on top without touching this loop.
         if _f_sector:
-            _sec_ok, _sec_reason = is_sector_tradeable(ticker, _sector_scores)
+            _sec_ok, _sec_reason = _sector_verdict(ticker, _sector_scores)
             if not _sec_ok:
                 logging.debug(f"[scan_momentum] {ticker} blocked by sector: {_sec_reason}")
                 continue
@@ -301,9 +340,11 @@ def scan_momentum_signals():
                 continue
             vr     = calc_vol_ratio(df)
             streak = (df["close"] > df["close"].shift(1)) & (df["close"].shift(1) > df["close"].shift(2))
-            # Holiday/weekend gap-up: 1 strong up day after a gap > 1 day works
+            # Gap-up after a >1-day calendar break (weekend/holiday) fires even
+            # without a 2-bar streak — the streak check fails across the gap. 1%
+            # floor keeps tiny weekend drift from triggering false signals.
             _date_diff = pd.to_datetime(df["date"]).diff().dt.days
-            _gap_up = (df["close"] > df["close"].shift(1)) & (_date_diff > 1)
+            _gap_up = (df["close"] > df["close"].shift(1) * 1.01) & (_date_diff > 1)
             sig    = (streak | _gap_up) & (vr > 1.3) & (vr <= 5.0)
             if sig.iloc[-1]:
                 # Signal quality gate — block 'watch' (100% loss rate in audit)
@@ -450,7 +491,7 @@ def daily_signal_scan():
         try:
             import sys, os
             sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-            from paper_trade import open_trade, get_open_trades, get_config
+            from paper_trade import open_trade, get_open_trades, get_config, get_backtest_best
 
             cfg      = get_config()
             max_open = int(cfg["max_open"])
@@ -464,6 +505,17 @@ def daily_signal_scan():
                 if any(t["ticker"] == s["ticker"] for t in opened):
                     print(f"[AutoTrade] {s['ticker']} sudah ada posisi terbuka, skip")
                     continue
+
+                # Quality gate — skip entries the backtest rates as coin-flips.
+                # POWR-class trades (~0.7% predicted return, <40% win rate) bleed capital.
+                _bt = get_backtest_best(s["ticker"])
+                if _bt is not None:
+                    _bt_ret = _bt["best_return"] if _bt["best_return"] is not None else 0.0
+                    _bt_wr  = _bt["win_rate"]    if _bt["win_rate"]    is not None else 0.0
+                    if _bt_ret < 1.0 or _bt_wr < 40.0:
+                        print(f"[AutoTrade] {s['ticker']} skipped — backtest weak "
+                              f"(ret={_bt_ret:.2f}%, win={_bt_wr:.0f}%)")
+                        continue
 
                 result = open_trade(s["ticker"], s["close"], notify=False)
                 if "error" in result:
@@ -691,8 +743,9 @@ def scheduled_multi_strategy_scan():
 
     for ticker in tickers:
         try:
-            # Sector rotation filter
-            _sec_ok, _sec_reason = is_sector_tradeable(ticker, _sector_scores)
+            # Sector rotation filter — routed through _sector_verdict
+            # to allow optional sectors.app overlay (env: SECTORS_APP_MODE)
+            _sec_ok, _sec_reason = _sector_verdict(ticker, _sector_scores)
             if not _sec_ok:
                 continue
 
@@ -913,6 +966,12 @@ def _run_open_trade_monitor():
         check_all_open_trades()
     except Exception as e:
         print(f"[scheduler] Monitor error: {e}")
+    # DD circuit breaker check — cheap, runs each monitor cycle (every 5 min during trading)
+    try:
+        from paper_trade import check_dd_circuit_breaker
+        check_dd_circuit_breaker()
+    except Exception as e:
+        print(f"[scheduler] DD circuit breaker error: {e}")
 
 
 def _run_screener_intraday():
@@ -1467,21 +1526,6 @@ def run_premover_eod():
         send_telegram(f"🔴 <b>Pre-mover Scan Error</b>\n<code>{str(e)[:200]}</code>")
 
 
-def run_pattern_summary():
-    """Daily roll-up of premover alert→trade conversion. Runs after EOD scan."""
-    from engine.premover_detector import daily_pattern_summary
-    try:
-        body = daily_pattern_summary(DB_PATH, days=1)
-        if not body:
-            print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pattern summary: no alerts today.")
-            return
-        msg = f"📊 <b>Premover Pattern Summary (today)</b>\n<pre>{body}</pre>"
-        send_telegram(msg)
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pattern summary sent.")
-    except Exception as e:
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pattern summary error: {e}")
-
-
 def start_scheduler():
     scheduler = BackgroundScheduler(timezone=WIB)
 
@@ -1572,11 +1616,6 @@ def start_scheduler():
         day_of_week="mon-fri", hour=16, minute=30, timezone=WIB),
         id="premover_eod", name="Pre-mover EOD Scan 16:30")
 
-    # Pattern conversion summary — 16:45 WIB (after premover EOD)
-    scheduler.add_job(run_pattern_summary, CronTrigger(
-        day_of_week="mon-fri", hour=16, minute=45, timezone=WIB),
-        id="pattern_summary", name="Pattern Summary 16:45")
-
     scheduler.start()
     print("Scheduler started:")
     print("  🤖 AUTO-TRADING STATUS: 09:00 (success/failed check)")
@@ -1588,7 +1627,6 @@ def start_scheduler():
     print("  🔄 DAILY FETCH: 17:30")
     print("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
     print("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
-    print("  📊 PATTERN SUMMARY: 16:45 (alert→trade conversion)")
     return scheduler
 
 if __name__ == "__main__":
