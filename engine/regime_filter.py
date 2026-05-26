@@ -1,14 +1,14 @@
 """
 Regime Filter — AI-powered market regime detection per ticker.
 ==============================================================
-Deteksi regime: TRENDING / SIDEWAYS / UNCERTAIN
+Deteksi regime: BULL / BEAR / SIDEWAYS
 Lalu pilih strategi yang sesuai.
 
 Usage:
     from engine.regime_filter import detect_regime, strategy_regime_adaptive
 
     # Detect regime saja
-    regime = detect_regime(df)  # "TRENDING" / "SIDEWAYS" / "UNCERTAIN"
+    regime = detect_regime(df)  # "BULL" / "BEAR" / "SIDEWAYS"
 
     # Full strategy — auto-select berdasarkan regime
     result = strategy_regime_adaptive(df, capital=50_000_000)
@@ -139,32 +139,32 @@ def apply_macro_overlay(regime: str, macro: dict) -> tuple:
 
 def detect_regime(df: pd.DataFrame) -> str:
     """
-    Detect market regime for the latest bar using rule-based approach.
-    Returns: "TRENDING" / "SIDEWAYS" / "UNCERTAIN"
+    Detect market regime from signed MA-slope.
+    Returns: 'BULL' / 'BEAR' / 'SIDEWAYS'
 
     Rules:
-      TRENDING:  ADX > 25 AND |MA slope| > 1%
-      SIDEWAYS:  ADX < 20 AND |MA slope| < 0.5%
-      UNCERTAIN: everything else
+      BULL:     ADX > 25 AND MA-slope > +1.0%
+      BEAR:     ADX > 25 AND MA-slope < -1.0%
+      SIDEWAYS: everything else (folds old SIDEWAYS + UNCERTAIN)
     """
     if len(df) < 30:
-        return "UNCERTAIN"
+        return 'SIDEWAYS'
 
-    adx = calc_adx(df, 14)
-    slope = calc_ma_slope(df, 20, 5)
+    adx   = calc_adx(df, 14)
+    slope = calc_ma_slope(df, 20, 5)          # signed, NOT abs()
 
-    last_adx = adx.iloc[-1]
-    last_slope = abs(slope.iloc[-1])
+    last_adx   = adx.iloc[-1]
+    last_slope = slope.iloc[-1]
 
     if pd.isna(last_adx) or pd.isna(last_slope):
-        return "UNCERTAIN"
+        return 'SIDEWAYS'
 
     if last_adx > 25 and last_slope > 1.0:
-        return "TRENDING"
-    elif last_adx < 20 and last_slope < 0.5:
-        return "SIDEWAYS"
+        return 'BULL'
+    elif last_adx > 25 and last_slope < -1.0:
+        return 'BEAR'
     else:
-        return "UNCERTAIN"
+        return 'SIDEWAYS'
 
 
 # ── Feature matrix builder (for ML training) ─────────────────────────
@@ -192,23 +192,18 @@ def build_regime_features(df: pd.DataFrame) -> pd.DataFrame:
 def label_regime_from_future(df: pd.DataFrame, forward_days: int = 5,
                               trend_threshold: float = 2.0) -> pd.Series:
     """
-    Auto-label regime berdasarkan future return (untuk training).
-    - forward return > +threshold% → TRENDING (0 = trending up works)
-    - forward return < -threshold% → TRENDING (1 = trending down)
-    - abs(return) < threshold/2   → SIDEWAYS (2)
-    - else                        → UNCERTAIN (3)
-
-    Simplified to binary for Logistic Regression:
-    - TRENDING (1): abs(forward return) > threshold → momentum strategies work
-    - NOT_TRENDING (0): abs(forward return) <= threshold → reversion/skip
+    Auto-label regime from signed future return (for ML training).
+    - forward return > +threshold%  → 'BULL'
+    - forward return < -threshold%  → 'BEAR'
+    - abs(return) <= threshold%     → 'SIDEWAYS'
+    - last forward_days rows        → NaN (no future data)
     """
     future_ret = (df['close'].shift(-forward_days) - df['close']) / df['close'] * 100
-    labels = pd.Series(index=df.index, dtype='int32')
-    labels[:] = -1  # unlabeled
-
-    labels[future_ret.abs() > trend_threshold] = 1   # TRENDING
-    labels[future_ret.abs() <= trend_threshold] = 0   # NOT_TRENDING
-
+    labels = pd.Series(index=df.index, dtype=object)          # all NaN by default
+    labels[future_ret > trend_threshold]  = 'BULL'
+    labels[future_ret < -trend_threshold] = 'BEAR'
+    mask_sideways = (future_ret >= -trend_threshold) & (future_ret <= trend_threshold)
+    labels[mask_sideways] = 'SIDEWAYS'
     return labels
 
 
@@ -236,6 +231,10 @@ class RegimeClassifier:
         """
         Train on full df. Returns training metrics.
         """
+        raise NotImplementedError(
+            "RegimeClassifier.train not yet updated for 3-class string labels. "
+            "See Task 2 (multinomial LogReg) in the implementation plan."
+        )
         from sklearn.linear_model import LogisticRegression
         from sklearn.preprocessing import StandardScaler
         from sklearn.metrics import accuracy_score, classification_report
@@ -322,9 +321,9 @@ def strategy_regime_adaptive(df: pd.DataFrame, capital: float = 50_000_000,
     """
     Meta-strategy: detect regime lalu jalankan strategi yang sesuai.
 
-    TRENDING  → Momentum Following (strategy_momentum)
-    SIDEWAYS  → VWAP Reversion (strategy_vwap_reversion)
-    UNCERTAIN → Skip (no trades)
+    BULL          → Momentum Following (strategy_momentum)
+    SIDEWAYS      → VWAP Reversion (strategy_vwap_reversion)
+    UNCERTAIN/BEAR → Skip (no trades)
 
     Jika classifier trained → pakai ML prediction
     Jika tidak → pakai rule-based detection
