@@ -6,7 +6,7 @@ import pytest
 
 @pytest.fixture
 def tmp_db(tmp_path):
-    """Temp SQLite DB with regime_watchlist + paper_trades tables."""
+    """Temp SQLite DB with regime_watchlist + paper_trades + backtest_cache."""
     db = tmp_path / "test.db"
     conn = sqlite3.connect(str(db))
     conn.executescript("""
@@ -17,7 +17,8 @@ def tmp_db(tmp_path):
             regime_at_add TEXT NOT NULL DEFAULT 'BEAR',
             rsi_at_add  REAL,
             close_vs_ma50_pct REAL,
-            wf_score    REAL,
+            bt_win_rate REAL,
+            bt_return_pct REAL,
             status      TEXT NOT NULL DEFAULT 'active',
             promoted_date TEXT,
             created_at  TEXT DEFAULT (datetime('now'))
@@ -30,6 +31,12 @@ def tmp_db(tmp_path):
             ticker  TEXT,
             status  TEXT DEFAULT 'OPEN'
         );
+
+        CREATE TABLE backtest_cache (
+            ticker TEXT, computed_date TEXT,
+            best_strategy TEXT, best_return REAL, win_rate REAL,
+            PRIMARY KEY (ticker, computed_date)
+        );
     """)
     conn.commit()
     return conn
@@ -38,8 +45,8 @@ def tmp_db(tmp_path):
 def test_add_new_entry(tmp_db):
     from engine.watchlist import add_to_watchlist
     added = add_to_watchlist(tmp_db, 'BBRI', rsi=28.0,
-                              close_vs_ma50_pct=-5.2, wf_score=72.0,
-                              scan_date='2026-05-26')
+                              close_vs_ma50_pct=-5.2, win_rate=60.0,
+                              best_return=8.0, scan_date='2026-05-26')
     assert added is True
     row = tmp_db.execute(
         "SELECT ticker, status, rsi_at_add FROM regime_watchlist WHERE ticker='BBRI'"
@@ -52,9 +59,9 @@ def test_add_new_entry(tmp_db):
 def test_duplicate_not_added(tmp_db):
     from engine.watchlist import add_to_watchlist
     add_to_watchlist(tmp_db, 'BBRI', rsi=28.0, close_vs_ma50_pct=-5.2,
-                     wf_score=72.0, scan_date='2026-05-26')
+                     win_rate=60.0, best_return=8.0, scan_date='2026-05-26')
     added = add_to_watchlist(tmp_db, 'BBRI', rsi=27.0, close_vs_ma50_pct=-6.0,
-                              wf_score=72.0, scan_date='2026-05-26')
+                              win_rate=60.0, best_return=8.0, scan_date='2026-05-26')
     assert added is False
     count = tmp_db.execute(
         "SELECT COUNT(*) FROM regime_watchlist WHERE ticker='BBRI'"
@@ -67,14 +74,14 @@ def test_open_trade_not_added(tmp_db):
     tmp_db.execute("INSERT INTO paper_trades (ticker, status) VALUES ('BMRI', 'OPEN')")
     tmp_db.commit()
     added = add_to_watchlist(tmp_db, 'BMRI', rsi=28.0, close_vs_ma50_pct=-5.0,
-                              wf_score=72.0, scan_date='2026-05-26')
+                              win_rate=60.0, best_return=8.0, scan_date='2026-05-26')
     assert added is False
 
 
 def test_promote_on_bull_flip(tmp_db):
     from engine.watchlist import add_to_watchlist, promote_watchlist
     add_to_watchlist(tmp_db, 'BBCA', rsi=29.0, close_vs_ma50_pct=-6.0,
-                     wf_score=65.0, scan_date='2026-05-20')
+                     win_rate=55.0, best_return=7.0, scan_date='2026-05-20')
     promoted = promote_watchlist(tmp_db, ['BBCA', 'TLKM'], scan_date='2026-05-26')
     assert 'BBCA' in promoted
     row = tmp_db.execute(
@@ -94,8 +101,8 @@ def test_expire_stale(tmp_db):
     from engine.watchlist import expire_stale
     # entry added 35 calendar days ago (stale beyond 30-day default)
     tmp_db.execute("""
-        INSERT INTO regime_watchlist (ticker, added_date, wf_score, status)
-        VALUES ('ASII', '2026-04-15', 70.0, 'active')
+        INSERT INTO regime_watchlist (ticker, added_date, status)
+        VALUES ('ASII', '2026-04-15', 'active')
     """)
     tmp_db.commit()
     expired = expire_stale(tmp_db, scan_date='2026-05-26', max_calendar_days=30)
@@ -109,10 +116,29 @@ def test_expire_stale(tmp_db):
 def test_priority_tickers_returns_promoted(tmp_db):
     from engine.watchlist import add_to_watchlist, promote_watchlist, priority_tickers
     add_to_watchlist(tmp_db, 'BBNI', rsi=30.0, close_vs_ma50_pct=-4.0,
-                     wf_score=68.0, scan_date='2026-05-20')
+                     win_rate=58.0, best_return=9.0, scan_date='2026-05-20')
     promote_watchlist(tmp_db, ['BBNI'], scan_date='2026-05-26')
     tickers = priority_tickers(tmp_db)
     assert 'BBNI' in tickers
+
+
+def test_quality_gate_passes_and_fails(tmp_db):
+    from engine.watchlist import passes_quality_gate
+    tmp_db.executemany(
+        "INSERT INTO backtest_cache (ticker, computed_date, best_strategy, best_return, win_rate) "
+        "VALUES (?,?,?,?,?)",
+        [
+            ('GOOD', '2026-05-26', 'Vol-Weighted Entry', 12.0, 65.0),  # passes
+            ('LOWWR', '2026-05-26', 'ORB', 12.0, 40.0),                # win_rate too low
+            ('LOWRET', '2026-05-26', 'Momentum Following', 2.0, 65.0), # return too low
+        ],
+    )
+    tmp_db.commit()
+    ok, wr, ret = passes_quality_gate(tmp_db, 'GOOD')
+    assert ok is True and wr == 65.0 and ret == 12.0
+    assert passes_quality_gate(tmp_db, 'LOWWR')[0] is False
+    assert passes_quality_gate(tmp_db, 'LOWRET')[0] is False
+    assert passes_quality_gate(tmp_db, 'MISSING')[0] is False
 
 
 def test_compute_rsi_uptrend_high():

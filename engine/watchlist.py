@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS regime_watchlist (
     regime_at_add     TEXT NOT NULL DEFAULT 'BEAR',
     rsi_at_add        REAL,
     close_vs_ma50_pct REAL,
-    wf_score          REAL,
+    bt_win_rate       REAL,
+    bt_return_pct     REAL,
     status            TEXT NOT NULL DEFAULT 'active',
     promoted_date     TEXT,
     created_at        TEXT DEFAULT (datetime('now'))
@@ -25,8 +26,12 @@ CREATE INDEX IF NOT EXISTS idx_rwl_ticker_status
     ON regime_watchlist(ticker, status);
 """
 
-RSI_THRESHOLD  = 35.0     # oversold gate
-WF_SCORE_MIN   = 60.0     # quality gate
+# Quality gate uses backtest_cache (cross-ticker comparable), NOT
+# wf_scores.weighted_score — that score is normalized within each ticker, so
+# ~99% of tickers score near 1.0 and it does not discriminate quality.
+RSI_THRESHOLD  = 35.0     # oversold gate (RSI-14)
+WIN_RATE_MIN   = 50.0     # backtest win-rate gate (%)
+RETURN_MIN_PCT = 5.0      # backtest predicted-return gate (%)
 
 
 def ensure_table(conn: sqlite3.Connection) -> None:
@@ -52,12 +57,32 @@ def compute_rsi(close, period: int = 14) -> float:
     return float(100 - 100 / (1 + rs))
 
 
+def passes_quality_gate(conn: sqlite3.Connection, ticker: str):
+    """Backtest-based quality gate (cross-ticker comparable).
+
+    Returns (ok, win_rate, best_return) from the most recent backtest_cache
+    row. ok is True when win_rate >= WIN_RATE_MIN AND best_return >= RETURN_MIN_PCT.
+    Missing cache row → (False, None, None).
+    """
+    row = conn.execute(
+        "SELECT win_rate, best_return FROM backtest_cache "
+        "WHERE ticker=? ORDER BY computed_date DESC LIMIT 1",
+        (ticker,),
+    ).fetchone()
+    if not row or row[0] is None or row[1] is None:
+        return False, None, None
+    win_rate, best_return = float(row[0]), float(row[1])
+    ok = win_rate >= WIN_RATE_MIN and best_return >= RETURN_MIN_PCT
+    return ok, win_rate, best_return
+
+
 def add_to_watchlist(
     conn: sqlite3.Connection,
     ticker: str,
     rsi: float,
     close_vs_ma50_pct: float,
-    wf_score: float,
+    win_rate: float,
+    best_return: float,
     scan_date: str,
 ) -> bool:
     """
@@ -85,9 +110,10 @@ def add_to_watchlist(
 
     conn.execute(
         """INSERT INTO regime_watchlist
-           (ticker, added_date, rsi_at_add, close_vs_ma50_pct, wf_score, status)
-           VALUES (?, ?, ?, ?, ?, 'active')""",
-        (ticker, scan_date, rsi, close_vs_ma50_pct, wf_score),
+           (ticker, added_date, rsi_at_add, close_vs_ma50_pct,
+            bt_win_rate, bt_return_pct, status)
+           VALUES (?, ?, ?, ?, ?, ?, 'active')""",
+        (ticker, scan_date, rsi, close_vs_ma50_pct, win_rate, best_return),
     )
     conn.commit()
     return True
