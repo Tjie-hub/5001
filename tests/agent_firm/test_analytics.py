@@ -137,7 +137,7 @@ def _seed_agreement_data(db_path):
     traces = [
         ("technical", json.dumps({"verdict": "BULLISH", "conviction": 0.7})),
         ("flow",      json.dumps({"flow_verdict": "ACCUMULATING"})),
-        ("regime",    json.dumps({"regime_call": "TRENDING"})),
+        ("regime",    json.dumps({"regime_call": "BULL"})),
         ("news",      json.dumps({"sentiment": "BULLISH"})),
         ("bull",      json.dumps({"bull_case": "Strong flow."})),
         ("bear",      json.dumps({"bear_case": "Rate risk."})),

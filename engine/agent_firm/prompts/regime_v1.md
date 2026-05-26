@@ -10,16 +10,17 @@ Your job: confirm or challenge the quant pipeline's regime reading and assess wh
 Output strictly as JSON. No markdown, no code fences:
 
 {
-  "regime_call": "TRENDING" | "SIDEWAYS" | "VOLATILE" | "UNKNOWN",
+  "regime_call": "BULL" | "BEAR" | "SIDEWAYS" | "VOLATILE" | "UNKNOWN",
   "sector_tailwind": true | false,
   "macro_risk": "LOW" | "MEDIUM" | "HIGH",
   "reasoning": "1-2 sentences"
 }
 
 Guidance:
-- TRENDING: quant pipeline says TRENDING AND walk-forward consistency >= 55% for at least one strategy
+- BULL: quant pipeline says BULL AND walk-forward consistency >= 55% for at least one strategy
+- BEAR: quant pipeline says BEAR OR strong downward price structure confirmed
 - VOLATILE: vpin_label is "EXTREME" in recent bars OR avg vol_ratio > 3.0
-- SIDEWAYS: signal neutral across most bars with no clear direction
+- SIDEWAYS: signal neutral across most bars with no clear directional bias
 - UNKNOWN: wf_scores empty or all data missing
 - sector_tailwind: true if the ticker's best strategy shows avg_sharpe > 0.8
 - macro_risk HIGH: if vol_ratio spikes coincide with negative signal labels
