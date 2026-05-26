@@ -89,11 +89,14 @@ def test_detect_bear():
 
 def _rich_df(n=220):
     """Mixed-regime df long enough for multinomial training (all 3 classes)."""
+    import pandas as pd
     up   = [100 + i * 0.5 for i in range(80)]
     flat = [140.0 + 0.2 * (i % 3 - 1) for i in range(60)]
     down = [140 - i * 0.5 for i in range(80)]
     closes = (up + flat + down)[:n]
-    return _make_ohlcv(closes)
+    df = _make_ohlcv(closes)
+    df['date'] = pd.date_range('2023-01-01', periods=n, freq='B').strftime('%Y-%m-%d')
+    return df
 
 
 def test_classifier_trains_3class():
@@ -141,3 +144,53 @@ def test_classifier_class_counts_in_metrics():
     cc = metrics['class_counts']
     assert set(cc.keys()).issubset({'BULL', 'BEAR', 'SIDEWAYS'})
     assert sum(cc.values()) == metrics['n_samples']
+
+
+# ── apply_macro_overlay ───────────────────────────────────────────────────────
+
+def test_macro_bull_downgrades_on_idr_weakness():
+    from engine.regime_filter import apply_macro_overlay
+    regime, reason = apply_macro_overlay('BULL', {'idr_weakening': 2.0, 'bi_rate': 5.5})
+    assert regime == 'SIDEWAYS'
+    assert 'BULL→SIDEWAYS' in reason
+
+
+def test_macro_bear_unchanged_on_idr_weakness():
+    from engine.regime_filter import apply_macro_overlay
+    regime, _ = apply_macro_overlay('BEAR', {'idr_weakening': 2.0, 'bi_rate': 5.5})
+    assert regime == 'BEAR'
+
+
+def test_macro_sideways_unchanged():
+    from engine.regime_filter import apply_macro_overlay
+    regime, _ = apply_macro_overlay('SIDEWAYS', {'idr_weakening': 2.0, 'bi_rate': 5.5})
+    assert regime == 'SIDEWAYS'
+
+
+def test_macro_clean_bull_unchanged():
+    from engine.regime_filter import apply_macro_overlay
+    regime, reason = apply_macro_overlay('BULL', {'idr_weakening': 0.3, 'bi_rate': 5.5})
+    assert regime == 'BULL'
+    assert reason == 'macro OK'
+
+
+# ── strategy_regime_adaptive ──────────────────────────────────────────────────
+
+def test_adaptive_bear_flat_equity():
+    from engine.regime_filter import strategy_regime_adaptive
+    # Steady downtrend → rule-based returns BEAR → flat equity
+    closes = [148 - i * 0.6 for i in range(80)]
+    df = _make_ohlcv(closes)
+    result = strategy_regime_adaptive(df, capital=10_000_000, classifier=None)
+    assert result['regime'] == 'BEAR'
+    assert result['trades'] == []
+    assert result['final_capital'] == result['initial_capital']
+
+
+def test_adaptive_has_regime_and_confidence():
+    from engine.regime_filter import strategy_regime_adaptive
+    result = strategy_regime_adaptive(_rich_df(120), capital=10_000_000, classifier=None)
+    assert 'regime' in result
+    assert result['regime'] in ('BULL', 'BEAR', 'SIDEWAYS')
+    assert 'regime_confidence' in result
+    assert result['strategy'] == 'Regime Adaptive'

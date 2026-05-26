@@ -114,8 +114,9 @@ def get_macro_overlay(period: str = "30d") -> dict:
 
 def apply_macro_overlay(regime: str, macro: dict) -> tuple:
     """
-    Terapkan macro overlay ke hasil regime prediction.
-    IDR melemah >1% dalam 5 hari → TRENDING di-downgrade ke UNCERTAIN.
+    Apply macro overlay to regime prediction.
+    IDR weakening >threshold → BULL downgraded to SIDEWAYS.
+    BEAR is never upgraded by macro alone.
     """
     idr_weak = macro.get("idr_weakening", 0.0)
     bi_rate  = macro.get("bi_rate", BI_RATE)
@@ -124,9 +125,9 @@ def apply_macro_overlay(regime: str, macro: dict) -> tuple:
 
     if idr_weak > _IDR_WEAKEN_THRESHOLD:
         reason_parts.append(f"IDR melemah {idr_weak:+.2f}% (5d)")
-        if regime == "TRENDING":
-            final_regime = "UNCERTAIN"
-            reason_parts.append("TRENDING→UNCERTAIN")
+        if regime == "BULL":
+            final_regime = "SIDEWAYS"
+            reason_parts.append("BULL→SIDEWAYS")
 
     if bi_rate > 6.5:
         reason_parts.append(f"BI Rate tinggi {bi_rate}%")
@@ -304,50 +305,39 @@ class RegimeClassifier:
 
 def strategy_regime_adaptive(df: pd.DataFrame, capital: float = 50_000_000,
                               filters: list = None,
-                              classifier: RegimeClassifier = None) -> dict:
+                              classifier: 'RegimeClassifier' = None) -> dict:
     """
-    Meta-strategy: detect regime lalu jalankan strategi yang sesuai.
-
-    BULL          → Momentum Following (strategy_momentum)
-    SIDEWAYS      → VWAP Reversion (strategy_vwap_reversion)
-    UNCERTAIN/BEAR → Skip (no trades)
-
-    Jika classifier trained → pakai ML prediction
-    Jika tidak → pakai rule-based detection
+    BULL     → Momentum Following
+    SIDEWAYS → VWAP Reversion
+    BEAR     → No trades (equity flat); dip-scouting is handled in live scan
     """
-    import sys, os; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))); from engine.strategies import strategy_momentum, strategy_vwap_reversion
+    import sys, os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from engine.strategies import strategy_momentum, strategy_vwap_reversion
 
     if classifier and classifier.is_trained:
         regime, confidence = classifier.predict(df)
-        # Fallback ke rule-based jika ML tidak yakin
-        if regime == "UNCERTAIN":
-            regime = detect_regime(df)
-            confidence = 0.0
     else:
-        regime = detect_regime(df)
+        regime    = detect_regime(df)
         confidence = 0.0
 
-    if regime == "TRENDING":
+    if regime == 'BULL':
         result = strategy_momentum(df, capital=capital, filters=filters)
-    elif regime == "SIDEWAYS":
+    elif regime == 'SIDEWAYS':
         result = strategy_vwap_reversion(df, capital=capital, filters=filters)
-    else:
-        # UNCERTAIN — return empty result
+    else:                                       # BEAR
         result = {
-            'strategy': 'Regime Adaptive',
-            'trades': [],
-            'equity': [capital] * len(df),
-            'final_capital': capital,
+            'strategy':        'Regime Adaptive',
+            'trades':          [],
+            'equity':          [capital] * len(df),
+            'final_capital':   capital,
             'initial_capital': capital,
         }
 
-    # Tag with regime info
-    result['strategy'] = 'Regime Adaptive'
-    if 'initial_capital' not in result:
-        result['initial_capital'] = capital
-    result['regime'] = regime
+    result['strategy']          = 'Regime Adaptive'
+    result.setdefault('initial_capital', capital)
+    result['regime']            = regime
     result['regime_confidence'] = round(confidence, 4)
-
     return result
 
 
