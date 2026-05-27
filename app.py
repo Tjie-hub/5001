@@ -682,21 +682,23 @@ def api_multi_quick_scan():
         results_by_strategy = {s: [] for s in strategies}
 
         for ticker, signals in ticker_signals.items():
-            # Fetch data once per ticker
-            try:
-                conn = sqlite3.connect(DB_PATH)
-                df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
-                conn.close()
-                if len(df) < 60:
-                    continue
-                for c in ['open','high','low','close','volume']:
-                    df[c] = df[c].astype(float)
-                strat_results = run_all_strategies(df, capital=capital)
-                best = max(strat_results, key=lambda x: x['total_return_pct'])
-                regime = detect_regime(df)
-            except Exception:
-                best = None
-                regime = "UNCERTAIN"
+            # Only run expensive backtest if at least one strategy has a signal
+            has_any_signal = any(signals.get(s, {}).get('has_signal') for s in strategies)
+            best = None
+            regime = "UNCERTAIN"
+            if has_any_signal:
+                try:
+                    conn = sqlite3.connect(DB_PATH)
+                    df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
+                    conn.close()
+                    if len(df) >= 60:
+                        for c in ['open','high','low','close','volume']:
+                            df[c] = df[c].astype(float)
+                        strat_results = run_all_strategies(df, capital=capital)
+                        best = max(strat_results, key=lambda x: x['total_return_pct'])
+                        regime = detect_regime(df)
+                except Exception:
+                    pass
 
             for strategy in strategies:
                 if strategy in signals:
@@ -749,20 +751,15 @@ def api_multi_quick_scan():
                 if r['ticker'] in wf_map:
                     r['wf_score'] = wf_map[r['ticker']]
 
-        # Attach flow for union results
-        include_flow = body.get('include_flow', True)
-        flow_threshold = body.get('flow_threshold', 2)
-        for strategy in results_by_strategy:
-            results_by_strategy[strategy] = attach_flow_data(
-                results_by_strategy[strategy],
-                include_flow,
-                flow_threshold
-            )
-
         # Flatten results into single array (frontend expects array, not dict)
         flat_results = []
         for strategy_results in results_by_strategy.values():
             flat_results.extend(strategy_results)
+
+        # Attach flow once on flat list (not per-strategy — avoids 9x redundant fetches)
+        include_flow = body.get('include_flow', False)
+        flow_threshold = body.get('flow_threshold', 2)
+        flat_results = attach_flow_data(flat_results, include_flow, flow_threshold)
 
         return jsonify({
             'success': True,
@@ -783,6 +780,38 @@ def api_multi_quick_scan():
 @app.route("/api/signals/today", methods=["GET"])
 def api_signals_today():
     signals = scan_momentum_signals()
+    return jsonify({"count": len(signals), "signals": signals})
+
+
+@app.route("/api/signals/scheduled", methods=["GET"])
+def api_signals_scheduled():
+    """Pre-computed signals written by the scheduler's periodic scans."""
+    import datetime, sqlite3
+    since = request.args.get("since", datetime.date.today().isoformat())
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        rows = conn.execute(
+            "SELECT scan_time, ticker, strategies, flow_score, flow_verdict, "
+            "smart_money, signal_reasons "
+            "FROM scheduled_signals WHERE date(scan_time) >= ? "
+            "ORDER BY scan_time DESC, flow_score DESC",
+            (since,),
+        ).fetchall()
+        conn.close()
+    except Exception as e:
+        return jsonify({"error": str(e), "count": 0, "signals": []})
+    signals = [
+        {
+            "scan_time": r[0],
+            "ticker": r[1],
+            "strategies": [s.strip() for s in r[2].split(",")],
+            "flow_score": r[3],
+            "flow_verdict": r[4],
+            "smart_money": r[5],
+            "signal_reasons": r[6],
+        }
+        for r in rows
+    ]
     return jsonify({"count": len(signals), "signals": signals})
 
 @app.route("/api/agent/status", methods=["GET"])
@@ -817,6 +846,24 @@ def agent_status():
         "active": _agent_config.is_active(),
         "model": _agent_config.MODEL_ID,
         "today_stats": stats,
+    })
+
+@app.route("/api/agent/config", methods=["POST"])
+def agent_config():
+    from engine.agent_firm import config as _agent_config
+    body = request.get_json(force=True) or {}
+    mode = body.get("mode", "off")
+    if mode == "enforce":
+        _agent_config.set_mode(enabled=True, enforce=True)
+    elif mode == "shadow":
+        _agent_config.set_mode(enabled=True, enforce=False)
+    else:
+        _agent_config.set_mode(enabled=False, enforce=False)
+    return jsonify({
+        "enabled": _agent_config.is_active() or mode != "off",
+        "enforce": _agent_config.get_enforce(),
+        "active": _agent_config.is_active(),
+        "mode": mode,
     })
 
 @app.route("/api/agent/audit", methods=["GET"])
