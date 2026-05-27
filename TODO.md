@@ -1,28 +1,28 @@
 # IDX Walkforward — TODO
 
-_Last updated: 2026-05-27 (post-regime-3class merge + holiday calendar + Telegram rotation)_
+_Last updated: 2026-05-27 (post-regime-3class merge + holiday calendar + Telegram rotation + agent-firm mode toggle + infra services diagnosed)_
 
 ---
 
-## 🟡 Sprint 11 — Agent-Firm Mode Toggle (PLANNED, not started)
+## ✅ Sprint 11 — Agent-Firm Mode Toggle (SHIPPED 2026-05-27)
 
-> Spec + plan written: `docs/superpowers/specs/2026-05-21-agent-firm-mode-toggle-design.md`
-> Plan: `docs/superpowers/plans/2026-05-21-agent-firm-mode-toggle.md`
-
-- [ ] Implement agent-firm enable/disable toggle per the plan
-- [ ] Wire `POST /api/agent/config` endpoint (already landed in bca533d) to persist toggle
-- [ ] UI switch in dashboard
-
----
-
-## 🟡 Infrastructure — Sibling Services (UNRESOLVED)
-
-- [ ] **`idx-walkforward.service`** stuck in `activating (auto-restart)` — runs `/home/tjiesar/idx-start.sh`, not investigated
-- [ ] **`idx-monitor.service`** stuck in `activating (auto-restart)` — runs `/home/tjiesar/idx-monitor/app.py`, not investigated
+- [x] `engine/agent_firm/config.py` — `_runtime`, `set_mode()`, `get_enforce()`, `is_active()` runtime override
+- [x] `POST /api/agent/config` — off/shadow/enforce toggle, runtime state persisted in memory
+- [x] `GET /api/agent/status` — returns `get_enforce()` (runtime-aware, not static env var)
+- [x] `scheduler.py` — uses `get_enforce()` to respect runtime mode
+- [x] Topbar pill (OFF/SHADOW/ENFORCE) in `backtest_multi.html` with confirm modal on ENFORCE
 
 ---
 
-## 🟡 Sprint 8 — News Volume Spike Detector (cold-start passed 2026-05-09)
+## ✅ Infrastructure — Sibling Services (RESOLVED 2026-05-27)
+
+- [x] **`idx-walkforward.service`** — was old duplicate of `idx-walkforward-5001.service`, causing port 5001 conflict. Disabled.
+- [x] **`idx-monitor.service`** — pointed to `/home/tjiesar/idx-monitor/` (non-existent, never built). Disabled after 411+ crash loops.
+- [x] **`idx-walkforward-5001.service`** confirmed sole authoritative service, active and healthy.
+
+---
+
+## ✅ Sprint 8 — News Volume Spike Detector (SHIPPED + VALIDATED 2026-05-27)
 
 - [x] News source: **Google News RSS** (`<ticker> saham`, `hl=id`)
 - [x] Schema: `news_mentions(ticker, date, count, headlines_json, updated_at)`
@@ -30,8 +30,8 @@ _Last updated: 2026-05-27 (post-regime-3class merge + holiday calendar + Telegra
 - [x] Spike rule: `today_count ≥ 3× 30d_avg AND today_count ≥ 3`
 - [x] Surface ⚡ tag + section in `flow_broker_report` Telegram
 - [x] Cold-start window passed
-- [ ] **Verify coverage**: `SELECT MIN(date), MAX(date), COUNT(DISTINCT date) FROM news_mentions`
-- [ ] **Spike → entry filter** (optional): observe correlation with profitable next-day moves, then wire into multi-strategy scan gate
+- [x] **Coverage verified**: 2026-04-26 → 2026-05-26, 17 trading days, 972 tickers, 15,558 rows, 411 spike events
+- [x] **Spike → entry filter REJECTED**: back-tested 344 events — win rate 35.5%, avg next-day return -0.58%. News spikes lag price (news chases moves). ⚡ Telegram tag stays as informational only.
 
 ---
 
@@ -87,6 +87,7 @@ _Last updated: 2026-05-27 (post-regime-3class merge + holiday calendar + Telegra
 | Stockbit community feed scraper | High effort, fragile scraping, account ban risk |
 | Full sentiment NLP on Google News | Signal lags price; keyword matching too noisy. Replaced by Sprint 8. |
 | Markov regime transition matrix | Per-ticker too sparse; signal redundant with current regime label |
+| News spike → entry filter | Back-tested 344 events: win rate 35.5%, avg return -0.58%. News lags price on IDX. |
 
 ---
 

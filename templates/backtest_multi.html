@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>IDX Strategy Suite</title>
+<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<meta property="og:title" content="IDX Strategy Suite">
+<meta property="og:description" content="Walk-forward backtesting & signal dashboard">
+<meta property="og:image" content="/static/og-banner.png">
+<meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -469,10 +475,15 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
 </style>
 </head>
 <body>
-<div id="agent-firm-badge" style="position:fixed;top:8px;right:8px;z-index:9999;
-     font:12px/1.4 system-ui,sans-serif;padding:4px 8px;border-radius:6px;
-     background:#222;color:#888;border:1px solid #444;">
-  Agent firm: <span id="agent-firm-state">…</span>
+<div id="enforce-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;">
+  <div style="background:#1a1a1a;border:1px solid #16a34a;border-radius:8px;padding:24px 28px;max-width:340px;width:90%;font:14px/1.5 system-ui,sans-serif;color:#e5e5e5;">
+    <div style="font-weight:700;font-size:15px;margin-bottom:10px;color:#4ade80;">Switch to ENFORCE?</div>
+    <div style="color:#aaa;margin-bottom:20px;">Vetoed tickers will be dropped from paper trade signals.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button id="enforce-cancel" style="padding:6px 16px;border:1px solid #444;border-radius:5px;background:#111;color:#aaa;cursor:pointer;font-size:13px;">Cancel</button>
+      <button id="enforce-ok"     style="padding:6px 16px;border:none;border-radius:5px;background:#16a34a;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Confirm</button>
+    </div>
+  </div>
 </div>
 <script>
 function updateFirmPill(active, enforce) {
@@ -495,7 +506,21 @@ function updateFirmPill(active, enforce) {
 }
 
 function setFirmMode(mode) {
-  if (mode === 'enforce' && !confirm('Switch to ENFORCE?\n\nVetoed tickers will be dropped from paper trade signals.')) return;
+  if (mode === 'enforce') {
+    document.getElementById('enforce-modal').style.display = 'flex';
+    document.getElementById('enforce-ok').onclick = () => {
+      document.getElementById('enforce-modal').style.display = 'none';
+      _applyFirmMode('enforce');
+    };
+    document.getElementById('enforce-cancel').onclick = () => {
+      document.getElementById('enforce-modal').style.display = 'none';
+    };
+    return;
+  }
+  _applyFirmMode(mode);
+}
+
+function _applyFirmMode(mode) {
   fetch('/api/agent/config', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -504,35 +529,13 @@ function setFirmMode(mode) {
   .then(r => r.ok ? r.json() : Promise.reject())
   .then(s => {
     updateFirmPill(s.active, s.enforce);
-    const el = document.getElementById('agent-firm-state');
-    const badge = document.getElementById('agent-firm-badge');
-    if (el && badge) {
-      if (!s.active) { el.textContent='OFF'; el.style.color='#888'; badge.style.color='#888'; badge.style.borderColor='#444'; }
-      else { el.textContent = s.enforce ? 'ENFORCE' : 'SHADOW'; badge.style.color = s.enforce ? '#fff' : '#fc0'; badge.style.borderColor = s.enforce ? '#0c0' : '#fc0'; }
-    }
   })
   .catch(() => { if (typeof showToast === 'function') showToast('Agent firm update failed', 'error'); });
 }
 
 fetch('/api/agent/status').then(r => r.json()).then(s => {
-  const el = document.getElementById('agent-firm-state');
-  const badge = document.getElementById('agent-firm-badge');
-  const st = s.today_stats || {};
-  const statsLine = st.evaluated
-    ? ` | ${st.evaluated} eval · ${st.approved} ✓ · ${st.vetoed} ✗ · $${(st.cost_usd||0).toFixed(4)}`
-    : '';
-  if (s.active) {
-    el.textContent = (s.enforce ? 'ENFORCE' : 'SHADOW') + statsLine;
-    badge.style.color = s.enforce ? '#fff' : '#fc0';
-    badge.style.borderColor = s.enforce ? '#0c0' : '#fc0';
-  } else {
-    el.textContent = 'OFF';
-    el.style.color = '#888';
-  }
   updateFirmPill(s.active, s.enforce);
-}).catch(() => {
-  document.getElementById('agent-firm-state').textContent = 'ERR';
-});
+}).catch(() => {});
 </script>
 
 <!-- Topbar -->
@@ -567,6 +570,7 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
 <div class="tabs-wrap">
   <nav class="tabs" id="tabs-nav">
     <button class="tab active" data-tab="monitor">Monitor <span class="tab-count" id="count-monitor">0</span></button>
+    <button class="tab" data-tab="signals">Signals <span class="tab-count" id="count-signals">0</span></button>
     <button class="tab" data-tab="closed">Closed Today <span class="tab-count" id="count-closed">0</span></button>
     <button class="tab" data-tab="scanner">Scanner</button>
     <button class="tab" data-tab="backtest">Backtest</button>
@@ -602,6 +606,21 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
   <div id="monitor-empty" style="display:none; text-align:center; padding:40px 20px; color:var(--text-mute); font-size:13px;">No active positions. Open a trade from Scanner or Swing Onset.</div>
 </section>
 
+<!-- ===== SIGNALS ===== -->
+<section class="tab-panel" id="panel-signals">
+  <div class="panel-head">
+    <div>
+      <h2 style="margin:0;">Scheduled Signals</h2>
+      <div class="sub" style="color:var(--text-mute); font-size:12px; margin-top:2px;">Pre-computed signals from the scheduler's periodic scans today.</div>
+    </div>
+    <div class="right">
+      <button class="btn btn-sm" onclick="loadSignals()">↺ Refresh</button>
+    </div>
+  </div>
+  <div id="signals-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+  <div id="signals-empty" style="display:none; text-align:center; padding:40px 20px; color:var(--text-mute); font-size:13px;">No signals recorded today.</div>
+</section>
+
 <!-- ===== CLOSED TODAY ===== -->
 <section class="tab-panel" id="panel-closed">
   <div class="panel-head">
@@ -631,7 +650,7 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
     <div class="section-title">Filters</div>
     <div class="filter-row">
       <div class="filter">
-        <div class="fk"><span class="l">Flow Confirmed</span><label class="toggle"><input type="checkbox" id="f-flow" checked><span class="tslide"></span></label></div>
+        <div class="fk"><span class="l">Flow Confirmed</span><label class="toggle"><input type="checkbox" id="f-flow"><span class="tslide"></span></label></div>
         <div class="fk-desc">Require positive broker flow</div>
       </div>
       <div class="filter">
@@ -678,30 +697,64 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
   </div>
 
   <div class="summary-bar" id="summary-bar" style="display:none">
-    <div class="sum-card"><div class="sk">Scanned</div><div class="sv" id="s-total">0</div></div>
-    <div class="sum-card"><div class="sk">Signals</div><div class="sv" style="color:var(--indigo-2)" id="s-signals">0</div></div>
-    <div class="sum-card"><div class="sk">Profitable</div><div class="sv" style="color:var(--green)" id="s-profit">0</div></div>
-    <div class="sum-card"><div class="sk">WF ≥ 60%</div><div class="sv" style="color:var(--amber)" id="s-wf">0</div></div>
+    <div class="sum-card"><div class="sk">Scanned</div><div class="sv mono" id="s-total">0</div></div>
+    <div class="sum-card"><div class="sk">Signals</div><div class="sv mono" style="color:var(--indigo-2)" id="s-signals">0</div></div>
+    <div class="sum-card"><div class="sk">Bullish</div><div class="sv mono" style="color:var(--green)" id="s-profit">0</div></div>
+    <div class="sum-card"><div class="sk">WF ≥ 60%</div><div class="sv mono" style="color:var(--amber)" id="s-wf">0</div></div>
   </div>
 
-  <div class="grid-cards" id="scanner-results"></div>
+  <div id="scanner-results"></div>
 </section>
 
 <!-- ===== BACKTEST ===== -->
 <section class="tab-panel" id="panel-backtest">
   <div class="panel-head">
-    <div><h2>Walk-forward Backtest</h2><div class="sub">Single ticker analysis across all strategies.</div></div>
+    <div><h2>Walk-forward Backtest</h2><div class="sub">Strategy comparison across all walk-forward windows.</div></div>
   </div>
 
-  <div class="scanner-section flex center gap-10" style="flex-wrap:wrap;">
-    <label class="field" style="flex:1;min-width:200px;">Ticker
+  <div class="scanner-section" style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+    <label class="field" style="flex:1;min-width:180px;">TICKER
       <input class="input input-mono" type="text" id="bt-ticker" placeholder="BBCA" style="text-transform:uppercase;margin-top:4px;" onkeydown="if(event.key==='Enter')runBacktest()">
     </label>
-    <div style="flex:1;"></div>
     <button class="btn btn-primary btn-lg" onclick="runBacktest()">▶ Run Analysis</button>
   </div>
 
   <div id="bt-results" style="display:none;margin-top:14px;">
+    <!-- Summary Bar -->
+    <div class="summary-bar" style="margin-bottom:14px;">
+      <div class="sum-card">
+        <div class="sk">Best Win Rate</div>
+        <div class="sv mono pos" id="bt-sum-winrate">—</div>
+        <div style="margin-top:8px;height:3px;border-radius:999px;background:var(--surface-2);overflow:hidden;">
+          <div id="bt-sum-winrate-bar" style="height:100%;width:0%;background:var(--green);border-radius:999px;transition:width .5s ease;"></div>
+        </div>
+      </div>
+      <div class="sum-card">
+        <div class="sk">Best Avg Return</div>
+        <div class="sv mono" id="bt-sum-return" style="color:var(--green);">—</div>
+        <div style="font-size:11px;margin-top:6px;color:var(--text-mute);">Period mean</div>
+      </div>
+      <div class="sum-card">
+        <div class="sk">Best Sharpe</div>
+        <div class="sv mono" id="bt-sum-sharpe">—</div>
+        <div style="font-size:11px;margin-top:6px;color:var(--text-mute);">Risk adjusted</div>
+      </div>
+      <div class="sum-card">
+        <div class="sk">Max Drawdown</div>
+        <div class="sv mono neg" id="bt-sum-dd">—</div>
+        <div style="margin-top:8px;height:3px;border-radius:999px;background:var(--surface-2);overflow:hidden;">
+          <div id="bt-sum-dd-bar" style="height:100%;width:0%;background:var(--red);border-radius:999px;transition:width .5s ease;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Table -->
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:8px;">
+      <div>
+        <div class="section-title" style="margin:0 0 2px;">Walk-Forward Results <span class="mono" id="bt-ticker-display" style="font-size:11px;text-transform:none;letter-spacing:0;font-weight:400;color:var(--text-dim);"></span></div>
+        <div style="font-size:11px;color:var(--text-mute);">Optimized parameter sets per rolling lookback window</div>
+      </div>
+    </div>
     <div class="table-wrap">
       <table class="data" id="bt-strategy-table">
         <thead><tr>
@@ -715,10 +768,12 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
         <tbody id="bt-strategy-body"></tbody>
       </table>
     </div>
+
+    <!-- Equity Chart -->
     <div class="scanner-section" style="margin-top:14px;">
       <div class="flex between center" style="margin-bottom:10px;">
-        <div class="section-title" style="margin:0;">Equity Curves <span class="mono dim" id="bt-ticker-display" style="font-size:11px;text-transform:none;letter-spacing:0;font-weight:400;"></span></div>
-        <div class="muted" style="font-size:11px;">Starting capital: <span class="mono">Rp 100,000,000</span></div>
+        <div class="section-title" style="margin:0;">Equity Curves</div>
+        <div style="font-size:11px;color:var(--text-mute);">Starting capital: <span class="mono">Rp 100,000,000</span></div>
       </div>
       <div style="position:relative;height:280px;"><canvas id="bt-equity-chart"></canvas></div>
     </div>
@@ -1195,6 +1250,42 @@ function renderClosed() {
   const pnlEl = document.getElementById('closed-pnl');
   if (pnlEl) pnlEl.innerHTML = `Net P&amp;L: <span style="color:${net>=0?'var(--green)':'var(--red)'}">${fmtRp(net)}</span>`;
 }
+const SM_COLOR = { STRONG_BUY:'var(--green)', ACCUMULATION:'var(--indigo-2)', STRONG_SELL:'var(--red)', MORNING_TRAP:'var(--red)', NEUTRAL:'var(--text-mute)' };
+function signalCard(s) {
+  const time = (s.scan_time || '').split(' ')[1] || s.scan_time;
+  const smColor = SM_COLOR[s.smart_money] || 'var(--text-mute)';
+  const scoreColor = s.flow_score >= 6 ? 'var(--green)' : s.flow_score >= 4 ? 'var(--yellow,#facc15)' : 'var(--text-mute)';
+  const strats = (s.strategies || []).map(st => `<span class="monitor-chip" style="background:var(--indigo-dim);color:var(--indigo-2)">${st}</span>`).join('');
+  const reasons = (s.signal_reasons || '').split('|').map(r => `<div style="color:var(--text-mute);font-size:11px">${r.trim()}</div>`).join('');
+  return `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start">
+    <div style="min-width:44px;text-align:center">
+      <div style="font-size:10px;color:var(--text-mute)">${time}</div>
+      <div style="font-size:22px;font-weight:700;color:${scoreColor};line-height:1.1">${s.flow_score}</div>
+      <div style="font-size:9px;color:var(--text-mute)">flow</div>
+    </div>
+    <div style="flex:1;min-width:160px">
+      <div style="font-size:18px;font-weight:700;letter-spacing:-.02em">${s.ticker}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${strats}</div>
+      <div style="margin-top:6px">${reasons}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+      <span class="monitor-chip" style="background:var(--surface-3);color:${smColor}">${s.smart_money || '—'}</span>
+      <span class="monitor-chip" style="background:var(--surface-3);color:var(--text-mute)">${s.flow_verdict || ''}</span>
+    </div>
+  </div>`;
+}
+async function loadSignals() {
+  try {
+    const res = await fetch('/api/signals/scheduled');
+    const data = await res.json();
+    const list = data.signals || [];
+    const el = document.getElementById('signals-list');
+    const empty = document.getElementById('signals-empty');
+    el.innerHTML = list.map(signalCard).join('');
+    empty.style.display = list.length ? 'none' : 'block';
+    document.getElementById('count-signals').textContent = list.length;
+  } catch(e) { console.error('loadSignals', e); }
+}
 async function loadMonitorData() {
   try {
     const res = await fetch('/api/paper/summary');
@@ -1286,6 +1377,7 @@ applyTweaks();
 
 /* initial monitor load */
 loadMonitorData();
+loadSignals();
 setInterval(loadMonitorData, 30000);
 
 /* ── Strategy checkboxes ── */
@@ -1315,6 +1407,7 @@ function setActiveTab(name) {
   tabPanels.forEach(p  => p.classList.toggle('active',  p.id === 'panel-' + name));
   requestAnimationFrame(updateIndicator);
   if (name === 'monitor' || name === 'closed') loadMonitorData();
+  if (name === 'signals')  loadSignals();
   if (name === 'paper')    loadPaperTrades();
   if (name === 'audit')    loadAuditData();
   if (name === 'intraday') loadScreenerResults();
@@ -1447,7 +1540,9 @@ async function runScan(type) {
   document.getElementById('summary-bar').style.display = 'none';
   const body = {
     strategies, mode: scanMode,
-    flow_confirmed_only: document.getElementById('f-flow').checked,
+    intersection_mode: scanMode === 'intersection',
+    filter_mode: 'signals_only',
+    include_flow: document.getElementById('f-flow').checked,
     use_wf_filter: true,
     wf_min_consistency: parseInt(document.getElementById('wf-min').value),
     use_regime:      document.getElementById('f-regime').checked,
@@ -1475,52 +1570,107 @@ async function runScan(type) {
   }
 }
 
+let scanRows = [];
+let scanSort = { idx: 5, dir: 'desc' };   // default: WF Score column, descending
+const SCAN_COLS = [
+  { key: 'ticker',        label: 'Symbol',   type: 'str' },
+  { key: 'best_strategy', label: 'Strategy', type: 'str' },
+  { key: 'has_signal',    label: 'Signal',   type: 'num', align: 'center' },
+  { key: 'wf_score',      label: 'Strength', type: 'num' },
+  { key: 'close',         label: 'Close',    type: 'num', cls: 'right-num' },
+  { key: 'wf_score',      label: 'WF Score', type: 'num', cls: 'right-num' },
+  { key: null,            label: 'Actions',  type: null },
+];
+
 function renderScanResults(data) {
-  const results = data.results || data.signals || [];
+  scanRows = data.results || data.signals || [];
   document.getElementById('summary-bar').style.display = 'grid';
-  document.getElementById('s-total').textContent    = data.summary?.total_tickers_scanned || results.length;
-  document.getElementById('s-signals').textContent  = data.summary?.tickers_with_signal  || results.filter(r => r.has_signal).length;
+  document.getElementById('s-total').textContent    = data.summary?.total_tickers_scanned || scanRows.length;
+  document.getElementById('s-signals').textContent  = data.summary?.tickers_with_signal  || scanRows.filter(r => r.has_signal).length;
   document.getElementById('s-profit').textContent   = data.profitable || 0;
-  document.getElementById('s-wf').textContent       = results.filter(r => (r.wf_score||0) >= 60).length;
-  const grid = document.getElementById('scanner-results');
-  grid.innerHTML = '';
-  if (!results.length) {
-    grid.innerHTML = '<div style="color:var(--text-mute);padding:30px;text-align:center;grid-column:1/-1">No signals found</div>';
+  document.getElementById('s-wf').textContent       = scanRows.filter(r => (r.wf_score||0) >= 0.6).length;
+  const container = document.getElementById('scanner-results');
+  container.innerHTML = '';
+  if (!scanRows.length) {
+    container.innerHTML = '<div style="color:var(--text-mute);padding:30px;text-align:center;">No signals found — try unchecking Flow Confirmed or Regime filters</div>';
     return;
   }
-  results.forEach((r, i) => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.style.animationDelay = Math.min(i * 35, 500) + 'ms';
+  scanSort = { idx: 5, dir: 'desc' };   // reset to WF Score desc on each fresh scan
+  const wrap = document.createElement('div');
+  wrap.className = 'table-wrap';
+  wrap.innerHTML = `<table class="data"><thead><tr id="scan-head"></tr></thead><tbody id="scanner-tbody"></tbody></table>`;
+  container.appendChild(wrap);
+  renderScanHead();
+  renderScanBody();
+}
+
+function renderScanHead() {
+  document.getElementById('scan-head').innerHTML = SCAN_COLS.map((c, i) => {
+    if (c.key === null) return `<th>${c.label}</th>`;
+    const arrow = i === scanSort.idx ? (scanSort.dir === 'desc' ? '▼' : '▲') : '↕';
+    const clsAttr = c.cls ? ` class="${c.cls}"` : '';
+    let style = 'cursor:pointer;user-select:none;';
+    if (c.align) style += `text-align:${c.align};`;
+    return `<th${clsAttr} style="${style}" onclick="sortScan(${i})">${c.label} <span style="opacity:.45;font-size:10px;">${arrow}</span></th>`;
+  }).join('');
+}
+
+function sortScan(idx) {
+  if (scanSort.idx === idx) {
+    scanSort.dir = scanSort.dir === 'desc' ? 'asc' : 'desc';
+  } else {
+    scanSort.idx = idx;
+    scanSort.dir = SCAN_COLS[idx].type === 'str' ? 'asc' : 'desc';
+  }
+  renderScanHead();
+  renderScanBody();
+}
+
+function renderScanBody() {
+  const col = SCAN_COLS[scanSort.idx];
+  const dir = scanSort.dir === 'asc' ? 1 : -1;
+  const sorted = [...scanRows].sort((a, b) => {
+    if (col.type === 'str') {
+      const av = (a[col.key] || '').toString().toLowerCase();
+      const bv = (b[col.key] || '').toString().toLowerCase();
+      return av < bv ? -dir : av > bv ? dir : 0;
+    }
+    return ((Number(a[col.key]) || 0) - (Number(b[col.key]) || 0)) * dir;
+  });
+  const tbody = document.getElementById('scanner-tbody');
+  tbody.innerHTML = '';
+  sorted.forEach(r => {
     const hasSignal = r.has_signal;
-    const bc  = hasSignal ? 'chip chip-signal badge-pulse' : 'chip chip-caution';
-    const sig = hasSignal ? 'BULLISH' : 'NEUTRAL';
-    const wr  = r.win_rate !== undefined ? r.win_rate.toFixed(0)+'%' : '—';
-    const wrCls = (r.win_rate||0) > 50 ? 'pos' : 'neg';
-    const flowBadge = r.flow?.verdict
-      ? `<span class="chip ${r.flow.verdict==='BULLISH'?'chip-signal':'chip-caution'}">${r.flow.verdict}</span>` : '';
-    const stratLabel = r.best_strategy ? r.best_strategy.replace(/_/g,' ') : '—';
-    card.innerHTML = `
-      <div class="flex between center" style="margin-bottom:10px;">
-        <div><div class="ticker">${r.ticker}</div><div class="strategy">${stratLabel}</div></div>
-        <span class="${bc}">${sig}</span>
-      </div>
-      <div class="card-metrics">
-        <div class="metric"><div class="metric-val ${wrCls}">${wr}</div><div class="metric-lbl">Win Rate</div></div>
-        <div class="metric"><div class="metric-val">${(r.best_return||0).toFixed(1)}%</div><div class="metric-lbl">Return</div></div>
-        <div class="metric"><div class="metric-val">${r.best_trades||'—'}</div><div class="metric-lbl">Trades</div></div>
-      </div>
-      <div class="card-details">
-        Close: <span>${r.close?.toLocaleString()||'—'}</span> &nbsp; VR: <span>${r.vol_ratio?.toFixed(1)||'—'}×</span> &nbsp; Regime: <span>${r.regime||'—'}</span><br>
-        WF Score: <span>${r.wf_score ? r.wf_score.toFixed(0)+'%' : '—'}</span>
-        ${flowBadge ? ' &nbsp; Flow: ' + flowBadge : ''}
-      </div>
-      <div class="card-actions">
-        <button class="btn-action buy" onclick="openTrade('${r.ticker}',${r.close||0})">+ Open Trade</button>
-        <button class="btn-action" onclick="gotoBacktest('${r.ticker}')">Backtest →</button>
-        <button class="btn-action" onclick="window.open('/dive/${r.ticker}','_blank')">Dive ↗</button>
-      </div>`;
-    grid.appendChild(card);
+    const wf = r.wf_score || 0;
+    const wfPct = wf <= 1 ? wf * 100 : wf;
+    const chipCls = hasSignal ? 'chip chip-signal' : 'chip chip-caution';
+    const chipLbl = hasSignal ? 'BULLISH' : 'NEUTRAL';
+    const flowV = r.flow?.verdict;
+    const flowBadge = (flowV && flowV !== 'UNAVAILABLE')
+      ? `<span class="chip ${flowV==='BULLISH'?'chip-signal':'chip-caution'}" style="font-size:9px;padding:2px 5px;margin-left:4px;">${flowV}</span>` : '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight:700;font-family:var(--mono);font-size:13px;">${r.ticker}${flowBadge}</td>
+      <td style="color:var(--text-dim);font-size:12px;">${(r.best_strategy||'—').replace(/_/g,' ')}</td>
+      <td style="text-align:center;"><span class="${chipCls}">${chipLbl}</span></td>
+      <td style="min-width:120px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="flex:1;height:4px;border-radius:999px;background:var(--surface-2);overflow:hidden;">
+            <div style="height:100%;width:${Math.min(wfPct,100).toFixed(0)}%;background:linear-gradient(90deg,var(--indigo),var(--indigo-2));border-radius:999px;"></div>
+          </div>
+          <span class="mono" style="font-size:11px;color:var(--text-dim);min-width:28px;">${wfPct.toFixed(0)}%</span>
+        </div>
+      </td>
+      <td class="right-num">${r.close?.toLocaleString()||'—'}</td>
+      <td class="right-num mono ${wfPct>=60?'pos':'neg'}">${wf?wfPct.toFixed(0)+'%':'—'}</td>
+      <td>
+        <div style="display:flex;gap:5px;">
+          <button class="btn btn-sm btn-primary" onclick="openTrade('${r.ticker}',${r.close||0})">Trade</button>
+          <button class="btn btn-sm btn-ghost" onclick="gotoBacktest('${r.ticker}')">BT</button>
+          <button class="btn btn-sm btn-ghost" onclick="window.open('/dive/${r.ticker}','_blank')">Dive</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
   });
 }
 
@@ -1556,13 +1706,16 @@ function renderSwingOnset(data) {
   document.getElementById('s-signals').textContent = data.n_onsets || 0;
   document.getElementById('s-profit').textContent  = '—';
   document.getElementById('s-wf').textContent      = data.n_watch || 0;
-  const grid = document.getElementById('scanner-results');
-  grid.innerHTML = '';
+  const container = document.getElementById('scanner-results');
+  container.innerHTML = '';
   const rows = [...(data.onsets||[]), ...(data.watch||[])];
   if (!rows.length) {
-    grid.innerHTML = '<div style="color:var(--text-mute);padding:30px;text-align:center;grid-column:1/-1">No trend-onset candidates right now</div>';
+    container.innerHTML = '<div style="color:var(--text-mute);padding:30px;text-align:center;">No trend-onset candidates right now</div>';
     return;
   }
+  const grid = document.createElement('div');
+  grid.className = 'grid-cards';
+  container.appendChild(grid);
   rows.forEach((r, i) => {
     const card = document.createElement('div');
     card.className = 'card';
@@ -1618,6 +1771,25 @@ function renderBacktest(ticker, data) {
   tbody.innerHTML = '';
   const results = data.results || [];
   const dates   = data.dates   || [];
+
+  // Summary bar
+  if (results.length) {
+    const bestWR  = Math.max(...results.map(r => r.win_rate || 0));
+    const bestRet = Math.max(...results.map(r => r.total_return_pct ?? r.total_return ?? 0));
+    const bestSh  = Math.max(...results.map(r => r.sharpe || 0));
+    const worstDD = Math.max(...results.map(r => Math.abs(r.max_drawdown_pct ?? r.max_drawdown ?? 0)));
+    const wrEl = document.getElementById('bt-sum-winrate');
+    wrEl.textContent = bestWR.toFixed(1) + '%';
+    wrEl.style.color = bestWR > 50 ? 'var(--green)' : 'var(--red)';
+    document.getElementById('bt-sum-winrate-bar').style.width = Math.min(bestWR, 100) + '%';
+    const retEl = document.getElementById('bt-sum-return');
+    retEl.textContent = (bestRet >= 0 ? '+' : '') + bestRet.toFixed(1) + '%';
+    retEl.style.color = bestRet >= 0 ? 'var(--green)' : 'var(--red)';
+    document.getElementById('bt-sum-sharpe').textContent = bestSh.toFixed(2);
+    document.getElementById('bt-sum-dd').textContent = '-' + worstDD.toFixed(1) + '%';
+    document.getElementById('bt-sum-dd-bar').style.width = Math.min(worstDD * 4, 100) + '%';
+  }
+
   results.forEach(r => {
     const wr  = r.win_rate || 0;
     const ret = r.total_return_pct ?? r.total_return;
