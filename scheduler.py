@@ -831,6 +831,79 @@ def scheduled_multi_strategy_scan():
     except Exception as e:
         print(f"[{time_str}] DB save error: {e}")
 
+    # ── Bear dip-scout watchlist ──────────────────────────────────────────────
+    # Scan the FULL universe (not just signal-producing tickers — bears don't
+    # generate entry signals) for oversold BEAR names, and promote any
+    # watchlisted name that has since turned BULL. Uses real OHLCV from
+    # ohlcv_map so detect_regime's ADX is meaningful. Fail-open.
+    try:
+        import sqlite3 as _sql
+        from engine.regime_filter import detect_regime as _detect_regime
+        from engine.watchlist import (
+            ensure_table as _wl_ensure,
+            add_to_watchlist as _wl_add,
+            promote_watchlist as _wl_promote,
+            expire_stale as _wl_expire,
+            priority_tickers as _wl_priority,
+            passes_quality_gate as _wl_quality,
+            compute_rsi as _compute_rsi,
+            RSI_THRESHOLD as _RSI_THR,
+        )
+
+        _wl_conn = _sql.connect(DB_PATH)
+        _wl_ensure(_wl_conn)
+
+        # Expire stale active entries at the start of each scan (60d: median
+        # BEAR->BULL recovery on IDX is ~59 cal days; 30d expired ~80% unpromoted)
+        _expired = _wl_expire(_wl_conn, scan_date=date_str, max_calendar_days=60)
+        if _expired:
+            print(f"[{time_str}] Watchlist expired: {_expired}")
+
+        _bear_added = []
+        _bull_tickers = []
+        for _tk, _df_wl in ohlcv_map.items():
+            if _tk == "IHSG" or _df_wl is None or len(_df_wl) < 50:
+                continue
+            try:
+                _regime_wl = _detect_regime(_df_wl)
+                if _regime_wl == 'BEAR':
+                    _rsi_wl = _compute_rsi(_df_wl['close'])
+                    if _rsi_wl != _rsi_wl or _rsi_wl >= _RSI_THR:   # NaN or not oversold
+                        continue
+                    _q_ok, _q_wr, _q_ret = _wl_quality(_wl_conn, _tk)
+                    if not _q_ok:
+                        continue
+                    _ma50 = _df_wl['close'].rolling(50).mean().iloc[-1]
+                    _vs_ma = ((_df_wl['close'].iloc[-1] - _ma50) / _ma50 * 100
+                              if _ma50 and _ma50 == _ma50 else None)
+                    if _wl_add(_wl_conn, _tk, rsi=_rsi_wl, close_vs_ma50_pct=_vs_ma,
+                               win_rate=_q_wr, best_return=_q_ret, scan_date=date_str):
+                        _bear_added.append(_tk)
+                elif _regime_wl == 'BULL':
+                    _bull_tickers.append(_tk)
+            except Exception:
+                continue
+
+        # Promote active watchlist entries that have since turned BULL
+        _promoted = _wl_promote(_wl_conn, _bull_tickers, scan_date=date_str)
+
+        # Give promoted names priority at the front of the entry candidate list
+        _priority = set(_wl_priority(_wl_conn))
+        if _priority:
+            _pri_fc  = [r for r in flow_confirmed if r['ticker'] in _priority]
+            _rest_fc = [r for r in flow_confirmed if r['ticker'] not in _priority]
+            flow_confirmed = _pri_fc + _rest_fc
+
+        if _bear_added:
+            print(f"[{time_str}] Watchlist added (BEAR oversold): {_bear_added}")
+        if _promoted:
+            print(f"[{time_str}] Watchlist promoted (→BULL): {_promoted}")
+
+        _wl_conn.close()
+    except Exception as _wl_err:
+        print(f"[{time_str}] Bear watchlist error (fail-open): {_wl_err}")
+    # ── End bear watchlist ────────────────────────────────────────────────────
+
     # ── Agent Firm evaluation (shadow mode) ──────────────────────────────────
     try:
         from engine.agent_firm import config as _firm_cfg
@@ -1527,6 +1600,16 @@ def run_premover_eod():
 
 
 def start_scheduler():
+    # Ensure regime_watchlist table exists (safe to run every start)
+    try:
+        import sqlite3 as _sql
+        from engine.watchlist import ensure_table as _ensure_watchlist
+        _wl_conn = _sql.connect(DB_PATH)
+        _ensure_watchlist(_wl_conn)
+        _wl_conn.close()
+    except Exception as _e:
+        print(f"[scheduler] watchlist table init error: {_e}")
+
     scheduler = BackgroundScheduler(timezone=WIB)
 
     # Daily signal scan — Mon-Fri 16:00 WIB (market close, always send even if no signals)

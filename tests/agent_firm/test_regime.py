@@ -9,7 +9,7 @@ def _make_candidate():
     return SignalCandidate(
         ticker="BBRI", strategy="vol_weighted",
         score=3.8, scan_time="2026-05-20T10:00:00+07:00",
-        regime="TRENDING",
+        regime="BULL",
     )
 
 
@@ -30,7 +30,7 @@ async def test_regime_returns_ok_on_success():
     fake_client = AsyncMock()
     fake_client.chat.return_value = {
         "content": json.dumps({
-            "regime_call": "TRENDING",
+            "regime_call": "BULL",
             "sector_tailwind": True,
             "macro_risk": "LOW",
             "reasoning": "Consistent walk-forward with elevated VPIN",
@@ -40,7 +40,7 @@ async def test_regime_returns_ok_on_success():
     result = await regime.run(_make_candidate(), fake_client, _make_context())
     assert result.role == "regime"
     assert result.status == "ok"
-    assert result.output["regime_call"] == "TRENDING"
+    assert result.output["regime_call"] == "BULL"
 
 
 @pytest.mark.asyncio

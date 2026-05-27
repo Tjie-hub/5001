@@ -107,7 +107,7 @@ def _is_aligned(role: str, output: dict, decision: str) -> bool:
     if role == "flow":
         return (output.get("flow_verdict") == "ACCUMULATING") == is_approve
     if role == "regime":
-        return (output.get("regime_call") == "TRENDING") == is_approve
+        return (output.get("regime_call") == "BULL") == is_approve
     if role == "news":
         return (output.get("sentiment") == "BULLISH") == is_approve
     if role == "bull":

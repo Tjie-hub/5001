@@ -19,7 +19,7 @@ def _make_analysts():
         AgentResult(role="flow", status="ok",
                     output={"flow_verdict": "ACCUMULATING", "smart_money_signal": "BUY"}),
         AgentResult(role="regime", status="ok",
-                    output={"regime_call": "TRENDING", "sector_tailwind": True}),
+                    output={"regime_call": "BULL", "sector_tailwind": True}),
         AgentResult(role="news", status="ok",
                     output={"sentiment": "BULLISH", "catalyst": "bullish"}),
     ]

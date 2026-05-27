@@ -1,14 +1,14 @@
 """
 Regime Filter — AI-powered market regime detection per ticker.
 ==============================================================
-Deteksi regime: TRENDING / SIDEWAYS / UNCERTAIN
+Deteksi regime: BULL / BEAR / SIDEWAYS
 Lalu pilih strategi yang sesuai.
 
 Usage:
     from engine.regime_filter import detect_regime, strategy_regime_adaptive
 
     # Detect regime saja
-    regime = detect_regime(df)  # "TRENDING" / "SIDEWAYS" / "UNCERTAIN"
+    regime = detect_regime(df)  # "BULL" / "BEAR" / "SIDEWAYS"
 
     # Full strategy — auto-select berdasarkan regime
     result = strategy_regime_adaptive(df, capital=50_000_000)
@@ -114,8 +114,9 @@ def get_macro_overlay(period: str = "30d") -> dict:
 
 def apply_macro_overlay(regime: str, macro: dict) -> tuple:
     """
-    Terapkan macro overlay ke hasil regime prediction.
-    IDR melemah >1% dalam 5 hari → TRENDING di-downgrade ke UNCERTAIN.
+    Apply macro overlay to regime prediction.
+    IDR weakening >threshold → BULL downgraded to SIDEWAYS.
+    BEAR is never upgraded by macro alone.
     """
     idr_weak = macro.get("idr_weakening", 0.0)
     bi_rate  = macro.get("bi_rate", BI_RATE)
@@ -124,9 +125,9 @@ def apply_macro_overlay(regime: str, macro: dict) -> tuple:
 
     if idr_weak > _IDR_WEAKEN_THRESHOLD:
         reason_parts.append(f"IDR melemah {idr_weak:+.2f}% (5d)")
-        if regime == "TRENDING":
-            final_regime = "UNCERTAIN"
-            reason_parts.append("TRENDING→UNCERTAIN")
+        if regime == "BULL":
+            final_regime = "SIDEWAYS"
+            reason_parts.append("BULL→SIDEWAYS")
 
     if bi_rate > 6.5:
         reason_parts.append(f"BI Rate tinggi {bi_rate}%")
@@ -139,32 +140,32 @@ def apply_macro_overlay(regime: str, macro: dict) -> tuple:
 
 def detect_regime(df: pd.DataFrame) -> str:
     """
-    Detect market regime for the latest bar using rule-based approach.
-    Returns: "TRENDING" / "SIDEWAYS" / "UNCERTAIN"
+    Detect market regime from signed MA-slope.
+    Returns: 'BULL' / 'BEAR' / 'SIDEWAYS'
 
     Rules:
-      TRENDING:  ADX > 25 AND |MA slope| > 1%
-      SIDEWAYS:  ADX < 20 AND |MA slope| < 0.5%
-      UNCERTAIN: everything else
+      BULL:     ADX > 25 AND MA-slope > +1.0%
+      BEAR:     ADX > 25 AND MA-slope < -1.0%
+      SIDEWAYS: everything else (folds old SIDEWAYS + UNCERTAIN)
     """
     if len(df) < 30:
-        return "UNCERTAIN"
+        return 'SIDEWAYS'
 
-    adx = calc_adx(df, 14)
-    slope = calc_ma_slope(df, 20, 5)
+    adx   = calc_adx(df, 14)
+    slope = calc_ma_slope(df, 20, 5)          # signed, NOT abs()
 
-    last_adx = adx.iloc[-1]
-    last_slope = abs(slope.iloc[-1])
+    last_adx   = adx.iloc[-1]
+    last_slope = slope.iloc[-1]
 
     if pd.isna(last_adx) or pd.isna(last_slope):
-        return "UNCERTAIN"
+        return 'SIDEWAYS'
 
     if last_adx > 25 and last_slope > 1.0:
-        return "TRENDING"
-    elif last_adx < 20 and last_slope < 0.5:
-        return "SIDEWAYS"
+        return 'BULL'
+    elif last_adx > 25 and last_slope < -1.0:
+        return 'BEAR'
     else:
-        return "UNCERTAIN"
+        return 'SIDEWAYS'
 
 
 # ── Feature matrix builder (for ML training) ─────────────────────────
@@ -192,23 +193,18 @@ def build_regime_features(df: pd.DataFrame) -> pd.DataFrame:
 def label_regime_from_future(df: pd.DataFrame, forward_days: int = 5,
                               trend_threshold: float = 2.0) -> pd.Series:
     """
-    Auto-label regime berdasarkan future return (untuk training).
-    - forward return > +threshold% → TRENDING (0 = trending up works)
-    - forward return < -threshold% → TRENDING (1 = trending down)
-    - abs(return) < threshold/2   → SIDEWAYS (2)
-    - else                        → UNCERTAIN (3)
-
-    Simplified to binary for Logistic Regression:
-    - TRENDING (1): abs(forward return) > threshold → momentum strategies work
-    - NOT_TRENDING (0): abs(forward return) <= threshold → reversion/skip
+    Auto-label regime from signed future return (for ML training).
+    - forward return > +threshold%  → 'BULL'
+    - forward return < -threshold%  → 'BEAR'
+    - abs(return) <= threshold%     → 'SIDEWAYS'
+    - last forward_days rows        → NaN (no future data)
     """
     future_ret = (df['close'].shift(-forward_days) - df['close']) / df['close'] * 100
-    labels = pd.Series(index=df.index, dtype='int32')
-    labels[:] = -1  # unlabeled
-
-    labels[future_ret.abs() > trend_threshold] = 1   # TRENDING
-    labels[future_ret.abs() <= trend_threshold] = 0   # NOT_TRENDING
-
+    labels = pd.Series(index=df.index, dtype=object)          # all NaN by default
+    labels[future_ret > trend_threshold]  = 'BULL'
+    labels[future_ret < -trend_threshold] = 'BEAR'
+    mask_sideways = (future_ret >= -trend_threshold) & (future_ret <= trend_threshold)
+    labels[mask_sideways] = 'SIDEWAYS'
     return labels
 
 
@@ -238,130 +234,110 @@ class RegimeClassifier:
         """
         from sklearn.linear_model import LogisticRegression
         from sklearn.preprocessing import StandardScaler
-        from sklearn.metrics import accuracy_score, classification_report
+        from sklearn.metrics import accuracy_score
 
         features = build_regime_features(df)
-        labels = label_regime_from_future(df, forward_days, trend_threshold)
+        labels   = label_regime_from_future(df, forward_days, trend_threshold)
 
-        # Align features and labels, drop unlabeled
+        # join on index, drop unlabeled (last forward_days rows) and NaN features
         aligned = features.join(labels.rename('label')).dropna()
-        aligned = aligned[aligned['label'] >= 0]
 
-        if len(aligned) < 50:
+        if len(aligned) < 60:
             return {'error': 'Not enough labeled data', 'n_samples': len(aligned)}
 
         X = aligned[self.feature_cols].values
         y = aligned['label'].values
 
-        # Standardize
-        self.scaler = StandardScaler()
-        X_scaled = self.scaler.fit_transform(X)
+        self.scaler  = StandardScaler()
+        X_scaled     = self.scaler.fit_transform(X)
 
-        # Train — simple logistic regression, L2 regularization
         self.model = LogisticRegression(
-            C=1.0, max_iter=500, class_weight='balanced', random_state=42
+            C=1.0, max_iter=500, class_weight='balanced',
+            random_state=42,
         )
         self.model.fit(X_scaled, y)
-        self.is_trained = True
-        self.train_accuracy = accuracy_score(y, self.model.predict(X_scaled))
-        # Baseline: majority class ratio
-        self.majority_baseline = max(np.bincount(y.astype(int)) / len(y))
+        self.is_trained   = True
+        y_pred            = self.model.predict(X_scaled)
+        self.train_accuracy = accuracy_score(y, y_pred)
 
-        # Training metrics
-        y_pred = self.model.predict(X_scaled)
-        acc = accuracy_score(y, y_pred)
+        unique, counts = np.unique(y, return_counts=True)
+        self.majority_baseline = float(counts.max() / len(y))
+
+        feature_importance = {
+            cls: dict(zip(self.feature_cols, [round(float(c), 4) for c in coef]))
+            for cls, coef in zip(self.model.classes_, self.model.coef_)
+        }
 
         return {
-            'accuracy': round(acc, 4),
-            'n_samples': len(aligned),
-            'n_trending': int(y.sum()),
-            'n_not_trending': int((y == 0).sum()),
-            'feature_importance': dict(zip(
-                self.feature_cols,
-                [round(c, 4) for c in self.model.coef_[0]]
-            ))
+            'accuracy':           round(self.train_accuracy, 4),
+            'n_samples':          int(len(aligned)),
+            'class_counts':       dict(zip(unique.tolist(), counts.tolist())),
+            'feature_importance': feature_importance,
         }
 
     def predict(self, df: pd.DataFrame) -> Tuple[str, float]:
         """
         Predict regime for latest bar.
         Returns: (regime_str, confidence)
-          regime_str: "TRENDING" / "SIDEWAYS" / "UNCERTAIN"
-          confidence: 0.0 - 1.0
+          regime_str: 'BULL' / 'BEAR' / 'SIDEWAYS'
+          confidence: max predict_proba score
+        Falls back to rule-based detect_regime if untrained or confidence < 0.45.
         """
         if not self.is_trained:
-            # Fallback to rule-based
             return detect_regime(df), 0.0
 
         features = build_regime_features(df)
         if len(features) == 0:
-            return "UNCERTAIN", 0.0
+            return 'SIDEWAYS', 0.0
 
-        X = features[self.feature_cols].iloc[[-1]].values
+        X        = features[self.feature_cols].iloc[[-1]].values
         X_scaled = self.scaler.transform(X)
+        proba    = self.model.predict_proba(X_scaled)[0]
+        idx      = int(proba.argmax())
+        conf     = float(proba[idx])
 
-        proba = self.model.predict_proba(X_scaled)[0]
-        pred_class = self.model.predict(X_scaled)[0]
-
-        confidence = max(proba)
-
-        # Kalau model lebih buruk dari naive baseline → pakai rule-based
-        if self.train_accuracy < (self.majority_baseline - 0.05) or confidence < 0.52:
-            return "UNCERTAIN", confidence
-        elif pred_class == 1:
-            return "TRENDING", confidence
-        else:
-            return "SIDEWAYS", confidence
+        if conf < 0.45:                            # low confidence → rule-based fallback
+            return detect_regime(df), conf
+        return str(self.model.classes_[idx]), conf
 
 
 # ── Strategi 6: Regime Adaptive Strategy ──────────────────────────────
 
 def strategy_regime_adaptive(df: pd.DataFrame, capital: float = 50_000_000,
                               filters: list = None,
-                              classifier: RegimeClassifier = None) -> dict:
+                              classifier: 'RegimeClassifier' = None) -> dict:
     """
-    Meta-strategy: detect regime lalu jalankan strategi yang sesuai.
-
-    TRENDING  → Momentum Following (strategy_momentum)
-    SIDEWAYS  → VWAP Reversion (strategy_vwap_reversion)
-    UNCERTAIN → Skip (no trades)
-
-    Jika classifier trained → pakai ML prediction
-    Jika tidak → pakai rule-based detection
+    BULL     → Momentum Following
+    SIDEWAYS → VWAP Reversion
+    BEAR     → No trades (equity flat); dip-scouting is handled in live scan
     """
-    import sys, os; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))); from engine.strategies import strategy_momentum, strategy_vwap_reversion
+    import sys, os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from engine.strategies import strategy_momentum, strategy_vwap_reversion
 
     if classifier and classifier.is_trained:
         regime, confidence = classifier.predict(df)
-        # Fallback ke rule-based jika ML tidak yakin
-        if regime == "UNCERTAIN":
-            regime = detect_regime(df)
-            confidence = 0.0
     else:
-        regime = detect_regime(df)
+        regime    = detect_regime(df)
         confidence = 0.0
 
-    if regime == "TRENDING":
+    if regime == 'BULL':
         result = strategy_momentum(df, capital=capital, filters=filters)
-    elif regime == "SIDEWAYS":
+    elif regime == 'SIDEWAYS':
         result = strategy_vwap_reversion(df, capital=capital, filters=filters)
-    else:
-        # UNCERTAIN — return empty result
+    else:                                       # BEAR
         result = {
-            'strategy': 'Regime Adaptive',
-            'trades': [],
-            'equity': [capital] * len(df),
-            'final_capital': capital,
+            'strategy':        'Regime Adaptive',
+            'trades':          [],
+            'equity':          [capital] * len(df),
+            'final_capital':   capital,
             'initial_capital': capital,
         }
 
-    # Tag with regime info
-    result['strategy'] = 'Regime Adaptive'
-    if 'initial_capital' not in result:
-        result['initial_capital'] = capital
-    result['regime'] = regime
+    result['strategy']          = 'Regime Adaptive'
+    result.setdefault('initial_capital', capital)
+    result['regime']            = regime
     result['regime_confidence'] = round(confidence, 4)
-
     return result
 
 

@@ -19,7 +19,7 @@ def _make_analysts():
         AgentResult(role="flow", status="ok",
                     output={"flow_verdict": "ACCUMULATING"}),
         AgentResult(role="regime", status="ok",
-                    output={"regime_call": "TRENDING"}),
+                    output={"regime_call": "BULL"}),
         AgentResult(role="news", status="ok",
                     output={"sentiment": "BULLISH"}),
     ]

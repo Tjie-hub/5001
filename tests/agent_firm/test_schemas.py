@@ -38,10 +38,10 @@ def test_signal_candidate_full():
     c = SignalCandidate(
         ticker="BBRI", strategy="momentum_following",
         score=4.2, scan_time="2026-05-19T16:00:00+07:00",
-        regime="TRENDING", flow_verdict="STRONG_BUY",
+        regime="BULL", flow_verdict="STRONG_BUY",
         foreign_score=3.42, indicators={"vwma_above": True},
     )
-    assert c.regime == "TRENDING"
+    assert c.regime == "BULL"
     assert c.indicators["vwma_above"] is True
 
 
