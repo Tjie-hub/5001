@@ -4,6 +4,11 @@ calendar_filter.py — IDX Economic Calendar & Trading Blackout Dates
 Defines BI Rate RDG and FOMC meeting dates for 2026.
 Blackout window: H-1 and H+1 around each event.
 New entries are paused during blackout to avoid event-driven whipsaw.
+
+Also defines IDX market holidays (exchange closed) for 2026 so
+schedulers can skip scans on non-trading days.
+Update IDX_MARKET_HOLIDAYS_2026 each year from the official BEI
+trading calendar (https://www.idx.co.id).
 """
 
 from datetime import date, timedelta
@@ -47,6 +52,46 @@ OTHER_BLACKOUT_DATES: List[str] = []
 BLACKOUT_DAYS_BEFORE = 1
 BLACKOUT_DAYS_AFTER  = 1
 
+# ─── IDX Market Holidays 2026 ─────────────────────────────────────────────────
+# BEI (Bursa Efek Indonesia) is closed on these dates.
+# Sources: Hari Libur Nasional + Cuti Bersama SKB Pemerintah 2026.
+# Islamic calendar dates (Idul Fitri, Idul Adha, etc.) are moon-sighting
+# dependent — verify against official BEI announcement each year.
+IDX_MARKET_HOLIDAYS_2026: Dict[str, str] = {
+    # ── Januari ──────────────────────────────────────────────────────────────
+    "2026-01-01": "Tahun Baru Masehi",
+    "2026-01-27": "Isra Mi'raj Nabi Muhammad SAW 1447 H",
+    "2026-01-29": "Tahun Baru Imlek 2577 Kongzili",
+    # ── Maret (Idul Fitri 1447 H + Nyepi) ───────────────────────────────────
+    "2026-03-19": "Cuti Bersama Idul Fitri 1447 H",
+    "2026-03-20": "Hari Raya Idul Fitri 1447 H (Hari ke-1)",
+    "2026-03-21": "Hari Raya Idul Fitri 1447 H (Hari ke-2)",
+    "2026-03-23": "Cuti Bersama Idul Fitri 1447 H",
+    "2026-03-24": "Cuti Bersama Idul Fitri 1447 H",
+    "2026-03-28": "Hari Suci Nyepi — Tahun Baru Saka 1948",
+    # ── April ────────────────────────────────────────────────────────────────
+    "2026-04-03": "Wafat Isa Al Masih (Good Friday)",
+    # ── Mei ──────────────────────────────────────────────────────────────────
+    "2026-05-01": "Hari Buruh Internasional",
+    "2026-05-14": "Kenaikan Isa Al Masih",
+    "2026-05-22": "Hari Raya Waisak 2570 BE",
+    "2026-05-27": "Hari Raya Idul Adha 1447 H",
+    # ── Juni ─────────────────────────────────────────────────────────────────
+    "2026-06-01": "Hari Lahir Pancasila",
+    "2026-06-17": "Tahun Baru Islam 1448 H",
+    # ── Agustus ──────────────────────────────────────────────────────────────
+    "2026-08-17": "Hari Kemerdekaan Republik Indonesia",
+    # ── September ────────────────────────────────────────────────────────────
+    "2026-09-04": "Maulid Nabi Muhammad SAW 1448 H",
+    # ── Desember ─────────────────────────────────────────────────────────────
+    "2026-12-25": "Hari Raya Natal",
+    "2026-12-26": "Cuti Bersama Natal",
+}
+
+_MARKET_HOLIDAYS: Dict[date, str] = {
+    date.fromisoformat(k): v for k, v in IDX_MARKET_HOLIDAYS_2026.items()
+}
+
 # ─── Build master event dict ──────────────────────────────────────────────────
 _ALL_EVENTS: Dict[str, str] = {}
 for _d in BI_RATE_DATES_2026:
@@ -78,6 +123,17 @@ def _build_blackout_set() -> Dict[date, str]:
 
 
 _BLACKOUT: Dict[date, str] = _build_blackout_set()
+
+
+def is_trading_day(check_date: date = None) -> Tuple[bool, str]:
+    """Returns (is_open, reason). False when IDX is closed (weekend or holiday)."""
+    if check_date is None:
+        check_date = date.today()
+    if check_date.weekday() >= 5:
+        return False, f"Weekend ({check_date.strftime('%A')})"
+    if check_date in _MARKET_HOLIDAYS:
+        return False, _MARKET_HOLIDAYS[check_date]
+    return True, "trading day"
 
 
 def is_blackout_day(check_date: date = None) -> Tuple[bool, str]:

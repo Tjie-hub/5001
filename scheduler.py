@@ -230,8 +230,14 @@ _last_trades_state: dict = {}
 def scan_momentum_signals():
     """Scan semua ticker untuk Momentum Following signal hari ini."""
     from engine.strategies import calc_vol_ratio, calc_relative_strength
-    from engine.calendar_filter import is_blackout_day
+    from engine.calendar_filter import is_blackout_day, is_trading_day
     from engine.sector_rotation import is_sector_tradeable
+
+    # Market-closed gate — skip entirely on weekends and IDX public holidays
+    _open, _closed_reason = is_trading_day()
+    if not _open:
+        logging.info(f"[scan_momentum] Pasar tutup: {_closed_reason} — scan dilewati.")
+        return []
 
     # Calendar blackout gate — pause new entries on BI Rate / FOMC event days
     _blackout, _bl_reason = is_blackout_day()
@@ -710,13 +716,19 @@ def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
 def scheduled_multi_strategy_scan():
     """Multi-strategy signal scanner dengan flow filter."""
     from engine.strategies import check_current_entry_signal
-    from engine.calendar_filter import is_blackout_day
+    from engine.calendar_filter import is_blackout_day, is_trading_day
     from engine.sector_rotation import is_sector_tradeable, get_ticker_sector
     from flow_filter import get_flow_batch
 
     now = datetime.now(WIB)
     time_str = now.strftime("%H:%M")
     date_str = now.strftime("%Y-%m-%d")
+
+    # Market-closed gate — skip entirely on weekends and IDX public holidays
+    _open, _closed_reason = is_trading_day()
+    if not _open:
+        print(f"[{time_str}] Pasar tutup: {_closed_reason} — scan skipped.")
+        return
 
     # Calendar blackout gate
     _blackout, _bl_reason = is_blackout_day()
