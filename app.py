@@ -842,7 +842,7 @@ def agent_status():
         pass
     return jsonify({
         "enabled": _agent_config.FIRM_ENABLED,
-        "enforce": _agent_config.FIRM_ENFORCE,
+        "enforce": _agent_config.get_enforce(),
         "active": _agent_config.is_active(),
         "model": _agent_config.MODEL_ID,
         "today_stats": stats,
