@@ -27,6 +27,7 @@ __pycache__/
 *.db-shm
 *.db-wal
 *.sqlite
+*.sqlite3
 
 # Generated outputs (smoketest screenshots, backtest reports, etc.)
 out/
@@ -34,6 +35,21 @@ out/
 # Local backup files
 *.bak
 *.bak2
+*.backup*
+
+# Runtime cache and debug artifacts
+.*_response_cache.json
+.*_cf_cookies.json
+debug_*.html
+debug_*.png
+venv_test/
+
+# Static assets (committed separately)
+# static/
+
+# Tool-generated directories
+.stitch/
+.superpowers/
 
 # Claude Code local state (per-developer)
 .claude/settings.json
