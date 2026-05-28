@@ -106,15 +106,15 @@ The price-discontinuity check distinguishes a real halt (BRPT-style: 11 days mis
 
 BRPT's history shows a bar at May 14 (close 2080) and the next bar at May 25 (open ≈ 1495).
 
-- Trading days strictly between May 14 and May 25 (inclusive of May 15, exclusive of May 25), filtered by `is_trading_day`:
-  - May 15 (Fri): trading
+- Trading days strictly between May 14 and May 25 (exclusive on both ends), filtered by `is_trading_day`:
+  - May 15 (Fri): Cuti Bersama Kenaikan Isa Al Masih — excluded
   - May 16, 17 (weekend): excluded
   - May 18, 19, 20, 21 (Mon-Thu): trading
   - May 22 (Fri): Waisak holiday — excluded
   - May 23, 24 (weekend): excluded
-  → 5 missing trading days. Exceeds threshold of 3.
+  → 4 missing trading days. Exceeds threshold of 3.
 - `gap_pct = (1495 − 2080) / 2080 = −0.281`, magnitude 28.1% ≥ 10%.
-- Result: one event with `missing_td=5`, `gap_pct=-0.281`, `classification='suspension'`.
+- Result: one event with `missing_td=4`, `gap_pct=-0.281`, `classification='suspension'`.
 
 ## `get_status` semantics
 

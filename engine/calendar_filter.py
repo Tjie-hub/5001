@@ -74,6 +74,7 @@ IDX_MARKET_HOLIDAYS_2026: Dict[str, str] = {
     # ── Mei ──────────────────────────────────────────────────────────────────
     "2026-05-01": "Hari Buruh Internasional",
     "2026-05-14": "Kenaikan Isa Al Masih",
+    "2026-05-15": "Cuti Bersama Kenaikan Isa Al Masih",
     "2026-05-22": "Hari Raya Waisak 2570 BE",
     "2026-05-27": "Hari Raya Idul Adha 1447 H",
     "2026-05-28": "Cuti Bersama Idul Adha 1447 H",

@@ -41,13 +41,13 @@ def test_detect_gaps_brpt_shaped_suspension():
     """
     BRPT-shaped: last bar 2026-05-13, resume 2026-05-25, ~-28% gap-down.
     Trading days strictly between 5/13 and 5/25, given IDX 2026 holidays:
-      5/14 Kenaikan Isa Al Masih (holiday)   — excluded
-      5/15 Fri                               — TRADING (1)
-      5/16, 5/17 weekend                     — excluded
-      5/18, 5/19, 5/20, 5/21 Mon-Thu         — TRADING (2,3,4,5)
-      5/22 Waisak holiday                    — excluded
-      5/23, 5/24 weekend                     — excluded
-    Total missing trading days: 5.
+      5/14 Kenaikan Isa Al Masih (holiday)            — excluded
+      5/15 Cuti Bersama Kenaikan Isa Al Masih         — excluded
+      5/16, 5/17 weekend                              — excluded
+      5/18, 5/19, 5/20, 5/21 Mon-Thu                  — TRADING (1,2,3,4)
+      5/22 Waisak holiday                             — excluded
+      5/23, 5/24 weekend                              — excluded
+    Total missing trading days: 4.
     """
     df = _df([
         ("2026-05-13", 2100.0, 2110.0, 2080.0, 2080.0, 50_000_000),
@@ -58,7 +58,7 @@ def test_detect_gaps_brpt_shaped_suspension():
     ev = events[0]
     assert ev.last_normal_date == "2026-05-13"
     assert ev.resume_date == "2026-05-25"
-    assert ev.missing_td == 5
+    assert ev.missing_td == 4
     assert ev.classification == "suspension"
     assert ev.gap_pct == pytest.approx((1495.0 - 2080.0) / 2080.0, rel=1e-6)
     assert ev.detected_at == "2026-05-28T00:00:00+00:00"
@@ -136,7 +136,7 @@ def test_scan_all_writes_suspension_event_and_skips_quiet_ticker():
             "SELECT ticker, last_normal_date, resume_date, missing_td, classification "
             "FROM suspension_events"
         ).fetchall()
-        assert rows == [("BRPT", "2026-05-13", "2026-05-25", 5, "suspension")]
+        assert rows == [("BRPT", "2026-05-13", "2026-05-25", 4, "suspension")]
     finally:
         conn.close()
 
