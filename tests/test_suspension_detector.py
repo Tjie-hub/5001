@@ -240,3 +240,14 @@ def test_get_status_data_gap_does_not_trip_post_suspension():
         assert status["post_suspension"] is False
     finally:
         conn.close()
+
+
+def test_detect_gaps_skips_pairs_with_nan_prices():
+    """Real-world OHLCV can have NULL/NaN rows. Skip rather than emit NULL gap_pct."""
+    import numpy as np
+    df = pd.DataFrame([
+        ("2026-04-01", 100.0, 101.0, 99.0, 100.0, 1000),
+        ("2026-04-15", np.nan, np.nan, np.nan, np.nan, np.nan),
+        ("2026-04-30", 200.0, 201.0, 199.0, 200.0, 2000),
+    ], columns=["date", "open", "high", "low", "close", "volume"])
+    assert detect_gaps(df) == []

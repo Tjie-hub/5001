@@ -68,7 +68,7 @@ def detect_gaps(
             continue
         last_close = closes[i]
         resume_open = opens[i + 1]
-        if last_close <= 0:
+        if pd.isna(last_close) or pd.isna(resume_open) or last_close <= 0:
             continue
         gap_pct = (resume_open - last_close) / last_close
         classification = (
