@@ -165,3 +165,91 @@ def scan_all(
     finally:
         if own_conn:
             conn.close()
+
+
+def _trading_days_inclusive(start: date, end: date) -> int:
+    """Trading days from start to end, both inclusive. Returns 0 if start > end."""
+    if start > end:
+        return 0
+    count = 0
+    d = start
+    while d <= end:
+        ok, _ = is_trading_day(d)
+        if ok:
+            count += 1
+        d += timedelta(days=1)
+    return count
+
+
+def get_status(
+    ticker: str,
+    *,
+    as_of: Optional[date] = None,
+    post_window: int = 14,
+    conn: Optional[sqlite3.Connection] = None,
+    db_path: Optional[str] = None,
+) -> dict:
+    """
+    Return suspension/post-suspension flags for `ticker` evaluated at `as_of`.
+    Reads the most recent event from suspension_events. See spec §get_status.
+    """
+    if as_of is None:
+        as_of = date.today()
+    elif isinstance(as_of, str):
+        as_of = date.fromisoformat(as_of)
+
+    own_conn = conn is None
+    if own_conn:
+        conn = sqlite3.connect(db_path or _DEFAULT_DB_PATH)
+    try:
+        _ensure_schema(conn)
+        row = conn.execute(
+            "SELECT last_normal_date, resume_date, missing_td, gap_pct, classification, detected_at "
+            "FROM suspension_events WHERE ticker = ? ORDER BY resume_date DESC LIMIT 1",
+            (ticker,),
+        ).fetchone()
+
+        if not row:
+            return {
+                "ticker": ticker,
+                "suspended_now": False,
+                "post_suspension": False,
+                "days_since_resume": None,
+                "last_event": None,
+            }
+
+        last_normal = date.fromisoformat(row[0])
+        resume = date.fromisoformat(row[1])
+        last_event = {
+            "last_normal_date": row[0],
+            "resume_date": row[1],
+            "missing_td": row[2],
+            "gap_pct": row[3],
+            "classification": row[4],
+            "detected_at": row[5],
+        }
+
+        suspended_now = last_normal < as_of < resume
+
+        if as_of < resume:
+            days_since_resume = None
+        else:
+            days_since_resume = _trading_days_inclusive(resume, as_of) - 1
+
+        is_suspension = row[4] == "suspension"
+        post_suspension = bool(
+            is_suspension
+            and days_since_resume is not None
+            and days_since_resume <= post_window
+        )
+
+        return {
+            "ticker": ticker,
+            "suspended_now": suspended_now,
+            "post_suspension": post_suspension,
+            "days_since_resume": days_since_resume,
+            "last_event": last_event,
+        }
+    finally:
+        if own_conn:
+            conn.close()

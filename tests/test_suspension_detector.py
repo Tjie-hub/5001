@@ -157,3 +157,86 @@ def test_scan_all_is_idempotent():
         assert count == 1
     finally:
         conn.close()
+
+
+from datetime import date
+
+from engine.suspension_detector import get_status
+
+
+def test_get_status_no_event_returns_clean_flags():
+    conn = sqlite3.connect(":memory:")
+    try:
+        status = get_status("NEVER", as_of=date(2026, 5, 28), conn=conn)
+        assert status == {
+            "ticker": "NEVER",
+            "suspended_now": False,
+            "post_suspension": False,
+            "days_since_resume": None,
+            "last_event": None,
+        }
+    finally:
+        conn.close()
+
+
+def test_get_status_within_post_window_flags_post_suspension():
+    """
+    BRPT resume 2026-05-25; check on 2026-05-28.
+    Trading days from 5/25 (incl) up to 5/28 (incl), IDX 2026:
+      5/25 Mon trading, 5/26 Tue trading, 5/27 Idul Adha holiday,
+      5/28 Cuti Bersama Idul Adha holiday.
+    Trading days inclusive count = 2 → days_since_resume = 2 - 1 = 1.
+    """
+    conn = sqlite3.connect(":memory:")
+    try:
+        scan_all({
+            "BRPT": _df([
+                ("2026-05-13", 2100.0, 2110.0, 2080.0, 2080.0, 50_000_000),
+                ("2026-05-25", 1495.0, 1565.0, 1495.0, 1565.0, 200_000_000),
+            ]),
+        }, conn=conn)
+        status = get_status("BRPT", as_of=date(2026, 5, 28), conn=conn, post_window=14)
+        assert status["suspended_now"] is False
+        assert status["post_suspension"] is True
+        assert status["days_since_resume"] == 1
+        assert status["last_event"]["classification"] == "suspension"
+        assert status["last_event"]["resume_date"] == "2026-05-25"
+    finally:
+        conn.close()
+
+
+def test_get_status_beyond_post_window_clears_flag():
+    conn = sqlite3.connect(":memory:")
+    try:
+        scan_all({
+            "BRPT": _df([
+                ("2026-05-13", 2100.0, 2110.0, 2080.0, 2080.0, 50_000_000),
+                ("2026-05-25", 1495.0, 1565.0, 1495.0, 1565.0, 200_000_000),
+            ]),
+        }, conn=conn)
+        # ~7 weeks later, well past the 14-trading-day default window
+        status = get_status("BRPT", as_of=date(2026, 7, 15), conn=conn, post_window=14)
+        assert status["post_suspension"] is False
+        assert status["suspended_now"] is False
+        assert status["days_since_resume"] is not None
+        assert status["days_since_resume"] > 14
+        assert status["last_event"]["classification"] == "suspension"
+    finally:
+        conn.close()
+
+
+def test_get_status_data_gap_does_not_trip_post_suspension():
+    """A recent data_gap event must NOT set post_suspension=True (only real suspensions do)."""
+    conn = sqlite3.connect(":memory:")
+    try:
+        scan_all({
+            "FETCHGAP": _df([
+                ("2026-04-06", 100.0, 101.0, 99.0, 100.0, 1000),
+                ("2026-04-13", 100.5, 101.5, 100.0, 100.5, 1100),
+            ]),
+        }, conn=conn)
+        status = get_status("FETCHGAP", as_of=date(2026, 4, 14), conn=conn)
+        assert status["last_event"]["classification"] == "data_gap"
+        assert status["post_suspension"] is False
+    finally:
+        conn.close()
