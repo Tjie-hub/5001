@@ -87,14 +87,17 @@ def test_detect_gaps_data_gap_when_price_continuous():
 
 def test_detect_gaps_long_holiday_cluster_returns_empty():
     """
-    Idul Fitri cluster: bar on 2026-03-18 (Wed), next bar on 2026-03-25 (Wed).
-    Strictly between, IDX 2026 calendar:
+    Idul Fitri cluster (3/18-3/24 non-trading). Bar on 2026-03-18 then next bar
+    on 2026-03-25 (Wed). Strictly between, IDX 2026 calendar:
       3/19 Cuti Bersama Idul Fitri        — excluded
       3/20 Idul Fitri day 1               — excluded
       3/21, 3/22 weekend                  — excluded
       3/23 Cuti Bersama Idul Fitri        — excluded
       3/24 Cuti Bersama Idul Fitri        — excluded
     Total missing trading days: 0 → no event, despite a 7-calendar-day gap.
+    (Note: 3/18 itself is also Cuti Bersama; the test uses it as the prior bar
+    date deliberately to stress that the strictly-between counter excludes both
+    endpoints.)
     """
     df = _df([
         ("2026-03-18", 100.0, 101.0, 99.0, 100.0, 1000),

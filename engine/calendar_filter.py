@@ -63,6 +63,7 @@ IDX_MARKET_HOLIDAYS_2026: Dict[str, str] = {
     "2026-01-27": "Isra Mi'raj Nabi Muhammad SAW 1447 H",
     "2026-01-29": "Tahun Baru Imlek 2577 Kongzili",
     # ── Maret (Idul Fitri 1447 H + Nyepi) ───────────────────────────────────
+    "2026-03-18": "Cuti Bersama Idul Fitri 1447 H",
     "2026-03-19": "Cuti Bersama Idul Fitri 1447 H",
     "2026-03-20": "Hari Raya Idul Fitri 1447 H (Hari ke-1)",
     "2026-03-21": "Hari Raya Idul Fitri 1447 H (Hari ke-2)",
