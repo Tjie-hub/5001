@@ -64,3 +64,22 @@ def test_detect_gaps_brpt_shaped_suspension():
     assert ev.detected_at == "2026-05-28T00:00:00+00:00"
     # ticker is set by scan_all, not by detect_gaps
     assert ev.ticker == ""
+
+
+def test_detect_gaps_data_gap_when_price_continuous():
+    """
+    4 missing trading days but price moves only 0.5% → classify as data_gap.
+    2026-04-06 (Mon) -> 2026-04-13 (Mon).
+    Strictly between: 4/7 Tue, 4/8 Wed, 4/9 Thu, 4/10 Fri = 4 trading days.
+    (4/3 Good Friday is *before* the start so doesn't affect this gap.)
+    """
+    df = _df([
+        ("2026-04-06", 100.0, 101.0, 99.0, 100.0, 1000),
+        ("2026-04-13", 100.5, 101.5, 100.0, 100.5, 1100),
+    ])
+    events = detect_gaps(df, detected_at="2026-05-28T00:00:00+00:00")
+    assert len(events) == 1
+    ev = events[0]
+    assert ev.missing_td == 4
+    assert ev.classification == "data_gap"
+    assert ev.gap_pct == pytest.approx(0.005, rel=1e-6)
