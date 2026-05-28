@@ -83,3 +83,30 @@ def test_detect_gaps_data_gap_when_price_continuous():
     assert ev.missing_td == 4
     assert ev.classification == "data_gap"
     assert ev.gap_pct == pytest.approx(0.005, rel=1e-6)
+
+
+def test_detect_gaps_long_holiday_cluster_returns_empty():
+    """
+    Idul Fitri cluster: bar on 2026-03-18 (Wed), next bar on 2026-03-25 (Wed).
+    Strictly between, IDX 2026 calendar:
+      3/19 Cuti Bersama Idul Fitri        — excluded
+      3/20 Idul Fitri day 1               — excluded
+      3/21, 3/22 weekend                  — excluded
+      3/23 Cuti Bersama Idul Fitri        — excluded
+      3/24 Cuti Bersama Idul Fitri        — excluded
+    Total missing trading days: 0 → no event, despite a 7-calendar-day gap.
+    """
+    df = _df([
+        ("2026-03-18", 100.0, 101.0, 99.0, 100.0, 1000),
+        ("2026-03-25", 102.0, 103.0, 101.0, 102.0, 1100),
+    ])
+    assert detect_gaps(df) == []
+
+
+def test_detect_gaps_normal_weekend_returns_empty():
+    """Fri -> Mon, no missing trading days."""
+    df = _df([
+        ("2026-04-10", 100.0, 101.0, 99.0, 100.0, 1000),
+        ("2026-04-13", 100.5, 101.5, 100.0, 100.5, 1100),
+    ])
+    assert detect_gaps(df) == []
