@@ -84,3 +84,84 @@ def detect_gaps(
             detected_at=detected_at,
         ))
     return events
+
+
+import os
+import sqlite3
+from typing import Dict
+
+
+_DEFAULT_DB_PATH = os.getenv(
+    "DB_PATH",
+    "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db",
+)
+
+
+def _ensure_schema(conn: sqlite3.Connection) -> None:
+    """Idempotent DDL. Called at the top of every public I/O function."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS suspension_events (
+            ticker            TEXT NOT NULL,
+            last_normal_date  TEXT NOT NULL,
+            resume_date       TEXT NOT NULL,
+            missing_td        INTEGER NOT NULL,
+            gap_pct           REAL NOT NULL,
+            classification    TEXT NOT NULL,
+            detected_at       TEXT NOT NULL,
+            PRIMARY KEY (ticker, last_normal_date, resume_date)
+        )
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_suspension_ticker_resume
+            ON suspension_events(ticker, resume_date DESC)
+    """)
+
+
+def _load_ohlcv_bulk(conn: sqlite3.Connection) -> Dict[str, pd.DataFrame]:
+    """Bulk-load the ohlcv table into {ticker: df}. Mirrors scheduler._load_ohlcv_bulk."""
+    df = pd.read_sql("SELECT * FROM ohlcv ORDER BY ticker, date ASC", conn)
+    for c in ["open", "high", "low", "close", "volume"]:
+        df[c] = df[c].astype(float)
+    return {t: g.reset_index(drop=True) for t, g in df.groupby("ticker")}
+
+
+def scan_all(
+    ohlcv_map: Optional[Dict[str, pd.DataFrame]] = None,
+    *,
+    threshold_days: int = 3,
+    price_jump_pct: float = 10.0,
+    conn: Optional[sqlite3.Connection] = None,
+    db_path: Optional[str] = None,
+) -> int:
+    """Scan every ticker's OHLCV for gap events and persist them. Returns rows written."""
+    own_conn = conn is None
+    if own_conn:
+        conn = sqlite3.connect(db_path or _DEFAULT_DB_PATH)
+    try:
+        _ensure_schema(conn)
+        if ohlcv_map is None:
+            ohlcv_map = _load_ohlcv_bulk(conn)
+        total = 0
+        for ticker, df in ohlcv_map.items():
+            events = detect_gaps(
+                df,
+                threshold_days=threshold_days,
+                price_jump_pct=price_jump_pct,
+            )
+            for ev in events:
+                ev.ticker = ticker
+                conn.execute(
+                    "INSERT OR REPLACE INTO suspension_events "
+                    "(ticker, last_normal_date, resume_date, missing_td, gap_pct, classification, detected_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        ev.ticker, ev.last_normal_date, ev.resume_date,
+                        ev.missing_td, ev.gap_pct, ev.classification, ev.detected_at,
+                    ),
+                )
+                total += 1
+        conn.commit()
+        return total
+    finally:
+        if own_conn:
+            conn.close()

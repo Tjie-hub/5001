@@ -110,3 +110,50 @@ def test_detect_gaps_normal_weekend_returns_empty():
         ("2026-04-13", 100.5, 101.5, 100.0, 100.5, 1100),
     ])
     assert detect_gaps(df) == []
+
+
+import sqlite3
+
+from engine.suspension_detector import scan_all
+
+
+def test_scan_all_writes_suspension_event_and_skips_quiet_ticker():
+    conn = sqlite3.connect(":memory:")
+    try:
+        ohlcv_map = {
+            "BRPT": _df([
+                ("2026-05-13", 2100.0, 2110.0, 2080.0, 2080.0, 50_000_000),
+                ("2026-05-25", 1495.0, 1565.0, 1495.0, 1565.0, 200_000_000),
+            ]),
+            "QUIET": _df([
+                ("2026-04-13", 100.0, 101.0, 99.0, 100.0, 1000),
+                ("2026-04-14", 100.0, 102.0, 99.0, 101.0, 1100),
+            ]),
+        }
+        n = scan_all(ohlcv_map, conn=conn)
+        assert n == 1
+        rows = conn.execute(
+            "SELECT ticker, last_normal_date, resume_date, missing_td, classification "
+            "FROM suspension_events"
+        ).fetchall()
+        assert rows == [("BRPT", "2026-05-13", "2026-05-25", 5, "suspension")]
+    finally:
+        conn.close()
+
+
+def test_scan_all_is_idempotent():
+    """Re-running scan_all on the same data must not duplicate rows."""
+    conn = sqlite3.connect(":memory:")
+    try:
+        ohlcv_map = {
+            "BRPT": _df([
+                ("2026-05-13", 2100.0, 2110.0, 2080.0, 2080.0, 50_000_000),
+                ("2026-05-25", 1495.0, 1565.0, 1495.0, 1565.0, 200_000_000),
+            ]),
+        }
+        scan_all(ohlcv_map, conn=conn)
+        scan_all(ohlcv_map, conn=conn)
+        count = conn.execute("SELECT COUNT(*) FROM suspension_events").fetchone()[0]
+        assert count == 1
+    finally:
+        conn.close()
