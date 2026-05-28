@@ -56,6 +56,12 @@ def fetch_latest():
     try:
         saved = fetch_all_incremental(category="ALL")
         print(f"[{datetime.now(WIB).strftime('%H:%M')}] Fetch selesai. {saved} bars saved.")
+        try:
+            from engine.suspension_detector import scan_all as _scan_suspensions
+            n_events = _scan_suspensions()
+            print(f"[{datetime.now(WIB).strftime('%H:%M')}] Suspension scan: {n_events} events written.")
+        except Exception as _scan_e:
+            logging.exception("suspension scan failed (non-fatal): %s", _scan_e)
     except Exception as e:
         print(f"[{datetime.now(WIB).strftime('%H:%M')}] Fetch error: {e}")
         send_telegram(
