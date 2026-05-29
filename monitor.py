@@ -10,22 +10,7 @@ from datetime import date as dt_date
 
 logger = logging.getLogger(__name__)
 
-TELEGRAM_TOKEN   = os.getenv('TELEGRAM_TOKEN', '')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
-
-
-def send_telegram(msg: str):
-    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        return
-    import requests
-    try:
-        requests.post(
-            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-            json={'chat_id': TELEGRAM_CHAT_ID, 'text': msg, 'parse_mode': 'HTML'},
-            timeout=10
-        )
-    except Exception as e:
-        logger.error(f"[monitor] Telegram error: {e}")
+from utils.telegram import send_telegram
 
 
 def _fetch_recent_closes(ticker: str, n: int = 5) -> list:

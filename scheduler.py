@@ -19,15 +19,7 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
 
-def send_telegram(msg: str):
-    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID or "ISI_" in TELEGRAM_TOKEN:
-        print(f"[Telegram skip] {msg}")
-        return
-    try:
-        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-        requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "HTML"}, timeout=10)
-    except Exception as e:
-        print(f"Telegram error: {e}")
+from utils.telegram import send_telegram  # noqa: E402
 
 def get_all_tickers():
     """Return all active tickers: idx_tickers table first, fallback to ohlcv."""
