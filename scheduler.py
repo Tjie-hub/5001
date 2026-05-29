@@ -209,7 +209,8 @@ def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
     Stale + price shock: attempts re-fetch via Stockbit API.
       - Re-fetch success: (True,  'refreshed:{N}d')
       - No token:         (False, 'stale_shock:{N}d,no_token')
-      - API fail:         (False, 'stale_shock:{N}d,fetch_error')
+      - API returns None: (False, 'stale_shock:{N}d,fetch_empty')
+      - API exception:    (False, 'stale_shock:{N}d,fetch_error')
     Stale + no shock:     (True,  'stale:{N}d')   — allow through
     Fresh:                (True,  'OK')
     No data:              (True,  'no_data')
@@ -236,7 +237,7 @@ def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
 
     stale_days = (_date.today() - fetch_date).days
 
-    if stale_days <= stale_threshold:
+    if stale_days <= stale_threshold:  # inclusive: day 30 is still fresh
         return True, 'OK'
 
     if not _detect_price_shock(df):
@@ -255,10 +256,9 @@ def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
         if not stats:
             logging.info(f"[keystats] {ticker} stale_shock:{stale_days}d — fetch empty, blocking")
             return False, f'stale_shock:{stale_days}d,fetch_empty'
-        conn2 = sqlite3.connect(db)
-        save_keystats(conn2, stats)
-        conn2.commit()
-        conn2.close()
+        with sqlite3.connect(db) as conn2:
+            save_keystats(conn2, stats)
+            conn2.commit()
         logging.info(
             f"[keystats] {ticker} refreshed after {stale_days}d stale — "
             f"PE={stats.get('pe_ttm')} ROE={stats.get('roe')}"

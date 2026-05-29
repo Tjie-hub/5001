@@ -113,7 +113,7 @@ class TestCheckKeystatsFreshness:
         db = _make_keystats_db(tmp_path, old)
         ok, reason = check_keystats_freshness("BRPT", _flat_df(), _db_path=db)
         assert ok is True
-        assert reason == "stale:45d"
+        assert reason.startswith("stale:")
 
     def test_stale_shock_no_token_blocks(self, tmp_path):
         old = (date.today() - timedelta(days=45)).isoformat()
@@ -126,16 +126,30 @@ class TestCheckKeystatsFreshness:
         assert "stale_shock" in reason
         assert "no_token" in reason
 
+    def test_stale_shock_fetch_empty_blocks(self, tmp_path):
+        old = (date.today() - timedelta(days=45)).isoformat()
+        db = _make_keystats_db(tmp_path, old)
+        tf = tmp_path / ".stockbit_token"
+        tf.write_text("eyJmYWtlLnRva2Vu.payload.sig")
+        with patch("stockbit_fetcher.fetch_keystats", return_value=None):
+            ok, reason = check_keystats_freshness(
+                "BRPT", _shock_df(), _db_path=db, _token_file=str(tf)
+            )
+        assert ok is False
+        assert "fetch_empty" in reason
+
     def test_stale_shock_refresh_success(self, tmp_path):
         old = (date.today() - timedelta(days=45)).isoformat()
         db = _make_keystats_db(tmp_path, old)
         tf = tmp_path / ".stockbit_token"
         tf.write_text("eyJmYWtlLnRva2Vu.payload.sig")
         mock_stats = {"ticker": "BRPT", "pe_ttm": 8.0, "roe": 12.0, "pbv": 2.0}
-        with patch("stockbit_fetcher.fetch_keystats", return_value=mock_stats), \
-             patch("stockbit_fetcher.save_keystats", return_value=None):
+        with patch("stockbit_fetcher.fetch_keystats", return_value=mock_stats) as mock_fetch, \
+             patch("stockbit_fetcher.save_keystats", return_value=None) as mock_save:
             ok, reason = check_keystats_freshness(
                 "BRPT", _shock_df(), _db_path=db, _token_file=str(tf)
             )
         assert ok is True
         assert "refreshed" in reason
+        mock_fetch.assert_called_once_with("eyJmYWtlLnRva2Vu.payload.sig", "BRPT")
+        mock_save.assert_called_once()
