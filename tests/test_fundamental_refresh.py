@@ -66,3 +66,76 @@ class TestLoadStockbitToken:
         tf = tmp_path / ".stockbit_token"
         tf.write_text("eyJoZWxsby13b3JsZA")  # starts with eyJ but no dots
         assert _load_stockbit_token(str(tf)) is None
+
+
+from scheduler import check_keystats_freshness
+
+
+def _make_keystats_db(tmp_path, fetch_date_str=None):
+    """Minimal stockbit_keystats table; optionally insert one BRPT row."""
+    db = str(tmp_path / "test.db")
+    conn = sqlite3.connect(db)
+    conn.execute("""
+        CREATE TABLE stockbit_keystats (
+            ticker TEXT NOT NULL,
+            fetch_date TEXT NOT NULL,
+            pe_ttm REAL, pbv REAL, roe REAL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (ticker, fetch_date)
+        )
+    """)
+    if fetch_date_str:
+        conn.execute(
+            "INSERT INTO stockbit_keystats (ticker, fetch_date, pe_ttm, pbv, roe, updated_at) "
+            "VALUES (?,?,?,?,?,?)",
+            ("BRPT", fetch_date_str, 10.0, 2.0, 15.0, "2026-01-01T00:00:00")
+        )
+    conn.commit()
+    conn.close()
+    return db
+
+
+class TestCheckKeystatsFreshness:
+    def test_no_row_passes(self, tmp_path):
+        db = _make_keystats_db(tmp_path)
+        ok, reason = check_keystats_freshness("BRPT", None, _db_path=db)
+        assert ok is True
+        assert reason == "no_data"
+
+    def test_fresh_data_passes(self, tmp_path):
+        db = _make_keystats_db(tmp_path, date.today().isoformat())
+        ok, reason = check_keystats_freshness("BRPT", _flat_df(), _db_path=db)
+        assert ok is True
+        assert reason == "OK"
+
+    def test_stale_no_shock_passes(self, tmp_path):
+        old = (date.today() - timedelta(days=45)).isoformat()
+        db = _make_keystats_db(tmp_path, old)
+        ok, reason = check_keystats_freshness("BRPT", _flat_df(), _db_path=db)
+        assert ok is True
+        assert reason == "stale:45d"
+
+    def test_stale_shock_no_token_blocks(self, tmp_path):
+        old = (date.today() - timedelta(days=45)).isoformat()
+        db = _make_keystats_db(tmp_path, old)
+        missing = str(tmp_path / "notoken")
+        ok, reason = check_keystats_freshness(
+            "BRPT", _shock_df(), _db_path=db, _token_file=missing
+        )
+        assert ok is False
+        assert "stale_shock" in reason
+        assert "no_token" in reason
+
+    def test_stale_shock_refresh_success(self, tmp_path):
+        old = (date.today() - timedelta(days=45)).isoformat()
+        db = _make_keystats_db(tmp_path, old)
+        tf = tmp_path / ".stockbit_token"
+        tf.write_text("eyJmYWtlLnRva2Vu.payload.sig")
+        mock_stats = {"ticker": "BRPT", "pe_ttm": 8.0, "roe": 12.0, "pbv": 2.0}
+        with patch("stockbit_fetcher.fetch_keystats", return_value=mock_stats), \
+             patch("stockbit_fetcher.save_keystats", return_value=None):
+            ok, reason = check_keystats_freshness(
+                "BRPT", _shock_df(), _db_path=db, _token_file=str(tf)
+            )
+        assert ok is True
+        assert "refreshed" in reason

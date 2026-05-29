@@ -202,6 +202,73 @@ def _load_stockbit_token(_token_file: str = None) -> str:
         return None
 
 
+def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
+                             _db_path: str = None, _token_file: str = None):
+    """
+    Returns (ok: bool, reason: str).
+    Stale + price shock: attempts re-fetch via Stockbit API.
+      - Re-fetch success: (True,  'refreshed:{N}d')
+      - No token:         (False, 'stale_shock:{N}d,no_token')
+      - API fail:         (False, 'stale_shock:{N}d,fetch_error')
+    Stale + no shock:     (True,  'stale:{N}d')   — allow through
+    Fresh:                (True,  'OK')
+    No data:              (True,  'no_data')
+    """
+    db = _db_path or DB_PATH
+    try:
+        conn = sqlite3.connect(db)
+        row = conn.execute(
+            'SELECT fetch_date FROM stockbit_keystats WHERE ticker=? ORDER BY fetch_date DESC LIMIT 1',
+            (ticker,)
+        ).fetchone()
+        conn.close()
+    except Exception:
+        return True, 'db_error'
+
+    if not row:
+        return True, 'no_data'
+
+    from datetime import date as _date
+    try:
+        fetch_date = _date.fromisoformat(row[0])
+    except Exception:
+        return True, 'bad_date'
+
+    stale_days = (_date.today() - fetch_date).days
+
+    if stale_days <= stale_threshold:
+        return True, 'OK'
+
+    if not _detect_price_shock(df):
+        logging.debug(f"[keystats] {ticker} stale:{stale_days}d, no shock — allow")
+        return True, f'stale:{stale_days}d'
+
+    # Stale + price shock — attempt re-fetch
+    token = _load_stockbit_token(_token_file)
+    if not token:
+        logging.info(f"[keystats] {ticker} stale_shock:{stale_days}d — no token, blocking")
+        return False, f'stale_shock:{stale_days}d,no_token'
+
+    try:
+        from stockbit_fetcher import fetch_keystats, save_keystats
+        stats = fetch_keystats(token, ticker)
+        if not stats:
+            logging.info(f"[keystats] {ticker} stale_shock:{stale_days}d — fetch empty, blocking")
+            return False, f'stale_shock:{stale_days}d,fetch_empty'
+        conn2 = sqlite3.connect(db)
+        save_keystats(conn2, stats)
+        conn2.commit()
+        conn2.close()
+        logging.info(
+            f"[keystats] {ticker} refreshed after {stale_days}d stale — "
+            f"PE={stats.get('pe_ttm')} ROE={stats.get('roe')}"
+        )
+        return True, f'refreshed:{stale_days}d'
+    except Exception as _e:
+        logging.warning(f"[keystats] {ticker} re-fetch error: {_e}")
+        return False, f'stale_shock:{stale_days}d,fetch_error'
+
+
 # Module-level regime classifier cache: {ticker: (date_str, RegimeClassifier)}
 _regime_clf_cache: dict = {}
 
