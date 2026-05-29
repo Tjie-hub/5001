@@ -217,12 +217,11 @@ def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
     """
     db = _db_path or DB_PATH
     try:
-        conn = sqlite3.connect(db)
-        row = conn.execute(
-            'SELECT fetch_date FROM stockbit_keystats WHERE ticker=? ORDER BY fetch_date DESC LIMIT 1',
-            (ticker,)
-        ).fetchone()
-        conn.close()
+        with sqlite3.connect(db) as conn:
+            row = conn.execute(
+                'SELECT fetch_date FROM stockbit_keystats WHERE ticker=? ORDER BY fetch_date DESC LIMIT 1',
+                (ticker,)
+            ).fetchone()
     except Exception:
         return True, 'db_error'
 

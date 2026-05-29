@@ -138,6 +138,18 @@ class TestCheckKeystatsFreshness:
         assert ok is False
         assert "fetch_empty" in reason
 
+    def test_stale_shock_fetch_error_blocks(self, tmp_path):
+        old = (date.today() - timedelta(days=45)).isoformat()
+        db = _make_keystats_db(tmp_path, old)
+        tf = tmp_path / ".stockbit_token"
+        tf.write_text("eyJmYWtlLnRva2Vu.payload.sig")
+        with patch("stockbit_fetcher.fetch_keystats", side_effect=Exception("timeout")):
+            ok, reason = check_keystats_freshness(
+                "BRPT", _shock_df(), _db_path=db, _token_file=str(tf)
+            )
+        assert ok is False
+        assert "fetch_error" in reason
+
     def test_stale_shock_refresh_success(self, tmp_path):
         old = (date.today() - timedelta(days=45)).isoformat()
         db = _make_keystats_db(tmp_path, old)
