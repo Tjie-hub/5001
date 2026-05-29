@@ -175,6 +175,29 @@ def check_fundamental(ticker):
         logging.warning(f"check_fundamental error: {_e}")
         return True, 'db_error'
 
+def _detect_price_shock(df, pct: float = 0.20, window: int = 5) -> bool:
+    """True if close dropped more than pct over the last window bars."""
+    if df is None or len(df) < window + 1:
+        return False
+    closes = df['close'].iloc[-(window + 1):]
+    base = closes.iloc[0]
+    if base <= 0:
+        return False
+    return bool((closes.iloc[-1] - base) / base <= -pct)
+
+
+def _load_stockbit_token(_token_file: str = None) -> str:
+    """Read Stockbit JWT from .stockbit_token. Returns None if missing or invalid."""
+    if _token_file is None:
+        _token_file = os.path.join(os.path.dirname(__file__), ".stockbit_token")
+    try:
+        with open(_token_file, 'r') as f:
+            t = f.read().strip()
+        return t if t.startswith('eyJ') else None
+    except Exception:
+        return None
+
+
 # Module-level regime classifier cache: {ticker: (date_str, RegimeClassifier)}
 _regime_clf_cache: dict = {}
 
