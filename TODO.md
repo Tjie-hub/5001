@@ -1,6 +1,6 @@
 # IDX Walkforward — TODO
 
-_Last updated: 2026-05-27 (post-regime-3class merge + holiday calendar + Telegram rotation + agent-firm mode toggle + infra services diagnosed + QuantConnect audit + big-liquidity value filter backlogged + indicator lag audit + BRPT deep-dive gap analysis)_
+_Last updated: 2026-05-29 (post-regime-3class merge + holiday calendar + Telegram rotation + agent-firm mode toggle + infra services diagnosed + QuantConnect audit + big-liquidity value filter backlogged + indicator lag audit + BRPT deep-dive gap analysis + G2 suspension detector shipped + 2024-2026 SKB calendar audit)_
 
 ---
 
@@ -173,7 +173,7 @@ _Source: BRPT.md live analysis — BRPT crash -35% May 2026 exposed critical gap
 ### 🔴 Critical — Extreme Event Handling
 
 - [ ] **G1. Backtest auto-rolling pipeline** — Current walk-forward windows are static (last ends Apr 2026). BRPT crash May 2026 is invisible. Build `engine/backtest_roller.py`: triggered weekly/monthly, appends new 3-month window, regenerates `meta_dataset_backtest.json`. ~4 hr. **Evidence: none of 4 windows cover BRPT May crash.**
-- [ ] **G2. Trading suspension / data gap detector** — BRPT had 11-day gap (May 14→25, likely suspension) with -28.1% gap-down on resume. Build `engine/suspension_detector.py`: detects gaps >3 trading days, flags ticker as `suspended`, adjusts indicator calculations (skip gap bars or reset), triggers `post_suspension` alert. ~3 hr. **Evidence: BRPT gap May 14→25 undetected, MA/ADX/ATR contaminated by discontinuity assumption.**
+- [x] **G2. Trading suspension / data gap detector** — SHIPPED 2026-05-28. `engine/suspension_detector.py` with three-layer API (`detect_gaps`, `scan_all`, `get_status`), persisted to new `suspension_events` table, wired fail-soft into `fetch_latest`. Calendar-aware trading-day counter via `engine.calendar_filter.is_trading_day`; classifies suspension vs `data_gap` by 10% price-discontinuity threshold. 15 unit tests. Backfill detected the BRPT/DEWA/BULL May-2026 cluster (`missing_td=5`, ~-22% gap-down). Followed by full SKB audit of 2024/2025/2026 calendars (commits 3efebc4..768079f). Indicator-math edits deferred to R9; Telegram alert is G8; chart marker is G9.
 - [ ] **G3. Crash recovery strategy pattern** — No existing strategy handles post-suspension gap-down or crash recovery. Design `strategy_crash_recovery`: detect gap >3 days + gap-down >20%, entry after 1-2 confirmation bars (VR>2x + close>open), SL = low of first post-resume bar (not ATR-based, since ATR is inflated by gap), TP = 50% gap retracement or VWAP resistance. ~5 hr. **Evidence: BRPT -28.1% gap-down → +4.7% bounce, REVERSAL_BREAKOUT fired but no crash-aware strategy exists.**
 
 ### 🟡 High Value — Detection-Action Gap
