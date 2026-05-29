@@ -179,7 +179,7 @@ _Source: BRPT.md live analysis — BRPT crash -35% May 2026 exposed critical gap
 ### 🟡 High Value — Detection-Action Gap
 
 - [ ] **G4. VR spike context classifier** — VR 2.73x after -35% crash ≠ VR 2.73x during normal uptrend. Add `classify_volume_context()` to VR calculation: tag as `crash_absorption`, `breakout_accumulation`, `exhaustion_distribution`, or `normal`. Adjust strategy thresholds per context. ~2 hr. **Evidence: BRPT REVERSAL_BREAKOUT score=55 but near_low=0, above_3ma=0 — misleading without context.**
-- [ ] **G5. Fundamental data auto-refresh on price shock** — BRPT fundamental data 6 weeks stale (Apr 14). NPM -4.47%, earnings growth -428%, DER 3.47 are red flags that should block entry. Trigger `stockbit_keystats` re-fetch when: (a) price drops >20% in 5 days, (b) data >30 days old + signal detected. Add `stale_days` to filter pipeline. ~1.5 hr. **Evidence: BRPT fundamentals from Apr 14 stale; 9-layer filter #4 (PE<20, PBV<5, ROE>5%) may be passing on bad data.**
+- [x] **G5. Fundamental data auto-refresh on price shock** — SHIPPED 2026-05-29. `check_keystats_freshness()` in `scheduler.py`: blocks stale+shock signals; allows stale-but-quiet through; attempts inline re-fetch via `.stockbit_token` before blocking. 17 unit tests.
 - [ ] **G6. Premover → paper trade auto-execution** — BRPT REVERSAL_BREAKOUT fired May 26 (score=55) but `paper_trades` empty. Add config toggle: `auto_trade_from_premover` (off/shadow/enforce). In shadow mode, log why trade was/wasn't opened (regime block? fundamental fail? calendar blackout?). ~2 hr. **Evidence: 0 BRPT paper trades despite premover alert. Gap between knowing and doing.**
 
 ### 🟡 High Value — Adaptive Intelligence
