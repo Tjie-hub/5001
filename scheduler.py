@@ -396,8 +396,13 @@ def scan_momentum_signals():
         wf = wf_map.get(ticker)
         if wf and wf["consistency_pct"] < BLACKLIST:
             continue
+        df = ohlcv_map.get(ticker)
         # Fundamental filter
         if _f_fundamental:
+            freshness_ok, fresh_reason = check_keystats_freshness(ticker, df)
+            if not freshness_ok:
+                logging.info(f"[scan_momentum] {ticker} blocked: {fresh_reason}")
+                continue
             fund_ok, fund_reason = check_fundamental(ticker)
             if not fund_ok:
                 continue
@@ -441,7 +446,6 @@ def scan_momentum_signals():
                 logging.warning(f"[scan_momentum] VPIN filter error [{ticker}]: {_ve}")
 
         try:
-            df = ohlcv_map.get(ticker)
             if df is None or len(df) < 25:
                 continue
             vr     = calc_vol_ratio(df)
