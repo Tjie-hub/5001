@@ -1,6 +1,6 @@
 # IDX Walkforward — TODO
 
-_Last updated: 2026-05-27 (post-regime-3class merge + holiday calendar + Telegram rotation + agent-firm mode toggle + infra services diagnosed)_
+_Last updated: 2026-05-27 (post-regime-3class merge + holiday calendar + Telegram rotation + agent-firm mode toggle + infra services diagnosed + QuantConnect audit + big-liquidity value filter backlogged + indicator lag audit + BRPT deep-dive gap analysis)_
 
 ---
 
@@ -94,3 +94,117 @@ _Last updated: 2026-05-27 (post-regime-3class merge + holiday calendar + Telegra
 ## ✅ Completed (earlier sprints)
 
 Sprint 1 (data foundation), Sprint 2 (perf/N+1), Sprint 3 (foreign accumulation score), Sprint 4 (schedule cleanup), Sprint 5 (RS vs IHSG), Sprint 6 (ATR risk mgmt), Sprint 7 (codebase cleanup), Phase 1–5 (strategies + dive page + fast-mover) — see git log for details.
+
+---
+
+## 🔲 Sprint 12 — Audit Response: Tier 1 Quick Wins
+
+_Source: QuantConnect comparison audit (review.md, 2026-05-27). High impact, low effort._
+
+- [ ] **R1. Execute `PLAN.md` — Frontend Strategy Registry** — Implement the 582-line plan for `dive.html`: JS strategy registry with interactive marker plotting, exit markers, trade detail tooltips, PnL annotation, multi-strategy overlay. ~3 hr. **Gap BRPT #6: dive.html hanya plotting entry markers tanpa exit/trade detail.**
+- [ ] **R2. Consolidate `DB_PATH` and config** — Create `config.py` module that reads `.env` once; all modules import from it. Eliminates 6+ duplicate definitions. ~1 hr.
+- [ ] **R3. Extract `send_telegram()` to shared utility** — Create `utils/telegram.py` with rate limiting and retry. Replace duplicates in `scheduler.py`, `monitor.py`, `app.py`. ~30 min.
+- [ ] **R4. Add `/health` endpoint** — Flask route returning `{"status", "db", "last_scan", "open_trades"}`. Enables systemd health checks. ~30 min.
+
+---
+
+## 🔲 Sprint 13 — Audit Response: Tier 2 Medium Improvements
+
+_Source: QuantConnect comparison audit (review.md, 2026-05-27). Medium impact, medium effort._
+
+- [ ] **R5. Split `scheduler.py` and `app.py`** — 1741-line scheduler → `scheduler/jobs.py`, `scanner.py`, `reports.py`. 2133-line app → `routes/backtest.py`, `flow.py`, `screener.py`, `telegram.py`. ~6 hr.
+- [ ] **R6. Portfolio-level backtesting** — Create `engine/portfolio_backtest.py` with multi-ticker concurrent execution, combined equity curve, portfolio Sharpe/drawdown/correlation. ~6 hr. **Gap BRPT #9: single-ticker only, tidak bisa analisis BRPT dalam konteks sektor/portfolio.**
+- [ ] **R7. Strategy parameter optimizer** — `engine/optimizer.py` with grid search + walk-forward validation. Tune VR thresholds, ATR multipliers, MA periods per-ticker. ~5 hr. **Gap BRPT #10: parameter BRPT mungkin berbeda dari rata-rata 972 ticker.**
+- [ ] **R8. Standardize VPIN** — Consolidate 3 copies of `vpin.py` into `engine/vpin.py`. Wire into scheduler toggle. Add to dive.html. ~2 hr.
+
+---
+
+## 🔲 Sprint 14 — Audit Response: Tier 3 Strategic Items
+
+_Source: QuantConnect comparison audit (review.md, 2026-05-27). Strategic, longer horizon._
+
+- [ ] **R9. Build indicator library** — Extract manual calculations from `strategies.py` into `engine/indicators.py` with auto-warmup, NaN handling, caching. ~6 hr.
+- [ ] **R10. Live broker integration research** — Investigate Sinarmas/Mirae/IPOT API; build `broker/` abstraction layer. Research phase first.
+- [ ] **R11. Clean up legacy projects** — Archive `idx-walkforward`, delete `idx-walkforward-5002`, decide on `idx-monitor`. Document in `docs/ARCHITECTURE.md`. ~2 hr.
+- [ ] **R12. CI/CD and testing** — GitHub Actions for pytest; unit tests for `run_strategy()`, `walk_forward_split()`, `compute_metrics()`. ~5 hr.
+
+---
+
+## 🔲 Sprint 15 — Big-Liquidity Value Signal Filter
+
+_Source: user request (2026-05-27). Pre-entry signal gate: restrict trades to high-liquidity stocks ranked by value metrics._
+
+- [ ] **L1. Define liquidity criteria** — ADV (avg daily volume ≥ threshold), market cap (≥ IDX30/LQ45 minimum), bid-ask spread (≤ 2%). Source: daily OHLCV volume + fundamental data.
+- [ ] **L2. Build value composite score** — Fundamental ratios: P/E (trailing), P/B, PEG, dividend yield, EV/EBITDA. Normalize and weight into a single `value_score` per ticker.
+- [ ] **L3. Integrate as pre-entry gate** — Insert liquidity + value filter into signal pipeline (`check_current_entry_signal()` or `scan_momentum_signals()`), before regime/quality gates. Reject signals for tickers below liquidity threshold or bottom value quartile.
+- [ ] **L4. Back-test filter impact** — Compare win rate, Sharpe, and max drawdown with vs. without the filter. Establish whether value + liquidity improves signal quality on IDX.
+- [ ] **L5. Surface in dive.html** — Add `ADV`, `MktCap`, `value_score` columns to screener table. Color-code liquidity tier (high/med/low) and value rank.
+
+---
+
+## 🔲 Sprint 16 — Indicator Lag Audit Fixes
+
+_Source: indicator lag audit (2026-05-27). Critical: 3 strategies use simplified ATR missing gap component. ~15 min fix + revalidation._
+
+### ✅ Critical — Simplified ATR (missing True Range gap components) — FIXED
+
+- [x] **I1. Fix `strategy_inside_bar_breakout()` line 753** — Replaced `(high-low).rolling(14).mean()` → `calc_atr(df, 14)` (full True Range). Affects TP (swing_hi_20 or entry+2×ATR) and position sizing.
+- [x] **I2. Fix `strategy_nr7_breakout()` line 836** — Replaced `ranges.rolling(14).mean()` → `calc_atr(df, 14)`. `ranges` kept for NR7 detection. Affects TP (entry+2×ATR) and position sizing.
+- [x] **I3. Fix `strategy_orb()` line 945** — Replaced `(high-low).rolling(14).mean()` → `calc_atr(df, 14)`. Affects OR range proxy (open±ATR×0.5), TP (swing_hi_20 or ATR×2), and SL.
+
+### ⚠️ Medium — Inconsistent ATR/ADX smoothing across modules
+
+- [ ] **I4. Audit ATR methodology** — `strategies.py` uses SMA `.rolling().mean()`, `regime_filter.py` uses Wilder's `.ewm(alpha=1/period)`, `premover_detector.py` uses SMA. Document decision or standardize. Defer to Sprint 14 R9 if standardization is chosen.
+
+### ⚠️ Low — Volume ratio self-inclusion
+
+- [ ] **I5. Document VR behavior** — `calc_vol_ratio()` (line 52) includes current bar's volume in both numerator and denominator, dampening VR spikes by ~10%. Add code comment noting this is intentional conservatism.
+
+### Revalidation
+
+- [ ] **I6. Re-run walkforward** — Refresh `wf_scores` for Inside Bar Breakout, NR7 Breakout, ORB after ATR fixes. Compare pre/post win rates and returns.
+
+---
+
+## 🔲 Sprint 17 — BRPT Deep-Dive Gap Analysis (NEW 2026-05-27)
+
+_Source: BRPT.md live analysis — BRPT crash -35% May 2026 exposed critical gaps not covered by any existing sprint. Case study: BRPT 2300 → 1495 with 11-day suspension gap._
+
+### 🔴 Critical — Extreme Event Handling
+
+- [ ] **G1. Backtest auto-rolling pipeline** — Current walk-forward windows are static (last ends Apr 2026). BRPT crash May 2026 is invisible. Build `engine/backtest_roller.py`: triggered weekly/monthly, appends new 3-month window, regenerates `meta_dataset_backtest.json`. ~4 hr. **Evidence: none of 4 windows cover BRPT May crash.**
+- [ ] **G2. Trading suspension / data gap detector** — BRPT had 11-day gap (May 14→25, likely suspension) with -28.1% gap-down on resume. Build `engine/suspension_detector.py`: detects gaps >3 trading days, flags ticker as `suspended`, adjusts indicator calculations (skip gap bars or reset), triggers `post_suspension` alert. ~3 hr. **Evidence: BRPT gap May 14→25 undetected, MA/ADX/ATR contaminated by discontinuity assumption.**
+- [ ] **G3. Crash recovery strategy pattern** — No existing strategy handles post-suspension gap-down or crash recovery. Design `strategy_crash_recovery`: detect gap >3 days + gap-down >20%, entry after 1-2 confirmation bars (VR>2x + close>open), SL = low of first post-resume bar (not ATR-based, since ATR is inflated by gap), TP = 50% gap retracement or VWAP resistance. ~5 hr. **Evidence: BRPT -28.1% gap-down → +4.7% bounce, REVERSAL_BREAKOUT fired but no crash-aware strategy exists.**
+
+### 🟡 High Value — Detection-Action Gap
+
+- [ ] **G4. VR spike context classifier** — VR 2.73x after -35% crash ≠ VR 2.73x during normal uptrend. Add `classify_volume_context()` to VR calculation: tag as `crash_absorption`, `breakout_accumulation`, `exhaustion_distribution`, or `normal`. Adjust strategy thresholds per context. ~2 hr. **Evidence: BRPT REVERSAL_BREAKOUT score=55 but near_low=0, above_3ma=0 — misleading without context.**
+- [ ] **G5. Fundamental data auto-refresh on price shock** — BRPT fundamental data 6 weeks stale (Apr 14). NPM -4.47%, earnings growth -428%, DER 3.47 are red flags that should block entry. Trigger `stockbit_keystats` re-fetch when: (a) price drops >20% in 5 days, (b) data >30 days old + signal detected. Add `stale_days` to filter pipeline. ~1.5 hr. **Evidence: BRPT fundamentals from Apr 14 stale; 9-layer filter #4 (PE<20, PBV<5, ROE>5%) may be passing on bad data.**
+- [ ] **G6. Premover → paper trade auto-execution** — BRPT REVERSAL_BREAKOUT fired May 26 (score=55) but `paper_trades` empty. Add config toggle: `auto_trade_from_premover` (off/shadow/enforce). In shadow mode, log why trade was/wasn't opened (regime block? fundamental fail? calendar blackout?). ~2 hr. **Evidence: 0 BRPT paper trades despite premover alert. Gap between knowing and doing.**
+
+### 🟡 High Value — Adaptive Intelligence
+
+- [ ] **G7. Adaptive strategy switching by regime** — System detects regime (BULL/BEAR/SIDEWAYS) and knows which strategies perform in each (from walk-forward)... but doesn't auto-switch. Add `adaptive_strategy_selector()` in scheduler: BULL+ADX 25-40+near MA → TFB, BULL+ADX>45+extended → Conservative, BEAR → no entry, SIDEWAYS+below MA → VWAP Reversion. ~3 hr. **Evidence: BRPT.md Section 5 heatmap shows clear strategy-regime mapping but it's manual only.**
+- [ ] **G8. Post-suspension alert pipeline** — When G2 detects suspension resume, trigger dedicated Telegram alert: "BRPT resumed trading after 11-day suspension, gap-down -28.1%, VR=2.73x, REVERSAL_BREAKOUT=55. CAUTION: crash recovery — high risk." ~1 hr.
+
+### 🟡 High Value — dive.html UI Gaps
+
+_These are frontend-only changes to `templates/dive.html`. They surface the backend intelligence (G2, G5, G7) visually so the user sees it without reading logs._
+
+- [ ] **G9. Suspension gap marker on chart** — When G2 detects a data gap >3 days, render a vertical shaded region + annotation on the chart: "SUSPENDED 11 days" with the gap-down % label. Prevents the chart from misleadingly drawing a continuous line across the gap. Uses `_rawCandles` date delta detection + `_candleSeries.createPriceLine()` or primitive overlay. ~1 hr. **Evidence: BRPT chart draws smooth line May 14→25, hiding the -28.1% gap-down reality.**
+- [ ] **G10. Regime → strategy recommendation badge** — Extend the existing regime badge to show a strategy hint. E.g. "SIDEWAYS → try VWAP Reversion" or "BULL → Conservative Confirm". Uses the heatmap from BRPT.md Section 5. Backend: add `recommended_strategy` field to `/api/ticker/<ticker>/full`. Frontend: render below regime badge. ~1 hr. **Evidence: User sees "SIDEWAYS" but has to memorize which strategy works. BRPT.md playbook is manual.**
+- [ ] **G11. Crash context annotation on chart** — When price drops >20% within 10 bars, render a shaded red region with "CRASH -35%" label on the chart. Uses lightweight-charts `createPriceLine` or background primitive. Helps user distinguish normal pullback from extreme event. ~0.5 hr. **Evidence: BRPT -35% in 3 weeks rendered identically to a normal 3% dip.**
+- [ ] **G12. Fundamental red flag badge** — When G5 detects deteriorating fundamentals (NPM < 0, DER > 3, earnings growth < -100%), render a red badge next to the premover badge: "⚠️ FUND: NPM -4.5% | DER 3.5x". Fetches from `/api/ticker/<ticker>/full` or a new `/api/ticker/<ticker>/fundamental` endpoint. ~1 hr. **Evidence: BRPT REVERSAL_BREAKOUT score=55 looks actionable, but NPM -4.47% + DER 3.47 should give pause. Currently invisible.**
+
+### 🔵 Documentation
+
+- [ ] **G13. BRPT case study in docs/** — Formalize BRPT.md findings into `docs/BRPT_CASE_STUDY.md` as reference for extreme event handling design. Include: timeline, indicator contamination evidence, strategy failure analysis, gap detection methodology. ~1 hr.
+
+---
+
+## 💡 Backlog: Tier 4 Nice-to-Have
+
+- [ ] R13. Structured logging (JSON, correlation IDs, log rotation)
+- [ ] R14. Prometheus metrics endpoint (scan duration, signals generated, open trades)
+- [ ] R15. Multi-timeframe support (hourly/daily/weekly bar aggregation — like QC TradeBarConsolidator)
+- [ ] R16. Strategy warmup caching (avoid recomputing indicators every scan; cache per ticker per day)
