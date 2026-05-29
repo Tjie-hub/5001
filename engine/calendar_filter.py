@@ -52,6 +52,50 @@ OTHER_BLACKOUT_DATES: List[str] = []
 BLACKOUT_DAYS_BEFORE = 1
 BLACKOUT_DAYS_AFTER  = 1
 
+# ─── IDX Market Holidays 2025 ─────────────────────────────────────────────────
+# Source: SKB 3 Menteri Nomor 1 Tahun 2025 (17 libur nasional + 10 cuti bersama)
+# plus SKB Perubahan adding 2025-08-18 (HUT RI 80 cuti bersama). Verified
+# 2026-05-29 against https://setkab.go.id/pemerintah-tetapkan-hari-libur-nasional-dan-cuti-bersama-tahun-2025/
+IDX_MARKET_HOLIDAYS_2025: Dict[str, str] = {
+    # ── Januari ──────────────────────────────────────────────────────────────
+    "2025-01-01": "Tahun Baru 2025 Masehi",
+    "2025-01-27": "Isra Mikraj Nabi Muhammad SAW",
+    "2025-01-28": "Cuti Bersama Tahun Baru Imlek 2576 Kongzili",
+    "2025-01-29": "Tahun Baru Imlek 2576 Kongzili",
+    # ── Maret (Nyepi + Idul Fitri 1446 H) ────────────────────────────────────
+    "2025-03-28": "Cuti Bersama Hari Suci Nyepi",
+    "2025-03-29": "Hari Suci Nyepi (Tahun Baru Saka 1947)",
+    "2025-03-31": "Hari Raya Idul Fitri 1446 H (Hari ke-1)",
+    # ── April (Idul Fitri lanjutan + Paskah) ─────────────────────────────────
+    "2025-04-01": "Hari Raya Idul Fitri 1446 H (Hari ke-2)",
+    "2025-04-02": "Cuti Bersama Idul Fitri 1446 H",
+    "2025-04-03": "Cuti Bersama Idul Fitri 1446 H",
+    "2025-04-04": "Cuti Bersama Idul Fitri 1446 H",
+    "2025-04-07": "Cuti Bersama Idul Fitri 1446 H",
+    "2025-04-18": "Wafat Yesus Kristus (Wafat Isa Al Masih)",
+    "2025-04-20": "Kebangkitan Yesus Kristus (Paskah)",
+    # ── Mei ──────────────────────────────────────────────────────────────────
+    "2025-05-01": "Hari Buruh Internasional",
+    "2025-05-12": "Hari Raya Waisak 2569 BE",
+    "2025-05-13": "Cuti Bersama Hari Raya Waisak",
+    "2025-05-29": "Kenaikan Yesus Kristus (Kenaikan Isa Al Masih)",
+    "2025-05-30": "Cuti Bersama Kenaikan Yesus Kristus",
+    # ── Juni ─────────────────────────────────────────────────────────────────
+    "2025-06-01": "Hari Lahir Pancasila",
+    "2025-06-06": "Hari Raya Idul Adha 1446 H",
+    "2025-06-09": "Cuti Bersama Idul Adha 1446 H",
+    "2025-06-27": "1 Muharam Tahun Baru Islam 1447 H",
+    # ── Agustus ──────────────────────────────────────────────────────────────
+    "2025-08-17": "Proklamasi Kemerdekaan Republik Indonesia",
+    "2025-08-18": "Cuti Bersama HUT ke-80 Kemerdekaan RI (SKB Perubahan)",
+    # ── September ────────────────────────────────────────────────────────────
+    "2025-09-05": "Maulid Nabi Muhammad SAW",
+    # ── Desember (Natal) ─────────────────────────────────────────────────────
+    "2025-12-25": "Hari Raya Natal",
+    "2025-12-26": "Cuti Bersama Hari Raya Natal",
+}
+
+
 # ─── IDX Market Holidays 2026 ─────────────────────────────────────────────────
 # BEI (Bursa Efek Indonesia) is closed on these dates.
 # Sources: Hari Libur Nasional + Cuti Bersama SKB Pemerintah 2026.
@@ -97,7 +141,9 @@ IDX_MARKET_HOLIDAYS_2026: Dict[str, str] = {
 }
 
 _MARKET_HOLIDAYS: Dict[date, str] = {
-    date.fromisoformat(k): v for k, v in IDX_MARKET_HOLIDAYS_2026.items()
+    date.fromisoformat(k): v
+    for src in (IDX_MARKET_HOLIDAYS_2025, IDX_MARKET_HOLIDAYS_2026)
+    for k, v in src.items()
 }
 
 # ─── Build master event dict ──────────────────────────────────────────────────
