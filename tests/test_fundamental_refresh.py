@@ -61,3 +61,8 @@ class TestLoadStockbitToken:
         tf = tmp_path / ".stockbit_token"
         tf.write_text("")
         assert _load_stockbit_token(str(tf)) is None
+
+    def test_malformed_token_returns_none(self, tmp_path):
+        tf = tmp_path / ".stockbit_token"
+        tf.write_text("eyJoZWxsby13b3JsZA")  # starts with eyJ but no dots
+        assert _load_stockbit_token(str(tf)) is None

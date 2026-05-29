@@ -176,7 +176,11 @@ def check_fundamental(ticker):
         return True, 'db_error'
 
 def _detect_price_shock(df, pct: float = 0.20, window: int = 5) -> bool:
-    """True if close dropped more than pct over the last window bars."""
+    """True if the most-recent close is down >= pct from the close window bars ago.
+
+    Endpoint-only check: intermediate lows are not considered.
+    Assumes df is sorted date-ascending (as returned by _load_ohlcv_bulk).
+    """
     if df is None or len(df) < window + 1:
         return False
     closes = df['close'].iloc[-(window + 1):]
@@ -187,13 +191,13 @@ def _detect_price_shock(df, pct: float = 0.20, window: int = 5) -> bool:
 
 
 def _load_stockbit_token(_token_file: str = None) -> str:
-    """Read Stockbit JWT from .stockbit_token. Returns None if missing or invalid."""
+    """Read Stockbit JWT from .stockbit_token. Returns None if missing, unreadable, or not a 3-segment JWT."""
     if _token_file is None:
         _token_file = os.path.join(os.path.dirname(__file__), ".stockbit_token")
     try:
         with open(_token_file, 'r') as f:
             t = f.read().strip()
-        return t if t.startswith('eyJ') else None
+        return t if t.startswith('eyJ') and len(t.split('.')) == 3 else None
     except Exception:
         return None
 
