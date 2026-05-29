@@ -96,6 +96,25 @@ def attach_flow_data(results, include_flow=True, flow_threshold=2):
     return results
 
 
+@app.route("/health")
+def health():
+    import sqlite3
+    result = {"status": "ok", "db": "ok", "last_scan": None, "open_trades": 0}
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        result["last_scan"] = conn.execute(
+            "SELECT MAX(scan_time) FROM scheduled_signals"
+        ).fetchone()[0]
+        result["open_trades"] = conn.execute(
+            "SELECT COUNT(*) FROM paper_trades WHERE status='OPEN'"
+        ).fetchone()[0]
+        conn.close()
+    except Exception as e:
+        result["status"] = "error"
+        result["db"] = str(e)
+    return jsonify(result)
+
+
 @app.route("/")
 @app.route("/backtest/multi")
 def backtest_multi_page():

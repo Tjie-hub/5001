@@ -104,7 +104,7 @@ _Source: QuantConnect comparison audit (review.md, 2026-05-27). High impact, low
 - [ ] **R1. Execute `PLAN.md` — Frontend Strategy Registry** — Implement the 582-line plan for `dive.html`: JS strategy registry with interactive marker plotting, exit markers, trade detail tooltips, PnL annotation, multi-strategy overlay. ~3 hr. **Gap BRPT #6: dive.html hanya plotting entry markers tanpa exit/trade detail.**
 - [ ] **R2. Consolidate `DB_PATH` and config** — Create `config.py` module that reads `.env` once; all modules import from it. Eliminates 6+ duplicate definitions. ~1 hr.
 - [x] **R3. Extract `send_telegram()` to shared utility** — `utils/telegram.py` with rate limiting (1s interval) and retry (2 retries, exp backoff). Replaced in `scheduler.py` and `monitor.py`. 8 unit tests. SHIPPED 2026-05-29.
-- [ ] **R4. Add `/health` endpoint** — Flask route returning `{"status", "db", "last_scan", "open_trades"}`. Enables systemd health checks. ~30 min.
+- [x] **R4. Add `/health` endpoint** — Flask route returning `{"status", "db", "last_scan", "open_trades"}`. 7 unit tests. SHIPPED 2026-05-29.
 
 ---
 
