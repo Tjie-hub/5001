@@ -750,7 +750,7 @@ def strategy_inside_bar_breakout(df: pd.DataFrame, capital: float = 50_000_000,
     # TP = max(swing_hi_20, entry + 2*ATR14), SL = prev low. WR baseline ~60%.
     # Design-intent (per STRATEGY_AUDIT.md A.1) was "2 inside + 3rd break + vol";
     # implementing that requires re-running walk-forward to revalidate WR.
-    atr = (df['high'] - df['low']).rolling(14).mean()
+    atr = calc_atr(df, 14)  # FIXED: was simplified (high-low) only, now uses full True Range
     if filters:
         from engine.strategies import apply_filters
         filter_mask = apply_filters(df, filters)
@@ -832,8 +832,8 @@ def strategy_inside_bar_breakout(df: pd.DataFrame, capital: float = 50_000_000,
 # STRATEGY - NR7 BREAKOUT
 def strategy_nr7_breakout(df: pd.DataFrame, capital: float = 50_000_000,
                            filters: list = None) -> dict:
-    ranges = df['high'] - df['low']
-    atr = ranges.rolling(14).mean()
+    ranges = df['high'] - df['low']  # kept for NR7 detection
+    atr = calc_atr(df, 14)  # FIXED: was simplified (high-low), now full True Range
     avg_vol5 = df['volume'].rolling(5).mean()
     if filters:
         from engine.strategies import apply_filters
@@ -942,7 +942,7 @@ def strategy_orb(df: pd.DataFrame, capital: float = 50_000_000,
 
     For true intraday ORB use `check_orb_intraday_signal()` (ticks-backed).
     """
-    atr = (df['high'] - df['low']).rolling(14).mean()
+    atr = calc_atr(df, 14)  # FIXED: was simplified (high-low), now full True Range
     avg_vol = df['volume'].rolling(20).mean()
 
     if filters:
@@ -1559,6 +1559,16 @@ if __name__ == '__main__':
 # STRATEGY: SWING TREND (big TP, reverse-trend SL)
 # ─────────────────────────────────────────────
 
+def _confirmed_pivots(pivot_indices, i: int, n: int = 2) -> list:
+    """Pivots usable at decision bar i.
+
+    A 2n+1 centered swing pivot at index p is only confirmable once bar p+n
+    exists, so at bar i only pivots with p + n <= i are known. Using later
+    pivots leaks future bars into the decision (look-ahead bias).
+    """
+    return [p for p in pivot_indices if p + n <= i]
+
+
 def _bearish_engulfing(df: pd.DataFrame, i: int) -> bool:
     if i < 1:
         return False
@@ -1614,11 +1624,6 @@ def strategy_swing_trend(df: pd.DataFrame,
     vr        = df['volume'] / avg_vol
 
     highs_idx_all, lows_idx_all = find_swing_points(df, n=2)
-    highs_set = set(highs_idx_all)
-    lows_set  = set(lows_idx_all)
-
-    def _pivots_up_to(i, pivot_set):
-        return [p for p in pivot_set if p <= i]
 
     equity      = [capital]
     trades      = []
@@ -1667,7 +1672,7 @@ def strategy_swing_trend(df: pd.DataFrame,
                         partial_done = True
 
             # Raise SL to latest HL pivot (only after 1 ATR from entry)
-            lows_seen = [p for p in lows_idx_all if p <= i]
+            lows_seen = _confirmed_pivots(lows_idx_all, i, n=2)
             if lows_seen:
                 new_hl = float(df['low'].iloc[lows_seen[-1]])
                 atr_ok = not pd.isna(atr.iloc[i]) and (highest_seen - entry_price) > atr.iloc[i]
@@ -1774,8 +1779,8 @@ def strategy_swing_trend(df: pd.DataFrame,
             was_below = (df['close'].iloc[max(0, i-5):i] <= ma50.iloc[max(0, i-5):i]).any()
             gate_reclaim = bool(above_ma50_now and was_below)
 
-            lows_so_far  = [p for p in lows_idx_all  if p <= i]
-            highs_so_far = [p for p in highs_idx_all if p <= i]
+            lows_so_far  = _confirmed_pivots(lows_idx_all,  i, n=2)
+            highs_so_far = _confirmed_pivots(highs_idx_all, i, n=2)
             gate_hhhl = (
                 len(highs_so_far) >= 2 and len(lows_so_far) >= 2 and
                 df['high'].iloc[highs_so_far[-1]] > df['high'].iloc[highs_so_far[-2]] and
@@ -1879,6 +1884,16 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
     donchian20  = df['high'].rolling(20).max().shift(1)   # prior 20-bar high
     atr60_med   = atr.rolling(60).median()
 
+    # Breakout signal per bar (NaN operands compare False, so unready bars
+    # are naturally excluded). Evaluated on the signal bar; entry fills at the
+    # NEXT bar's open — never at the signal bar's own close.
+    signal = (
+        (df['close']  > donchian20) &
+        (df['volume'] > 1.8 * avg_vol) &
+        (atr          > 0.5 * atr60_med) &
+        (df['close']  > ma50)
+    )
+
     equity      = [capital]
     trades      = []
     in_trade    = False
@@ -1922,33 +1937,23 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
                     strategy=strategy_name
                 ))
                 in_trade = False
-        else:
-            if (pd.isna(cur_atr) or pd.isna(cur_ma20)
-                    or pd.isna(ma50.iloc[i])
-                    or pd.isna(donchian20.iloc[i])
-                    or pd.isna(atr60_med.iloc[i])
-                    or pd.isna(avg_vol.iloc[i])):
+        elif signal.iloc[i - 1]:
+            sig_atr = atr.iloc[i - 1]
+            if pd.isna(sig_atr) or sig_atr <= 0:
                 equity.append(capital)
                 continue
-
-            cond_breakout = row['close'] > donchian20.iloc[i]
-            cond_volume   = row['volume'] > 1.8 * avg_vol.iloc[i]
-            cond_atr_exp  = cur_atr > 0.5 * atr60_med.iloc[i]
-            cond_regime   = row['close'] > ma50.iloc[i]
-
-            if cond_breakout and cond_volume and cond_atr_exp and cond_regime:
-                entry_price = apply_costs(row['close'], 'BUY')
-                sl_dist     = 2.5 * cur_atr
-                sl_pct      = sl_dist / entry_price
-                if sl_pct <= 0.001:
-                    equity.append(capital)
-                    continue
-                lots = lot_size(capital, entry_price, 0.005, sl_pct)
-                cost = entry_price * lots * 100
-                if cost <= capital and lots > 0:
-                    trail_stop  = entry_price - sl_dist
-                    in_trade    = True
-                    entry_date  = date
+            entry_price = apply_costs(row['open'], 'BUY')   # next-bar open
+            sl_dist     = 2.5 * sig_atr
+            sl_pct      = sl_dist / entry_price
+            if sl_pct <= 0.001:
+                equity.append(capital)
+                continue
+            lots = lot_size(capital, entry_price, 0.005, sl_pct)
+            cost = entry_price * lots * 100
+            if cost <= capital and lots > 0:
+                trail_stop  = entry_price - sl_dist
+                in_trade    = True
+                entry_date  = date
 
         equity.append(capital)
 

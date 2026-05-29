@@ -1048,7 +1048,14 @@ def scheduled_multi_strategy_scan():
         
         send_telegram(msg)
     else:
-        print(f"[{time_str}] No flow-confirmed signals (strategy pass: {len(intersection_results)}). Telegram suppressed.")
+        print(f"[{time_str}] No flow-confirmed signals (strategy pass: {len(intersection_results)}). Sending heartbeat.")
+        send_telegram(
+            f"📡 <b>Scan @ {time_str}</b> — tidak ada sinyal\n\n"
+            f"🔍 Scanned: {len(tickers)} tickers\n"
+            f"📊 Lolos strategi: {len(intersection_results)}\n"
+            f"❌ Lolos flow (≥+2): 0\n\n"
+            f"<i>Market sedang BEAR, scanner tetap jalan.</i>"
+        )
     print(f"[{time_str}] Multi-strategy scan complete.\n")
 
 def _run_open_trade_monitor():

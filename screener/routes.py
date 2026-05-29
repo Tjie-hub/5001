@@ -12,6 +12,7 @@ import screener.calculator as calc
 import screener.vpin as vpin_mod
 import screener.vpin_multi as vpin_multi
 import screener.screener_jobs as jobs
+import screener.brpt_filter as brpt_filter
 from data.fetcher import load_all_tickers
 
 logger = logging.getLogger(__name__)
@@ -132,3 +133,32 @@ def api_lq45():
 def api_run_log():
     limit = int(request.args.get('limit', 10))
     return jsonify({'run_log': db.get_run_log(limit)})
+
+
+# ── BRPT Comparable Filter ────────────────────────────────────────────────────
+
+@screener_bp.route('/brpt_filter')
+def api_brpt_filter():
+    """
+    GET /screener/brpt_filter?top=20&date=2026-05-26
+    
+    Returns stocks comparable to BRPT (Barito Pacific) based on:
+    - Big liquidity (high avg_vol_20d)
+    - Tradeability (good fundamentals, index membership)
+    - Profile similarity to BRPT (PE, PBV, ROE, price range)
+    """
+    top_n = request.args.get('top', 20, type=int)
+    trade_date = request.args.get('date', None)
+    
+    try:
+        results = brpt_filter.run_filter(screen_date=trade_date, top_n=top_n)
+        return jsonify({
+            'generated': dt_date.today().isoformat(),
+            'reference_ticker': 'BRPT',
+            'reference_profile': brpt_filter.BRPT_PROFILE,
+            'count': len(results),
+            'results': results,
+        })
+    except Exception as e:
+        logger.error(f"[brpt_filter] Error: {e}")
+        return jsonify({'error': str(e)}), 500
