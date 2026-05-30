@@ -135,6 +135,164 @@ def api_run_log():
     return jsonify({'run_log': db.get_run_log(limit)})
 
 
+# ── Fundamental Screener ─────────────────────────────────────────────────────
+
+@screener_bp.route('/columns')
+def api_screener_columns():
+    """List all available fundamental screener columns."""
+    columns = {
+        "ticker":        {"label": "Ticker", "type": "text"},
+        "pe_ttm":        {"label": "PE (TTM)", "type": "float"},
+        "pe_ann":        {"label": "PE (Annual)", "type": "float"},
+        "pe_forward":    {"label": "PE (Forward)", "type": "float"},
+        "pbv":           {"label": "PBV", "type": "float"},
+        "ps_ttm":        {"label": "P/S (TTM)", "type": "float"},
+        "eps_ttm":       {"label": "EPS (TTM)", "type": "float"},
+        "bvps":          {"label": "BVPS", "type": "float"},
+        "earnings_yield":{"label": "Earnings Yield", "type": "float"},
+        "pcf_ttm":       {"label": "P/CF (TTM)", "type": "float"},
+        "pfcf_ttm":      {"label": "P/FCF (TTM)", "type": "float"},
+        "ev_ebit":       {"label": "EV/EBIT", "type": "float"},
+        "ev_ebitda":     {"label": "EV/EBITDA", "type": "float"},
+        "peg_ratio":     {"label": "PEG Ratio", "type": "float"},
+        "fcf_per_share": {"label": "FCF/Share", "type": "float"},
+        "cash_per_share":{"label": "Cash/Share", "type": "float"},
+        "revenue_per_share":{"label": "Revenue/Share", "type": "float"},
+        "current_ratio": {"label": "Current Ratio", "type": "float"},
+        "quick_ratio":   {"label": "Quick Ratio", "type": "float"},
+        "roe":           {"label": "ROE (%)", "type": "float"},
+        "roa":           {"label": "ROA (%)", "type": "float"},
+        "der":           {"label": "D/E Ratio", "type": "float"},
+        "npm":           {"label": "Net Margin (%)", "type": "float"},
+        "div_yield":     {"label": "Div Yield (%)", "type": "float"},
+        "rev_growth":    {"label": "Rev Growth (%)", "type": "float"},
+        "earn_growth":   {"label": "Earn Growth (%)", "type": "float"},
+        "flow_score":    {"label": "Flow Score", "type": "int"},
+        "flow_verdict":  {"label": "Flow Verdict", "type": "text"},
+        "smart_money":   {"label": "Smart Money", "type": "text"},
+        "net_lot":       {"label": "Net Lots", "type": "int"},
+        "net_value":     {"label": "Net Value", "type": "int"},
+        "last_price":    {"label": "Last Price", "type": "int"},
+        "buy_lot":       {"label": "Buy Lots", "type": "int"},
+        "sell_lot":      {"label": "Sell Lots", "type": "int"},
+        "in_idx30":      {"label": "IDX30", "type": "int"},
+        "in_lq45":       {"label": "LQ45", "type": "int"},
+        "in_idx80":      {"label": "IDX80", "type": "int"},
+    }
+    return jsonify(columns)
+
+
+@screener_bp.route('/presets')
+def api_screener_presets():
+    """List preset screener configurations."""
+    return jsonify({
+        "graham_value": {
+            "columns": "ticker,pe_ttm,pbv,roe,der,div_yield,current_ratio",
+            "filters": "pe_ttm<15;pbv<1.5;der<1;current_ratio>2",
+            "sort": "pe_ttm", "sort_dir": "ASC",
+            "label": "Graham Deep Value"
+        },
+        "garp": {
+            "columns": "ticker,pe_ttm,peg_ratio,roe,rev_growth,earn_growth,flow_score",
+            "filters": "peg_ratio<1;roe>15;rev_growth>10",
+            "sort": "peg_ratio", "sort_dir": "ASC",
+            "label": "GARP — Growth at Reasonable"
+        },
+        "dividend": {
+            "columns": "ticker,div_yield,pe_ttm,pbv,roe,der,current_ratio",
+            "filters": "div_yield>4;roe>8;der<2",
+            "sort": "div_yield", "sort_dir": "DESC",
+            "label": "High Dividend Yield"
+        },
+        "flow_momentum": {
+            "columns": "ticker,flow_score,flow_verdict,smart_money,net_lot,last_price",
+            "filters": "flow_score>=3",
+            "sort": "flow_score", "sort_dir": "DESC",
+            "label": "Strong Flow Momentum"
+        },
+        "quality": {
+            "columns": "ticker,roe,roa,npm,der,earn_growth,pe_ttm,pbv",
+            "filters": "roe>20;npm>10;der<1.5",
+            "sort": "roe", "sort_dir": "DESC",
+            "label": "Quality Compounders"
+        },
+        "value": {
+            "columns": "ticker,pe_ttm,pbv,div_yield,roe,der,current_ratio",
+            "filters": "pe_ttm<10;pbv<1.5;div_yield>3",
+            "sort": "pe_ttm", "sort_dir": "ASC",
+            "label": "Deep Value"
+        },
+    })
+
+
+@screener_bp.route('/fundamental')
+def api_fundamental():
+    """Run a fundamental screener query."""
+    from screener.fundamental import run_query as f_query
+
+    columns_str = request.args.get('columns', 'ticker,pe_ttm,pbv,roe')
+    columns = [c.strip() for c in columns_str.split(',') if c.strip()]
+
+    # Optional Stockbit template pre-filter
+    ticker_filter = None
+    sb_template = request.args.get('stockbit_template', type=int)
+    if sb_template:
+        try:
+            from screener.stockbit_screener import fetch_template_tickers
+            ticker_filter = fetch_template_tickers(sb_template)
+        except Exception as e:
+            logger.warning(f"[stockbit_template] Failed to fetch tickers: {e}")
+
+    result = f_query(
+        columns=columns,
+        universe=request.args.get('universe', 'ALL'),
+        filters=request.args.get('filters', ''),
+        sort=request.args.get('sort', 'ticker'),
+        sort_dir=request.args.get('sort_dir', 'ASC'),
+        page=request.args.get('page', 1, type=int),
+        perpage=request.args.get('perpage', 20, type=int),
+        ticker_filter=ticker_filter,
+    )
+    if ticker_filter is not None:
+        result['stockbit_template'] = sb_template
+        result['stockbit_ticker_count'] = len(ticker_filter)
+    return jsonify(result)
+
+
+# ── Stockbit screener integration ─────────────────────────────────────────────
+
+@screener_bp.route('/stockbit/templates')
+def api_stockbit_templates():
+    """List user's saved Stockbit screener templates."""
+    try:
+        from screener.stockbit_screener import fetch_favorites, GURU_TEMPLATES
+        favs = fetch_favorites()
+        return jsonify({
+            'saved': favs,
+            'builtin': [
+                {'id': tid, 'type': ttype, 'name': name}
+                for name, (tid, ttype) in GURU_TEMPLATES.items()
+            ],
+        })
+    except Exception as e:
+        logger.error(f"[stockbit/templates] {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@screener_bp.route('/stockbit/run')
+def api_stockbit_run():
+    """Run a Stockbit screener template and merge with local keystats."""
+    template_id = request.args.get('template_id', 63, type=int)
+    template_type = request.args.get('template_type', 'TEMPLATE_TYPE_GURU')
+    try:
+        from screener.stockbit_screener import run_screener
+        result = run_screener(template_id, template_type)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"[stockbit/run] {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 # ── BRPT Comparable Filter ────────────────────────────────────────────────────
 
 @screener_bp.route('/brpt_filter')
