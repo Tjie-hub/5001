@@ -249,7 +249,7 @@ def _evaluate_swing_trend(trade: dict) -> dict:
     import pandas as pd
     from engine.regime_filter import calc_adx, calc_ma_slope
     from engine.swing_screener import find_swing_points
-    from engine.strategies import calc_atr
+    from engine.indicators import calc_atr
 
     ticker      = trade['ticker']
     entry_price = float(trade['entry_price'])

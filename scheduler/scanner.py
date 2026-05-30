@@ -215,7 +215,7 @@ def _sector_verdict(ticker, scored):
 
 def scan_momentum_signals():
     """Scan semua ticker untuk Momentum Following signal hari ini."""
-    from engine.strategies import calc_vol_ratio, calc_relative_strength
+    from engine.indicators import calc_vol_ratio, calc_relative_strength
     from engine.calendar_filter import is_blackout_day, is_trading_day
     from engine.sector_rotation import is_sector_tradeable
 

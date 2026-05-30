@@ -915,7 +915,7 @@ def api_paper_report_telegram():
 @backtest_bp.route('/api/signals/custom', methods=['POST'])
 def api_signals_custom():
     import sqlite3, pandas as pd, logging
-    from engine.strategies import calc_vol_ratio
+    from engine.indicators import calc_vol_ratio
     from engine.regime_filter import RegimeClassifier, get_macro_overlay, apply_macro_overlay
     import datetime as _dt
 
