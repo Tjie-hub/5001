@@ -5,6 +5,7 @@ import logging
 from dotenv import load_dotenv
 from datetime import datetime
 import pytz
+import pandas as pd
 
 load_dotenv()
 
@@ -87,7 +88,7 @@ def _detect_price_shock(df, pct: float = 0.20, window: int = 5) -> bool:
 def _load_stockbit_token(_token_file: str = None) -> str:
     """Read Stockbit JWT from .stockbit_token. Returns None if missing, unreadable, or not a 3-segment JWT."""
     if _token_file is None:
-        _token_file = os.path.join(os.path.dirname(__file__), ".stockbit_token")
+        _token_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".stockbit_token")
     try:
         with open(_token_file, 'r') as f:
             t = f.read().strip()
@@ -214,7 +215,6 @@ def _sector_verdict(ticker, scored):
 
 def scan_momentum_signals():
     """Scan semua ticker untuk Momentum Following signal hari ini."""
-    import pandas as pd
     from engine.strategies import calc_vol_ratio, calc_relative_strength
     from engine.calendar_filter import is_blackout_day, is_trading_day
     from engine.sector_rotation import is_sector_tradeable
