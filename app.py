@@ -11,6 +11,7 @@ from routes.telegram import telegram_bp, telegram_poller_loop
 from routes.flow import flow_bp
 from routes.screener import screener_main_bp
 from routes.backtest import backtest_bp
+from routes.portfolio import portfolio_bp
 import threading
 
 load_dotenv()
@@ -24,6 +25,7 @@ app.register_blueprint(telegram_bp)
 app.register_blueprint(flow_bp)
 app.register_blueprint(screener_main_bp)
 app.register_blueprint(backtest_bp)
+app.register_blueprint(portfolio_bp)
 
 @app.after_request
 def set_security_headers(response):
@@ -66,6 +68,11 @@ def screener_page():
 @app.route("/signal-scanner")
 def signal_scanner_page():
     return render_template("backtest_multi.html")
+
+
+@app.route("/portfolio")
+def portfolio_page():
+    return render_template("portfolio.html")
 
 
 if __name__ == "__main__":
