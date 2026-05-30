@@ -1,6 +1,6 @@
 # IDX Walkforward — TODO
 
-_Last updated: 2026-05-29 (post-regime-3class merge + holiday calendar + Telegram rotation + agent-firm mode toggle + infra services diagnosed + QuantConnect audit + big-liquidity value filter backlogged + indicator lag audit + BRPT deep-dive gap analysis + G2 suspension detector shipped + 2024-2026 SKB calendar audit)_
+_Last updated: 2026-05-30 (Stockbit screener shipped + R3/R4/G8 shipped + ohlcv chart fix + screener silent-failure bugs found)_
 
 ---
 
@@ -105,6 +105,21 @@ _Source: QuantConnect comparison audit (review.md, 2026-05-27). High impact, low
 - [ ] **R2. Consolidate `DB_PATH` and config** — Create `config.py` module that reads `.env` once; all modules import from it. Eliminates 6+ duplicate definitions. ~1 hr.
 - [x] **R3. Extract `send_telegram()` to shared utility** — `utils/telegram.py` with rate limiting (1s interval) and retry (2 retries, exp backoff). Replaced in `scheduler.py` and `monitor.py`. 8 unit tests. SHIPPED 2026-05-29.
 - [x] **R4. Add `/health` endpoint** — Flask route returning `{"status", "db", "last_scan", "open_trades"}`. 7 unit tests. SHIPPED 2026-05-29.
+
+---
+
+## ✅ Stockbit Screener Integration (SHIPPED 2026-05-30)
+
+- [x] `screener/stockbit_screener.py` — JWT capture from DS browser session, token validation, `fetch_template_tickers(id)`, `run_screener(id)`, `GURU_TEMPLATES` (id 63 high_volume_breakout, id 77 foreign_flow_uptrend)
+- [x] `screener/fundamental.py` — `run_query()` gains `ticker_filter` param; safe IN-clause injection
+- [x] `screener/routes.py` — `GET /screener/fundamental` accepts `stockbit_template`; `GET /screener/stockbit/templates`; `GET /screener/stockbit/run`
+- [x] `templates/screener.html` — Stockbit Filter sidebar with template dropdown and badge indicator
+- [x] **ohlcv chart fix** — `/api/ticker/<ticker>/full` now returns 250-bar OHLCV array; dive chart was showing "Chart data loading…" placeholder because `d.ohlcv` was missing from response
+
+### 🔴 Follow-up bugs (found during verification 2026-05-30)
+
+- [ ] **SB-1. Silent Stockbit filter failure** — when token expired or bad template ID, exception is swallowed and full 972-result list is returned with no error field. `sbStatus` div shows result count instead of failure message. User cannot distinguish "Stockbit filtered" from "Stockbit failed, showing all". Fix: propagate error flag in API response; show ⚠️ in `sbStatus` when `stockbit_ticker_count` absent. ~30 min.
+- [ ] **SB-2. Dead `/api/screener/stockbit/templates` endpoint** — endpoint exists and returns correct data but is never called by `screener.html`. Dropdown is hardcoded with ids 63 and 77. Adding a new template requires editing HTML. Fix: fetch templates on page load and populate `<select>` dynamically. ~20 min.
 
 ---
 

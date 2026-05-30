@@ -30,7 +30,7 @@ app.register_blueprint(screener_bp, url_prefix='/api/screener')
 
 @app.after_request
 def set_security_headers(response):
-    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
@@ -119,6 +119,10 @@ def health():
 @app.route("/backtest/multi")
 def backtest_multi_page():
     return render_template("backtest_multi.html")
+
+@app.route("/screener")
+def screener_page():
+    return render_template("screener.html")
 
 
 @app.route('/api/backtest/scan_all', methods=['POST'])
@@ -1914,9 +1918,13 @@ def api_ticker_full(ticker):
                         flow_score=_frow[0] if _frow else None)
     _pm_rev = _score_reversal(df, flow_score=_frow[0] if _frow else None)
 
+    _ohlcv = df[['date', 'open', 'high', 'low', 'close', 'volume']].tail(250).copy()
+    _ohlcv['date'] = _ohlcv['date'].astype(str)
+
     return jsonify({
         'ticker':         ticker,
         'price':          price,
+        'ohlcv':          _ohlcv.to_dict('records'),
         'regime':         regime,
         'strategies':     strategies,
         'flow':           {'latest': flow_latest, 'cum_delta_20d': cum_delta_20d},
