@@ -1,6 +1,6 @@
 # IDX Walkforward — TODO
 
-_Last updated: 2026-05-30 (R5a shipped — scheduler.py → scheduler/ package split)_
+_Last updated: 2026-05-30 (Sprint 16 shipped — ATR audit + VR doc + WF revalidation)_
 
 ---
 
@@ -97,7 +97,7 @@ Sprint 1 (data foundation), Sprint 2 (perf/N+1), Sprint 3 (foreign accumulation 
 
 ---
 
-## 🔲 Sprint 12 — Audit Response: Tier 1 Quick Wins
+## ✅ Sprint 12 — Audit Response: Tier 1 Quick Wins (SHIPPED 2026-05-30)
 
 _Source: QuantConnect comparison audit (review.md, 2026-05-27). High impact, low effort._
 
@@ -116,14 +116,14 @@ _Source: QuantConnect comparison audit (review.md, 2026-05-27). High impact, low
 - [x] `templates/screener.html` — Stockbit Filter sidebar with template dropdown and badge indicator
 - [x] **ohlcv chart fix** — `/api/ticker/<ticker>/full` now returns 250-bar OHLCV array; dive chart was showing "Chart data loading…" placeholder because `d.ohlcv` was missing from response
 
-### 🔴 Follow-up bugs (found during verification 2026-05-30)
+### ✅ Follow-up bugs (found + fixed during verification 2026-05-30)
 
 - [x] **SB-1. Silent Stockbit filter failure** — `screener/routes.py` now propagates `stockbit_error` (exception message) and always sets `stockbit_template` in response on failure. `renderResults` in `screener.html` shows ⚠️ in amber in `sbStatus` div. 6 unit tests. SHIPPED 2026-05-30.
 - [x] **SB-2. Dead `/api/screener/stockbit/templates` endpoint** — `loadStockbitTemplates()` added to `screener.html`; fetches on `init()`, populates `<select>` dynamically (saved templates preferred, builtin as fallback). Hardcoded options removed. SHIPPED 2026-05-30.
 
 ---
 
-## 🔲 Sprint 13 — Audit Response: Tier 2 Medium Improvements
+## ✅ Sprint 13 — Audit Response: Tier 2 Medium Improvements (SHIPPED 2026-05-30)
 
 _Source: QuantConnect comparison audit (review.md, 2026-05-27). Medium impact, medium effort._
 
@@ -139,7 +139,7 @@ _Source: QuantConnect comparison audit (review.md, 2026-05-27). Medium impact, m
 
 _Source: QuantConnect comparison audit (review.md, 2026-05-27). Strategic, longer horizon._
 
-- [ ] **R9. Build indicator library** — Extract manual calculations from `strategies.py` into `engine/indicators.py` with auto-warmup, NaN handling, caching. ~6 hr.
+- [x] **R9. Build indicator library** — `engine/indicators.py`: 13 `calc_*` functions, `warmup_bars` metadata, `get_warmup()`, `IndicatorCache` (SQLite). Full migration: 9 files updated, no shims. `WARMUP_BARS` in WF harness replaced with `get_warmup()`. SHIPPED 2026-05-30.
 - [ ] **R10. Live broker integration research** — Investigate Sinarmas/Mirae/IPOT API; build `broker/` abstraction layer. Research phase first.
 - [ ] **R11. Clean up legacy projects** — Archive `idx-walkforward`, delete `idx-walkforward-5002`, decide on `idx-monitor`. Document in `docs/ARCHITECTURE.md`. ~2 hr.
 - [ ] **R12. CI/CD and testing** — GitHub Actions for pytest; unit tests for `run_strategy()`, `walk_forward_split()`, `compute_metrics()`. ~5 hr.
@@ -158,7 +158,7 @@ _Source: user request (2026-05-27). Pre-entry signal gate: restrict trades to hi
 
 ---
 
-## 🔲 Sprint 16 — Indicator Lag Audit Fixes
+## ✅ Sprint 16 — Indicator Lag Audit Fixes (SHIPPED 2026-05-30)
 
 _Source: indicator lag audit (2026-05-27). Critical: 3 strategies use simplified ATR missing gap component. ~15 min fix + revalidation._
 
@@ -170,15 +170,15 @@ _Source: indicator lag audit (2026-05-27). Critical: 3 strategies use simplified
 
 ### ⚠️ Medium — Inconsistent ATR/ADX smoothing across modules
 
-- [ ] **I4. Audit ATR methodology** — `strategies.py` uses SMA `.rolling().mean()`, `regime_filter.py` uses Wilder's `.ewm(alpha=1/period)`, `premover_detector.py` uses SMA. Document decision or standardize. Defer to Sprint 14 R9 if standardization is chosen.
+- [x] **I4. Audit ATR methodology** — Decision: document, don't standardize. SMA used in `strategies.py` + `premover_detector.py` (position sizing, simpler, less lag). Wilder's EWM in `regime_filter.py` is required by ADX/DMI spec. Comments added to all 3 files. SHIPPED 2026-05-30.
 
 ### ⚠️ Low — Volume ratio self-inclusion
 
-- [ ] **I5. Document VR behavior** — `calc_vol_ratio()` (line 52) includes current bar's volume in both numerator and denominator, dampening VR spikes by ~10%. Add code comment noting this is intentional conservatism.
+- [x] **I5. Document VR behavior** — Added comment to `calc_vol_ratio()`: rolling mean includes current bar (dampens spikes ~10%), intentional conservatism. SHIPPED 2026-05-30.
 
 ### Revalidation
 
-- [ ] **I6. Re-run walkforward** — Refresh `wf_scores` for Inside Bar Breakout, NR7 Breakout, ORB after ATR fixes. Compare pre/post win rates and returns.
+- [x] **I6. Re-run walkforward** — 857/972 tickers refreshed 2026-05-30. Post-fix gains: Inside Bar +3.8pp consistency / +17% score, NR7 +4.3pp / +17%, ORB +5.7pp / +7%. Full True Range ATR measurably improves all three strategies. SHIPPED 2026-05-30.
 
 ---
 
