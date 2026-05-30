@@ -8,6 +8,17 @@ import numpy as np
 from dataclasses import dataclass
 from typing import Optional
 
+from engine.indicators import (
+    calc_atr,
+    calc_delta,
+    calc_relative_strength,
+    calc_sma,
+    calc_vwap,
+    calc_vol_ratio,
+    calc_vwma,
+    calc_weekly_trend,
+)
+
 # ─────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────
@@ -32,43 +43,6 @@ class Trade:
 # ─────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────
-
-def calc_vwap(df: pd.DataFrame, window: int = 60) -> pd.Series:
-    """Rolling VWAP 60 hari — lebih relevan untuk sinyal entry."""
-    tp = (df['high'] + df['low'] + df['close']) / 3
-    cum_tp_vol = (tp * df['volume']).rolling(window).sum()
-    cum_vol    = df['volume'].rolling(window).sum()
-    return cum_tp_vol / cum_vol
-
-def calc_atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
-    h, l, c = df['high'], df['low'], df['close']
-    tr = pd.concat([h - l,
-                    (h - c.shift()).abs(),
-                    (l - c.shift()).abs()], axis=1).max(axis=1)
-    return tr.rolling(period).mean()
-
-def calc_vol_ratio(df: pd.DataFrame, period: int = 20) -> pd.Series:
-    avg = df['volume'].rolling(period).mean()
-    return df['volume'] / avg
-
-def calc_relative_strength(ticker_df: pd.DataFrame, ihsg_df: pd.DataFrame, period: int = 20) -> float:
-    """RS = (1 + ticker_return_N) / (1 + ihsg_return_N). RS > 1.0 = outperforming IHSG."""
-    if ticker_df is None or ihsg_df is None:
-        return 1.0
-    if len(ticker_df) < period + 1 or len(ihsg_df) < period + 1:
-        return 1.0
-    ticker_return = ticker_df["close"].iloc[-1] / ticker_df["close"].iloc[-period - 1] - 1
-    ihsg_return   = ihsg_df["close"].iloc[-1]  / ihsg_df["close"].iloc[-period - 1]  - 1
-    denominator   = 1 + ihsg_return
-    if denominator == 0:
-        return 1.0
-    return (1 + ticker_return) / denominator
-
-
-def calc_delta(df: pd.DataFrame) -> pd.Series:
-    """Proxy delta: (close - open) / (high - low) * volume, normalized."""
-    rng = (df['high'] - df['low']).replace(0, np.nan)
-    return ((df['close'] - df['open']) / rng * df['volume']).fillna(0)
 
 def lot_size(capital: float, price: float, risk_pct: float, sl_pct: float) -> int:
     """Hitung lot (1 lot = 100 lembar) berdasarkan risk per trade."""
@@ -134,7 +108,7 @@ def filter_vwma_above(df: pd.DataFrame) -> pd.Series:
 
 def filter_above_ma50(df: pd.DataFrame) -> pd.Series:
     """Price di atas MA 50 — medium-term trend filter."""
-    return df['close'] > df['close'].rolling(50).mean()
+    return df['close'] > calc_sma(df, 50)
 
 def filter_low_atr(df: pd.DataFrame) -> pd.Series:
     """ATR di bawah 1.2x ATR MA — hindari hari terlalu volatile."""
@@ -342,7 +316,7 @@ def strategy_conservative(df: pd.DataFrame, capital: float = 50_000_000, filters
     Exit:  TP +1.5% / SL -1.0%  (tightest risk)
     """
     vr    = calc_vol_ratio(df, 20)
-    ma20  = df['close'].rolling(20).mean()
+    ma20  = calc_sma(df, 20)
     atr   = calc_atr(df, 14)
     atr_ma = atr.rolling(10).mean()
     bullish = df['close'] > df['open']
@@ -358,12 +332,6 @@ def strategy_conservative(df: pd.DataFrame, capital: float = 50_000_000, filters
 # ─────────────────────────────────────────────
 # STRATEGY 5 — VWMA BREAKOUT PULLBACK
 # ─────────────────────────────────────────────
-
-def calc_vwma(df: pd.DataFrame, period: int = 20) -> pd.Series:
-    """Volume Weighted Moving Average."""
-    return (df['close'] * df['volume']).rolling(period).sum() / \
-            df['volume'].rolling(period).sum()
-
 
 def strategy_vwma_breakout_pullback(df: pd.DataFrame, capital: float = 50_000_000) -> dict:
     """
@@ -1195,45 +1163,6 @@ Tambahkan kode ini ke engine/strategies.py
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-
-def calc_weekly_trend(df: pd.DataFrame) -> tuple:
-    """
-    Check weekly timeframe trend: resample daily bars to weekly, verify
-    price > weekly MA20 and slope is not sharply negative.
-
-    Returns (passes: bool, reason: str).
-    Returns (True, 'insufficient') if <100 daily bars — soft pass, don't block.
-    """
-    if len(df) < 100:
-        return True, "W:insufficient_data"
-
-    try:
-        dfc = df.copy()
-        # Ensure date index for resampling
-        if not isinstance(dfc.index, pd.DatetimeIndex):
-            dfc['date'] = pd.to_datetime(dfc['date'])
-            dfc = dfc.set_index('date')
-
-        weekly = dfc['close'].resample('W').last().dropna()
-        if len(weekly) < 22:
-            return True, "W:insufficient_weeks"
-
-        wma20    = weekly.rolling(20).mean()
-        cur_c    = weekly.iloc[-1]
-        cur_ma20 = wma20.iloc[-1]
-        if pd.isna(cur_ma20) or cur_ma20 <= 0:
-            return True, "W:ma20_nan"
-
-        # Slope over last 5 weekly bars
-        ma20_5w_ago = wma20.iloc[-6] if len(wma20) >= 6 else wma20.iloc[0]
-        slope_pct = float((cur_ma20 - ma20_5w_ago) / ma20_5w_ago * 100) if ma20_5w_ago > 0 else 0.0
-
-        if cur_c >= cur_ma20 and slope_pct >= -1.0:
-            return True, f"W:OK c={cur_c:.0f}≥ma20={cur_ma20:.0f} slope={slope_pct:+.1f}%"
-        return False, f"W:FAIL c={cur_c:.0f}<ma20={cur_ma20:.0f} slope={slope_pct:+.1f}%"
-    except Exception as _e:
-        return True, f"W:error({_e})"  # soft pass on error
-
 
 def check_current_entry_signal(ticker: str, strategy: str, df: pd.DataFrame = None) -> dict:
     """
