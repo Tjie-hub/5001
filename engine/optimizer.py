@@ -388,26 +388,28 @@ def save_optimizer_result(
     from datetime import datetime
     oos  = result['oos_metrics']
     conn = sqlite3.connect(db_path)
-    conn.execute(_CREATE_TABLE_SQL)
-    conn.execute(
-        """
-        INSERT OR REPLACE INTO optimizer_results
-            (ticker, strategy, best_params_json, oos_avg_sharpe,
-             oos_avg_return_pct, oos_avg_win_rate, windows_tested, updated_at)
-        VALUES (?,?,?,?,?,?,?,?)
-        """,
-        (
-            ticker.upper(), strategy_key,
-            json.dumps(result['best_params']),
-            oos['avg_sharpe'],
-            oos['avg_return_pct'],
-            oos['avg_win_rate'],
-            oos['windows_tested'],
-            datetime.now().strftime('%Y-%m-%d %H:%M'),
-        ),
-    )
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute(_CREATE_TABLE_SQL)
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO optimizer_results
+                (ticker, strategy, best_params_json, oos_avg_sharpe,
+                 oos_avg_return_pct, oos_avg_win_rate, windows_tested, updated_at)
+            VALUES (?,?,?,?,?,?,?,?)
+            """,
+            (
+                ticker.upper(), strategy_key,
+                json.dumps(result['best_params']),
+                oos['avg_sharpe'],
+                oos['avg_return_pct'],
+                oos['avg_win_rate'],
+                oos['windows_tested'],
+                datetime.now().strftime('%Y-%m-%d %H:%M'),
+            ),
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def get_optimizer_result(
@@ -419,16 +421,18 @@ def get_optimizer_result(
     import json
     import sqlite3
     conn = sqlite3.connect(db_path)
-    conn.execute(_CREATE_TABLE_SQL)
-    row = conn.execute(
-        """
-        SELECT best_params_json, oos_avg_sharpe, oos_avg_return_pct,
-               oos_avg_win_rate, windows_tested, updated_at
-        FROM optimizer_results WHERE ticker=? AND strategy=?
-        """,
-        (ticker.upper(), strategy_key),
-    ).fetchone()
-    conn.close()
+    try:
+        conn.execute(_CREATE_TABLE_SQL)
+        row = conn.execute(
+            """
+            SELECT best_params_json, oos_avg_sharpe, oos_avg_return_pct,
+                   oos_avg_win_rate, windows_tested, updated_at
+            FROM optimizer_results WHERE ticker=? AND strategy=?
+            """,
+            (ticker.upper(), strategy_key),
+        ).fetchone()
+    finally:
+        conn.close()
     if not row:
         return None
     return {
