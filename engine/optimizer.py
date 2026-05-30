@@ -220,3 +220,41 @@ STRATEGY_RUNNERS: dict[str, Any] = {
     'conservative':             _run_conservative,
     'trend_following_breakout': _run_tfb,
 }
+
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+
+def _iter_param_grid(grid: dict[str, list]) -> list[dict]:
+    """Expand a param dict into a list of all combinations."""
+    from itertools import product
+    keys   = list(grid.keys())
+    values = list(grid.values())
+    return [dict(zip(keys, combo)) for combo in product(*values)]
+
+
+# ─── Grid search ──────────────────────────────────────────────────────────────
+
+def grid_search(
+    df: pd.DataFrame,
+    strategy_key: str,
+    capital: float = 50_000_000,
+    param_grid: dict | None = None,
+) -> list[dict]:
+    """
+    Evaluate all param combos for strategy_key on df.
+    Returns list sorted by Sharpe (descending).
+    Each item: {'params': {...}, 'metrics': {...}}.
+    """
+    from engine.walkforward_multi import compute_metrics
+    if strategy_key not in STRATEGY_RUNNERS:
+        raise ValueError(f"Unknown strategy: {strategy_key!r}. Valid: {list(STRATEGY_RUNNERS)}")
+    runner = STRATEGY_RUNNERS[strategy_key]
+    grid   = param_grid if param_grid is not None else PARAM_GRIDS[strategy_key]
+    combos = _iter_param_grid(grid)
+    results = []
+    for params in combos:
+        raw     = runner(df, capital, params)
+        metrics = compute_metrics(raw)
+        results.append({'params': params, 'metrics': metrics})
+    results.sort(key=lambda x: x['metrics']['sharpe'], reverse=True)
+    return results

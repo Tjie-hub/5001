@@ -103,3 +103,69 @@ def test_strategy_runners_contains_all_five():
     from engine.optimizer import STRATEGY_RUNNERS
     for key in ('vol_weighted', 'momentum', 'vwap_reversion', 'conservative', 'trend_following_breakout'):
         assert key in STRATEGY_RUNNERS
+
+
+# ─── _iter_param_grid ─────────────────────────────────────────────────────────
+
+def test_iter_param_grid_full_product():
+    from engine.optimizer import _iter_param_grid
+    grid = {'a': [1, 2], 'b': [10, 20]}
+    combos = _iter_param_grid(grid)
+    assert len(combos) == 4
+    assert {'a': 1, 'b': 10} in combos
+    assert {'a': 2, 'b': 20} in combos
+
+
+def test_iter_param_grid_single_param():
+    from engine.optimizer import _iter_param_grid
+    combos = _iter_param_grid({'x': [5, 6, 7]})
+    assert len(combos) == 3
+    assert all(len(c) == 1 for c in combos)
+
+
+# ─── grid_search ──────────────────────────────────────────────────────────────
+
+def test_grid_search_returns_sorted_by_sharpe():
+    from engine.optimizer import grid_search
+    df = _make_df(250)
+    results = grid_search(df, 'vol_weighted', capital=10_000_000)
+    assert len(results) > 0
+    sharpes = [r['metrics']['sharpe'] for r in results]
+    assert sharpes == sorted(sharpes, reverse=True)
+
+
+def test_grid_search_each_result_has_params_and_metrics():
+    from engine.optimizer import grid_search
+    df = _make_df(250)
+    results = grid_search(df, 'conservative', capital=10_000_000)
+    for r in results:
+        assert 'params' in r
+        assert 'metrics' in r
+        assert 'sharpe' in r['metrics']
+        assert 'vr_threshold' in r['params']
+
+
+def test_grid_search_result_count_matches_grid_size():
+    from engine.optimizer import grid_search, PARAM_GRIDS
+    df = _make_df(250)
+    results = grid_search(df, 'conservative', capital=10_000_000)
+    grid = PARAM_GRIDS['conservative']
+    expected_count = 1
+    for v in grid.values():
+        expected_count *= len(v)
+    assert len(results) == expected_count
+
+
+def test_grid_search_custom_param_grid():
+    from engine.optimizer import grid_search
+    df = _make_df(250)
+    small_grid = {'vr_threshold': [1.5, 2.0], 'atr_sl_mult': [1.0], 'atr_tp_mult': [2.0]}
+    results = grid_search(df, 'vol_weighted', capital=10_000_000, param_grid=small_grid)
+    assert len(results) == 2
+
+
+def test_grid_search_raises_on_unknown_strategy():
+    from engine.optimizer import grid_search
+    df = _make_df(250)
+    with pytest.raises(ValueError, match='Unknown strategy'):
+        grid_search(df, 'nonexistent', capital=10_000_000)
