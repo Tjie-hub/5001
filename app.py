@@ -1918,6 +1918,30 @@ def api_ticker_full(ticker):
                         flow_score=_frow[0] if _frow else None)
     _pm_rev = _score_reversal(df, flow_score=_frow[0] if _frow else None)
 
+    # ── VPIN multi-day signal ──────────────────────────────────────────────
+    from engine.vpin import calc_vpin_multi as _calc_vpin_multi_full
+    _vpin_conn = _sq3.connect(DB_PATH)
+    try:
+        _vpin_raw = _calc_vpin_multi_full(_vpin_conn, ticker, str(latest['date'])[:10])
+    except Exception:
+        _vpin_raw = None
+    finally:
+        _vpin_conn.close()
+    _vpin = None
+    if _vpin_raw:
+        _vpin = {
+            'signal':        _vpin_raw['signal'],
+            'signal_desc':   _vpin_raw['signal_desc'],
+            'vpin_today':    _vpin_raw['vpin_today'],
+            'vpin_label':    _vpin_raw['vpin_label'],
+            'vpin_regime':   _vpin_raw['vpin_regime'],
+            'vpin_z':        _vpin_raw['vpin_z'],
+            'pressure':      _vpin_raw['pressure'],
+            'delta_dir':     _vpin_raw['delta_dir'],
+            'price_move':    _vpin_raw['price_move'],
+            'lookback_days': _vpin_raw['lookback_days'],
+        }
+
     _ohlcv = df[['date', 'open', 'high', 'low', 'close', 'volume']].tail(250).copy()
     _ohlcv['date'] = _ohlcv['date'].astype(str)
 
@@ -1947,6 +1971,7 @@ def api_ticker_full(ticker):
             'green_day':  _pm_rev.get('green_day'),
             'atr_ratio':  _pm_rev.get('atr_ratio'),
         },
+        'vpin': _vpin,
     })
 
 
