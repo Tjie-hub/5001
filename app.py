@@ -15,11 +15,6 @@ import threading
 
 load_dotenv()
 DB_PATH = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
-WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/telegram/updates")
-TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.urandom(32)
@@ -67,6 +62,10 @@ def backtest_multi_page():
 def screener_page():
     return render_template("screener.html")
 
+
+@app.route("/signal-scanner")
+def signal_scanner_page():
+    return render_template("backtest_multi.html")
 
 
 if __name__ == "__main__":
