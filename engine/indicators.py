@@ -24,6 +24,7 @@ def calc_vwap(df: pd.DataFrame, window: int = 60) -> pd.Series:
     tp = (df['high'] + df['low'] + df['close']) / 3
     cum_tp_vol = (tp * df['volume']).rolling(window, min_periods=window).sum()
     cum_vol    = df['volume'].rolling(window, min_periods=window).sum()
+    # Zero-volume windows (trading halts) yield NaN — callers should handle.
     return cum_tp_vol / cum_vol
 
 calc_vwap.warmup_bars = lambda window=60: window
@@ -35,6 +36,8 @@ def calc_vol_ratio(df: pd.DataFrame, period: int = 20) -> pd.Series:
     return df['volume'] / avg
 
 calc_vol_ratio.warmup_bars = lambda period=20: period
+# warmup_bars reflects full-window accuracy, not first-value availability.
+# With min_periods=1, a ratio exists from bar 1 but stabilises at bar period.
 
 
 def calc_delta(df: pd.DataFrame) -> pd.Series:
@@ -45,6 +48,7 @@ calc_delta.warmup_bars = lambda: 0
 
 
 def calc_vwma(df: pd.DataFrame, period: int = 20) -> pd.Series:
+    # Zero-volume windows (trading halts) yield NaN — callers should handle.
     return (df['close'] * df['volume']).rolling(period, min_periods=period).sum() / \
             df['volume'].rolling(period, min_periods=period).sum()
 
@@ -55,6 +59,8 @@ def calc_sma(df: pd.DataFrame, period: int = 20) -> pd.Series:
     return df['close'].rolling(period, min_periods=1).mean()
 
 calc_sma.warmup_bars = lambda period=20: period
+# warmup_bars reflects full-window accuracy, not first-value availability.
+# With min_periods=1, a value exists from bar 1 but converges at bar period.
 
 
 def calc_relative_strength(ticker_df: pd.DataFrame, ihsg_df: pd.DataFrame, period: int = 20) -> float:

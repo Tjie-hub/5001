@@ -37,7 +37,7 @@ class TestCalcAtr:
     def test_no_nan_after_warmup(self, ohlcv):
         from engine.indicators import calc_atr
         result = calc_atr(ohlcv, period=14)
-        assert not result.iloc[14:].isna().any()
+        assert not result.iloc[13:].isna().any()   # was iloc[14:]
 
     def test_positive_values(self, ohlcv):
         from engine.indicators import calc_atr
