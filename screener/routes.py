@@ -235,6 +235,7 @@ def api_fundamental():
 
     # Optional Stockbit template pre-filter
     ticker_filter = None
+    stockbit_error = None
     sb_template = request.args.get('stockbit_template', type=int)
     if sb_template:
         try:
@@ -242,6 +243,7 @@ def api_fundamental():
             ticker_filter = fetch_template_tickers(sb_template)
         except Exception as e:
             logger.warning(f"[stockbit_template] Failed to fetch tickers: {e}")
+            stockbit_error = str(e)
 
     result = f_query(
         columns=columns,
@@ -253,9 +255,12 @@ def api_fundamental():
         perpage=request.args.get('perpage', 20, type=int),
         ticker_filter=ticker_filter,
     )
-    if ticker_filter is not None:
+    if sb_template:
         result['stockbit_template'] = sb_template
-        result['stockbit_ticker_count'] = len(ticker_filter)
+        if ticker_filter is not None:
+            result['stockbit_ticker_count'] = len(ticker_filter)
+        if stockbit_error:
+            result['stockbit_error'] = stockbit_error
     return jsonify(result)
 
 

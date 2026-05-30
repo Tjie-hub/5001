@@ -334,7 +334,26 @@ async function init() {
   renderColumnList();
   renderSortSelects();
   loadPresets();
+  loadStockbitTemplates();
   runQuery();
+}
+
+async function loadStockbitTemplates() {
+  try {
+    const res = await fetch('/api/screener/stockbit/templates');
+    const {saved = [], builtin = []} = await res.json();
+    const sel = document.getElementById('sbTemplate');
+    sel.innerHTML = '<option value="">— None —</option>';
+    const seen = new Set(saved.map(t => t.id));
+    [...saved, ...builtin.filter(t => !seen.has(t.id))].forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.name;
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    console.warn('[screener] Failed to load Stockbit templates:', e);
+  }
 }
 
 async function loadPresets() {
@@ -413,11 +432,7 @@ function onSbTemplateChange() {
     status.textContent = '';
   }
   currentPage = 1;
-  runQuery().then(() => {
-    if (!val) return;
-    const rc = document.getElementById('resultCount');
-    status.textContent = rc ? rc.textContent : '';
-  });
+  runQuery();
 }
 
 // ── Filters ──
@@ -504,6 +519,18 @@ function renderResults(data) {
   currentPage = data.page || 1;
 
   document.getElementById('resultCount').textContent = `(${totalRows} results)`;
+
+  // SB-1: surface stockbit filter result or error
+  const sbStatus = document.getElementById('sbStatus');
+  if (sbStatus) {
+    if (data.stockbit_error) {
+      sbStatus.innerHTML = `⚠️ Stockbit filter failed — ${data.stockbit_error}`;
+      sbStatus.style.color = 'var(--amber)';
+    } else if (data.stockbit_ticker_count !== undefined) {
+      sbStatus.textContent = `${data.stockbit_ticker_count} tickers from Stockbit`;
+      sbStatus.style.color = 'var(--text-mute)';
+    }
+  }
 
   if (!data.results || data.results.length === 0) {
     document.getElementById('tableWrap').innerHTML = '<div class="empty">No results match your criteria.</div>';

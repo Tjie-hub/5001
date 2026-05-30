@@ -118,8 +118,8 @@ _Source: QuantConnect comparison audit (review.md, 2026-05-27). High impact, low
 
 ### 🔴 Follow-up bugs (found during verification 2026-05-30)
 
-- [ ] **SB-1. Silent Stockbit filter failure** — when token expired or bad template ID, exception is swallowed and full 972-result list is returned with no error field. `sbStatus` div shows result count instead of failure message. User cannot distinguish "Stockbit filtered" from "Stockbit failed, showing all". Fix: propagate error flag in API response; show ⚠️ in `sbStatus` when `stockbit_ticker_count` absent. ~30 min.
-- [ ] **SB-2. Dead `/api/screener/stockbit/templates` endpoint** — endpoint exists and returns correct data but is never called by `screener.html`. Dropdown is hardcoded with ids 63 and 77. Adding a new template requires editing HTML. Fix: fetch templates on page load and populate `<select>` dynamically. ~20 min.
+- [x] **SB-1. Silent Stockbit filter failure** — `screener/routes.py` now propagates `stockbit_error` (exception message) and always sets `stockbit_template` in response on failure. `renderResults` in `screener.html` shows ⚠️ in amber in `sbStatus` div. 6 unit tests. SHIPPED 2026-05-30.
+- [x] **SB-2. Dead `/api/screener/stockbit/templates` endpoint** — `loadStockbitTemplates()` added to `screener.html`; fetches on `init()`, populates `<select>` dynamically (saved templates preferred, builtin as fallback). Hardcoded options removed. SHIPPED 2026-05-30.
 
 ---
 
