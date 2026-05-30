@@ -10,13 +10,10 @@ from typing import Any
 
 import pandas as pd
 
+from engine.indicators import calc_atr, calc_delta, calc_vol_ratio, calc_vwap
 from engine.strategies import (
     Trade,
     apply_costs,
-    calc_atr,
-    calc_delta,
-    calc_vol_ratio,
-    calc_vwap,
     lot_size,
     run_strategy,
     _watch_signal_block,

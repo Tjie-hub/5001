@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 from engine.regime_filter import calc_adx, calc_ma_slope
-from engine.strategies import calc_atr, calc_vol_ratio
+from engine.indicators import calc_atr, calc_vol_ratio
 
 
 # ── Pivot detection ──────────────────────────────────────────────────
