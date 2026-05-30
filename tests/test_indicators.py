@@ -121,3 +121,91 @@ class TestCalcRelativeStrength:
     def test_none_fallback(self):
         from engine.indicators import calc_relative_strength
         assert calc_relative_strength(None, None) == 1.0
+
+
+class TestCalcAdx:
+    def test_returns_series(self, ohlcv):
+        from engine.indicators import calc_adx
+        assert isinstance(calc_adx(ohlcv, period=14), pd.Series)
+
+    def test_range_0_to_100(self, ohlcv):
+        from engine.indicators import calc_adx
+        valid = calc_adx(ohlcv, period=14).dropna()
+        assert (valid >= 0).all() and (valid <= 100).all()
+
+
+class TestCalcMaSlope:
+    def test_returns_series(self, ohlcv):
+        from engine.indicators import calc_ma_slope
+        assert isinstance(calc_ma_slope(ohlcv), pd.Series)
+
+    def test_leading_nan(self, ohlcv):
+        from engine.indicators import calc_ma_slope
+        # ma_period=20 + shift of slope_window=5 → first 24 rows NaN
+        assert calc_ma_slope(ohlcv, ma_period=20, slope_window=5).iloc[:24].isna().all()
+
+
+class TestCalcVrMean:
+    def test_returns_series(self, ohlcv):
+        from engine.indicators import calc_vr_mean
+        assert isinstance(calc_vr_mean(ohlcv), pd.Series)
+
+
+class TestCalcPriceRangePct:
+    def test_returns_series(self, ohlcv):
+        from engine.indicators import calc_price_range_pct
+        assert isinstance(calc_price_range_pct(ohlcv, window=20), pd.Series)
+
+    def test_non_negative(self, ohlcv):
+        from engine.indicators import calc_price_range_pct
+        assert (calc_price_range_pct(ohlcv, window=20).dropna() >= 0).all()
+
+
+class TestCalcCloseVsMa:
+    def test_returns_series(self, ohlcv):
+        from engine.indicators import calc_close_vs_ma
+        assert isinstance(calc_close_vs_ma(ohlcv, period=20), pd.Series)
+
+
+class TestCalcWeeklyTrend:
+    def test_insufficient_data_soft_pass(self, ohlcv):
+        from engine.indicators import calc_weekly_trend
+        passes, reason = calc_weekly_trend(ohlcv)   # 40 bars < 100
+        assert passes is True and 'insufficient' in reason
+
+    def test_uptrend_returns_bool_and_str(self):
+        from engine.indicators import calc_weekly_trend
+        n = 150
+        close = pd.Series(range(1000, 1000 + n), dtype=float)
+        df = pd.DataFrame({
+            'date':  pd.date_range('2024-01-01', periods=n),
+            'close': close,
+        })
+        passes, reason = calc_weekly_trend(df)
+        assert isinstance(passes, bool) and isinstance(reason, str)
+
+
+class TestWarmupMetadata:
+    def test_calc_atr_default(self):
+        from engine.indicators import calc_atr
+        assert calc_atr.warmup_bars() == 14
+
+    def test_calc_atr_custom(self):
+        from engine.indicators import calc_atr
+        assert calc_atr.warmup_bars(period=7) == 7
+
+    def test_calc_adx_default(self):
+        from engine.indicators import calc_adx
+        assert calc_adx.warmup_bars() == 28
+
+    def test_calc_vwap_default(self):
+        from engine.indicators import calc_vwap
+        assert calc_vwap.warmup_bars() == 60
+
+    def test_get_warmup_returns_max(self):
+        from engine.indicators import get_warmup, calc_atr, calc_adx, calc_vwap
+        assert get_warmup([calc_atr, calc_adx, calc_vwap]) == 60
+
+    def test_get_warmup_empty(self):
+        from engine.indicators import get_warmup
+        assert get_warmup([]) == 0
