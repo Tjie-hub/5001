@@ -20,6 +20,7 @@ from .strategies import (
     Trade
 )
 from engine.regime_filter import strategy_regime_adaptive, RegimeClassifier
+from engine.indicators import get_warmup, calc_atr, calc_adx, calc_ma_slope, calc_vwap
 
 
 # ─────────────────────────────────────────────
@@ -214,7 +215,9 @@ def run_walk_forward(df: pd.DataFrame, capital: float = 50_000_000, filters: lis
     # (TFB needs 60-bar ATR median, Swing Trend needs 50-bar MA) can compute
     # indicators when the test slice (~65 bars) is shorter than their warmup.
     # Trades opened during the warmup portion are filtered out post-hoc.
-    WARMUP_BARS = 75
+    # Derived from the heaviest-warmup indicators across all strategies:
+    # calc_vwap(window=60) dominates; calc_adx(28), calc_ma_slope(25), calc_atr(14) follow.
+    WARMUP_BARS = get_warmup([calc_vwap, calc_adx, calc_ma_slope, calc_atr])  # → 60
 
     for w in windows:
         test_df = w['test']
