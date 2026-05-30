@@ -258,3 +258,102 @@ def grid_search(
         results.append({'params': params, 'metrics': metrics})
     results.sort(key=lambda x: x['metrics']['sharpe'], reverse=True)
     return results
+
+
+# ─── Walk-forward optimization ────────────────────────────────────────────────
+
+def optimize_strategy(
+    df: pd.DataFrame,
+    strategy_key: str,
+    capital: float = 50_000_000,
+    param_grid: dict | None = None,
+) -> dict:
+    """
+    Walk-forward validated parameter optimization.
+
+    For each WF window (12-month train, 3-month test):
+      1. Grid-search all param combos on train → pick best Sharpe
+      2. Evaluate best params on test (with warmup tail)
+    Returns best_params (most frequent train-winner), averaged OOS metrics,
+    and per-window detail.
+    """
+    import numpy as np
+    from collections import Counter
+    from engine.walkforward_multi import compute_metrics, walk_forward_split
+
+    if strategy_key not in STRATEGY_RUNNERS:
+        raise ValueError(f"Unknown strategy: {strategy_key!r}. Valid: {list(STRATEGY_RUNNERS)}")
+
+    windows = walk_forward_split(df)
+    if not windows:
+        raise ValueError("Data tidak cukup untuk walk-forward (butuh minimal 15 bulan)")
+
+    grid   = param_grid if param_grid is not None else PARAM_GRIDS[strategy_key]
+    runner = STRATEGY_RUNNERS[strategy_key]
+    combos = _iter_param_grid(grid)
+    WARMUP_BARS = 75
+
+    window_results = []
+
+    for w in windows:
+        train_df       = w['train']
+        test_df        = w['test']
+        test_start_str = w['test_start']
+
+        # Best params on train by Sharpe
+        train_scores = []
+        for params in combos:
+            raw     = runner(train_df, capital, params)
+            metrics = compute_metrics(raw)
+            train_scores.append((params, metrics['sharpe']))
+        train_scores.sort(key=lambda x: x[1], reverse=True)
+        best_params_window, train_sharpe = train_scores[0]
+
+        # Evaluate on test with warmup
+        warmup_tail = train_df.tail(WARMUP_BARS) if len(train_df) >= WARMUP_BARS else train_df
+        extended    = pd.concat([warmup_tail, test_df], ignore_index=True)
+        raw_test    = runner(extended, capital, best_params_window)
+
+        kept   = [t for t in raw_test['trades'] if t.entry_date >= test_start_str]
+        cur_cap = capital
+        eq      = [capital]
+        for t in kept:
+            cur_cap += t.pnl_rp
+            eq.append(cur_cap)
+        raw_test['trades']          = kept
+        raw_test['equity']          = eq
+        raw_test['final_capital']   = cur_cap
+        raw_test['initial_capital'] = capital
+        oos = compute_metrics(raw_test)
+
+        window_results.append({
+            'window':       w['window'],
+            'train_start':  w['train_start'],
+            'train_end':    w['train_end'],
+            'test_start':   w['test_start'],
+            'test_end':     w['test_end'],
+            'best_params':  best_params_window,
+            'train_sharpe': round(train_sharpe, 3),
+            'oos_metrics':  oos,
+        })
+
+    # Global best_params = most-frequent train winner across windows
+    param_wins         = Counter(str(w['best_params']) for w in window_results)
+    winner_str         = param_wins.most_common(1)[0][0]
+    best_params_global = next(c for c in combos if str(c) == winner_str)
+
+    oos_sharpes = [w['oos_metrics']['sharpe']           for w in window_results]
+    oos_returns = [w['oos_metrics']['total_return_pct'] for w in window_results]
+    oos_wr      = [w['oos_metrics']['win_rate']         for w in window_results]
+
+    return {
+        'strategy':    strategy_key,
+        'best_params': best_params_global,
+        'oos_metrics': {
+            'avg_sharpe':     round(float(np.mean(oos_sharpes)), 3),
+            'avg_return_pct': round(float(np.mean(oos_returns)), 2),
+            'avg_win_rate':   round(float(np.mean(oos_wr)), 1),
+            'windows_tested': len(window_results),
+        },
+        'windows': window_results,
+    }
