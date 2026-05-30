@@ -250,3 +250,62 @@ def test_optimize_strategy_raises_on_insufficient_data():
     df = _make_df(50)  # too short for WF
     with pytest.raises(ValueError, match='Data tidak cukup'):
         optimize_strategy(df, 'vol_weighted')
+
+
+# ─── DB persistence ───────────────────────────────────────────────────────────
+
+def test_save_and_get_round_trip(tmp_path):
+    from engine.optimizer import save_optimizer_result, get_optimizer_result
+    db = str(tmp_path / 'test.db')
+    result = {
+        'strategy':    'vol_weighted',
+        'best_params': {'vr_threshold': 2.0, 'atr_sl_mult': 1.0, 'atr_tp_mult': 2.0},
+        'oos_metrics': {
+            'avg_sharpe': 0.85, 'avg_return_pct': 12.3,
+            'avg_win_rate': 55.0, 'windows_tested': 3,
+        },
+    }
+    save_optimizer_result('BRPT', 'vol_weighted', result, db)
+    loaded = get_optimizer_result('BRPT', 'vol_weighted', db)
+    assert loaded is not None
+    assert loaded['ticker'] == 'BRPT'
+    assert loaded['strategy'] == 'vol_weighted'
+    assert loaded['best_params']['vr_threshold'] == 2.0
+    assert loaded['oos_metrics']['avg_sharpe'] == 0.85
+    assert 'updated_at' in loaded
+
+
+def test_get_optimizer_result_returns_none_if_missing(tmp_path):
+    from engine.optimizer import get_optimizer_result
+    db = str(tmp_path / 'empty.db')
+    assert get_optimizer_result('XXXX', 'vol_weighted', db) is None
+
+
+def test_save_upserts_on_duplicate(tmp_path):
+    from engine.optimizer import save_optimizer_result, get_optimizer_result
+    db = str(tmp_path / 'upsert.db')
+    r1 = {
+        'strategy': 'momentum', 'best_params': {'vr_threshold': 1.3, 'atr_sl_mult': 1.0, 'atr_tp_mult': 2.0},
+        'oos_metrics': {'avg_sharpe': 0.5, 'avg_return_pct': 5.0, 'avg_win_rate': 50.0, 'windows_tested': 2},
+    }
+    r2 = {
+        'strategy': 'momentum', 'best_params': {'vr_threshold': 2.0, 'atr_sl_mult': 1.2, 'atr_tp_mult': 2.4},
+        'oos_metrics': {'avg_sharpe': 1.2, 'avg_return_pct': 18.0, 'avg_win_rate': 62.0, 'windows_tested': 3},
+    }
+    save_optimizer_result('BBCA', 'momentum', r1, db)
+    save_optimizer_result('BBCA', 'momentum', r2, db)
+    loaded = get_optimizer_result('BBCA', 'momentum', db)
+    assert loaded['best_params']['vr_threshold'] == 2.0  # r2 overwrote r1
+
+
+def test_ticker_upcased_on_save(tmp_path):
+    from engine.optimizer import save_optimizer_result, get_optimizer_result
+    db = str(tmp_path / 'case.db')
+    result = {
+        'strategy': 'conservative', 'best_params': {'vr_threshold': 1.5, 'atr_sl_mult': 0.7, 'atr_tp_mult': 1.4},
+        'oos_metrics': {'avg_sharpe': 0.6, 'avg_return_pct': 7.0, 'avg_win_rate': 52.0, 'windows_tested': 2},
+    }
+    save_optimizer_result('bbca', 'conservative', result, db)
+    loaded = get_optimizer_result('BBCA', 'conservative', db)
+    assert loaded is not None
+    assert loaded['ticker'] == 'BBCA'

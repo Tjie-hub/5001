@@ -357,3 +357,89 @@ def optimize_strategy(
         },
         'windows': window_results,
     }
+
+
+# ─── DB persistence ───────────────────────────────────────────────────────────
+
+_CREATE_TABLE_SQL = """
+    CREATE TABLE IF NOT EXISTS optimizer_results (
+        ticker              TEXT NOT NULL,
+        strategy            TEXT NOT NULL,
+        best_params_json    TEXT NOT NULL,
+        oos_avg_sharpe      REAL,
+        oos_avg_return_pct  REAL,
+        oos_avg_win_rate    REAL,
+        windows_tested      INTEGER,
+        updated_at          TEXT NOT NULL,
+        PRIMARY KEY (ticker, strategy)
+    )
+"""
+
+
+def save_optimizer_result(
+    ticker: str,
+    strategy_key: str,
+    result: dict,
+    db_path: str,
+) -> None:
+    """Upsert optimizer result for (ticker, strategy) into optimizer_results table."""
+    import json
+    import sqlite3
+    from datetime import datetime
+    oos  = result['oos_metrics']
+    conn = sqlite3.connect(db_path)
+    conn.execute(_CREATE_TABLE_SQL)
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO optimizer_results
+            (ticker, strategy, best_params_json, oos_avg_sharpe,
+             oos_avg_return_pct, oos_avg_win_rate, windows_tested, updated_at)
+        VALUES (?,?,?,?,?,?,?,?)
+        """,
+        (
+            ticker.upper(), strategy_key,
+            json.dumps(result['best_params']),
+            oos['avg_sharpe'],
+            oos['avg_return_pct'],
+            oos['avg_win_rate'],
+            oos['windows_tested'],
+            datetime.now().strftime('%Y-%m-%d %H:%M'),
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_optimizer_result(
+    ticker: str,
+    strategy_key: str,
+    db_path: str,
+) -> dict | None:
+    """Fetch cached optimizer result for (ticker, strategy). Returns None if missing."""
+    import json
+    import sqlite3
+    conn = sqlite3.connect(db_path)
+    conn.execute(_CREATE_TABLE_SQL)
+    row = conn.execute(
+        """
+        SELECT best_params_json, oos_avg_sharpe, oos_avg_return_pct,
+               oos_avg_win_rate, windows_tested, updated_at
+        FROM optimizer_results WHERE ticker=? AND strategy=?
+        """,
+        (ticker.upper(), strategy_key),
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {
+        'ticker':      ticker.upper(),
+        'strategy':    strategy_key,
+        'best_params': json.loads(row[0]),
+        'oos_metrics': {
+            'avg_sharpe':     row[1],
+            'avg_return_pct': row[2],
+            'avg_win_rate':   row[3],
+            'windows_tested': row[4],
+        },
+        'updated_at': row[5],
+    }
