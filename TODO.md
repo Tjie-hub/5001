@@ -128,7 +128,7 @@ _Source: QuantConnect comparison audit (review.md, 2026-05-27). High impact, low
 _Source: QuantConnect comparison audit (review.md, 2026-05-27). Medium impact, medium effort._
 
 - [x] **R5a. Split `scheduler.py`** — `scheduler/` package: `state.py` (caches), `utils.py` (shared helpers), `jobs.py` (10 job fns), `scanner.py` (11 scan fns), `reports.py` (4 report fns), `__init__.py` (start_scheduler + re-exports). Old 1887-line `scheduler.py` deleted. SHIPPED 2026-05-30.
-- [ ] **R5b. Split `app.py`** — 2160-line app → `routes/backtest.py`, `flow.py`, `screener.py`, `telegram.py`. ~4 hr.
+- [x] **R5b. Split `app.py`** — `routes/` package: `backtest.py` (backtest/paper/signals/agent), `flow.py` (flow/broker), `screener.py` (ticker/dive/strategy/fastmover/premover/sector/calendar), `telegram.py` (webhook/polling). app.py reduced to 77 lines. 97 tests pass. SHIPPED 2026-05-30.
 - [ ] **R6. Portfolio-level backtesting** — Create `engine/portfolio_backtest.py` with multi-ticker concurrent execution, combined equity curve, portfolio Sharpe/drawdown/correlation. ~6 hr. **Gap BRPT #9: single-ticker only, tidak bisa analisis BRPT dalam konteks sektor/portfolio.**
 - [ ] **R7. Strategy parameter optimizer** — `engine/optimizer.py` with grid search + walk-forward validation. Tune VR thresholds, ATR multipliers, MA periods per-ticker. ~5 hr. **Gap BRPT #10: parameter BRPT mungkin berbeda dari rata-rata 972 ticker.**
 - [x] **R8. Standardize VPIN** — Merged screener/vpin.py + screener/vpin_multi.py → engine/vpin.py. Shims left for backward compat. vpin key added to /api/ticker/<ticker>/full. VPIN card added to dive.html. SHIPPED 2026-05-30.
