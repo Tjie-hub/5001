@@ -165,6 +165,37 @@
       box-shadow: 0 0 14px var(--accent-glow);
     }
 
+    /* ── VPIN card ───────────────────────────────────────── */
+    .vpin-signal-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 5px;
+      font-size: 12px; font-weight: 700; letter-spacing: .04em;
+      margin-bottom: 6px;
+    }
+    .vpin-sig-STRONG_BUY  { background: rgba(34,197,94,.18);  color: #22c55e; }
+    .vpin-sig-BUY         { background: rgba(134,239,172,.15); color: #86efac; }
+    .vpin-sig-ACCUMULATION{ background: rgba(234,179,8,.15);   color: #eab308; }
+    .vpin-sig-AVOID,
+    .vpin-sig-DANGER      { background: rgba(239,68,68,.18);   color: #ef4444; }
+    .vpin-sig-WATCH_LONG,
+    .vpin-sig-WATCH_SHORT { background: rgba(148,163,184,.12); color: #94a3b8; }
+    .vpin-sig-NO_SIGNAL   { background: rgba(100,116,139,.10); color: #64748b; }
+    .vpin-regime-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 600; letter-spacing: .03em;
+    }
+    .vpin-reg-SPIKE   { background: rgba(249,115,22,.18); color: #f97316; }
+    .vpin-reg-RISING  { background: rgba(34,197,94,.15);  color: #22c55e; }
+    .vpin-reg-FALLING { background: rgba(239,68,68,.15);  color: #ef4444; }
+    .vpin-reg-NORMAL  { background: rgba(148,163,184,.12);color: #94a3b8; }
+    .vpin-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 6px 16px; margin-top: 8px; font-size: 12px;
+    }
+    .vpin-grid-label { color: var(--mute); }
+    .vpin-grid-value { color: var(--text); font-weight: 600; font-family: var(--mono); }
+    .vpin-desc { font-size: 11px; color: var(--mute); margin-bottom: 8px; }
+    .vpin-pressure-yes { color: #ef4444; font-weight: 700; }
+
     /* Strategy selector overlay (top-left below TF) */
     .strat-overlay {
       position: absolute; top: 44px; left: 12px; z-index: 3;
@@ -352,6 +383,7 @@
   </div>
   <div class="drawer-section-title">Jump To</div>
   <a class="drawer-link" href="#sec-strategies" onclick="toggleDrawer()">Strategy Signals</a>
+  <a class="drawer-link" href="#sec-vpin"       onclick="toggleDrawer()">VPIN Flow</a>
   <a class="drawer-link" href="#sec-flow"       onclick="toggleDrawer()">Order Flow</a>
   <a class="drawer-link" href="#sec-broker"     onclick="toggleDrawer()">Top Brokers</a>
   <div class="drawer-section-title" style="margin-top:8px">Watchlist</div>
@@ -419,6 +451,33 @@
         </tr></thead>
         <tbody id="strat-body"></tbody>
       </table>
+    </div>
+
+    <div class="section" id="sec-vpin">
+      <div class="sec-title">VPIN — Informed Flow</div>
+      <div id="vpin-loading" class="loading-msg">Loading…</div>
+      <div id="vpin-content" style="display:none">
+        <div id="vpin-signal-badge" class="vpin-signal-badge">—</div>
+        <div id="vpin-desc" class="vpin-desc">—</div>
+        <div class="vpin-grid">
+          <span class="vpin-grid-label">VPIN Today</span>
+          <span class="vpin-grid-value" id="vpin-today">—</span>
+          <span class="vpin-grid-label">Label</span>
+          <span class="vpin-grid-value" id="vpin-label">—</span>
+          <span class="vpin-grid-label">Regime</span>
+          <span class="vpin-grid-value" id="vpin-regime">—</span>
+          <span class="vpin-grid-label">Z-score</span>
+          <span class="vpin-grid-value" id="vpin-z">—</span>
+          <span class="vpin-grid-label">Pressure</span>
+          <span class="vpin-grid-value" id="vpin-pressure">—</span>
+          <span class="vpin-grid-label">Delta 3D</span>
+          <span class="vpin-grid-value" id="vpin-delta">—</span>
+          <span class="vpin-grid-label">Price 3D</span>
+          <span class="vpin-grid-value" id="vpin-price">—</span>
+          <span class="vpin-grid-label">Based on</span>
+          <span class="vpin-grid-value" id="vpin-days">—</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -755,6 +814,42 @@
 
   populateStrategyDropdown();
 
+  function renderVpin(vpin) {
+    const loading = document.getElementById('vpin-loading');
+    const content = document.getElementById('vpin-content');
+    if (!vpin) {
+      if (loading) loading.textContent = 'No VPIN data — need 5+ days of tick history.';
+      return;
+    }
+    if (loading) loading.style.display = 'none';
+    if (content) content.style.display = 'block';
+
+    const badge = document.getElementById('vpin-signal-badge');
+    badge.textContent = vpin.signal;
+    badge.className = 'vpin-signal-badge vpin-sig-' + vpin.signal;
+
+    document.getElementById('vpin-desc').textContent = vpin.signal_desc || '';
+
+    const regEl = document.getElementById('vpin-regime');
+    regEl.innerHTML = '<span class="vpin-regime-badge vpin-reg-' + vpin.vpin_regime + '">' + vpin.vpin_regime + '</span>';
+
+    document.getElementById('vpin-today').textContent =
+      vpin.vpin_today != null ? vpin.vpin_today.toFixed(4) : '—';
+    document.getElementById('vpin-label').textContent = vpin.vpin_label || '—';
+    document.getElementById('vpin-z').textContent =
+      vpin.vpin_z != null ? vpin.vpin_z.toFixed(1) + 'σ' : '—';
+
+    const pressEl = document.getElementById('vpin-pressure');
+    pressEl.innerHTML = vpin.pressure
+      ? '<span class="vpin-pressure-yes">YES 🔴</span>'
+      : 'NO';
+
+    document.getElementById('vpin-delta').textContent = vpin.delta_dir || '—';
+    document.getElementById('vpin-price').textContent = vpin.price_move || '—';
+    document.getElementById('vpin-days').textContent =
+      vpin.lookback_days ? vpin.lookback_days + ' days' : '—';
+  }
+
   async function loadFull() {
     let d;
     try {
@@ -774,6 +869,7 @@
     }
     renderPrice(d.price, d.regime);
     renderStrategies(d.strategies, d.price.close);
+    renderVpin(d.vpin);
     try { renderFlow(d.flow); }
     catch(e) { document.getElementById('flow-loading').textContent = 'Error loading flow data.'; }
     try { renderBroker(d.broker); }
