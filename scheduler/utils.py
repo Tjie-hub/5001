@@ -15,6 +15,7 @@ TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 from utils.telegram import send_telegram  # noqa: E402
+from engine.indicators import IndicatorCache
 
 def get_all_tickers():
     """Return all active tickers: idx_tickers table first, fallback to ohlcv."""
@@ -84,6 +85,12 @@ def fetch_latest():
     try:
         saved = fetch_all_incremental(category="ALL")
         print(f"[{datetime.now(WIB).strftime('%H:%M')}] Fetch selesai. {saved} bars saved.")
+        try:
+            _cache = IndicatorCache()
+            for t in tickers:
+                _cache.clear(t)
+        except Exception as _ce:
+            logging.warning("indicator cache clear failed (non-fatal): %s", _ce)
         try:
             from engine.suspension_detector import scan_all as _scan_suspensions
             n_events = _scan_suspensions()
