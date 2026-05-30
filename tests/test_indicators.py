@@ -209,3 +209,41 @@ class TestWarmupMetadata:
     def test_get_warmup_empty(self):
         from engine.indicators import get_warmup
         assert get_warmup([]) == 0
+
+
+class TestIndicatorCache:
+    def test_put_and_get_full_hit(self, tmp_path):
+        from engine.indicators import IndicatorCache
+        cache  = IndicatorCache(db_path=str(tmp_path / 'test.db'))
+        series = pd.Series({'2025-01-01': 10.0, '2025-01-02': 11.0, '2025-01-03': 12.0})
+        cache.put('BBCA', 'atr', 14, series)
+        result = cache.get('BBCA', 'atr', 14, ['2025-01-01', '2025-01-02', '2025-01-03'])
+        assert result is not None and len(result) == 3
+        assert abs(result['2025-01-01'] - 10.0) < 0.001
+
+    def test_get_miss_returns_none(self, tmp_path):
+        from engine.indicators import IndicatorCache
+        cache = IndicatorCache(db_path=str(tmp_path / 'test.db'))
+        assert cache.get('BBCA', 'atr', 14, ['2025-01-01']) is None
+
+    def test_partial_miss_returns_none(self, tmp_path):
+        from engine.indicators import IndicatorCache
+        cache = IndicatorCache(db_path=str(tmp_path / 'test.db'))
+        cache.put('BBCA', 'atr', 14, pd.Series({'2025-01-01': 10.0}))
+        assert cache.get('BBCA', 'atr', 14, ['2025-01-01', '2025-01-02']) is None
+
+    def test_clear_removes_ticker(self, tmp_path):
+        from engine.indicators import IndicatorCache
+        cache = IndicatorCache(db_path=str(tmp_path / 'test.db'))
+        cache.put('BBCA', 'atr', 14, pd.Series({'2025-01-01': 10.0}))
+        cache.clear('BBCA')
+        assert cache.get('BBCA', 'atr', 14, ['2025-01-01']) is None
+
+    def test_clear_leaves_other_tickers(self, tmp_path):
+        from engine.indicators import IndicatorCache
+        cache = IndicatorCache(db_path=str(tmp_path / 'test.db'))
+        cache.put('BBCA', 'atr', 14, pd.Series({'2025-01-01': 10.0}))
+        cache.put('TLKM', 'atr', 14, pd.Series({'2025-01-01': 20.0}))
+        cache.clear('BBCA')
+        result = cache.get('TLKM', 'atr', 14, ['2025-01-01'])
+        assert result is not None and abs(result['2025-01-01'] - 20.0) < 0.001

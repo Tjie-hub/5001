@@ -8,6 +8,8 @@ leading bars are required before the indicator produces valid values.
 
 import numpy as np
 import pandas as pd
+import sqlite3
+from config import DB_PATH
 
 
 def calc_atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
@@ -160,3 +162,69 @@ def get_warmup(funcs: list) -> int:
     if not funcs:
         return 0
     return max(fn.warmup_bars() for fn in funcs)
+
+
+class IndicatorCache:
+    """SQLite-backed cache for indicator Series, keyed by (ticker, indicator, period)."""
+
+    def __init__(self, db_path: str = DB_PATH):
+        self._db = db_path
+        self._init_table()
+
+    def _init_table(self):
+        conn = sqlite3.connect(self._db)
+        try:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS indicator_cache (
+                    ticker    TEXT    NOT NULL,
+                    date      TEXT    NOT NULL,
+                    indicator TEXT    NOT NULL,
+                    period    INTEGER NOT NULL,
+                    value     REAL,
+                    PRIMARY KEY (ticker, date, indicator, period)
+                )
+            """)
+            conn.commit()
+        finally:
+            conn.close()
+
+    def put(self, ticker: str, indicator: str, period: int, series: pd.Series):
+        conn = sqlite3.connect(self._db)
+        try:
+            rows = [
+                (ticker, str(date), indicator, period,
+                 float(val) if not pd.isna(val) else None)
+                for date, val in series.items()
+            ]
+            conn.executemany(
+                "INSERT OR REPLACE INTO indicator_cache "
+                "(ticker, date, indicator, period, value) VALUES (?,?,?,?,?)",
+                rows
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def get(self, ticker: str, indicator: str, period: int,
+            dates: list) -> 'pd.Series | None':
+        conn = sqlite3.connect(self._db)
+        try:
+            placeholders = ','.join('?' * len(dates))
+            rows = conn.execute(
+                f"SELECT date, value FROM indicator_cache "
+                f"WHERE ticker=? AND indicator=? AND period=? AND date IN ({placeholders})",
+                [ticker, indicator, period] + [str(d) for d in dates]
+            ).fetchall()
+        finally:
+            conn.close()
+        if len(rows) < len(dates):
+            return None
+        return pd.Series({r[0]: r[1] for r in rows})
+
+    def clear(self, ticker: str):
+        conn = sqlite3.connect(self._db)
+        try:
+            conn.execute("DELETE FROM indicator_cache WHERE ticker=?", (ticker,))
+            conn.commit()
+        finally:
+            conn.close()
