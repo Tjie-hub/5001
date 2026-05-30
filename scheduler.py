@@ -469,7 +469,7 @@ def scan_momentum_signals():
         if _f_vpin:
             try:
                 import sqlite3 as _sqlite3
-                from screener.vpin_multi import calc_vpin_multi as _calc_vpin_multi
+                from engine.vpin import calc_vpin_multi as _calc_vpin_multi
                 _vpin_conn = _sqlite3.connect(DB_PATH)
                 _vpin_multi = _calc_vpin_multi(_vpin_conn, ticker, _today_str)
                 _vpin_conn.close()
