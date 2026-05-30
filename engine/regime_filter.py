@@ -23,61 +23,17 @@ try:
 except ImportError:
     _YF_AVAILABLE = False
 
+from engine.indicators import (
+    calc_adx,
+    calc_close_vs_ma,
+    calc_ma_slope,
+    calc_price_range_pct,
+    calc_vr_mean,
+)
+
 # ── Macro config (update manual per rapat BI) ─────────────────────────
 BI_RATE: float = 6.25  # % — update kalau ada perubahan BI rate
 _IDR_WEAKEN_THRESHOLD: float = 1.0  # % 5-hari, positif = IDR melemah
-
-
-# ── Regime feature calculations ──────────────────────────────────────
-
-def calc_adx(df: pd.DataFrame, period: int = 14) -> pd.Series:
-    """Average Directional Index — ukuran kekuatan trend."""
-    high, low, close = df['high'], df['low'], df['close']
-
-    plus_dm = high.diff()
-    minus_dm = -low.diff()
-    plus_dm = plus_dm.where((plus_dm > minus_dm) & (plus_dm > 0), 0.0)
-    minus_dm = minus_dm.where((minus_dm > plus_dm) & (minus_dm > 0), 0.0)
-
-    tr1 = high - low
-    tr2 = (high - close.shift(1)).abs()
-    tr3 = (low - close.shift(1)).abs()
-    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-
-    atr = tr.ewm(alpha=1/period, min_periods=period).mean()
-    plus_di = 100 * (plus_dm.ewm(alpha=1/period, min_periods=period).mean() / atr)
-    minus_di = 100 * (minus_dm.ewm(alpha=1/period, min_periods=period).mean() / atr)
-
-    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, np.nan)
-    adx = dx.ewm(alpha=1/period, min_periods=period).mean()
-    return adx
-
-
-def calc_ma_slope(df: pd.DataFrame, ma_period: int = 20, slope_window: int = 5) -> pd.Series:
-    """Slope of MA20 over last N bars — normalized as percentage."""
-    ma = df['close'].rolling(ma_period).mean()
-    slope = (ma - ma.shift(slope_window)) / ma.shift(slope_window) * 100
-    return slope
-
-
-def calc_vr_mean(df: pd.DataFrame, vr_period: int = 20, mean_window: int = 10) -> pd.Series:
-    """Rolling mean of Volume Ratio over last N bars."""
-    avg_vol = df['volume'].rolling(vr_period).mean()
-    vr = df['volume'] / avg_vol.replace(0, np.nan)
-    return vr.rolling(mean_window).mean()
-
-
-def calc_price_range_pct(df: pd.DataFrame, window: int = 20) -> pd.Series:
-    """(Highest - Lowest) / Lowest over window — ukuran range/volatility."""
-    highest = df['high'].rolling(window).max()
-    lowest = df['low'].rolling(window).min()
-    return (highest - lowest) / lowest.replace(0, np.nan) * 100
-
-
-def calc_close_vs_ma(df: pd.DataFrame, period: int = 20) -> pd.Series:
-    """Distance of close from MA as percentage."""
-    ma = df['close'].rolling(period).mean()
-    return (df['close'] - ma) / ma * 100
 
 
 # ── Macro regime overlay ─────────────────────────────────────────────
