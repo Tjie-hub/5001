@@ -140,7 +140,7 @@ _Source: QuantConnect comparison audit (review.md, 2026-05-27). Medium impact, m
 _Source: QuantConnect comparison audit (review.md, 2026-05-27). Strategic, longer horizon._
 
 - [x] **R9. Build indicator library** — `engine/indicators.py`: 13 `calc_*` functions, `warmup_bars` metadata, `get_warmup()`, `IndicatorCache` (SQLite). Full migration: 9 files updated, no shims. `WARMUP_BARS` in WF harness replaced with `get_warmup()`. SHIPPED 2026-05-30.
-- [ ] **R10. Live broker integration research** — Investigate Sinarmas/Mirae/IPOT API; build `broker/` abstraction layer. Research phase first.
+- [~] **R10. Live broker integration research** — RESEARCHED 2026-05-30. **Verdict: no accessible IDX broker API exists in Indonesia.** Sinarmas (GUI-only ATS), Mirae Asset ID (no API; India mStock SDK is NSE/BSE only), IPOT (in-app ATM only), Stockbit Sekuritas (JWT surface is read-only market data, no order endpoints found anywhere). Industry-wide OJK/retail gap — not broker-specific. Only viable live execution path: Interactive Brokers (IBKR) via `ib_insync`. **Parked** — no `broker/` abstraction built; revisit if IBKR account opens or a local broker publishes an API.
 - [ ] **R11. Clean up legacy projects** — Archive `idx-walkforward`, delete `idx-walkforward-5002`, decide on `idx-monitor`. Document in `docs/ARCHITECTURE.md`. ~2 hr.
 - [ ] **R12. CI/CD and testing** — GitHub Actions for pytest; unit tests for `run_strategy()`, `walk_forward_split()`, `compute_metrics()`. ~5 hr.
 
