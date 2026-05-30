@@ -1072,3 +1072,58 @@ def api_signals_custom():
         print(f"Telegram error: {_te}")
 
     return jsonify({"total": len(results), "passed": len(passed), "failed": len(failed), "results": results})
+
+
+@backtest_bp.route('/api/optimizer/run', methods=['POST'])
+def api_optimizer_run():
+    """
+    POST /api/optimizer/run
+    Body: {"ticker": "BRPT", "strategy": "vol_weighted", "capital": 50000000}
+    Returns: best_params, oos_metrics, per-window detail.
+    """
+    body     = request.get_json(force=True)
+    ticker   = (body.get('ticker') or '').strip().upper()
+    strategy = (body.get('strategy') or '').strip()
+    capital  = float(body.get('capital', 50_000_000))
+
+    if not ticker or not strategy:
+        return jsonify({'error': 'ticker and strategy required'}), 400
+
+    from engine.optimizer import STRATEGY_RUNNERS, optimize_strategy, save_optimizer_result
+    if strategy not in STRATEGY_RUNNERS:
+        return jsonify({
+            'error': f"Unknown strategy: {strategy!r}. Valid: {list(STRATEGY_RUNNERS)}"
+        }), 422
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        df = pd.read_sql(
+            "SELECT date, open, high, low, close, volume FROM ohlcv WHERE ticker=? ORDER BY date",
+            conn, params=(ticker,),
+        )
+        conn.close()
+        if len(df) < 60:
+            return jsonify({'error': f'Insufficient data for {ticker}: {len(df)} bars'}), 400
+        for col in ('open', 'high', 'low', 'close', 'volume'):
+            df[col] = df[col].astype(float)
+
+        result = optimize_strategy(df, strategy, capital)
+        save_optimizer_result(ticker, strategy, result, DB_PATH)
+        result['ticker'] = ticker
+        for w in result.get('windows', []):
+            w['oos_metrics'].pop('exit_reasons', None)
+        return jsonify(result)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@backtest_bp.route('/api/optimizer/result/<ticker>/<strategy>', methods=['GET'])
+def api_optimizer_result(ticker, strategy):
+    """GET cached optimizer result for (ticker, strategy)."""
+    from engine.optimizer import get_optimizer_result
+    result = get_optimizer_result(ticker.upper(), strategy, DB_PATH)
+    if not result:
+        return jsonify({'error': f'No optimizer result for {ticker}/{strategy}'}), 404
+    return jsonify(result)

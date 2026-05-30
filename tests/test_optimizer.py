@@ -309,3 +309,108 @@ def test_ticker_upcased_on_save(tmp_path):
     loaded = get_optimizer_result('BBCA', 'conservative', db)
     assert loaded is not None
     assert loaded['ticker'] == 'BBCA'
+
+
+# ─── REST endpoints ───────────────────────────────────────────────────────────
+
+@pytest.fixture
+def client(tmp_path, monkeypatch):
+    """Flask test client with temp DB path."""
+    import os
+    monkeypatch.setenv('DB_PATH', str(tmp_path / 'test.db'))
+    # Re-import config after env var change so DB_PATH is fresh
+    import importlib
+    import config
+    importlib.reload(config)
+    import routes.backtest as rb
+    importlib.reload(rb)
+    from app import app
+    app.config['TESTING'] = True
+    with app.test_client() as c:
+        yield c
+
+
+def test_optimizer_run_returns_200_with_best_params(client):
+    from unittest.mock import patch, MagicMock
+    import pandas as pd
+    import numpy as np
+    np.random.seed(1)
+    n = 400
+    close = np.cumprod(1 + np.random.normal(0.0003, 0.012, n)) * 1000
+    fake_df = pd.DataFrame({
+        'date':   pd.date_range('2021-01-04', periods=n, freq='B').strftime('%Y-%m-%d'),
+        'open':   (close * 0.998).round(0),
+        'high':   (close * 1.015).round(0),
+        'low':    (close * 0.985).round(0),
+        'close':  close.round(0),
+        'volume': np.random.randint(500_000, 3_000_000, n).astype(float),
+    })
+    fake_result = {
+        'strategy': 'vol_weighted',
+        'best_params': {'vr_threshold': 2.0, 'atr_sl_mult': 1.0, 'atr_tp_mult': 2.0},
+        'oos_metrics': {'avg_sharpe': 0.9, 'avg_return_pct': 14.0, 'avg_win_rate': 58.0, 'windows_tested': 3},
+        'windows': [],
+    }
+    mock_conn = MagicMock()
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    with patch('routes.backtest.sqlite3.connect', return_value=mock_conn), \
+         patch('routes.backtest.pd.read_sql', return_value=fake_df), \
+         patch('engine.optimizer.optimize_strategy', return_value=fake_result), \
+         patch('engine.optimizer.save_optimizer_result'):
+        resp = client.post('/api/optimizer/run',
+                           json={'ticker': 'BBCA', 'strategy': 'vol_weighted'})
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['best_params']['vr_threshold'] == 2.0
+    assert data['ticker'] == 'BBCA'
+
+
+def test_optimizer_run_returns_400_if_ticker_missing(client):
+    resp = client.post('/api/optimizer/run', json={'strategy': 'vol_weighted'})
+    assert resp.status_code == 400
+
+
+def test_optimizer_run_returns_422_for_unknown_strategy(client):
+    import pandas as pd
+    import numpy as np
+    from unittest.mock import patch, MagicMock
+    np.random.seed(1)
+    n = 400
+    close = np.cumprod(1 + np.random.normal(0, 0.01, n)) * 1000
+    fake_df = pd.DataFrame({
+        'date': pd.date_range('2021-01-04', periods=n, freq='B').strftime('%Y-%m-%d'),
+        'open': close.round(0), 'high': (close * 1.01).round(0),
+        'low': (close * 0.99).round(0), 'close': close.round(0),
+        'volume': np.ones(n) * 1_000_000,
+    })
+    mock_conn = MagicMock()
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    with patch('routes.backtest.sqlite3.connect', return_value=mock_conn), \
+         patch('routes.backtest.pd.read_sql', return_value=fake_df):
+        resp = client.post('/api/optimizer/run',
+                           json={'ticker': 'BBCA', 'strategy': 'not_a_strategy'})
+    assert resp.status_code == 422
+
+
+def test_optimizer_result_get_returns_404_if_missing(client):
+    from unittest.mock import patch
+    with patch('engine.optimizer.get_optimizer_result', return_value=None):
+        resp = client.get('/api/optimizer/result/ZZZZ/vol_weighted')
+    assert resp.status_code == 404
+
+
+def test_optimizer_result_get_returns_200_with_cached(client):
+    from unittest.mock import patch
+    cached = {
+        'ticker': 'BBCA', 'strategy': 'vol_weighted',
+        'best_params': {'vr_threshold': 1.8, 'atr_sl_mult': 1.0, 'atr_tp_mult': 2.0},
+        'oos_metrics': {'avg_sharpe': 0.7, 'avg_return_pct': 9.0, 'avg_win_rate': 54.0, 'windows_tested': 3},
+        'updated_at': '2026-05-30 12:00',
+    }
+    with patch('engine.optimizer.get_optimizer_result', return_value=cached):
+        resp = client.get('/api/optimizer/result/BBCA/vol_weighted')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['best_params']['vr_threshold'] == 1.8
