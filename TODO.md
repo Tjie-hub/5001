@@ -185,7 +185,7 @@ _Source: BRPT.md live analysis — BRPT crash -35% May 2026 exposed critical gap
 ### 🟡 High Value — Adaptive Intelligence
 
 - [ ] **G7. Adaptive strategy switching by regime** — System detects regime (BULL/BEAR/SIDEWAYS) and knows which strategies perform in each (from walk-forward)... but doesn't auto-switch. Add `adaptive_strategy_selector()` in scheduler: BULL+ADX 25-40+near MA → TFB, BULL+ADX>45+extended → Conservative, BEAR → no entry, SIDEWAYS+below MA → VWAP Reversion. ~3 hr. **Evidence: BRPT.md Section 5 heatmap shows clear strategy-regime mapping but it's manual only.**
-- [ ] **G8. Post-suspension alert pipeline** — When G2 detects suspension resume, trigger dedicated Telegram alert: "BRPT resumed trading after 11-day suspension, gap-down -28.1%, VR=2.73x, REVERSAL_BREAKOUT=55. CAUTION: crash recovery — high risk." ~1 hr.
+- [x] **G8. Post-suspension alert pipeline** — `send_suspension_resume_alerts()` in `scheduler.py`: queries `suspension_events WHERE resume_date=today AND classification='suspension'`, fires Telegram alert per ticker with duration, gap%, and CAUTION warning. Wired into `fetch_latest()` after `scan_all()`. 9 unit tests. SHIPPED 2026-05-30.
 
 ### 🟡 High Value — dive.html UI Gaps
 

@@ -39,6 +39,47 @@ def get_all_tickers():
     conn.close()
     return tickers
 
+def send_suspension_resume_alerts(
+    db_path: str = DB_PATH,
+    send_fn=None,
+    as_of: str = None,
+) -> int:
+    """Send Telegram alerts for tickers whose suspension resumed on as_of (default: today).
+    Only fires for classification='suspension'; skips data_gap events.
+    Returns number of alerts sent.
+    """
+    if send_fn is None:
+        send_fn = send_telegram
+    if as_of is None:
+        from datetime import date as _date
+        as_of = _date.today().isoformat()
+
+    try:
+        conn = sqlite3.connect(db_path)
+        rows = conn.execute(
+            "SELECT ticker, missing_td, gap_pct FROM suspension_events "
+            "WHERE resume_date = ? AND classification = 'suspension'",
+            (as_of,),
+        ).fetchall()
+        conn.close()
+    except Exception as e:
+        logging.exception("suspension resume alert query failed: %s", e)
+        return 0
+
+    for ticker, missing_td, gap_pct in rows:
+        gap_pct_str = f"{gap_pct * 100:.1f}%"
+        msg = (
+            f"🚨 <b>SUSPENSION RESUME: {ticker}</b>\n\n"
+            f"Suspended: <b>{missing_td} trading days</b>\n"
+            f"Gap: <b>{gap_pct_str}</b>\n"
+            f"Resume date: {as_of}\n\n"
+            f"⚠️ CAUTION: crash recovery — high risk. Verify volume and direction before entry."
+        )
+        send_fn(msg)
+
+    return len(rows)
+
+
 def fetch_latest():
     """Fetch OHLCV terbaru untuk semua ticker (incremental batch)."""
     from data.fetcher import fetch_all_incremental, load_all_tickers
@@ -52,6 +93,9 @@ def fetch_latest():
             from engine.suspension_detector import scan_all as _scan_suspensions
             n_events = _scan_suspensions()
             print(f"[{datetime.now(WIB).strftime('%H:%M')}] Suspension scan: {n_events} events written.")
+            n_alerts = send_suspension_resume_alerts()
+            if n_alerts:
+                print(f"[{datetime.now(WIB).strftime('%H:%M')}] Suspension resume alerts: {n_alerts} sent.")
         except Exception as _scan_e:
             logging.exception("suspension scan failed (non-fatal): %s", _scan_e)
     except Exception as e:
