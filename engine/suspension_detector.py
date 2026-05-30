@@ -86,15 +86,10 @@ def detect_gaps(
     return events
 
 
-import os
 import sqlite3
 from typing import Dict
 
-
-_DEFAULT_DB_PATH = os.getenv(
-    "DB_PATH",
-    "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db",
-)
+from config import DB_PATH as _DEFAULT_DB_PATH
 
 
 def _ensure_schema(conn: sqlite3.Connection) -> None:

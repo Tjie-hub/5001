@@ -6,12 +6,11 @@ Top sectors = OVERWEIGHT (trade freely), bottom = UNDERWEIGHT (avoid entries).
 """
 
 import sqlite3
-import os
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Tuple
 
-DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
+from config import DB_PATH
 
 # IDX Sector → Ticker mapping (based on tickers in DB)
 IDX_SECTOR_MAP: Dict[str, List[str]] = {

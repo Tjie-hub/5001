@@ -27,10 +27,8 @@ FILTER_MAP = {
 def resolve_filters(filter_names: list) -> list:
     return [FILTER_MAP[f] for f in (filter_names or []) if f in FILTER_MAP]
 
-import os
+from config import DB_PATH
 backtest_multi_bp = Blueprint('backtest_multi', __name__)
-
-DB_PATH = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
 
 
 def get_ohlcv(ticker: str) -> pd.DataFrame:

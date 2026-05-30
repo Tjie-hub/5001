@@ -3,9 +3,9 @@ screener/fundamental.py — Fundamental screener query engine
 ============================================================
 Used by: screener/routes.py (Flask API) and screener_clone.py (CLI)
 """
-import os, sqlite3
+import sqlite3
 
-DB_PATH = os.getenv('DB_PATH', os.path.join(os.path.dirname(__file__), '..', 'data', 'walkforward.db'))
+from config import DB_PATH
 
 COLUMNS = {
     "ticker":        ("k", "ticker",       "text",     "Ticker"),

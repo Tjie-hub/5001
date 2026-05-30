@@ -26,7 +26,7 @@ HEADERS_BASE = {
     "Referer": "https://stockbit.com/",
 }
 TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".stockbit_token")
-_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "walkforward.db")
+from config import DB_PATH as _DB_PATH
 
 try:
     from data.fetcher import IDX80 as _TICKERS_FALLBACK

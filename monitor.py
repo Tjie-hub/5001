@@ -5,8 +5,10 @@ Sends Telegram alerts on: flow reversal, VPIN spike, momentum reversal,
 near-SL/TP approach, regime change.
 """
 import logging
-import os
+import sqlite3
 from datetime import date as dt_date
+
+from config import DB_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -15,11 +17,8 @@ from utils.telegram import send_telegram
 
 def _fetch_recent_closes(ticker: str, n: int = 5) -> list:
     """Fetch last N daily closes from walkforward DB."""
-    import sqlite3
-    import os
-    db_path = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
     try:
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(DB_PATH)
         rows = conn.execute(
             'SELECT close FROM ohlcv WHERE ticker=? ORDER BY date DESC LIMIT ?', (ticker, n)
         ).fetchall()
@@ -31,11 +30,9 @@ def _fetch_recent_closes(ticker: str, n: int = 5) -> list:
 
 def _fetch_atr(ticker: str, periods: int = 14) -> float:
     """Compute ATR from recent OHLCV."""
-    import sqlite3, os
-    db_path = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
     try:
         import pandas as pd
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(DB_PATH)
         df = pd.read_sql(
             'SELECT high, low, close FROM ohlcv WHERE ticker=? ORDER BY date DESC LIMIT ?',
             conn, params=(ticker, periods + 5)
@@ -67,10 +64,8 @@ def _detect_momentum_reversal(closes: list, entry_price: float) -> bool:
 
 def _get_flow_score(ticker: str) -> dict:
     """Fetch today's cached flow score from DB."""
-    import sqlite3, os
-    db_path = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
     try:
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         today = dt_date.today().isoformat()
         row = conn.execute(
@@ -84,10 +79,8 @@ def _get_flow_score(ticker: str) -> dict:
 
 def _get_vpin(ticker: str) -> dict:
     """Fetch today's VPIN from daily_screen."""
-    import sqlite3, os
-    db_path = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
     try:
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         today = dt_date.today().isoformat()
         row = conn.execute(
@@ -253,7 +246,7 @@ def _evaluate_swing_trend(trade: dict) -> dict:
     Returns {'action': 'CLOSE'|'TRAIL'|'OK', 'reason': <rule>, 'message': <telegram>,
              'new_sl': <float|None>}.
     """
-    import sqlite3, os, pandas as pd
+    import pandas as pd
     from engine.regime_filter import calc_adx, calc_ma_slope
     from engine.swing_screener import find_swing_points
     from engine.strategies import calc_atr
@@ -264,9 +257,8 @@ def _evaluate_swing_trend(trade: dict) -> dict:
     adx_peak    = float(trade.get('adx_peak') or 0.0)
     highest     = float(trade.get('highest_seen') or entry_price)
 
-    db_path = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
     try:
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(DB_PATH)
         df = pd.read_sql(
             'SELECT date, open, high, low, close, volume FROM ohlcv WHERE ticker=? ORDER BY date ASC',
             conn, params=(ticker,)
@@ -371,7 +363,7 @@ def _evaluate_swing_trend(trade: dict) -> dict:
 
     # R5: flow bearish 2d
     try:
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(DB_PATH)
         rows = conn.execute(
             'SELECT composite_score FROM stockbit_flow WHERE ticker=? ORDER BY trade_date DESC LIMIT 2',
             (ticker,)

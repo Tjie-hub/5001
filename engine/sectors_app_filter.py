@@ -23,14 +23,11 @@ Usage:
         ...
 """
 
-import os
 import sqlite3
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-_HERE   = Path(__file__).resolve().parent.parent
-DB_PATH = os.getenv("DB_PATH", str(_HERE / "data" / "walkforward.db"))
+from config import DB_PATH
 
 # sectors.app sector label → internal sector_rotation label
 SECTORS_APP_TO_INTERNAL: Dict[str, str] = {

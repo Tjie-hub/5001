@@ -2,9 +2,8 @@
 screener/db.py — Screener DB helpers using the shared walkforward.db
 """
 import sqlite3
-import os
 
-DB_PATH = os.getenv('DB_PATH', os.path.join(os.path.dirname(__file__), '..', 'data', 'walkforward.db'))
+from config import DB_PATH
 
 
 def get_conn():
