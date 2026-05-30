@@ -6,14 +6,8 @@ ATR multipliers, and MA/period params per-ticker.
 """
 from __future__ import annotations
 
-import json
-import sqlite3
-from collections import Counter
-from datetime import datetime
-from itertools import product
 from typing import Any
 
-import numpy as np
 import pandas as pd
 
 from engine.strategies import (
@@ -25,8 +19,8 @@ from engine.strategies import (
     calc_vwap,
     lot_size,
     run_strategy,
+    _watch_signal_block,
 )
-from engine.walkforward_multi import compute_metrics, walk_forward_split
 
 # ─── Param grids ────────────────────────────────────────────────────────────
 
@@ -84,7 +78,8 @@ def _run_momentum(df: pd.DataFrame, capital: float, params: dict) -> dict:
         (df['close'] > df['close'].shift(1)) &
         (df['close'].shift(1) > df['close'].shift(2))
     )
-    sig = streak2 & (vr > vr_threshold) & (vr <= 5.0)
+    watch_block = _watch_signal_block(df)
+    sig = streak2 & (vr > vr_threshold) & (vr <= 5.0) & ~watch_block
     return run_strategy(df, sig, atr_sl_mult=atr_sl_mult, atr_tp_mult=atr_tp_mult,
                         min_rr=2.0, strategy_name='momentum',
                         initial_capital=capital, trail_sl=True)
@@ -159,7 +154,7 @@ def _run_tfb(df: pd.DataFrame, capital: float, params: dict) -> dict:
     lots        = 0
     entry_date  = ''
 
-    start_bar = donchian_period + 65
+    start_bar = 65
     for i in range(start_bar, len(df)):
         row      = df.iloc[i]
         date     = str(row['date'])[:10]
