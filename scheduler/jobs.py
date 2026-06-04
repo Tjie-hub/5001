@@ -272,9 +272,31 @@ def _refresh_backtest_cache():
         print(f"[scheduler] Cache refresh error: {e}")
 
 
+def _send_premover_auto_summary(rows: list, mode: str, send_fn) -> None:
+    """Send Telegram summary of shadow/enforce evaluation results."""
+    _LABEL = {'off': 'OFF', 'shadow': 'SHADOW', 'enforce': 'ENFORCE'}
+    mode_label = _LABEL.get(mode, mode.upper())
+    passed  = [r for r in rows if r.get('would_trade')]
+    blocked = [r for r in rows if not r.get('would_trade')]
+    msg = f"\U0001f916 <b>Premover {mode_label} — {len(rows)} setups</b>\n\n"
+    for r in passed:
+        msg += f"✅ <b>{r['ticker']}</b> score={r['score']} → PASS\n"
+    for r in blocked:
+        reason = r.get('skip_reason', 'unknown')
+        msg += f"❌ <b>{r['ticker']}</b> score={r['score']} → {reason}\n"
+    if not rows:
+        msg += "No new setups to evaluate.\n"
+    try:
+        send_fn(msg)
+    except Exception as e:
+        print(f"[premover auto] Telegram summary error: {e}")
+
+
 def run_premover_eod():
     """EOD pre-breakout scan — runs at 16:30 after data fetch."""
     from engine.premover_detector import run_scan
+    from paper_trade import (get_premover_mode, evaluate_premover_trade,
+                              open_trade, _log_premover_auto, init_paper_table)
     now_str = datetime.now(WIB).strftime('%H:%M')
     print(f"[{now_str}] Pre-mover EOD scan dimulai...")
     try:
@@ -284,6 +306,36 @@ def run_premover_eod():
     except Exception as e:
         print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan error: {e}")
         send_telegram(f"🔴 <b>Pre-mover Scan Error</b>\n<code>{str(e)[:200]}</code>")
+        return
+
+    mode = get_premover_mode()
+    if mode not in ('shadow', 'enforce') or not new_setups:
+        return
+
+    init_paper_table()
+    today = datetime.now(WIB).strftime('%Y-%m-%d')
+    summary_rows = []
+    for s in new_setups:
+        ticker  = s['ticker']
+        score   = s.get('score', 0)
+        pattern = s.get('pattern', 'UNKNOWN')
+        try:
+            ev = evaluate_premover_trade(ticker, score, pattern)
+            _log_premover_auto(ticker, today, pattern, score, mode, ev)
+            if mode == 'enforce' and ev['would_trade']:
+                close_price = float(s.get('close', 0))
+                if close_price > 0:
+                    open_trade(ticker, close_price, strategy=None, notify=True)
+            summary_rows.append({'ticker': ticker, 'score': score,
+                                  'pattern': pattern, **ev})
+        except Exception as exc:
+            print(f"[premover auto] {ticker} error: {exc}")
+            summary_rows.append({'ticker': ticker, 'score': score,
+                                  'pattern': pattern,
+                                  'would_trade': False,
+                                  'skip_reason': f'error:{str(exc)[:80]}'})
+
+    _send_premover_auto_summary(summary_rows, mode, send_telegram)
 
 
 def run_backtest_roller():
