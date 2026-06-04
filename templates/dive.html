@@ -737,7 +737,7 @@
 
     _contextMarkers = [];   // reset before re-populating (TF switch or reload)
     renderCrashMarkers();
-    renderSuspensions(_suspensionsCache);
+    if (_currentTf === 'D') renderSuspensions(_suspensionsCache);
     _lwChart.timeScale().fitContent();
 
     // Re-apply active strategy markers after data reload (TF switch)
@@ -756,9 +756,10 @@
   // ═══════════════════════════════════════════════════════════════
   function refreshContextMarkers() {
     if (!_candleSeries) return;
-    const sorted = [..._contextMarkers]
+    const stratMarkers = (_activeStrategy && _markerCache[_activeStrategy]) ? _markerCache[_activeStrategy] : [];
+    const merged = [..._contextMarkers, ...stratMarkers]
         .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
-    _candleSeries.setMarkers(sorted);
+    _candleSeries.setMarkers(merged);
   }
 
   const _markerCache = {};   // key → markers[]
@@ -975,8 +976,8 @@
     if (!suspensions || !suspensions.length) return;
     _suspensionsCache = suspensions;
     suspensions.forEach(function(s) {
-      const pct = (s.gap_pct * 100).toFixed(1);
-      const sign = s.gap_pct >= 0 ? '+' : '';
+      const pct = s.gap_pct != null ? (s.gap_pct * 100).toFixed(1) : 'n/a';
+      const sign = (s.gap_pct != null && s.gap_pct >= 0) ? '+' : '';
       _contextMarkers.push({
         time:     s.resume_date,
         position: 'aboveBar',

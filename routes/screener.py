@@ -6,6 +6,7 @@ import pandas as pd
 from flask import Blueprint, jsonify, render_template, request
 
 from config import DB_PATH
+from engine.indicators import calc_adx as _calc_adx
 from flow_filter import get_flow_batch
 from scheduler import send_telegram as _send_telegram
 
@@ -216,13 +217,12 @@ def api_ticker_full(ticker):
         regime = 'UNKNOWN'
 
     # ── RECOMMENDED STRATEGY ───────────────────────────────────────────────
-    from engine.indicators import calc_adx as _calc_adx
     try:
         _adx_val = float(_calc_adx(df, 14).iloc[-1])
     except Exception:
         _adx_val = 0.0
 
-    if regime in ('BEAR', 'SIDEWAYS'):
+    if regime in ('BEAR', 'SIDEWAYS', 'UNKNOWN'):
         recommended_strategy = _REGIME_STRATEGY_MAP.get((regime, 'any'))
     else:
         recommended_strategy = _REGIME_STRATEGY_MAP.get((regime, _adx_band(_adx_val)))

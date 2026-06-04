@@ -156,8 +156,10 @@ def test_recommended_strategy_is_string_or_none(client):
 
 
 def test_recommended_strategy_sideways_returns_vwap(client):
-    # Fixture data is flat (ADX ~0), detect_regime returns SIDEWAYS
+    # Fixture data is flat (close=101 for 75 bars), expect SIDEWAYS
     d = _get_full(client)
+    # If regime is not SIDEWAYS, document what it is to help debug fixture assumptions
+    assert d["regime"] in ("SIDEWAYS", "BULL", "BEAR"), f"Unexpected regime: {d['regime']}"
     if d["regime"] == "SIDEWAYS":
         assert d["recommended_strategy"] == "VWAP Reversion"
 
@@ -222,3 +224,18 @@ def test_fundamental_empty_flags_when_healthy(client):
     conn.close()
     d = _get_full(client)
     assert d["fundamental"]["flags"] == []
+
+
+def test_suspensions_null_gap_pct_handled(client):
+    c, db = client
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "INSERT OR REPLACE INTO suspension_events VALUES "
+        "('TEST','2026-01-25','2026-01-28',2,NULL,'suspension','2026-01-28T09:00:00')"
+    )
+    conn.commit()
+    conn.close()
+    d = _get_full(client)
+    null_susp = [s for s in d["suspensions"] if s["last_normal_date"] == "2026-01-25"]
+    assert len(null_susp) == 1
+    assert null_susp[0]["gap_pct"] is None
