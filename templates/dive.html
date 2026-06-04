@@ -723,6 +723,8 @@
     _vpPlugin.setVisible(_indicators.vp);
     _candleSeries.attachPrimitive(_vpPlugin);
 
+    _contextMarkers = [];   // reset before re-populating (TF switch or reload)
+    renderCrashMarkers();
     _lwChart.timeScale().fitContent();
 
     // Re-apply active strategy markers after data reload (TF switch)
@@ -909,6 +911,49 @@
     hc.textContent = `${sign}${fmt(p.chg)} (${sign}${p.chg_pct?.toFixed(2)}%)`;
     hc.style.color = p.chg >= 0 ? 'var(--green)' : 'var(--red)';
     document.getElementById('chart-hud').classList.add('loaded');
+  }
+
+  function renderCrashMarkers() {
+    var candles = _rawCandles;
+    if (!candles || candles.length < 11) return;
+    var window = 10;
+    var threshold = -0.20;
+    var candidates = [];
+    for (var i = 1; i < candles.length - window + 1; i++) {
+      var refClose = candles[i - 1].close;
+      if (!refClose) continue;
+      var minClose = refClose, minIdx = i;
+      for (var j = i; j < i + window && j < candles.length; j++) {
+        if (candles[j].close < minClose) { minClose = candles[j].close; minIdx = j; }
+      }
+      var drop = (minClose - refClose) / refClose;
+      if (drop < threshold) {
+        candidates.push({ idx: minIdx, drop: drop });
+      }
+    }
+    // de-duplicate: merge candidates within 5 bars, keep worst drop
+    var survivors = [];
+    candidates.forEach(function(c) {
+      var merged = false;
+      for (var k = 0; k < survivors.length; k++) {
+        if (Math.abs(survivors[k].idx - c.idx) <= 5) {
+          if (c.drop < survivors[k].drop) survivors[k] = c;
+          merged = true;
+          break;
+        }
+      }
+      if (!merged) survivors.push(c);
+    });
+    survivors.forEach(function(s) {
+      _contextMarkers.push({
+        time:     candles[s.idx].time,
+        position: 'aboveBar',
+        color:    '#dc2626',
+        shape:    'arrowDown',
+        text:     'CRASH ' + (s.drop * 100).toFixed(0) + '%',
+      });
+    });
+    if (survivors.length) refreshContextMarkers();
   }
 
   function renderSuspensions(suspensions) {
