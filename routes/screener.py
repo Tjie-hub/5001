@@ -11,6 +11,23 @@ from scheduler import send_telegram as _send_telegram
 
 screener_main_bp = Blueprint("screener_main", __name__)
 
+# Regime × ADX band → recommended strategy display name
+_REGIME_STRATEGY_MAP = {
+    ('BULL',     'low'):  'Vol-Weighted Entry',
+    ('BULL',     'mid'):  'Trend Following Breakout',
+    ('BULL',     'high'): 'Conservative Confirm',
+    ('BEAR',     'any'):  None,
+    ('SIDEWAYS', 'any'):  'VWAP Reversion',
+}
+
+
+def _adx_band(adx: float) -> str:
+    if adx < 25:
+        return 'low'
+    if adx <= 40:
+        return 'mid'
+    return 'high'
+
 
 @screener_main_bp.route('/api/screener/swing_onset', methods=['POST'])
 def api_swing_onset():
@@ -198,6 +215,18 @@ def api_ticker_full(ticker):
     except Exception:
         regime = 'UNKNOWN'
 
+    # ── RECOMMENDED STRATEGY ───────────────────────────────────────────────
+    from engine.indicators import calc_adx as _calc_adx
+    try:
+        _adx_val = float(_calc_adx(df, 14).iloc[-1])
+    except Exception:
+        _adx_val = 0.0
+
+    if regime in ('BEAR', 'SIDEWAYS'):
+        recommended_strategy = _REGIME_STRATEGY_MAP.get((regime, 'any'))
+    else:
+        recommended_strategy = _REGIME_STRATEGY_MAP.get((regime, _adx_band(_adx_val)))
+
     # ── WF SCORES + LIVE SIGNALS ───────────────────────────────────────────
     wf_rows = conn.execute("""
         SELECT strategy, consistency_pct, avg_return_pct, avg_sharpe, weighted_score
@@ -336,6 +365,7 @@ def api_ticker_full(ticker):
         'price':          price,
         'ohlcv':          _ohlcv.to_dict('records'),
         'regime':         regime,
+        'recommended_strategy': recommended_strategy,
         'strategies':     strategies,
         'flow':           {'latest': flow_latest, 'cum_delta_20d': cum_delta_20d},
         'broker':         top_brokers,

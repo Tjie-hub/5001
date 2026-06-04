@@ -132,3 +132,23 @@ def test_suspensions_has_correct_fields(client):
     assert s["resume_date"] == "2026-01-15"
     assert s["missing_td"] == 3
     assert s["gap_pct"] == -0.1235   # -0.123456 rounded to 4dp
+
+
+# ── G10: recommended_strategy ──────────────────────────────────────────────
+
+
+def test_full_includes_recommended_strategy_key(client):
+    d = _get_full(client)
+    assert "recommended_strategy" in d
+
+
+def test_recommended_strategy_is_string_or_none(client):
+    d = _get_full(client)
+    assert d["recommended_strategy"] is None or isinstance(d["recommended_strategy"], str)
+
+
+def test_recommended_strategy_sideways_returns_vwap(client):
+    # Fixture data is flat (ADX ~0), detect_regime returns SIDEWAYS
+    d = _get_full(client)
+    if d["regime"] == "SIDEWAYS":
+        assert d["recommended_strategy"] == "VWAP Reversion"
