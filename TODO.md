@@ -1,6 +1,6 @@
 # IDX Walkforward — TODO
 
-_Last updated: 2026-05-30 (Sprint 16 shipped — ATR audit + VR doc + WF revalidation)_
+_Last updated: 2026-06-04 (G9-G12 dive.html annotations shipped)_
 
 ---
 
@@ -207,10 +207,10 @@ _Source: BRPT.md live analysis — BRPT crash -35% May 2026 exposed critical gap
 
 _These are frontend-only changes to `templates/dive.html`. They surface the backend intelligence (G2, G5, G7) visually so the user sees it without reading logs._
 
-- [ ] **G9. Suspension gap marker on chart** — When G2 detects a data gap >3 days, render a vertical shaded region + annotation on the chart: "SUSPENDED 11 days" with the gap-down % label. Prevents the chart from misleadingly drawing a continuous line across the gap. Uses `_rawCandles` date delta detection + `_candleSeries.createPriceLine()` or primitive overlay. ~1 hr. **Evidence: BRPT chart draws smooth line May 14→25, hiding the -28.1% gap-down reality.**
-- [ ] **G10. Regime → strategy recommendation badge** — Extend the existing regime badge to show a strategy hint. E.g. "SIDEWAYS → try VWAP Reversion" or "BULL → Conservative Confirm". Uses the heatmap from BRPT.md Section 5. Backend: add `recommended_strategy` field to `/api/ticker/<ticker>/full`. Frontend: render below regime badge. ~1 hr. **Evidence: User sees "SIDEWAYS" but has to memorize which strategy works. BRPT.md playbook is manual.**
-- [ ] **G11. Crash context annotation on chart** — When price drops >20% within 10 bars, render a shaded red region with "CRASH -35%" label on the chart. Uses lightweight-charts `createPriceLine` or background primitive. Helps user distinguish normal pullback from extreme event. ~0.5 hr. **Evidence: BRPT -35% in 3 weeks rendered identically to a normal 3% dip.**
-- [ ] **G12. Fundamental red flag badge** — When G5 detects deteriorating fundamentals (NPM < 0, DER > 3, earnings growth < -100%), render a red badge next to the premover badge: "⚠️ FUND: NPM -4.5% | DER 3.5x". Fetches from `/api/ticker/<ticker>/full` or a new `/api/ticker/<ticker>/fundamental` endpoint. ~1 hr. **Evidence: BRPT REVERSAL_BREAKOUT score=55 looks actionable, but NPM -4.47% + DER 3.47 should give pause. Currently invisible.**
+- [x] **G9. Suspension gap marker on chart** — SHIPPED 2026-06-04. Marker at resume bar (red ▼ SUSP Nd X%) using existing setMarkers() API; suspension events fetched from DB via /full.
+- [x] **G10. Regime → strategy recommendation badge** — SHIPPED 2026-06-04. Tooltip on existing regime badge: "Recommended: [strategy]". Regime×ADX lookup in backend; recommended_strategy field in /full.
+- [x] **G11. Crash context annotation on chart** — SHIPPED 2026-06-04. Client-side scan of _rawCandles for >20% drop in 10-bar window; red ▼ CRASH X% markers; de-duplicated within 5 bars.
+- [x] **G12. Fundamental red flag badge** — SHIPPED 2026-06-04. Red ⚠️ badge in topbar; flags: NPM<0, DER>3, earn_growth<-100; data from stockbit_keystats via /full.
 
 ### 🔵 Documentation
 
