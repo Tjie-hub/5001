@@ -228,3 +228,40 @@ class IndicatorCache:
             conn.commit()
         finally:
             conn.close()
+
+
+def classify_volume_context(df: pd.DataFrame) -> str:
+    """
+    Classify the volume spike context of the last bar.
+    Returns one of: 'crash_absorption', 'exhaustion_distribution',
+                    'breakout_accumulation', 'normal'.
+
+    Priority order:
+      crash_absorption:        VR >= 2.0x AND close >= 20% below 20d high
+      exhaustion_distribution: VR >= 2.0x AND bearish close AND within 5% of 20d high
+      breakout_accumulation:   VR >= 1.5x AND within 5% of 20d high AND above MA20
+      normal:                  everything else
+    """
+    if len(df) < 20:
+        return "normal"
+
+    close_s  = df["close"].astype(float)
+    high_20d = df["high"].astype(float).rolling(20).max().iloc[-1]
+    ma20     = close_s.rolling(20).mean().iloc[-1]
+    last     = df.iloc[-1]
+    cl       = float(last["close"])
+    op       = float(last["open"])
+    vr       = calc_vol_ratio(df, 20).iloc[-1]
+
+    if pd.isna(vr) or pd.isna(high_20d) or high_20d <= 0:
+        return "normal"
+
+    pct_from_high = (cl - high_20d) / high_20d  # negative = below high
+
+    if vr >= 2.0 and pct_from_high <= -0.20:
+        return "crash_absorption"
+    if vr >= 2.0 and cl < op and pct_from_high >= -0.05:
+        return "exhaustion_distribution"
+    if vr >= 1.5 and pct_from_high >= -0.05 and not pd.isna(ma20) and cl > ma20:
+        return "breakout_accumulation"
+    return "normal"
