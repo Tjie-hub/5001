@@ -94,6 +94,14 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("DB_PATH", str(db))
     monkeypatch.setattr("scheduler.start_scheduler", lambda: None, raising=False)
 
+    # Reload config and screener modules to pick up monkeypatched DB_PATH
+    import sys
+    import importlib
+    if 'config' in sys.modules:
+        importlib.reload(sys.modules['config'])
+    if 'routes.screener' in sys.modules:
+        importlib.reload(sys.modules['routes.screener'])
+
     from flask import Flask
     from routes.screener import screener_main_bp
     app = Flask(__name__, template_folder="../templates")
@@ -152,3 +160,65 @@ def test_recommended_strategy_sideways_returns_vwap(client):
     d = _get_full(client)
     if d["regime"] == "SIDEWAYS":
         assert d["recommended_strategy"] == "VWAP Reversion"
+
+
+# ── G12: fundamental ───────────────────────────────────────────────────────
+
+
+def test_full_includes_fundamental_key(client):
+    d = _get_full(client)
+    assert "fundamental" in d
+
+
+def test_fundamental_null_when_no_keystats(client):
+    d = _get_full(client)
+    assert d["fundamental"] is None
+
+
+def test_fundamental_fields_and_flags_npm_der(client):
+    c, db = client
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "INSERT INTO stockbit_keystats "
+        "(ticker, fetch_date, npm, der, earn_growth, updated_at) "
+        "VALUES ('TEST', '2026-01-30', -2.5, 3.8, 50.0, '2026-01-30T10:00:00')"
+    )
+    conn.commit()
+    conn.close()
+    d = _get_full(client)
+    f = d["fundamental"]
+    assert f is not None
+    assert abs(f["npm"] - (-2.5)) < 0.01
+    assert abs(f["der"] - 3.8) < 0.01
+    assert "NPM negative" in f["flags"]
+    assert "DER > 3" in f["flags"]
+    assert "EPS loss" not in f["flags"]
+
+
+def test_fundamental_flag_eps_loss(client):
+    c, db = client
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "INSERT OR REPLACE INTO stockbit_keystats "
+        "(ticker, fetch_date, npm, der, earn_growth, updated_at) "
+        "VALUES ('TEST', '2026-01-31', 5.0, 1.5, -150.0, '2026-01-31T10:00:00')"
+    )
+    conn.commit()
+    conn.close()
+    d = _get_full(client)
+    assert "EPS loss" in d["fundamental"]["flags"]
+    assert "NPM negative" not in d["fundamental"]["flags"]
+
+
+def test_fundamental_empty_flags_when_healthy(client):
+    c, db = client
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "INSERT OR REPLACE INTO stockbit_keystats "
+        "(ticker, fetch_date, npm, der, earn_growth, updated_at) "
+        "VALUES ('TEST', '2026-02-01', 8.0, 1.2, 20.0, '2026-02-01T10:00:00')"
+    )
+    conn.commit()
+    conn.close()
+    d = _get_full(client)
+    assert d["fundamental"]["flags"] == []

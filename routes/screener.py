@@ -303,6 +303,34 @@ def api_ticker_full(ticker):
     except Exception:
         suspensions = []
 
+    # ── FUNDAMENTAL FLAGS ──────────────────────────────────────────────────
+    try:
+        ks = conn.execute("""
+            SELECT npm, der, earn_growth
+            FROM stockbit_keystats
+            WHERE ticker=? ORDER BY fetch_date DESC LIMIT 1
+        """, (ticker,)).fetchone()
+    except Exception:
+        ks = None
+
+    if ks is None:
+        fundamental = None
+    else:
+        npm, der, earn_growth = ks
+        flags = []
+        if npm is not None and npm < 0:
+            flags.append('NPM negative')
+        if der is not None and der > 3:
+            flags.append('DER > 3')
+        if earn_growth is not None and earn_growth < -100:
+            flags.append('EPS loss')
+        fundamental = {
+            'npm':         npm,
+            'der':         der,
+            'earn_growth': earn_growth,
+            'flags':       flags,
+        }
+
     conn.close()
 
     # ── PRE-MOVER SCORE (live, not cached) ────────────────────────────────
@@ -389,6 +417,7 @@ def api_ticker_full(ticker):
         },
         'vpin': _vpin,
         'suspensions': suspensions,
+        'fundamental': fundamental,
     })
 
 
