@@ -254,6 +254,23 @@ def api_ticker_full(ticker):
         'dates':   broker_dates,
     }
 
+    # ── SUSPENSIONS ────────────────────────────────────────────────────────
+    susp_rows = conn.execute("""
+        SELECT last_normal_date, resume_date, missing_td, gap_pct
+        FROM suspension_events
+        WHERE ticker=? AND classification='suspension'
+        ORDER BY resume_date DESC
+    """, (ticker,)).fetchall()
+    suspensions = [
+        {
+            'last_normal_date': r[0],
+            'resume_date':      r[1],
+            'missing_td':       r[2],
+            'gap_pct':          round(r[3], 4),
+        }
+        for r in susp_rows
+    ]
+
     conn.close()
 
     # ── PRE-MOVER SCORE (live, not cached) ────────────────────────────────
@@ -338,6 +355,7 @@ def api_ticker_full(ticker):
             'atr_ratio':  _pm_rev.get('atr_ratio'),
         },
         'vpin': _vpin,
+        'suspensions': suspensions,
     })
 
 
