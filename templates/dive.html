@@ -887,7 +887,7 @@
     if (d.premover) renderPremover(d.premover);
   }
 
-  function renderPrice(p, regime) {
+  function renderPrice(p, regime, recommendedStrategy) {
     document.getElementById('pb-close').textContent = fmt(p.close);
     const sign = p.chg >= 0 ? '+' : '';
     const el = document.getElementById('pb-chg');
@@ -900,12 +900,31 @@
     const rb = document.getElementById('tb-regime');
     rb.textContent = regime || '—';
     rb.className = 'regime-badge ' + (regime || '');
+    rb.title = recommendedStrategy
+      ? 'Recommended: ' + recommendedStrategy
+      : (regime === 'BEAR' ? 'No entry in BEAR regime' : '');
     // HUD
     document.getElementById('hud-price').textContent = fmt(p.close);
     const hc = document.getElementById('hud-change');
     hc.textContent = `${sign}${fmt(p.chg)} (${sign}${p.chg_pct?.toFixed(2)}%)`;
     hc.style.color = p.chg >= 0 ? 'var(--green)' : 'var(--red)';
     document.getElementById('chart-hud').classList.add('loaded');
+  }
+
+  function renderSuspensions(suspensions) {
+    if (!suspensions || !suspensions.length) return;
+    suspensions.forEach(function(s) {
+      const pct = (s.gap_pct * 100).toFixed(1);
+      const sign = s.gap_pct >= 0 ? '+' : '';
+      _contextMarkers.push({
+        time:     s.resume_date,
+        position: 'aboveBar',
+        color:    '#ef4444',
+        shape:    'arrowDown',
+        text:     'SUSP ' + s.missing_td + 'd ' + sign + pct + '%',
+      });
+    });
+    refreshContextMarkers();
   }
 
   function renderPremover(pm) {
