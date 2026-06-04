@@ -22,6 +22,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
+from engine.indicators import classify_volume_context
+
 
 ALERT_THRESHOLD = 50
 REVERSAL_THRESHOLD = 45  # REVERSAL_BREAKOUT pattern — lower threshold for earlier catch
@@ -113,6 +115,7 @@ def _init_table(conn: sqlite3.Connection):
 
 
 def _calc_atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    # SMA-ATR matches strategies.py convention. Wilder's EWM is only used in regime_filter.py for ADX.
     hi, lo, cl = df['high'], df['low'], df['close']
     prev_cl = cl.shift(1)
     tr = pd.concat([hi - lo, (hi - prev_cl).abs(), (lo - prev_cl).abs()], axis=1).max(axis=1)
@@ -215,15 +218,16 @@ def score_ticker(df: pd.DataFrame, ihsg_df: pd.DataFrame = None,
         reasons.append(f'FLOW_POS({flow_score:+.0f})')
 
     return {
-        'score':      min(score, 100),
-        'reasons':    reasons,
-        'above_ma50': above_ma50,
-        'adx':        round(adx_j, 1)   if not pd.isna(adx_j)   else None,
-        'near_52w':   near_52w,
-        'atr_ratio':  round(atr_ratio, 3) if not pd.isna(atr_ratio) else None,
-        'vol_dryup':  round(vol_dryup, 3) if not pd.isna(vol_dryup) else None,
-        'rs':         round(rs, 3)       if not pd.isna(rs)       else None,
-        'close':      cl_j,
+        'score':       min(score, 100),
+        'reasons':     reasons,
+        'above_ma50':  above_ma50,
+        'adx':         round(adx_j, 1)   if not pd.isna(adx_j)   else None,
+        'near_52w':    near_52w,
+        'atr_ratio':   round(atr_ratio, 3) if not pd.isna(atr_ratio) else None,
+        'vol_dryup':   round(vol_dryup, 3) if not pd.isna(vol_dryup) else None,
+        'rs':          round(rs, 3)       if not pd.isna(rs)       else None,
+        'close':       cl_j,
+        'vol_context': classify_volume_context(df),
     }
 
 
@@ -322,14 +326,15 @@ def score_ticker_reversal(df: pd.DataFrame, flow_score: float = None) -> dict:
         reasons.append('FLOW_CONFIRMATION')
 
     return {
-        'score':     min(score, 100),
-        'reasons':   reasons,
-        'vol_ratio': round(vol_ratio, 1) if not pd.isna(vol_ratio) else None,
-        'near_low':  near_low,
-        'above_3ma': above_3ma,
-        'green_day': green_day,
-        'atr_ratio': round(atr_ratio, 3) if not pd.isna(atr_ratio) else None,
-        'close':     cl_j,
+        'score':       min(score, 100),
+        'reasons':     reasons,
+        'vol_ratio':   round(vol_ratio, 1) if not pd.isna(vol_ratio) else None,
+        'near_low':    near_low,
+        'above_3ma':   above_3ma,
+        'green_day':   green_day,
+        'atr_ratio':   round(atr_ratio, 3) if not pd.isna(atr_ratio) else None,
+        'close':       cl_j,
+        'vol_context': classify_volume_context(df),
     }
 
 
