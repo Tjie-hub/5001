@@ -188,7 +188,7 @@ _Source: BRPT.md live analysis — BRPT crash -35% May 2026 exposed critical gap
 
 ### 🔴 Critical — Extreme Event Handling
 
-- [ ] **G1. Backtest auto-rolling pipeline** — Current walk-forward windows are static (last ends Apr 2026). BRPT crash May 2026 is invisible. Build `engine/backtest_roller.py`: triggered weekly/monthly, appends new 3-month window, regenerates `meta_dataset_backtest.json`. ~4 hr. **Evidence: none of 4 windows cover BRPT May crash.**
+- [x] **G1. Backtest auto-rolling pipeline** — SHIPPED 2026-06-04. `engine/backtest_roller.py`: `backtest_windows` DB table (per-window data), `roll_ticker()`, `roll_all()`, `export_meta_dataset()`. Scheduler: monthly 1st Sunday 10:00 WIB. `POST /api/backtest/roll` on-demand endpoint. Initial population: 3,367 complete + 849 partial windows for 866 tickers; 4,216 records in `out/meta_dataset_backtest.json`. BRPT now has window 5 (2026-04-16→2026-06-04, partial) — May crash visible. 8 unit tests.
 - [x] **G2. Trading suspension / data gap detector** — SHIPPED 2026-05-28. `engine/suspension_detector.py` with three-layer API (`detect_gaps`, `scan_all`, `get_status`), persisted to new `suspension_events` table, wired fail-soft into `fetch_latest`. Calendar-aware trading-day counter via `engine.calendar_filter.is_trading_day`; classifies suspension vs `data_gap` by 10% price-discontinuity threshold. 15 unit tests. Backfill detected the BRPT/DEWA/BULL May-2026 cluster (`missing_td=5`, ~-22% gap-down). Followed by full SKB audit of 2024/2025/2026 calendars (commits 3efebc4..768079f). Indicator-math edits deferred to R9; Telegram alert is G8; chart marker is G9.
 - [ ] **G3. Crash recovery strategy pattern** — No existing strategy handles post-suspension gap-down or crash recovery. Design `strategy_crash_recovery`: detect gap >3 days + gap-down >20%, entry after 1-2 confirmation bars (VR>2x + close>open), SL = low of first post-resume bar (not ATR-based, since ATR is inflated by gap), TP = 50% gap retracement or VWAP resistance. ~5 hr. **Evidence: BRPT -28.1% gap-down → +4.7% bounce, REVERSAL_BREAKOUT fired but no crash-aware strategy exists.**
 
@@ -215,6 +215,205 @@ _These are frontend-only changes to `templates/dive.html`. They surface the back
 ### 🔵 Documentation
 
 - [ ] **G13. BRPT case study in docs/** — Formalize BRPT.md findings into `docs/BRPT_CASE_STUDY.md` as reference for extreme event handling design. Include: timeline, indicator contamination evidence, strategy failure analysis, gap detection methodology. ~1 hr.
+
+---
+
+## 🔴 Sprint 18 — Crash Early Warning System (NEW 2026-06-04)
+
+_Source: macro_idx.md crash analysis (IHSG -34.84%, 9,135 → 5,952) + agent_firm deep audit. Three broken sensors, five detection gaps, one composite score._
+
+---
+
+### 🔴 Critical — Fix Broken Sensors (ship this sprint)
+
+- [ ] **C1. Fix scheduled_signals BEARISH/SELL path** — `scheduled_signals` generated ZERO SELL/BEARISH signals during the entire -35% crash (only BULLISH + NEUTRAL). Audit `flow_filter.py` verdict mapping and strategy signal generation — the BEARISH enum exists but is never triggered. Verify `flow_verdict` database column accepts BEARISH/SELL values. Test: replay May 8-21 data, confirm SELL signals fire. ~3 hr. **Evidence: 67 BULLISH on May 1, 48 BULLISH on May 14 — mid-crash. System is blind to bear markets.**
+- [ ] **C2. Fix bandar_detector accdist calculation** — `broker_accdist` field is always 0.0, producing 100% accumulation bias even during Rp 1.5T foreign outflow days. Debug the Stockbit→DB pipeline: is the raw data missing, or is the accdist formula broken? Cross-validate against `broker_flow` net values (which ARE correct — shows Rp -933M foreign net SELL on Jun 2). Should output negative accdist on heavy distribution days. ~2 hr. **Evidence: Jun 3 — 855 accumulation, 0 distribution while IHSG crashed -3.73% with 452 decliners.**
+- [ ] **C3. VPIN crash alert threshold in scheduler** — `daily_screen.vpin` has been above 0.97 for 37 consecutive days (Apr 28–Jun 4) but no alert fires. Add to `scheduler/scanner.py` or `scheduler/jobs.py`: when `AVG(vpin) > 0.8` across >50% of tickers → YELLOW alert. When `AVG(vpin) > 0.95` across >75% of tickers → RED CRITICAL alert. Fire via Telegram. Use `engine/vpin.py` (standardized in R8). ~1.5 hr. **Evidence: VPIN 0.973 on Apr 28 gave 10 days warning before May 8 streak, 36 days before Jun 3 crash.**
+- [ ] **C4. Add daily market breadth computation** — Compute advancers/decliners ratio from `ohlcv` table each trading day. Persist to new `market_breadth(date, advancers, decliners, pct_up, pct_down)` table. Alert thresholds: <40% advancers → YELLOW, <25% → ORANGE, <10% → RED. Wire to Telegram. ~2 hr. **Evidence: Breadth collapsed from 65% to 48% on Apr 15 — 9 days before Apr 24 crash. Peak-day breadth was only 42% — distribution already underway at the top.**
+
+---
+
+### 🟠 High — Build Composite Market Risk Score (next sprint)
+
+- [ ] **C5. Composite Market Risk Score engine** — New module `engine/market_risk.py` with `compute_risk_score()` that aggregates:
+  - VPIN toxicity (30% weight): avg_vpin across all tickers, % tickers with vpin > 0.8
+  - Foreign flow (25% weight): 5-day and 20-day cumulative foreign net (Rp), flow acceleration/deceleration
+  - Market breadth (20% weight): advancers/decliners ratio, % stocks above MA20
+  - Technical structure (15% weight): IHSG vs MA5/MA20, death cross status, lower high count
+  - Volatility (10% weight): daily range vs 20-day avg, extreme range days per month
+  - Output: 0-100 score with tiers: GREEN (0-30), YELLOW (31-50), ORANGE (51-70), RED (71-85), CRITICAL (86-100)
+  - ~4 hr
+- [ ] **C6. Risk score scheduler job** — Run `compute_risk_score()` after daily data fetch (~16:00 WIB). Persist to `market_risk_log(date, score, tier, vpin_component, flow_component, breadth_component, technical_component, volatility_component)`. Fire Telegram alert on tier change (especially YELLOW→ORANGE, ORANGE→RED). ~2 hr.
+- [x] **C7. Risk score surface in dashboard** — **SUPERSEDED by Sprint 19 D4-D6.** The watchlist dashboard (`templates/watchlist.html`) is the canonical risk surface with live refresh, component breakdown, and watchlist integration. Component breakdown (VPIN/Flow/Breadth/Technical/Vol weights) included in D4's expandable detail.
+
+---
+
+### 🟡 Medium — Agent Firm Macro Context (following sprint)
+
+- [ ] **C8. Market-wide context in agent firm** — `_build_context()` currently fetches only per-ticker data. Add market-wide data to every agent's context:
+  - `market_risk` — current risk score + tier from C5
+  - `ihsg_trend` — IHSG close, MA5, MA20, death cross status (last 60d)
+  - `aggregate_vpin` — market avg VPIN + % toxic tickers
+  - `foreign_flow_summary` — 5d/20d cumulative foreign net (Rp) + trend direction
+  - `macro_headlines` — top 5 CNBC/Kontan headlines from `news_mentions` (market-wide, not per-ticker)
+  - ~3 hr. **Evidence: Risk Manager currently approves ticker signals unaware that the market is in a -35% bear regime.**
+- [ ] **C9. Enrich Risk Manager prompt with macro awareness** — Update `prompts/risk_v3.md` (new version): add macro override rules:
+  - If Market Risk Score ≥ RED (71+): auto-veto any BUY signal unless quant score ≥ 4.5 AND ≥3 analysts STRONGLY bullish
+  - If Market Risk Score = CRITICAL (86+): veto all BUY signals, auto-approve SELL signals
+  - If foreign outflow > Rp 5T in 5 days: reduce max size_hint to 1.0
+  - If IHSG below MA20 and death cross active: require technical conviction ≥ 0.7 for approval
+  - Include current market risk tier + key macro drivers in the system prompt
+  - ~1.5 hr
+- [ ] **C10. Sector-level consensus analysis** — After evaluating all ticker candidates in a scan, run a summary pass: (Surface results via D10 Sector Heatmap in watchlist dashboard.)
+  - Group decisions by sector (Banking, Mining, Consumer, etc.)
+  - If ≥60% of signals in a sector are vetoed → flag "Sector under distribution"
+  - If all signals in a sector approved but sector index is declining → flag "Sector divergence warning"
+  - Persist to `sector_consensus` table, surface in Telegram
+  - ~3 hr. **Evidence: Banking sector (BBCA -11.8%, BBRI -10.4%, BBNI -11.8%) should have triggered sector-wide veto, but per-ticker evaluation missed the pattern.**
+
+---
+
+### 🔵 Validation — Back-test & Enable (when C1-C7 complete)
+
+- [ ] **C11. Back-test agent firm decisions against crash data** — Replay Apr 1–Jun 4 data through the enhanced agent firm (with C8-C9 macro context). Compare:
+  - Approval rate before vs after macro context (should drop significantly after Apr 15)
+  - Vetoed trades hypothetical P&L (should be negative — validating veto decisions)
+  - Approved trades hypothetical P&L (should outperform baseline)
+  - Use `analytics.py` cohort_summary to quantify improvement
+  - ~3 hr
+- [ ] **C12. Staged enforce mode rollout** — After C11 validates improvement:
+  - Week 1: `AGENT_FIRM_ENFORCE=true` with Market Risk Score veto only (individual signals still shadow)
+  - Week 2: Enable per-signal veto for RED/CRITICAL tier days only
+  - Week 3: Full enforce if false-positive rate < 10%
+  - Add `agent_decisions` Telegram digest (daily: X approved, Y vetoed, Z bypassed)
+  - ~2 hr
+
+---
+
+### 🔴 Critical — Crash-Aware Trade Management (gaps from findings.md audit)
+
+- [ ] **C13. Auto-close paper trades on risk escalation** — When risk score transitions to RED (71+): send Telegram warning listing all open trades with current P&L. When CRITICAL (86+): auto-close all paper trades at market, log rationale to `paper_trades.notes`. Configurable via `AUTO_CLOSE_ON_CRITICAL` env var (default: true). ~2 hr. **Evidence: 67 BULLISH signals May 1 at IHSG 6,957 — system opened trades right before May 8-21 streak (-12.55%).**
+- [ ] **C14. Position size scaling by risk tier** — GREEN: 100% normal size. YELLOW: 75%. ORANGE: 50%. RED: 25%. CRITICAL: 0% (block all new entries). Integrate into `paper_trade.open_trade()` — reads current risk score from `market_risk_log` before sizing. ~1.5 hr.
+
+---
+
+### 🟠 High — Scanner & Infrastructure Gaps
+
+- [ ] **C15. Scanner regime gate** — Skip long-only strategies when risk is elevated. GREEN/YELLOW: all strategies. ORANGE: only mean-reversion (VWAP reversion, vol_weighted) + watchlist. RED: only VPIN/breadth/flow monitoring (no signal generation). CRITICAL: pause all scanning, only risk score + foreign flow tracking. Gate at top of `scheduled_multi_strategy_scan()` in `scheduler/scanner.py`. ~2 hr. **Evidence: Scanner ran 10+ long-only strategies every hour during May 8-21 crash (-12.55%), generating noise.**
+- [ ] **C16. Foreign flow daily summary table** — New table `foreign_flow_daily(date, foreign_net, local_net, govt_net, total_value, ticker_count, top_buy_5_json, top_sell_5_json)`. New job `run_foreign_flow_summary()` after daily fetch. C5 and D1 read from this instead of scanning raw broker_flow (millions of rows). Backfill historical dates. ~1.5 hr.
+- [ ] **C17. Adaptive agent count by risk tier** — GREEN (risk 0-30): 3 agents (Technical, Flow, Risk) — saves ~$0.004/signal. YELLOW (31-50): 5 agents (+Regime, Bull). ORANGE+ (51-100): full 7 agents. Configurable via `AGENT_FIRM_ADAPTIVE_COUNT`. `firm.py` selects agent set based on current risk score. ~1.5 hr.
+- [ ] **C18. Sector mapping table** — New table `ticker_sectors(ticker TEXT PRIMARY KEY, sector TEXT, sub_sector TEXT)`. Populated from IDX classification or `stockbit_keystats.sector`. Used by C10 (sector consensus), D10 (sector heatmap), G7 (adaptive strategy). ~2 hr.
+
+---
+
+### 📋 Detection Gap Reference (from macro_idx.md)
+
+| Crash Event | Best Early Warning | Lead Time | Sensor | Status |
+|-------------|-------------------|-----------|--------|--------|
+| Jan 28 (-7.35%) | Breadth collapse to 22.5% | 7 days | Breadth | C4 adds this |
+| Mar 4 (-4.57%) | Lower High #1 (9,174→8,291) | 21 days | Technical | C5 tracks this |
+| Apr 24 (-3.38%) | Foreign flow reversal -Rp 2.9T | 9 days | Foreign Flow | C5 tracks this |
+| May 8 (-12.55%) | VPIN toxicity spike 0.973 | 10 days | VPIN | C3 alerts this |
+| Jun 3 (-3.73%) | VPIN persistent 0.97+ | 36 days | VPIN | C3 alerts this |
+
+---
+
+## 🔵 Sprint 19 — IDX Watchlist Dashboard (NEW 2026-06-04)
+
+_Source: macro_idx.md ticker scan + Sprint 18 market risk score concept. Single-page dashboard surfacing market regime, watchlist, foreign flow, VPIN, breadth._
+
+---
+
+### 🎯 Goal
+
+Replace scattered monitoring (Telegram + DB queries + macro_idx.md reports) with a single auto-refreshing dashboard: **"What is the market doing, and which tickers should I watch?"** — answered in <5 seconds.
+
+---
+
+### 🔴 Core — Backend Data Layer
+
+- [ ] **D1. `/api/dashboard/risk` endpoint** — Aggregates market risk into one JSON response:
+  - `risk_score`: composite score + tier (GREEN/YELLOW/ORANGE/RED/CRITICAL) from `market_risk_log`
+  - `ihsg`: latest OHLCV, MA5, MA20, death_cross_active, YTD chg%
+  - `breadth`: today's advancers, decliners, pct_up, 5-day trend
+  - `foreign_flow`: today's net foreign (Rp), 5d cumulative, 20d cumulative, trend
+  - `vpin`: market avg VPIN, % tickers >0.8, % tickers >0.95, days above threshold
+  - `sectors`: top 3 accumulating, top 3 distributing sectors
+  - All queries read-only from walkforward.db. ~2 hr.
+- [ ] **D2. `/api/dashboard/watchlist` endpoint** — Computes BUY WATCH / AVOID / WAIT lists:
+  - `buy_watch`: tickers with hammer (>3% intraday bounce) AND foreign BUY >Rp 5B AND volume >50M, ranked by foreign net
+  - `avoid`: tickers with foreign SELL >Rp 100B in 3 days AND YTD drop >20%
+  - `wait`: tickers with hammer BUT foreign SELL (distribution into bounce)
+  - Each entry: ticker, close, chg%, intra_bounce, foreign_net_3d, volume, entry_trigger, stop_loss
+  - ~2.5 hr.
+- [ ] **D3. `/api/dashboard/signals` endpoint** — Recent agent_firm decisions + scheduled_signals:
+  - Last 20 agent_decisions: verdict, confidence, ticker, rationale
+  - Today's scheduled_signals count by verdict
+  - ~1 hr.
+
+---
+
+### 🟠 Core — Frontend Dashboard (`templates/watchlist.html`)
+
+- [ ] **D4. Market Risk Gauge (sticky header)** — 
+  - Large risk score (0-100) color-coded background (green→red gradient)
+  - Tier label: SAFE / CAUTION / WARNING / DANGER / CRITICAL
+  - Mini 7-day trend sparkline. Auto-refresh badge. Click to expand component breakdown.
+  - ~3 hr.
+- [ ] **D5. IHSG Panel** — 
+  - Current IHSG level, day chg%, intraday range, YTD chg%
+  - Mini OHLC bars (last 10 days) with inline CSS
+  - Key support (5,500 / 5,000) & resistance (6,200 / 6,500) levels
+  - MA status line: "MA5 < MA20 — DEATH CROSS ACTIVE" or golden cross
+  - ~2 hr.
+- [ ] **D6. Breadth & Flow Panel** — Side-by-side gauges:
+  - Breadth bar (color-coded), 5-day trend, foreign flow sparkline (10d), VPIN gauge with days-above count
+  - ~2.5 hr.
+
+---
+
+### 🟡 Medium — Watchlist Tables (main content)
+
+- [ ] **D7. BUY WATCH Table** — Sortable: Ticker | Price | Chg% | IntraBounce% | Foreign 3d | Volume | Entry | Stop | Dist to Entry. Green/yellow/white row coloring. Click → dive.html. Auto-refresh 60s. ~3 hr.
+- [ ] **D8. AVOID Table** — Red-tinted, collapsed by default: Ticker | Price | YTD% | Foreign 3d | Reason. ~1.5 hr.
+- [ ] **D9. WAIT Table** — Yellow-tinted: Ticker | Price | Chg% | IntraBounce% | Foreign 3d | Issue. ~1 hr.
+- [ ] **D10. Sector Heatmap** — 3×3 grid: sectors colored by aggregate foreign flow (green=accumulation, red=distribution). Based on broker_flow sector mapping. ~2 hr.
+
+---
+
+### 🟡 Medium — Live Features
+
+- [ ] **D11. Auto-refresh with diff highlighting** — 60s poll, yellow flash on changed values, green/red dot for connection status. Pause on hover. ~1.5 hr.
+- [ ] **D12. Confirmation Checklist widget** — Sticky sidebar:
+  - ☐ Breadth >50% (currently: 6.9% ❌)
+  - ☐ IHSG >6,000 (currently: 5,847 ❌)
+  - ☐ ≥2 BUY WATCH above entry (0/6 ❌)
+  - ☐ Foreign flow leaders positive (3/3 ✅)
+  - ☐ VPIN targets <0.90 (0/6 ❌)
+  - Progress: "1/5 — STAY IN CASH" with red→green bar
+  - ~1.5 hr.
+
+---
+
+### 🔵 Polish — Integration
+
+- [ ] **D13. Wire into app.py** — Register `/dashboard` route, add nav links across all templates. ~1 hr.
+- [ ] **D14. Telegram `/dashboard` command** — Compact summary: risk tier + IHSG + top 3 BUY WATCH + checklist. ~1 hr.
+- [ ] **D15. Mobile-responsive** — Stack panels vertical, tables → cards, touch-friendly. ~1.5 hr.
+
+---
+
+### 📋 Dependencies
+
+```
+C1-C6 (Sprint 18) ────→ D1 (risk endpoint) ──→ D4-D6 (panels)
+broker_flow (existing) ──→ D2 (watchlist) ────→ D7-D10 (tables)
+agent_decisions ─────────→ D3 (signals) ──────→ D11 (live) + D12 (checklist)
+```
+
+**Prerequisites:** C1-C6 should ship before D1. D2-D3 can ship independently.
+
+**Total:** ~26 hours, 15 tasks.
 
 ---
 
