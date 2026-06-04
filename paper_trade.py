@@ -113,6 +113,8 @@ def init_paper_table():
         ("entries_blocked",    "0"),    # 1 = new entries blocked by circuit breaker
         ("dd_threshold_pct",   "8.0"),  # block new entries when 30d DD >= this %
         ("dd_recover_pct",     "5.0"),  # auto-unblock when DD recovers <= this %
+        # Premover auto-execution: off / shadow / enforce
+        ("auto_trade_from_premover", "off"),
     ]
     for k, v in configs:
         conn.execute("INSERT OR IGNORE INTO paper_config (key,value) VALUES (?,?)", (k,v))
@@ -126,6 +128,20 @@ def init_paper_table():
         conn.execute("ALTER TABLE paper_trades ADD COLUMN highest_seen REAL")
     if 'atr14' not in cols:
         conn.execute("ALTER TABLE paper_trades ADD COLUMN atr14 REAL")
+    # premover_auto_log: shadow/enforce evaluation records
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS premover_auto_log (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticker       TEXT NOT NULL,
+            detected_at  TEXT NOT NULL,
+            pattern_type TEXT,
+            score        INTEGER,
+            mode         TEXT,
+            would_trade  INTEGER,
+            skip_reason  TEXT,
+            logged_at    TEXT
+        )
+    """)
     conn.commit()
     conn.close()
     pass  # tables ready
@@ -134,7 +150,13 @@ def get_config():
     conn = get_db()
     rows = conn.execute("SELECT key, value FROM paper_config").fetchall()
     conn.close()
-    return {r["key"]: float(r["value"]) for r in rows}
+    result = {}
+    for r in rows:
+        try:
+            result[r["key"]] = float(r["value"])
+        except (ValueError, TypeError):
+            result[r["key"]] = r["value"]
+    return result
 
 def get_open_trades():
     conn = get_db()
@@ -478,6 +500,23 @@ def _set_config(key: str, value) -> None:
                  (key, str(value)))
     conn.commit()
     conn.close()
+
+
+def get_premover_mode() -> str:
+    """Read auto_trade_from_premover from paper_config. Returns 'off' if not set."""
+    conn = get_db()
+    row = conn.execute(
+        "SELECT value FROM paper_config WHERE key='auto_trade_from_premover'"
+    ).fetchone()
+    conn.close()
+    return str(row[0]) if row else "off"
+
+
+def set_premover_mode(mode: str) -> None:
+    """Set auto_trade_from_premover. Must be 'off', 'shadow', or 'enforce'."""
+    if mode not in ("off", "shadow", "enforce"):
+        raise ValueError(f"Invalid mode '{mode}'. Must be: off, shadow, enforce.")
+    _set_config("auto_trade_from_premover", mode)
 
 
 def compute_drawdown(days: int = 30) -> dict:
