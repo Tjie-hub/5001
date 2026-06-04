@@ -255,21 +255,24 @@ def api_ticker_full(ticker):
     }
 
     # ── SUSPENSIONS ────────────────────────────────────────────────────────
-    susp_rows = conn.execute("""
-        SELECT last_normal_date, resume_date, missing_td, gap_pct
-        FROM suspension_events
-        WHERE ticker=? AND classification='suspension'
-        ORDER BY resume_date DESC
-    """, (ticker,)).fetchall()
-    suspensions = [
-        {
-            'last_normal_date': r[0],
-            'resume_date':      r[1],
-            'missing_td':       r[2],
-            'gap_pct':          round(r[3], 4),
-        }
-        for r in susp_rows
-    ]
+    try:
+        susp_rows = conn.execute("""
+            SELECT last_normal_date, resume_date, missing_td, gap_pct
+            FROM suspension_events
+            WHERE ticker=? AND classification='suspension'
+            ORDER BY resume_date DESC
+        """, (ticker,)).fetchall()
+        suspensions = [
+            {
+                'last_normal_date': r[0],
+                'resume_date':      r[1],
+                'missing_td':       r[2],
+                'gap_pct':          round(r[3], 4) if r[3] is not None else None,
+            }
+            for r in susp_rows
+        ]
+    except Exception:
+        suspensions = []
 
     conn.close()
 

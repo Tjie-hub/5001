@@ -49,7 +49,7 @@ def client(tmp_path, monkeypatch):
     """)
     conn.execute(
         "INSERT INTO suspension_events VALUES "
-        "('TEST','2026-01-10','2026-01-15',3,-0.20,'suspension','2026-01-15T09:00:00')"
+        "('TEST','2026-01-10','2026-01-15',3,-0.123456,'suspension','2026-01-15T09:00:00')"
     )
     conn.execute(
         "INSERT INTO suspension_events VALUES "
@@ -131,4 +131,4 @@ def test_suspensions_has_correct_fields(client):
     assert s["last_normal_date"] == "2026-01-10"
     assert s["resume_date"] == "2026-01-15"
     assert s["missing_td"] == 3
-    assert abs(s["gap_pct"] - (-0.20)) < 0.001
+    assert s["gap_pct"] == -0.1235   # -0.123456 rounded to 4dp
