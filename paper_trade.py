@@ -627,3 +627,67 @@ def clear_history():
     conn.commit()
     conn.close()
     return {"deleted": count}
+
+
+def evaluate_premover_trade(ticker: str, score: int, pattern_type: str) -> dict:
+    """
+    Dry-run open_trade() gates without side effects.
+    Returns {'would_trade': bool, 'skip_reason': str|None, 'gates': dict}.
+    Gates: DD circuit breaker → max positions → duplicate → regime.
+    """
+    gates: dict = {}
+
+    # Gate 1: DD circuit breaker
+    if is_entries_blocked():
+        return {'would_trade': False, 'skip_reason': 'dd_circuit_breaker',
+                'gates': {'entries_blocked': True}}
+    gates['entries_blocked'] = False
+
+    cfg         = get_config()
+    open_trades = get_open_trades()
+    max_open    = int(cfg.get('max_open', 5))
+
+    # Gate 2: position limit
+    if len(open_trades) >= max_open:
+        return {'would_trade': False, 'skip_reason': f'max_open_{max_open}',
+                'gates': {**gates, 'max_open': True}}
+    gates['max_open'] = False
+
+    # Gate 3: duplicate position
+    if any(t['ticker'] == ticker for t in open_trades):
+        return {'would_trade': False, 'skip_reason': 'already_open',
+                'gates': {**gates, 'duplicate': True}}
+    gates['duplicate'] = False
+
+    # Gate 4: regime filter (reads backtest_cache, no OHLCV load)
+    if int(cfg.get('filter_regime', 1)):
+        conn = get_db()
+        row = conn.execute(
+            "SELECT regime FROM backtest_cache WHERE ticker=? "
+            "ORDER BY computed_date DESC LIMIT 1",
+            (ticker,)
+        ).fetchone()
+        conn.close()
+        regime = str(row['regime']) if row and row['regime'] else 'UNKNOWN'
+        if regime == 'BEAR':
+            return {'would_trade': False, 'skip_reason': 'regime_bear',
+                    'gates': {**gates, 'regime': regime}}
+        gates['regime'] = regime
+
+    return {'would_trade': True, 'skip_reason': None, 'gates': gates}
+
+
+def _log_premover_auto(ticker: str, detected_at: str, pattern_type: str,
+                       score: int, mode: str, eval_result: dict) -> None:
+    """Insert one evaluation record into premover_auto_log."""
+    conn = get_db()
+    now_str = datetime.now(WIB).strftime('%Y-%m-%d %H:%M')
+    conn.execute("""
+        INSERT INTO premover_auto_log
+        (ticker, detected_at, pattern_type, score, mode, would_trade, skip_reason, logged_at)
+        VALUES (?,?,?,?,?,?,?,?)
+    """, (ticker, detected_at, pattern_type, score, mode,
+          int(eval_result.get('would_trade', False)),
+          eval_result.get('skip_reason'), now_str))
+    conn.commit()
+    conn.close()
