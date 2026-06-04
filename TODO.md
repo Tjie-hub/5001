@@ -196,7 +196,7 @@ _Source: BRPT.md live analysis — BRPT crash -35% May 2026 exposed critical gap
 
 - [x] **G4. VR spike context classifier** — SHIPPED 2026-06-05. `classify_volume_context(df)` in `engine/indicators.py`: tags last-bar VR spike as crash_absorption/exhaustion_distribution/breakout_accumulation/normal. Added to `score_ticker_reversal()` + `score_ticker()`. Stored in `watchlist_premover.vol_context` (DB migration). REVERSAL_BREAKOUT Telegram alerts show [CRASH_ABSORB]/[BRK_ACCUM]/[EXHAUST_DIST] tags. 6 unit tests.
 - [x] **G5. Fundamental data auto-refresh on price shock** — SHIPPED 2026-05-29. `check_keystats_freshness()` in `scheduler.py`: blocks stale+shock signals; allows stale-but-quiet through; attempts inline re-fetch via `.stockbit_token` before blocking. 17 unit tests.
-- [ ] **G6. Premover → paper trade auto-execution** — BRPT REVERSAL_BREAKOUT fired May 26 (score=55) but `paper_trades` empty. Add config toggle: `auto_trade_from_premover` (off/shadow/enforce). In shadow mode, log why trade was/wasn't opened (regime block? fundamental fail? calendar blackout?). ~2 hr. **Evidence: 0 BRPT paper trades despite premover alert. Gap between knowing and doing.**
+- [x] **G6. Premover → paper trade auto-execution** — SHIPPED 2026-06-05. `get/set_premover_mode()`, `evaluate_premover_trade()` (gates: DD, max_open, duplicate, regime), `_log_premover_auto()` in `paper_trade.py`. `premover_auto_log` DB table. `run_premover_eod()` evaluates+logs+executes in shadow/enforce mode. Telegram shadow summary shows PASS/BLOCK+reason. `GET/POST /api/paper/premover_mode`. Fixed `get_config()` to handle string values. 8 unit tests.
 
 ### 🟡 High Value — Adaptive Intelligence
 

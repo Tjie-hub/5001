@@ -1147,3 +1147,25 @@ def api_backtest_roll():
     except Exception as e:
         logging.exception("api_backtest_roll error")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@backtest_bp.route('/api/paper/premover_mode', methods=['GET'])
+def api_premover_mode_get():
+    """GET current auto_trade_from_premover mode."""
+    from paper_trade import get_premover_mode, init_paper_table
+    init_paper_table()
+    return jsonify({'mode': get_premover_mode()})
+
+
+@backtest_bp.route('/api/paper/premover_mode', methods=['POST'])
+def api_premover_mode_set():
+    """POST {'mode': 'off|shadow|enforce'} to update auto_trade_from_premover."""
+    from paper_trade import set_premover_mode, get_premover_mode, init_paper_table
+    init_paper_table()
+    body = request.get_json(force=True) or {}
+    mode = body.get('mode', 'off')
+    try:
+        set_premover_mode(mode)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    return jsonify({'mode': get_premover_mode()})
