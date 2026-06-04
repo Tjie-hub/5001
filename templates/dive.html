@@ -542,6 +542,7 @@
   let _vpPlugin   = null;
   let _rawCandles = [];
   let _contextMarkers = [];  // G9 + G11 markers — persist across strategy changes
+  let _suspensionsCache = [];  // cached from /full for re-application on TF switch
   let _indicators = { vwma: true, vp: true };
   let _candleSeries  = null;     // module-scoped for setMarkers()
   let _activeStrategy = '';      // currently selected strategy key
@@ -736,6 +737,7 @@
 
     _contextMarkers = [];   // reset before re-populating (TF switch or reload)
     renderCrashMarkers();
+    renderSuspensions(_suspensionsCache);
     _lwChart.timeScale().fitContent();
 
     // Re-apply active strategy markers after data reload (TF switch)
@@ -890,7 +892,7 @@
       });
       return;
     }
-    renderPrice(d.price, d.regime);
+    renderPrice(d.price, d.regime, d.recommended_strategy);
     renderStrategies(d.strategies, d.price.close);
     renderVpin(d.vpin);
     try { renderFlow(d.flow); }
@@ -898,6 +900,8 @@
     try { renderBroker(d.broker); }
     catch(e) { document.getElementById('broker-loading').textContent = 'Error loading broker data.'; }
     if (d.premover) renderPremover(d.premover);
+    renderSuspensions(d.suspensions || []);
+    renderFundamental(d.fundamental);
   }
 
   function renderPrice(p, regime, recommendedStrategy) {
@@ -969,6 +973,7 @@
 
   function renderSuspensions(suspensions) {
     if (!suspensions || !suspensions.length) return;
+    _suspensionsCache = suspensions;
     suspensions.forEach(function(s) {
       const pct = (s.gap_pct * 100).toFixed(1);
       const sign = s.gap_pct >= 0 ? '+' : '';
