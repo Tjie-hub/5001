@@ -63,6 +63,7 @@ def _init_table(conn: sqlite3.Connection):
         ('above_3ma', 'INTEGER'),
         ('green_day', 'INTEGER'),
         ('vol_ratio', 'REAL'),
+        ('vol_context', 'TEXT'),
     ]:
         if col not in existing_cols:
             try:
@@ -362,28 +363,31 @@ def _upsert_setup(conn: sqlite3.Connection, ticker: str, detected_at: str,
         conn.execute("""
             INSERT OR IGNORE INTO watchlist_premover
             (ticker, detected_at, pattern_type, score, reasons_json,
-             above_ma50, adx, near_52w, atr_ratio, vol_dryup, rs, close_price)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+             above_ma50, adx, near_52w, atr_ratio, vol_dryup, rs, close_price,
+             vol_context)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             ticker, detected_at, pattern_type, result['score'],
             json.dumps(result.get('reasons', [])),
             result.get('above_ma50'), result.get('adx'),
             result.get('near_52w'),   result.get('atr_ratio'),
             result.get('vol_dryup'),  result.get('rs'),
-            result.get('close'),
+            result.get('close'),      result.get('vol_context'),
         ))
     elif pattern_type == 'REVERSAL_BREAKOUT':
         conn.execute("""
             INSERT OR IGNORE INTO watchlist_premover
             (ticker, detected_at, pattern_type, score, reasons_json,
-             near_low, above_3ma, green_day, atr_ratio, vol_ratio, close_price)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)
+             near_low, above_3ma, green_day, atr_ratio, vol_ratio, close_price,
+             vol_context)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             ticker, detected_at, pattern_type, result['score'],
             json.dumps(result.get('reasons', [])),
             result.get('near_low'), result.get('above_3ma'),
             result.get('green_day'), result.get('atr_ratio'),
             result.get('vol_ratio'), result.get('close'),
+            result.get('vol_context'),
         ))
     return conn.execute('SELECT changes()').fetchone()[0] > 0
 
@@ -449,10 +453,17 @@ def run_scan(db_path: str, send_alert_fn=None) -> list:
 
         msg = f"\U0001f50d <b>Pre-Breakout Setups — {detected_at}</b>\n\n"
 
+        _VOL_CTX_LABELS = {
+            'crash_absorption':        'CRASH_ABSORB',
+            'exhaustion_distribution': 'EXHAUST_DIST',
+            'breakout_accumulation':   'BRK_ACCUM',
+        }
         if reversal:
             msg += f"── REVERSAL_BREAKOUT ({len(reversal)}) ──\n"
             for s in sorted(reversal, key=lambda x: x['score'], reverse=True)[:5]:
-                msg += f"<b>{s['ticker']}</b> — Score {s['score']}/100\n"
+                ctx = s.get('vol_context', 'normal')
+                ctx_tag = f" [{_VOL_CTX_LABELS[ctx]}]" if ctx in _VOL_CTX_LABELS else ''
+                msg += f"<b>{s['ticker']}</b> — Score {s['score']}/100{ctx_tag}\n"
                 msg += f"  {' · '.join(s.get('reasons', []))}\n"
                 msg += f"  Close: {s.get('close', 0):,.0f}\n\n"
 
