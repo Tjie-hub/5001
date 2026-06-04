@@ -284,3 +284,28 @@ def run_premover_eod():
     except Exception as e:
         print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan error: {e}")
         send_telegram(f"🔴 <b>Pre-mover Scan Error</b>\n<code>{str(e)[:200]}</code>")
+
+
+def run_backtest_roller():
+    """Monthly backtest window roller — appends new windows, exports JSON."""
+    from engine.backtest_roller import roll_all, export_meta_dataset
+    now_str = datetime.now(WIB).strftime('%H:%M')
+    print(f"[{now_str}] Backtest roller dimulai...")
+    try:
+        summary = roll_all(include_partial=True)
+        n_exported = export_meta_dataset()
+        msg = (
+            f"🔄 <b>Backtest Roller Selesai</b>\n\n"
+            f"New complete windows: <b>{summary['new_complete']}</b>\n"
+            f"New partial windows: <b>{summary['new_partial']}</b>\n"
+            f"Tickers updated: <b>{summary['tickers_updated']}/{summary['total_tickers']}</b>\n"
+            f"JSON exported: <b>{n_exported} records</b>"
+        )
+        if summary['errors']:
+            msg += f"\n⚠️ Errors: {len(summary['errors'])}"
+        send_telegram(msg)
+        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Backtest roller selesai. "
+              f"{summary['new_complete']} complete, {summary['new_partial']} partial")
+    except Exception as e:
+        send_telegram(f"🔴 <b>Backtest Roller Error</b>\n<code>{str(e)[:200]}</code>")
+        print(f"[{now_str}] Backtest roller error: {e}")

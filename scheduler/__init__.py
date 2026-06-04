@@ -46,6 +46,7 @@ from scheduler.jobs import (  # noqa: F401
     run_foreign_snapshot,
     run_news_fetch,
     run_premover_eod,
+    run_backtest_roller,
     _refresh_backtest_cache,
     _run_open_trade_monitor,
     _run_screener_intraday,
@@ -161,6 +162,11 @@ def start_scheduler():
         day_of_week="mon-fri", hour=16, minute=30, timezone=WIB),
         id="premover_eod", name="Pre-mover EOD Scan 16:30")
 
+    # Backtest roller — 1st Sunday of each month at 10:00 WIB
+    scheduler.add_job(run_backtest_roller, CronTrigger(
+        day="1-7", day_of_week="sun", hour=10, minute=0, timezone=WIB),
+        id="backtest_roller", name="Backtest Roller Sun 10:00")
+
     scheduler.start()
     print("Scheduler started:")
     print("  🤖 AUTO-TRADING STATUS: 09:00 (success/failed check)")
@@ -172,6 +178,7 @@ def start_scheduler():
     print("  🔄 DAILY FETCH: 17:30")
     print("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
     print("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
+    print("  🔄 BACKTEST ROLLER: 1st Sun/month 10:00 (rolling WF windows)")
     return scheduler
 
 
