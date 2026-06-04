@@ -112,6 +112,16 @@
     .pm-badge.high   { background: rgba(34,197,94,.12);  color: var(--green); }
     .pm-badge.medium { background: rgba(234,179,8,.12);  color: var(--yellow); }
     .pm-badge.low    { background: rgba(78,95,122,.1);   color: var(--mute); }
+    .fund-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(239,68,68,.15);
+      color: #ef4444;
+      white-space: nowrap;
+      cursor: default;
+    }
 
     /* ── PRICE BAR ───────────────────────────────────── */
     .price-bar { display: flex; gap: 1px; background: var(--border); }
@@ -400,6 +410,7 @@
   <span class="ticker-label">{{ ticker }}</span>
   <span class="regime-badge" id="tb-regime">…</span>
   <span class="pm-badge" id="tb-pm" title="Pre-mover setup score">Setup —</span>
+  <span class="fund-badge" id="tb-fund" style="display:none"></span>
 </div>
 
 <!-- Price bar -->
@@ -970,6 +981,18 @@
       });
     });
     refreshContextMarkers();
+  }
+
+  function renderFundamental(fundamental) {
+    var el = document.getElementById('tb-fund');
+    if (!fundamental || !fundamental.flags || !fundamental.flags.length) return;
+    el.textContent = '⚠️ ' + fundamental.flags.join(' | ');
+    var parts = [];
+    if (fundamental.npm  != null) parts.push('NPM ' + fundamental.npm.toFixed(1) + '%');
+    if (fundamental.der  != null) parts.push('DER ' + fundamental.der.toFixed(2) + 'x');
+    if (fundamental.earn_growth != null) parts.push('EPS growth ' + fundamental.earn_growth.toFixed(0) + '%');
+    el.title = parts.join(' · ');
+    el.style.display = '';
   }
 
   function renderPremover(pm) {
