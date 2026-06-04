@@ -17,6 +17,7 @@ from .strategies import (
     strategy_orb,
     strategy_swing_trend,
     strategy_trend_following_breakout,
+    strategy_crash_recovery,
     Trade
 )
 from engine.regime_filter import strategy_regime_adaptive, RegimeClassifier
@@ -164,6 +165,7 @@ STRATEGY_FUNCS = {
     'ORB':                       strategy_orb,
     'Swing Trend':               strategy_swing_trend,
     'Trend Following Breakout':  strategy_trend_following_breakout,
+    'Crash Recovery':            strategy_crash_recovery,
 }
 
 
