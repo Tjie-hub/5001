@@ -916,14 +916,14 @@
   function renderCrashMarkers() {
     var candles = _rawCandles;
     if (!candles || candles.length < 11) return;
-    var window = 10;
+    var winSize = 10;
     var threshold = -0.20;
     var candidates = [];
-    for (var i = 1; i < candles.length - window + 1; i++) {
+    for (var i = 1; i < candles.length - winSize + 1; i++) {
       var refClose = candles[i - 1].close;
       if (!refClose) continue;
       var minClose = refClose, minIdx = i;
-      for (var j = i; j < i + window && j < candles.length; j++) {
+      for (var j = i; j < i + winSize && j < candles.length; j++) {
         if (candles[j].close < minClose) { minClose = candles[j].close; minIdx = j; }
       }
       var drop = (minClose - refClose) / refClose;
