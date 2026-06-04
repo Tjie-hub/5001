@@ -80,7 +80,7 @@ def roll_ticker(ticker: str, df: pd.DataFrame, conn: sqlite3.Connection,
                 "profit_factor": float(min(w["profit_factor"], 999)),
             }
 
-    now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     new_complete = 0
 
     for w in windows:
