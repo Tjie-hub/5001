@@ -1956,3 +1956,239 @@ def check_trend_following_breakout_signal(df: pd.DataFrame) -> dict:
         'details': details,
     }
     print(f"Details: {result['details']}")
+
+
+# ─────────────────────────────────────────────
+# CRASH RECOVERY CONSTANTS
+# ─────────────────────────────────────────────
+CRASH_MIN_GAP_DAYS   = 5      # calendar days — suspension proxy (weekend = 2-3 days)
+CRASH_GAP_DOWN_PCT   = -0.20  # ≥20% gap-down on resume open vs prior close
+CRASH_VR_MIN         = 2.0    # volume ratio threshold for confirmation
+CRASH_ENTRY_WINDOW   = 3      # max bars after crash resume to find confirmation
+CRASH_TP_RETRACEMENT = 0.50   # TP at 50% gap retracement from resume open
+
+
+# ─────────────────────────────────────────────
+# STRATEGY 11 — CRASH RECOVERY
+# ─────────────────────────────────────────────
+
+def strategy_crash_recovery(df: pd.DataFrame, capital: float = 50_000_000,
+                             filters: list = None) -> dict:
+    """
+    Entry: gap-down >=20% after >=5 calendar day gap (suspension proxy),
+           confirmed by VR>2x + bullish close within 3 bars post-resume.
+    SL: low of crash resume bar (NOT ATR — ATR is inflated by the gap bar).
+    TP: resume_open + 50% x gap_amount (50% gap retracement).
+    """
+    if len(df) < 5:
+        return {'strategy': 'Crash Recovery', 'trades': [], 'equity': [capital],
+                'final_capital': capital, 'initial_capital': capital}
+
+    df = df.copy().reset_index(drop=True)
+    df['_dt'] = pd.to_datetime(df['date'])
+    day_diff = df['_dt'].diff().dt.days.fillna(1)
+    open_gap_pct = (df['open'] - df['close'].shift(1)) / df['close'].shift(1)
+    vr = calc_vol_ratio(df, 20)
+
+    capital_cur = capital
+    equity = [capital_cur]
+    trades = []
+    in_trade = False
+    entry_price = tp_level = sl_level = 0.0
+    entry_date = ''
+    lots = 0
+
+    entry_window_active = False
+    window_bars_remaining = 0
+    resume_low = 0.0
+    resume_open_price = 0.0
+    gap_amount = 0.0
+    enter_next_bar = False
+
+    for i in range(1, len(df)):
+        row = df.iloc[i]
+        date = str(row['date'])[:10]
+
+        if enter_next_bar and not in_trade:
+            raw_entry = row['open']
+            ep = apply_costs(raw_entry, 'BUY')
+            sl_price = apply_costs(resume_low, 'SELL')
+            sl_pct = (ep - sl_price) / ep if ep > sl_price else 0.02
+            if sl_pct < 0.005:
+                sl_pct = 0.02
+                sl_price = ep * (1.0 - sl_pct)
+            tp_price = resume_open_price + CRASH_TP_RETRACEMENT * gap_amount
+            if tp_price > ep * 1.02:
+                lots_n = lot_size(capital_cur, ep, 0.02, sl_pct)
+                cost = ep * lots_n * 100
+                if cost <= capital_cur and lots_n > 0:
+                    entry_price = ep
+                    sl_level = sl_price
+                    tp_level = tp_price
+                    lots = lots_n
+                    in_trade = True
+                    entry_date = date
+            enter_next_bar = False
+
+        if in_trade:
+            hi, lo, cur = row['high'], row['low'], row['close']
+            exit_reason = None
+            if lo <= sl_level:
+                exit_price = apply_costs(sl_level, 'SELL')
+                exit_reason = 'SL'
+            elif hi >= tp_level:
+                exit_price = apply_costs(tp_level, 'SELL')
+                exit_reason = 'TP'
+            elif i == len(df) - 1:
+                exit_price = apply_costs(cur, 'SELL')
+                exit_reason = 'EOD'
+            if exit_reason:
+                gross = (exit_price - entry_price) * lots * 100
+                pnl_pct = (exit_price - entry_price) / entry_price
+                capital_cur += gross
+                trades.append(Trade(
+                    entry_date=entry_date, exit_date=date,
+                    entry_price=entry_price, exit_price=exit_price,
+                    lots=lots, direction='BUY', exit_reason=exit_reason,
+                    pnl_rp=gross, pnl_pct=pnl_pct * 100,
+                    strategy='Crash Recovery'
+                ))
+                in_trade = False
+        else:
+            is_crash_resume = (
+                not pd.isna(open_gap_pct.iloc[i])
+                and day_diff.iloc[i] >= CRASH_MIN_GAP_DAYS
+                and open_gap_pct.iloc[i] <= CRASH_GAP_DOWN_PCT
+            )
+
+            if is_crash_resume:
+                entry_window_active = True
+                window_bars_remaining = CRASH_ENTRY_WINDOW
+                resume_low = row['low']
+                resume_open_price = row['open']
+                gap_amount = df['close'].iloc[i - 1] - resume_open_price
+                enter_next_bar = False
+            elif entry_window_active and window_bars_remaining > 0:
+                vr_val = vr.iloc[i]
+                if (not pd.isna(vr_val) and vr_val >= CRASH_VR_MIN
+                        and row['close'] > row['open']):
+                    enter_next_bar = True
+                    entry_window_active = False
+                else:
+                    window_bars_remaining -= 1
+                    if window_bars_remaining == 0:
+                        entry_window_active = False
+
+        equity.append(capital_cur)
+
+    return {
+        'strategy':        'Crash Recovery',
+        'trades':          trades,
+        'equity':          equity,
+        'final_capital':   capital_cur,
+        'initial_capital': capital,
+    }
+
+
+def check_crash_recovery_signal(ticker: str, df: pd.DataFrame,
+                                 db_path: str = None) -> dict:
+    """
+    Live signal check for crash recovery. Queries suspension_events for a
+    recent suspension (within last 5 trading bars). If found, checks VR>2x
+    + bullish close on the last bar.
+    Returns: {'has_signal': bool, 'reason': str, 'details': dict}
+    """
+    import sqlite3 as _sqlite3
+    if db_path is None:
+        from config import DB_PATH
+        db_path = DB_PATH
+
+    if df is None or len(df) < 5:
+        return {'has_signal': False, 'reason': 'Insufficient data', 'details': {}}
+
+    last_5_dates = [str(df['date'].iloc[i])[:10] for i in range(-5, 0)]
+    earliest = min(last_5_dates)
+
+    try:
+        conn = _sqlite3.connect(db_path)
+        row = conn.execute(
+            "SELECT resume_date, gap_pct, last_normal_date, missing_td "
+            "FROM suspension_events "
+            "WHERE ticker=? AND resume_date >= ? AND classification='suspension' "
+            "ORDER BY resume_date DESC LIMIT 1",
+            (ticker, earliest)
+        ).fetchone()
+        conn.close()
+    except Exception:
+        row = None
+
+    if not row:
+        return {
+            'has_signal': False,
+            'reason': f'No recent suspension event for {ticker}',
+            'details': {}
+        }
+
+    resume_date, gap_pct, last_normal_date, missing_td = row
+
+    date_strs = df['date'].astype(str).str[:10]
+    resume_mask = date_strs == resume_date
+    if not resume_mask.any():
+        return {
+            'has_signal': False,
+            'reason': f'Resume date {resume_date} not in OHLCV data',
+            'details': {}
+        }
+
+    resume_idx = int(df[resume_mask].index[-1])
+    resume_low = float(df.loc[resume_idx, 'low'])
+    resume_open = float(df.loc[resume_idx, 'open'])
+
+    if resume_idx == 0:
+        return {'has_signal': False, 'reason': 'Resume bar at start of data', 'details': {}}
+    last_pre_close = float(df.loc[resume_idx - 1, 'close'])
+    gap_amount = last_pre_close - resume_open
+
+    last = df.iloc[-1]
+    vr_series = calc_vol_ratio(df, 20)
+    vr_val = vr_series.iloc[-1]
+
+    is_bullish = float(last['close']) > float(last['open'])
+    has_volume = (not pd.isna(vr_val)) and float(vr_val) >= CRASH_VR_MIN
+
+    entry_approx = float(last['close'])
+    sl_approx = float(apply_costs(resume_low, 'SELL'))
+    tp_approx = resume_open + CRASH_TP_RETRACEMENT * gap_amount
+    sl_pct = (entry_approx - sl_approx) / entry_approx if entry_approx > sl_approx else 0.02
+
+    details = {
+        'vr':          round(float(vr_val), 2) if not pd.isna(vr_val) else None,
+        'bullish':     is_bullish,
+        'resume_date': resume_date,
+        'gap_pct':     round(float(gap_pct) * 100, 1),
+        'missing_td':  missing_td,
+        'sl':          round(sl_approx, 0),
+        'tp':          round(tp_approx, 0),
+        'sl_pct':      round(sl_pct * 100, 2),
+    }
+
+    if is_bullish and has_volume and tp_approx > entry_approx * 1.02:
+        return {
+            'has_signal': True,
+            'reason': (f"Crash Recovery: VR={float(vr_val):.1f}x, "
+                       f"gap {float(gap_pct)*100:.1f}% on {resume_date}"),
+            'details': details,
+        }
+
+    missing = []
+    if not is_bullish:
+        missing.append('bearish close')
+    if not has_volume:
+        missing.append(f'VR={float(vr_val):.1f}x<{CRASH_VR_MIN}x')
+    if tp_approx <= entry_approx * 1.02:
+        missing.append('insufficient TP headroom')
+    return {
+        'has_signal': False,
+        'reason': f"Crash Recovery: conditions not met ({', '.join(missing)})",
+        'details': details,
+    }
