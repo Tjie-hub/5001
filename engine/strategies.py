@@ -1197,6 +1197,9 @@ def check_current_entry_signal(ticker: str, strategy: str, df: pd.DataFrame = No
     elif strategy in ('orb_intraday', 'ORB_intraday'):
         # True intraday ORB — bypasses daily df; uses ticks DB directly.
         result = check_orb_intraday_signal(ticker)
+    elif strategy == 'Crash Recovery':
+        # Counter-trend — bypass the weekly-trend gate (irrelevant for crash bounce)
+        return check_crash_recovery_signal(ticker, df)
     else:
         return {
             'has_signal': False,
