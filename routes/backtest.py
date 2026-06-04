@@ -1127,3 +1127,23 @@ def api_optimizer_result(ticker, strategy):
     if not result:
         return jsonify({'error': f'No optimizer result for {ticker}/{strategy}'}), 404
     return jsonify(result)
+
+
+@backtest_bp.route('/api/backtest/roll', methods=['POST'])
+def api_backtest_roll():
+    """Trigger backtest roller on demand.
+    Body: {"tickers": ["BRPT", ...], "include_partial": true}
+    tickers is optional — omit to roll all tickers.
+    """
+    from engine.backtest_roller import roll_all, export_meta_dataset
+    body = request.get_json(force=True) or {}
+    tickers = body.get('tickers')
+    include_partial = bool(body.get('include_partial', True))
+    try:
+        summary = roll_all(tickers=tickers, include_partial=include_partial)
+        n_exported = export_meta_dataset()
+        summary['exported'] = n_exported
+        return jsonify({'status': 'ok', 'summary': summary})
+    except Exception as e:
+        logging.exception("api_backtest_roll error")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
