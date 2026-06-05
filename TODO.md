@@ -181,8 +181,8 @@ _Source: macro_idx.md crash analysis (IHSG -34.84%, 9,135 → 5,952). Three brok
 - [x] **C7. Telegram alert routing by risk tier** — `engine/risk_alert.py`: `route_risk_alert()` CRITICAL→immediate Telegram, RED/ORANGE→market_risk_log (sent=0), GREEN→silent. `get_pending_risk_alerts()`, `mark_alerts_sent()`, `build_risk_summary_message()`. Scheduler: hourly RED bundle at :30, EOD ORANGE/YELLOW summary at 16:00. Wired into scanner post-risk-score computation. 10 unit tests. SHIPPED 2026-06-05.
 - [x] **C8. Scheduled market health report** — `engine/health_report.py`: `build_market_health_report()` formats risk score, VPIN, breadth, accdist, foreign flow, IHSG technicals (death cross flags, support breaks) as Telegram message. Scheduler: 08:45 WIB Mon-Fri via `run_market_health_report()`. 8 unit tests. SHIPPED 2026-06-05.
 - [x] **C9. Auto circuit breaker** — `engine/circuit_breaker.py`: `CircuitBreakerState` enum (OPEN/CLOSED), `check_circuit_breaker(risk)` → OPEN only on CRITICAL tier (fail-open for all others). `get_market_risk_for_circuit_breaker()` helper assembles live sensor data. `run_premover_eod()` gates on breaker state: OPEN → log + Telegram alert + return early. 9 unit tests. SHIPPED 2026-06-05.
-- [ ] **C10. VPIN batch compute for all tickers** — Daily VPIN calculation for all tickers with sufficient broker_flow data. Persist to `vpin_scores` table. ~2 hr.
-- [ ] **C11. Backfill VPIN history** — Compute VPIN for past 90 days from broker_flow data to establish baseline thresholds. ~2 hr.
+- [x] **C10. VPIN batch compute for all tickers** — `run_vpin_daily_batch(date_str)` in `scheduler/jobs.py`: runs `calc_vpin()` for all tickers, persists to `vpin_scores` table (ticker, date, vpin, vpin_label, bucket_count, error) and updates `daily_screen.vpin`. Scheduler: Mon-Fri 18:00 WIB. `ensure_vpin_scores_table()` helper. 7 unit tests. SHIPPED 2026-06-05.
+- [x] **C11. Backfill VPIN history** — `run_vpin_backfill(days=90)` in `scheduler/jobs.py`: iterates daily_screen dates for last 90 days, skips tickers already in vpin_scores, computes and saves gaps. Fail-open per ticker. SHIPPED 2026-06-05.
 
 **Total Sprint 18:** ~26 hours, 11 tasks.
 

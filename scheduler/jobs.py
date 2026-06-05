@@ -445,3 +445,130 @@ def run_market_health_report():
         print(f"[{now.strftime('%H:%M')}] Health report error: {e}")
     finally:
         conn.close()
+
+
+def ensure_vpin_scores_table(conn):
+    """Create vpin_scores table if not exists."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS vpin_scores (
+            ticker TEXT NOT NULL,
+            date TEXT NOT NULL,
+            vpin REAL,
+            vpin_label TEXT,
+            bucket_count INTEGER,
+            error TEXT,
+            computed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (ticker, date)
+        )
+    """)
+    conn.commit()
+
+
+def run_vpin_daily_batch(date_str=None):
+    """Compute VPIN for all tickers on a given date and persist to vpin_scores.
+
+    Runs independently of screener_jobs.py. Also updates daily_screen.vpin
+    for any tickers that don't yet have a value.
+    Returns {'computed': int, 'errors': int, 'date': str}.
+    """
+    from engine.vpin import calc_vpin as _calc_vpin
+    if date_str is None:
+        date_str = datetime.now(WIB).strftime('%Y-%m-%d')
+
+    now_str = datetime.now(WIB).strftime('%H:%M')
+    print(f"[{now_str}] VPIN batch compute starting for {date_str}...")
+
+    tickers = get_all_tickers()
+    computed = 0
+    errors = 0
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        ensure_vpin_scores_table(conn)
+    except Exception as _e:
+        logging.error(f"[vpin_batch] DB init error: {_e}")
+        return {'computed': 0, 'errors': 0, 'date': date_str}
+
+    for ticker in tickers:
+        try:
+            r = _calc_vpin(conn, ticker, date_str)
+            conn.execute(
+                "INSERT OR REPLACE INTO vpin_scores "
+                "(ticker, date, vpin, vpin_label, bucket_count, error) VALUES (?,?,?,?,?,?)",
+                (ticker, date_str, r.get('vpin'), r.get('vpin_label', 'N/A'),
+                 r.get('bucket_count', 0), r.get('error')),
+            )
+            if r.get('vpin') is not None:
+                conn.execute(
+                    "UPDATE daily_screen SET vpin=?, vpin_label=? WHERE date=? AND ticker=?",
+                    (r['vpin'], r.get('vpin_label', ''), date_str, ticker),
+                )
+                computed += 1
+        except Exception as _e:
+            logging.warning(f"[vpin_batch] {ticker} error: {_e}")
+            errors += 1
+
+    conn.commit()
+    conn.close()
+
+    print(f"[{now_str}] VPIN batch done: {computed} computed, {errors} errors")
+    return {'computed': computed, 'errors': errors, 'date': date_str}
+
+
+def run_vpin_backfill(days=90):
+    """Backfill vpin_scores for the past N days from existing daily_screen data.
+
+    Skips dates where vpin_scores already has data. Uses dates from
+    daily_screen (which has OHLCV and tick coverage), not calendar dates.
+    """
+    from engine.vpin import calc_vpin as _calc_vpin
+    now_str = datetime.now(WIB).strftime('%H:%M')
+    print(f"[{now_str}] VPIN backfill starting ({days} days)...")
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        ensure_vpin_scores_table(conn)
+
+        # Get dates that have daily_screen data but may not have vpin_scores
+        cutoff = datetime.now(WIB).strftime('%Y-%m-%d')
+        dates = [r[0] for r in conn.execute(
+            "SELECT DISTINCT date FROM daily_screen "
+            "WHERE date <= ? ORDER BY date ASC",
+            (cutoff,),
+        ).fetchall()][-days:]
+
+        tickers = get_all_tickers()
+        total_computed = 0
+        total_errors = 0
+
+        for date_str in dates:
+            already = {r[0] for r in conn.execute(
+                "SELECT ticker FROM vpin_scores WHERE date=? AND vpin IS NOT NULL",
+                (date_str,),
+            ).fetchall()}
+            remaining = [t for t in tickers if t not in already]
+            if not remaining:
+                continue
+
+            for ticker in remaining:
+                try:
+                    r = _calc_vpin(conn, ticker, date_str)
+                    conn.execute(
+                        "INSERT OR IGNORE INTO vpin_scores "
+                        "(ticker, date, vpin, vpin_label, bucket_count, error) VALUES (?,?,?,?,?,?)",
+                        (ticker, date_str, r.get('vpin'), r.get('vpin_label', 'N/A'),
+                         r.get('bucket_count', 0), r.get('error')),
+                    )
+                    if r.get('vpin') is not None:
+                        total_computed += 1
+                except Exception:
+                    total_errors += 1
+
+            conn.commit()
+
+        conn.close()
+        print(f"[{now_str}] VPIN backfill done: {total_computed} computed, {total_errors} errors")
+        return {'computed': total_computed, 'errors': total_errors, 'dates': len(dates)}
+    except Exception as _e:
+        logging.error(f"[vpin_backfill] error: {_e}")
+        return {'computed': 0, 'errors': 0, 'dates': 0}

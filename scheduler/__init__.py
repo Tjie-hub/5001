@@ -50,6 +50,8 @@ from scheduler.jobs import (  # noqa: F401
     run_hourly_risk_bundle,
     run_eod_risk_summary,
     run_market_health_report,
+    run_vpin_daily_batch,
+    run_vpin_backfill,
     _refresh_backtest_cache,
     _run_open_trade_monitor,
     _run_screener_intraday,
@@ -169,6 +171,11 @@ def start_scheduler():
     scheduler.add_job(run_backtest_roller, CronTrigger(
         day="1-7", day_of_week="sun", hour=10, minute=0, timezone=WIB),
         id="backtest_roller", name="Backtest Roller Sun 10:00")
+
+    # VPIN daily batch — 18:00 WIB (after EOD data is available)
+    scheduler.add_job(run_vpin_daily_batch, CronTrigger(
+        day_of_week="mon-fri", hour=18, minute=0, timezone=WIB),
+        id="vpin_daily_batch", name="VPIN Daily Batch 18:00")
 
     # Daily market health report — 08:45 WIB (pre-market)
     scheduler.add_job(run_market_health_report, CronTrigger(
