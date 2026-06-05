@@ -375,3 +375,38 @@ def run_eod_risk_summary():
     from engine.risk_alert import send_eod_risk_summary
     now = datetime.now(WIB)
     send_eod_risk_summary(now.strftime('%Y-%m-%d'))
+
+
+def run_market_health_report():
+    """Daily pre-market health report at 08:45 WIB."""
+    import sqlite3 as _sql
+    from engine.health_report import build_market_health_report
+    from flow_filter import get_market_accdist_summary
+    from engine.vpin import get_market_vpin_summary
+    from engine.breadth import get_market_breadth
+    from engine.technicals import detect_ihsg_technicals
+    from engine.risk_score import compute_market_risk_score
+
+    now = datetime.now(WIB)
+    date_str = now.strftime('%Y-%m-%d')
+    conn = _sql.connect(DB_PATH)
+    try:
+        vpin_s = get_market_vpin_summary(conn, date_str)
+        accdist_s = get_market_accdist_summary(date_str)
+        breadth_s = get_market_breadth(conn, date_str)
+        tech_s = detect_ihsg_technicals(conn, date_str)
+        try:
+            fb = conn.execute("SELECT SUM(lot_value) FROM broker_flow WHERE investor_type='Asing' AND side='BUY' AND trade_date<=? AND trade_date>=date(?,'-7 days')", (date_str, date_str)).fetchone()[0] or 0
+            fs = conn.execute("SELECT SUM(lot_value) FROM broker_flow WHERE investor_type='Asing' AND side='SELL' AND trade_date<=? AND trade_date>=date(?,'-7 days')", (date_str, date_str)).fetchone()[0] or 0
+            foreign_net = fb - fs
+        except Exception:
+            foreign_net = None
+        risk = compute_market_risk_score(vpin_s, accdist_s, breadth_s, tech_s, foreign_net)
+        msg = build_market_health_report(date_str, risk, vpin_s, accdist_s, breadth_s, tech_s, foreign_net)
+        send_telegram(msg)
+        print(f"[{now.strftime('%H:%M')}] Market health report sent (tier={risk['tier']})")
+    except Exception as e:
+        send_telegram(f"⚠️ <b>Health Report Error</b>\n<code>{str(e)[:200]}</code>")
+        print(f"[{now.strftime('%H:%M')}] Health report error: {e}")
+    finally:
+        conn.close()
