@@ -565,6 +565,86 @@ def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
         return ["vol_weighted", "vwap_reversion"]  # Fallback
 
 
+# Regime → preferred strategy candidates.
+# Keys: BULL_MODERATE (ADX 25-45), BULL_STRONG (ADX >=45), BEAR, SIDEWAYS.
+# Strategy names match STRATEGY_FUNCS keys in engine/walkforward_multi.py.
+_REGIME_STRATEGY_MAP = {
+    'BULL_MODERATE': ['Trend Following Breakout', 'momentum',
+                      'Inside Bar Breakout', 'NR7 Breakout'],
+    'BULL_STRONG':   ['conservative', 'momentum', 'Trend Following Breakout'],
+    'BEAR':          [],
+    'SIDEWAYS':      ['vwap_reversion', 'vol_weighted'],
+}
+_BULL_STRONG_ADX = 45.0
+
+
+def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
+                                min_consistency: float = 50.0) -> list:
+    """
+    Select strategies for ticker based on current regime and WF consistency.
+
+    1. Detect regime (BULL/BEAR/SIDEWAYS) via detect_regime(df).
+    2. For BULL, compute ADX to pick MODERATE vs STRONG sub-band.
+    3. Look up preferred strategies for the sub-band.
+    4. Keep only those present in wf_scores with consistency >= min_consistency.
+    5. Sort by weighted_score DESC.
+    6. Fall back to get_ticker_best_strategies() if result is empty.
+    7. BEAR always returns [] — no fallback.
+    """
+    from engine.regime_filter import detect_regime
+    from engine.indicators import calc_adx
+
+    try:
+        regime = detect_regime(df)
+    except Exception:
+        regime = 'SIDEWAYS'
+
+    if regime == 'BEAR':
+        return []
+
+    if regime == 'BULL':
+        try:
+            adx_val = float(calc_adx(df, 14).iloc[-1])
+        except Exception:
+            adx_val = 0.0
+        sub_band = 'BULL_STRONG' if adx_val >= _BULL_STRONG_ADX else 'BULL_MODERATE'
+    else:
+        sub_band = 'SIDEWAYS'
+
+    candidates = _REGIME_STRATEGY_MAP.get(sub_band, [])
+    if not candidates:
+        return get_ticker_best_strategies(ticker, min_consistency)
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        placeholders = ','.join('?' * len(candidates))
+        rows = conn.execute(f"""
+            SELECT strategy, weighted_score
+            FROM wf_scores
+            WHERE ticker = ?
+              AND strategy IN ({placeholders})
+              AND consistency_pct >= ?
+            ORDER BY weighted_score DESC
+        """, [ticker, *candidates, min_consistency]).fetchall()
+        conn.close()
+        selected = [r[0] for r in rows]
+    except Exception:
+        selected = []
+
+    if selected:
+        return selected
+
+    return get_ticker_best_strategies(ticker, min_consistency)
+
+
+def _safe_regime(df: pd.DataFrame) -> str:
+    try:
+        from engine.regime_filter import detect_regime
+        return detect_regime(df)
+    except Exception:
+        return 'UNKNOWN'
+
+
 def scheduled_multi_strategy_scan():
     """Multi-strategy signal scanner dengan flow filter."""
     from engine.strategies import check_current_entry_signal
