@@ -5,7 +5,7 @@ from datetime import date
 from flask import Blueprint, jsonify, request
 
 from config import DB_PATH
-from flow_filter import get_flow_batch
+from flow_filter import get_flow_batch, get_market_accdist_summary
 
 flow_bp = Blueprint("flow", __name__)
 
@@ -178,3 +178,27 @@ def api_broker_flow_dates(ticker):
     dates = sorted(set(dates_bf + dates_sf), reverse=True)[:30]
     conn.close()
     return jsonify({'ticker': ticker, 'dates': dates})
+
+
+@flow_bp.route('/api/market/accdist', methods=['GET'])
+def api_market_accdist():
+    """Market-wide accumulation/distribution summary from bandar_detector.
+
+    Query param: date (YYYY-MM-DD, default today).
+    Also returns a 30-day time series when ?series=1 is passed.
+    """
+    query_date = request.args.get('date', str(date.today()))
+    summary = get_market_accdist_summary(query_date)
+
+    series = []
+    if request.args.get('series'):
+        conn = sqlite3.connect(DB_PATH)
+        dates = [r[0] for r in conn.execute(
+            "SELECT DISTINCT trade_date FROM bandar_detector "
+            "ORDER BY trade_date DESC LIMIT 30"
+        ).fetchall()]
+        conn.close()
+        for d in sorted(dates):
+            series.append(get_market_accdist_summary(d))
+
+    return jsonify({'summary': summary, 'series': series})

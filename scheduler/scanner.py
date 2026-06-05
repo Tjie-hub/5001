@@ -813,6 +813,17 @@ def scheduled_multi_strategy_scan():
 
     print(f"[{time_str}] Starting multi-strategy scan...")
 
+    # Market-wide accdist snapshot — log before scan so it's visible even on no-signal days
+    try:
+        from flow_filter import get_market_accdist_summary as _get_accdist
+        _accdist = _get_accdist(date_str)
+        if _accdist['total'] > 0:
+            print(f"[{time_str}] Market accdist: {_accdist['label']} "
+                  f"(dist={_accdist['dist_pct']}% acc={_accdist['acc_pct']}% "
+                  f"score={_accdist['avg_numeric_score']:+.3f})")
+    except Exception as _ae:
+        logging.warning(f"[scan] accdist summary error: {_ae}")
+
     # Pre-compute sector scores once (1-hour TTL cache)
     _sector_scores = _get_sector_scores_cached()
 

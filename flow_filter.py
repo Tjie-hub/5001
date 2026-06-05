@@ -414,6 +414,94 @@ def save_results_to_db(results, db_path=None):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# BANDAR DETECTOR — numeric accdist pipeline
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+_ACCDIST_SCORE_MAP = {
+    'Big Acc':    3,
+    'Normal Acc': 2,
+    'Small Acc':  1,
+    'Neutral':    0,
+    'Small Dist': -1,
+    'Normal Dist': -2,
+    'Big Dist':   -3,
+    'Acc':        1,   # top-level broker_accdist short label
+    'Dist':       -1,  # top-level broker_accdist short label
+}
+
+
+def accdist_label_to_score(label):
+    """Convert bandar_detector text label to integer score.
+
+    Stockbit stores labels like 'Big Acc', 'Normal Dist', 'Acc', 'Dist'.
+    SQLite CAST of these to REAL returns 0.0, causing 100% accumulation bias
+    in any query that treats broker_accdist as numeric. Use this instead.
+    """
+    if not label:
+        return 0
+    return _ACCDIST_SCORE_MAP.get(str(label).strip(), 0)
+
+
+def get_market_accdist_summary(date=None):
+    """Compute market-wide accumulation/distribution score from bandar_detector.
+
+    Returns a dict with numeric fields so callers don't need to handle
+    text labels. All values are 0 / 'NEUTRAL' when no data exists.
+    """
+    from datetime import date as _date
+    if date is None:
+        date = str(_date.today())
+
+    empty = {
+        'date': date, 'total': 0,
+        'dist_count': 0, 'acc_count': 0, 'neutral_count': 0,
+        'dist_pct': 0.0, 'acc_pct': 0.0,
+        'avg_numeric_score': 0.0,
+        'label': 'NEUTRAL',
+    }
+    try:
+        conn = sqlite3.connect(_DB_PATH)
+        rows = conn.execute(
+            "SELECT broker_accdist FROM bandar_detector WHERE trade_date=?",
+            (date,),
+        ).fetchall()
+        conn.close()
+    except Exception:
+        return empty
+
+    if not rows:
+        return empty
+
+    scores = [accdist_label_to_score(r[0]) for r in rows]
+    total = len(scores)
+    dist_count = sum(1 for s in scores if s < 0)
+    acc_count = sum(1 for s in scores if s > 0)
+    neutral_count = total - dist_count - acc_count
+    dist_pct = round(dist_count / total * 100, 1)
+    acc_pct = round(acc_count / total * 100, 1)
+    avg_score = round(sum(scores) / total, 3)
+
+    if dist_pct >= 65:
+        label = 'STRONG_DISTRIBUTION' if dist_pct >= 75 else 'DISTRIBUTION'
+    elif acc_pct >= 65:
+        label = 'STRONG_ACCUMULATION' if acc_pct >= 75 else 'ACCUMULATION'
+    else:
+        label = 'NEUTRAL'
+
+    return {
+        'date': date,
+        'total': total,
+        'dist_count': dist_count,
+        'acc_count': acc_count,
+        'neutral_count': neutral_count,
+        'dist_pct': dist_pct,
+        'acc_pct': acc_pct,
+        'avg_numeric_score': avg_score,
+        'label': label,
+    }
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # PUBLIC API — call these from scheduler.py
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
