@@ -645,6 +645,58 @@ def _safe_regime(df: pd.DataFrame) -> str:
         return 'UNKNOWN'
 
 
+def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str):
+    """Evaluate intersection_results through the agent firm gate.
+
+    Candidates are taken from intersection_results (all strategy signals), not
+    flow_confirmed. This lets the agent run in bear markets where the flow gate
+    produces zero confirmed tickers.
+
+    Returns updated flow_confirmed:
+    - firm disabled → flow_confirmed unchanged
+    - active + no signals → idle-log, flow_confirmed unchanged
+    - shadow mode → flow_confirmed unchanged (agent evaluates, doesn't filter)
+    - enforce mode → agent-approved tickers from intersection_results[:20]
+    """
+    try:
+        from engine.agent_firm import config as _firm_cfg
+        from engine.agent_firm import firm as _firm
+        from engine.agent_firm.schemas import SignalCandidate as _SC
+
+        if not _firm_cfg.is_active():
+            return flow_confirmed
+
+        if not intersection_results:
+            print(f"[{time_str}] Agent firm: idle (no strategy signals generated)")
+            return flow_confirmed
+
+        _candidates = [
+            _SC(
+                ticker=r["ticker"],
+                strategy=(r["strategies"][0] if r.get("strategies") else "multi"),
+                score=float((r.get("flow") or {}).get("score") or 0),
+                scan_time=f"{date_str} {time_str}",
+                flow_verdict=(r.get("flow") or {}).get("verdict"),
+                foreign_score=None,
+                indicators={},
+            )
+            for r in intersection_results[:20]
+        ]
+        _decisions = _firm.evaluate(_candidates)
+        print(f"[{time_str}] Agent firm: {len(_decisions)} evaluated"
+              f" ({sum(1 for d in _decisions if d.decision == 'approve')} approved"
+              f", {sum(1 for d in _decisions if d.decision == 'veto')} vetoed)")
+
+        if _firm_cfg.get_enforce():
+            _approved = {d.ticker for d in _decisions if d.decision == "approve"}
+            return [r for r in intersection_results if r["ticker"] in _approved]
+
+        return flow_confirmed
+    except Exception as _err:
+        print(f"[{time_str}] Agent firm error (fail-open): {_err}")
+        return flow_confirmed
+
+
 def scheduled_multi_strategy_scan():
     """Multi-strategy signal scanner dengan flow filter."""
     from engine.strategies import check_current_entry_signal
@@ -849,33 +901,10 @@ def scheduled_multi_strategy_scan():
         print(f"[{time_str}] Bear watchlist error (fail-open): {_wl_err}")
     # ── End bear watchlist ────────────────────────────────────────────────────
 
-    # ── Agent Firm evaluation (shadow mode) ──────────────────────────────────
-    try:
-        from engine.agent_firm import config as _firm_cfg
-        from engine.agent_firm import firm as _firm
-        from engine.agent_firm.schemas import SignalCandidate as _SC
-        if _firm_cfg.is_active() and flow_confirmed:
-            _candidates = [
-                _SC(
-                    ticker=r["ticker"],
-                    strategy=(r["strategies"][0] if r.get("strategies") else "multi"),
-                    score=float((r.get("flow") or {}).get("score") or 0),
-                    scan_time=f"{date_str} {time_str}",
-                    flow_verdict=(r.get("flow") or {}).get("verdict"),
-                    foreign_score=None,
-                    indicators={},
-                )
-                for r in flow_confirmed
-            ]
-            _decisions = _firm.evaluate(_candidates)
-            if _firm_cfg.get_enforce():
-                _approved = {d.ticker for d in _decisions if d.decision == "approve"}
-                flow_confirmed = [r for r in flow_confirmed if r["ticker"] in _approved]
-            print(f"[{time_str}] Agent firm: {len(_decisions)} evaluated"
-                  f" ({sum(1 for d in _decisions if d.decision=='approve')} approved"
-                  f", {sum(1 for d in _decisions if d.decision=='veto')} vetoed)")
-    except Exception as _firm_err:
-        print(f"[{time_str}] Agent firm error (fail-open): {_firm_err}")
+    # ── Agent Firm evaluation ─────────────────────────────────────────────────
+    flow_confirmed = run_agent_firm_gate(
+        intersection_results, flow_confirmed, date_str, time_str
+    )
     # ── End agent firm ────────────────────────────────────────────────────────
 
     # Step 7: Auto-open paper trades for flow-confirmed signals
