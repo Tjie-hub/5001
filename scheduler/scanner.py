@@ -813,7 +813,7 @@ def scheduled_multi_strategy_scan():
 
     print(f"[{time_str}] Starting multi-strategy scan...")
 
-    # Market-wide accdist snapshot — log before scan so it's visible even on no-signal days
+    # Market-wide sensors — log before scan so visible even on zero-signal days
     try:
         from flow_filter import get_market_accdist_summary as _get_accdist
         _accdist = _get_accdist(date_str)
@@ -823,6 +823,29 @@ def scheduled_multi_strategy_scan():
                   f"score={_accdist['avg_numeric_score']:+.3f})")
     except Exception as _ae:
         logging.warning(f"[scan] accdist summary error: {_ae}")
+
+    try:
+        from engine.vpin import get_market_vpin_summary as _get_vpin
+        _vpin_conn = sqlite3.connect(DB_PATH)
+        _vpin_summary = _get_vpin(_vpin_conn, date_str)
+        _vpin_conn.close()
+        if _vpin_summary['tickers_with_vpin'] > 0:
+            print(f"[{time_str}] Market VPIN: {_vpin_summary['label']} "
+                  f"(avg={_vpin_summary['avg_vpin']:.4f} "
+                  f">0.8={_vpin_summary['pct_above_08']}% "
+                  f">0.95={_vpin_summary['pct_above_095']}%)")
+            if _vpin_summary['label'] in ('CRITICAL', 'RED'):
+                send_telegram(
+                    f"🚨 <b>VPIN Alert: {_vpin_summary['label']}</b>\n\n"
+                    f"avg VPIN = {_vpin_summary['avg_vpin']:.4f}\n"
+                    f"Tickers >0.80: {_vpin_summary['pct_above_08']}% "
+                    f"({_vpin_summary['count_above_08']})\n"
+                    f"Tickers >0.95: {_vpin_summary['pct_above_095']}% "
+                    f"({_vpin_summary['count_above_095']})\n\n"
+                    f"<i>High VPIN = informed trading / toxicity spike.</i>"
+                )
+    except Exception as _ve:
+        logging.warning(f"[scan] VPIN summary error: {_ve}")
 
     # Pre-compute sector scores once (1-hour TTL cache)
     _sector_scores = _get_sector_scores_cached()

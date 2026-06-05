@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request
 
 from config import DB_PATH
 from flow_filter import get_flow_batch, get_market_accdist_summary
+from engine.vpin import get_market_vpin_summary
 
 flow_bp = Blueprint("flow", __name__)
 
@@ -201,4 +202,29 @@ def api_market_accdist():
         for d in sorted(dates):
             series.append(get_market_accdist_summary(d))
 
+    return jsonify({'summary': summary, 'series': series})
+
+
+@flow_bp.route('/api/market/vpin', methods=['GET'])
+def api_market_vpin():
+    """Market-wide VPIN toxicity summary aggregated from daily_screen.
+
+    Query params:
+      date   — YYYY-MM-DD (default today)
+      series — if set, also returns 30-day time series
+    """
+    query_date = request.args.get('date', str(date.today()))
+    conn = sqlite3.connect(DB_PATH)
+    summary = get_market_vpin_summary(conn, query_date)
+
+    series = []
+    if request.args.get('series'):
+        dates = [r[0] for r in conn.execute(
+            "SELECT DISTINCT date FROM daily_screen "
+            "WHERE vpin IS NOT NULL ORDER BY date DESC LIMIT 30"
+        ).fetchall()]
+        for d in sorted(dates):
+            series.append(get_market_vpin_summary(conn, d))
+
+    conn.close()
     return jsonify({'summary': summary, 'series': series})

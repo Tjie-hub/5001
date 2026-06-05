@@ -298,6 +298,64 @@ def get_latest_vpin_date(conn, ticker, date):
     return row[0] if row else None
 
 
+def get_market_vpin_summary(conn: sqlite3.Connection, date: str) -> dict:
+    """Aggregate per-ticker VPIN from daily_screen into a market-wide toxicity score.
+
+    Thresholds from macro_idx.md crash analysis:
+      CRITICAL : pct_above_095 >= 75% OR avg_vpin >= 0.95
+      RED      : pct_above_08 >= 70%  OR avg_vpin >= 0.90
+      ORANGE   : pct_above_08 >= 50%  OR avg_vpin >= 0.80
+      YELLOW   : pct_above_08 >= 30%  OR avg_vpin >= 0.70
+      GREEN    : below all thresholds
+    """
+    rows = conn.execute(
+        "SELECT vpin FROM daily_screen WHERE date=? AND vpin IS NOT NULL",
+        (date,),
+    ).fetchall()
+
+    if not rows:
+        return {
+            'date': date,
+            'tickers_with_vpin': 0,
+            'avg_vpin': None,
+            'pct_above_08': 0.0,
+            'pct_above_095': 0.0,
+            'count_above_08': 0,
+            'count_above_095': 0,
+            'label': 'INSUFFICIENT_DATA',
+        }
+
+    vpins = [r[0] for r in rows]
+    n = len(vpins)
+    avg = sum(vpins) / n
+    above_08 = sum(1 for v in vpins if v > 0.8)
+    above_095 = sum(1 for v in vpins if v > 0.95)
+    pct_08 = round(above_08 / n * 100, 1)
+    pct_095 = round(above_095 / n * 100, 1)
+
+    if pct_095 >= 75 or avg >= 0.95:
+        label = 'CRITICAL'
+    elif pct_08 >= 70 or avg >= 0.90:
+        label = 'RED'
+    elif pct_08 >= 50 or avg >= 0.80:
+        label = 'ORANGE'
+    elif pct_08 >= 30 or avg >= 0.70:
+        label = 'YELLOW'
+    else:
+        label = 'GREEN'
+
+    return {
+        'date': date,
+        'tickers_with_vpin': n,
+        'avg_vpin': round(avg, 4),
+        'pct_above_08': pct_08,
+        'pct_above_095': pct_095,
+        'count_above_08': above_08,
+        'count_above_095': above_095,
+        'label': label,
+    }
+
+
 # ── Signal Definitions ───────────────────────────────────────────────────────
 
 SIGNAL_MAP = {
