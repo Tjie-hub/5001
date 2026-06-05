@@ -292,12 +292,47 @@ def _send_premover_auto_summary(rows: list, mode: str, send_fn) -> None:
         print(f"[premover auto] Telegram summary error: {e}")
 
 
+def get_market_risk_for_circuit_breaker() -> dict:
+    """Fetch today's composite market risk for the circuit breaker gate."""
+    try:
+        import sqlite3 as _sql
+        from flow_filter import get_market_accdist_summary
+        from engine.vpin import get_market_vpin_summary
+        from engine.breadth import get_market_breadth
+        from engine.technicals import detect_ihsg_technicals
+        from engine.risk_score import compute_market_risk_score
+        today = datetime.now(WIB).strftime('%Y-%m-%d')
+        conn = _sql.connect(DB_PATH)
+        try:
+            vpin_s = get_market_vpin_summary(conn, today)
+            accdist_s = get_market_accdist_summary(today)
+            breadth_s = get_market_breadth(conn, today)
+            tech_s = detect_ihsg_technicals(conn, today)
+            foreign_net = None
+            return compute_market_risk_score(vpin_s, accdist_s, breadth_s, tech_s, foreign_net)
+        finally:
+            conn.close()
+    except Exception as _e:
+        logging.warning(f"[circuit_breaker] risk fetch error: {_e}")
+        return {'tier': 'GREEN', 'score': 0.0}
+
+
 def run_premover_eod():
     """EOD pre-breakout scan — runs at 16:30 after data fetch."""
     from engine.premover_detector import run_scan
+    from engine.circuit_breaker import check_circuit_breaker, CircuitBreakerState
     from paper_trade import (get_premover_mode, evaluate_premover_trade,
                               open_trade, _log_premover_auto, init_paper_table)
     now_str = datetime.now(WIB).strftime('%H:%M')
+
+    # Circuit breaker gate — block auto-trading when risk = CRITICAL
+    _risk = get_market_risk_for_circuit_breaker()
+    _cb_state, _cb_reason = check_circuit_breaker(_risk)
+    if _cb_state == CircuitBreakerState.OPEN:
+        print(f"[{now_str}] Circuit breaker OPEN: {_cb_reason} — premover EOD paused")
+        send_telegram(f"⛔ <b>Circuit Breaker Active</b>\n\n{_cb_reason}\n\nAuto-trading paused. Manual override required.")
+        return
+
     print(f"[{now_str}] Pre-mover EOD scan dimulai...")
     try:
         new_setups = run_scan(DB_PATH, send_alert_fn=send_telegram)
