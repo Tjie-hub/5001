@@ -120,6 +120,63 @@ def _calc_ytd(conn: sqlite3.Connection, date: str) -> float | None:
     return None
 
 
+# ── Signals ───────────────────────────────────────────────────────────────────
+
+def get_signals_dashboard(db_path: str, date: str) -> dict[str, Any]:
+    """Aggregate agent decisions and today's scheduled signals for the dashboard.
+
+    Returns:
+        date, recent_decisions (last 20, newest first),
+        signals_today (total, by_verdict, by_direction).
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        # Last 20 agent_decisions, newest first
+        decisions = []
+        for row in conn.execute(
+            "SELECT id,scan_time,ticker,strategy,quant_score,decision,"
+            "       confidence,size_hint,rationale "
+            "FROM agent_decisions "
+            "ORDER BY scan_time DESC, id DESC "
+            "LIMIT 20"
+        ):
+            decisions.append({
+                'id': row[0], 'scan_time': row[1], 'ticker': row[2],
+                'strategy': row[3], 'quant_score': row[4], 'decision': row[5],
+                'confidence': row[6], 'size_hint': row[7], 'rationale': row[8],
+            })
+
+        # Today's scheduled_signals grouped by verdict and direction
+        by_verdict: dict[str, int] = {}
+        by_direction: dict[str, int] = {}
+        total = 0
+        for row in conn.execute(
+            "SELECT flow_verdict, signal_direction, COUNT(*) "
+            "FROM scheduled_signals "
+            "WHERE date(scan_time)=? "
+            "GROUP BY flow_verdict, signal_direction",
+            (date,),
+        ):
+            verdict, direction, count = row[0], row[1], row[2]
+            total += count
+            if verdict:
+                by_verdict[verdict] = by_verdict.get(verdict, 0) + count
+            if direction:
+                by_direction[direction] = by_direction.get(direction, 0) + count
+
+        return {
+            'date': date,
+            'recent_decisions': decisions,
+            'signals_today': {
+                'total': total,
+                'by_verdict': by_verdict,
+                'by_direction': by_direction,
+            },
+        }
+    finally:
+        conn.close()
+
+
 # ── Watchlist ─────────────────────────────────────────────────────────────────
 
 def get_watchlist(db_path: str, date: str) -> dict[str, Any]:

@@ -330,6 +330,26 @@ def api_dashboard_risk():
                         'risk_score': 0.0, 'tier': 'GREEN'}), 500
 
 
+@flow_bp.route('/api/dashboard/signals', methods=['GET'])
+def api_dashboard_signals():
+    """Signals dashboard — last 20 agent decisions + today's signal counts.
+
+    Query params:
+      date — YYYY-MM-DD (default today)
+
+    Returns: date, recent_decisions (list, newest first, capped at 20),
+             signals_today (total, by_verdict, by_direction).
+    """
+    from engine.dashboard import get_signals_dashboard
+    query_date = request.args.get('date', str(date.today()))
+    try:
+        return jsonify(get_signals_dashboard(DB_PATH, query_date))
+    except Exception as e:
+        return jsonify({'error': str(e), 'date': query_date,
+                        'recent_decisions': [],
+                        'signals_today': {'total': 0, 'by_verdict': {}, 'by_direction': {}}}), 500
+
+
 @flow_bp.route('/api/dashboard/watchlist', methods=['GET'])
 def api_dashboard_watchlist():
     """Watchlist dashboard — BUY WATCH / AVOID / WAIT ticker lists.

@@ -200,7 +200,7 @@ Replace scattered monitoring (Telegram + DB queries + macro_idx.md reports) with
 
 - [x] **D1. `/api/dashboard/risk` endpoint** — Aggregates market risk: `risk_score` + tier, `ihsg` (OHLCV, MA5, MA20, death_cross, YTD), `breadth` (advancers/decliners, pct_up, trend), `foreign_flow` (today, 5d, 20d, trend), `vpin` (avg, % >0.8, % >0.95), `sectors` (top 3 accumulate/distribute). Read-only from walkforward.db. ~2 hr.
 - [x] **D2. `/api/dashboard/watchlist` endpoint** — BUY WATCH / AVOID / WAIT lists: hammer (>3% intraday bounce) + foreign BUY >Rp 5B + volume >50M for buy_watch; foreign SELL >Rp 100B in 3d + YTD drop >20% for avoid; hammer + foreign SELL for wait. 10 unit tests. SHIPPED 2026-06-05.
-- [ ] **D3. `/api/dashboard/signals` endpoint** — Last 20 agent_decisions + today's scheduled_signals count by verdict. ~1 hr.
+- [x] **D3. `/api/dashboard/signals` endpoint** — Last 20 agent_decisions + today's scheduled_signals count by verdict. 8 unit tests. SHIPPED 2026-06-05.
 
 ### 🟠 Core — Frontend Dashboard (`templates/watchlist.html`)
 
