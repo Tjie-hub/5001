@@ -697,8 +697,8 @@ def scheduled_multi_strategy_scan():
             if df is None or len(df) < 20:
                 continue
 
-            # Get best strategies for this ticker from WF scores
-            best_strategies = get_ticker_best_strategies(ticker, min_wf_consistency)
+            # Get best strategies for this ticker — regime-aware selection
+            best_strategies = adaptive_strategy_selector(ticker, df, min_wf_consistency)
 
             # Check signals for best strategies
             passing_strategies = []
@@ -717,14 +717,15 @@ def scheduled_multi_strategy_scan():
             if len(passing_strategies) > 0:
                 _sec_entry = next((s for s in _sector_scores if s["sector"] == get_ticker_sector(ticker)), None)
                 intersection_results.append({
-                    'ticker':         ticker,
-                    'strategies':     passing_strategies,
-                    'has_signal':     True,
-                    'signal_reasons': combined_reasons,
-                    'signal_details': combined_details,
-                    'sector':         get_ticker_sector(ticker),
-                    'sector_weight':  _sec_entry["weight"] if _sec_entry else "NEUTRAL",
-                    'sector_score':   _sec_entry["score"]  if _sec_entry else 0,
+                    'ticker':           ticker,
+                    'strategies':       passing_strategies,
+                    'has_signal':       True,
+                    'signal_reasons':   combined_reasons,
+                    'signal_details':   combined_details,
+                    'sector':           get_ticker_sector(ticker),
+                    'sector_weight':    _sec_entry["weight"] if _sec_entry else "NEUTRAL",
+                    'sector_score':     _sec_entry["score"]  if _sec_entry else 0,
+                    'adaptive_regime':  _safe_regime(df),
                 })
 
         except Exception as e:

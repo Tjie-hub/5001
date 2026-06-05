@@ -1169,3 +1169,58 @@ def api_premover_mode_set():
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     return jsonify({'mode': get_premover_mode()})
+
+
+@backtest_bp.route('/api/scanner/adaptive_strategy/<ticker>', methods=['GET'])
+def api_adaptive_strategy(ticker):
+    """Return what adaptive_strategy_selector would pick for ticker right now."""
+    import pandas as pd
+    from scheduler.scanner import (adaptive_strategy_selector,
+                                   _REGIME_STRATEGY_MAP, _BULL_STRONG_ADX)
+    from engine.regime_filter import detect_regime
+    from engine.indicators import calc_adx
+
+    ticker = ticker.upper()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        df = pd.read_sql(
+            "SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC", conn,
+            params=(ticker,)
+        )
+        conn.close()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    if df.empty or len(df) < 20:
+        return jsonify({'error': f'Insufficient OHLCV data for {ticker}'}), 404
+
+    for c in ['open', 'high', 'low', 'close', 'volume']:
+        df[c] = df[c].astype(float)
+
+    try:
+        regime = detect_regime(df)
+    except Exception:
+        regime = 'SIDEWAYS'
+
+    adx_val = None
+    sub_band = regime
+    if regime == 'BULL':
+        try:
+            adx_val = round(float(calc_adx(df, 14).iloc[-1]), 1)
+        except Exception:
+            adx_val = None
+        sub_band = 'BULL_STRONG' if (adx_val or 0) >= _BULL_STRONG_ADX else 'BULL_MODERATE'
+
+    candidates = _REGIME_STRATEGY_MAP.get(sub_band, [])
+    selected = adaptive_strategy_selector(ticker, df)
+    fallback_used = bool(selected) and not any(s in candidates for s in selected)
+
+    return jsonify({
+        'ticker':        ticker,
+        'regime':        regime,
+        'adx':           adx_val,
+        'sub_band':      sub_band,
+        'candidates':    candidates,
+        'selected':      selected,
+        'fallback_used': fallback_used,
+    })

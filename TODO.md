@@ -200,7 +200,7 @@ _Source: BRPT.md live analysis — BRPT crash -35% May 2026 exposed critical gap
 
 ### 🟡 High Value — Adaptive Intelligence
 
-- [ ] **G7. Adaptive strategy switching by regime** — System detects regime (BULL/BEAR/SIDEWAYS) and knows which strategies perform in each (from walk-forward)... but doesn't auto-switch. Add `adaptive_strategy_selector()` in scheduler: BULL+ADX 25-40+near MA → TFB, BULL+ADX>45+extended → Conservative, BEAR → no entry, SIDEWAYS+below MA → VWAP Reversion. ~3 hr. **Evidence: BRPT.md Section 5 heatmap shows clear strategy-regime mapping but it's manual only.**
+- [x] **G7. Adaptive strategy switching by regime** — SHIPPED 2026-06-05. `adaptive_strategy_selector(ticker, df, min_consistency)` in `scheduler/scanner.py`: detects regime+ADX sub-band (BULL_MODERATE/BULL_STRONG/BEAR/SIDEWAYS), maps to preferred strategy candidates via `_REGIME_STRATEGY_MAP`, intersects with wf_scores consistency gate, falls back to `get_ticker_best_strategies()` if empty. BEAR always returns []. Wired into `scheduled_multi_strategy_scan()` (replaces `get_ticker_best_strategies()`). `adaptive_regime` added to scan results. `GET /api/scanner/adaptive_strategy/<ticker>` for inspection. 5 unit tests.
 - [x] **G8. Post-suspension alert pipeline** — `send_suspension_resume_alerts()` in `scheduler.py`: queries `suspension_events WHERE resume_date=today AND classification='suspension'`, fires Telegram alert per ticker with duration, gap%, and CAUTION warning. Wired into `fetch_latest()` after `scan_all()`. 9 unit tests. SHIPPED 2026-05-30.
 
 ### 🟡 High Value — dive.html UI Gaps
