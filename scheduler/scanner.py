@@ -825,6 +825,34 @@ def scheduled_multi_strategy_scan():
         logging.warning(f"[scan] accdist summary error: {_ae}")
 
     try:
+        from engine.technicals import detect_ihsg_technicals as _detect_tech
+        _tech_conn = sqlite3.connect(DB_PATH)
+        _tech = _detect_tech(_tech_conn, date_str)
+        _tech_conn.close()
+        if _tech['close'] is not None:
+            flags = []
+            if _tech['death_cross']:
+                flags.append('DEATH_CROSS')
+            if _tech['lower_high']:
+                flags.append('LOWER_HIGH')
+            if _tech['support_breaks']:
+                flags.append(f"BROKE {','.join(_tech['support_breaks'])}")
+            print(f"[{time_str}] IHSG technicals: {_tech['label']} "
+                  f"({', '.join(flags) if flags else 'no flags'}) "
+                  f"close={_tech['close']:,.0f} MA5={_tech['ma5']:,.0f} MA20={_tech.get('ma20', 0) or 0:,.0f}")
+            if _tech['label'] in ('BEARISH_TREND', 'DOWNTREND') and _tech['death_cross']:
+                send_telegram(
+                    f"⚠️ <b>IHSG Technical Alert: {_tech['label']}</b>\n\n"
+                    f"Close: {_tech['close']:,.0f}\n"
+                    f"MA5: {_tech['ma5']:,.0f} | MA20: {_tech.get('ma20') or 0:,.0f}\n"
+                    f"Death Cross: {'YES ❌' if _tech['death_cross'] else 'NO'}\n"
+                    f"Lower High: {'YES ❌' if _tech['lower_high'] else 'NO'}\n"
+                    + (f"Support Broken: {', '.join(_tech['support_breaks'])}\n" if _tech['support_breaks'] else "")
+                )
+    except Exception as _te:
+        logging.warning(f"[scan] IHSG technicals error: {_te}")
+
+    try:
         from engine.breadth import get_market_breadth as _get_breadth
         _breadth_conn = sqlite3.connect(DB_PATH)
         _breadth = _get_breadth(_breadth_conn, date_str)

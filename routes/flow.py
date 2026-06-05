@@ -8,6 +8,7 @@ from config import DB_PATH
 from flow_filter import get_flow_batch, get_market_accdist_summary
 from engine.vpin import get_market_vpin_summary
 from engine.breadth import get_market_breadth
+from engine.technicals import detect_ihsg_technicals
 
 flow_bp = Blueprint("flow", __name__)
 
@@ -229,6 +230,20 @@ def api_market_vpin():
 
     conn.close()
     return jsonify({'summary': summary, 'series': series})
+
+
+@flow_bp.route('/api/market/technicals', methods=['GET'])
+def api_market_technicals():
+    """IHSG technical signals: death cross, lower high, support breaks.
+
+    Query params:
+      date — YYYY-MM-DD (default today)
+    """
+    query_date = request.args.get('date', str(date.today()))
+    conn = sqlite3.connect(DB_PATH)
+    result = detect_ihsg_technicals(conn, query_date)
+    conn.close()
+    return jsonify(result)
 
 
 @flow_bp.route('/api/market/breadth', methods=['GET'])
