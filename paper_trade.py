@@ -278,7 +278,8 @@ def get_best_strategy_for_ticker(ticker: str) -> str:
 
 def open_trade(ticker: str, entry_price: float, strategy: str = None,
                sl_atr_mult: float = 2.0, min_rr: float = 2.0,
-               sl_price: float = None, tp_price: float = None, notify: bool = True):
+               sl_price: float = None, tp_price: float = None, notify: bool = True,
+               lots_multiplier: float = 1.0):
     # Default to the backtest-optimal strategy for this ticker, not a blanket
     # 'Momentum Following'. Explicit callers (swing screener, manual API) win.
     strategy = strategy or get_best_strategy_for_ticker(ticker)
@@ -383,7 +384,7 @@ def open_trade(ticker: str, entry_price: float, strategy: str = None,
         sl_rp = cost_per_lot * sl_pct if sl_pct > 0 else cost_per_lot * 0.02
         lots  = int(risk_rp / sl_rp) if sl_rp > 0 else 1
     max_lots     = int((capital * 0.30) / cost_per_lot)
-    lots         = max(1, min(lots, max_lots))
+    lots         = max(1, min(int(lots * lots_multiplier), max_lots))
     capital_used = lots * cost_per_lot
     now          = datetime.now(WIB).strftime("%Y-%m-%d")
 

@@ -1,582 +1,269 @@
-# PLAN.md — Strategy Modularization Refactor for dive.html
+# PLAN.md — Agent Firm Optimization
 
-**Role**: Senior Frontend Architect  
-**Scope**: `/templates/dive.html`  
-**Goal**: Extract hardcoded strategy logic into a pluggable JavaScript registry with UI controls  
-**Constraint**: Chart engine (`LightweightCharts.createChart`, candlestick series, volume pane) must remain untouched. Only markers (`series.setMarkers`) change per strategy.
-
----
-
-## Context & Current State
-
-The `dive.html` file currently renders a stock chart using `lightweight-charts` and displays strategy signals in a **read-only table** fetched from `/api/ticker/<ticker>/full`.
-
-### Current Architecture Flow
-```
-Server (Python backtest)
-    ↓  JSON
-renderStrategies() → static HTML table
-    
-fetchAndRender() → LightweightCharts.createChart()
-    ├── Candlestick series (OHLCV)
-    ├── Volume histogram
-    ├── VWMA 20 line
-    └── Volume Profile plugin
-```
-
-### Problem
-- Strategy signals are **pre-computed on the server**. The frontend cannot run, compare, or visualize different strategies interactively.
-- No way for the user to select a strategy and see its **buy/sell markers** plotted directly on the chart.
-- The `renderStrategies()` function (line 683) only renders a text table. No chart integration.
-
-### Target Architecture
-```
-User selects strategy from dropdown
-    ↓
-JavaScript strategy registry executes on _rawCandles
-    ↓
-Returns marker array [{time, position, color, shape, text}]
-    ↓
-candles.setMarkers(markers)  ← only chart mutation
-```
+**Date**: 2026-06-04
+**Status**: Phase 1 SHIPPED (2026-06-05, commit 3616700) — Phase 2 ready to start
+**Source**: Full agent firm audit (session 2026-06-04) + macro_idx.md crash analysis
 
 ---
 
-## Phase 1: Analysis — Identify Current Code Sections
+## Problem Statement
 
-### 1.1 Chart Container & Overlays (Lines 348–364)
-The chart has two existing overlay panels inside `#lw_chart_wrap`:
-- `.tf-overlay` (top-left): Timeframe buttons (1H, 1D, 1W)
-- `.ind-overlay` (top-right): Indicator toggles (VWMA 20, Vol Profile)
+The agent firm (`engine/agent_firm/`) — a 7-agent LLM pipeline for IDX signal evaluation — shipped May 27 (Sprint 11) but has never evaluated a single live signal. Three root causes:
 
-**We will add a third overlay panel** below `.tf-overlay` for the strategy selector.
+1. **The flow filter starves it.** `scheduler/scanner.py` line 776 gates the agent behind `flow_confirmed`, a list of tickers with Stockbit flow score ≥ 2. In the current bear market (IHSG -34.84%, ARB cascades, Rp 1.5T foreign outflow), zero tickers pass this threshold. The agent is active but idle.
 
-### 1.2 Chart Creation & Data Storage (Lines 544–622)
-Inside `fetchAndRender(tf)`:
-- `_rawCandles = data.candles` (line 604) stores the full OHLCV array globally.
-- `candles` variable (line 576) is the candlestick series instance — this is what receives `setMarkers()`.
-- **CRITICAL**: `candles` is a local variable inside `fetchAndRender()`. We must **promote it to module scope** so `runSelectedStrategy()` can access it later.
+2. **It duplicates existing gates.** The flow filter and trend filter already gate entries. The monitor (`monitor.py`) already handles exits with hardcoded R1-R7 rules every 5 minutes. The agent has no unique role — it's an expensive ($0.01-0.03/signal) observer that never observes.
 
-### 1.3 Strategy Data Rendering (Lines 683–706)
-`renderStrategies(strats, closePrice)` renders the server-provided strategy table. It does **not** touch the chart.
+3. **It's downstream of decisions, not integrated.** Paper trades open/close without the agent. Even in enforce mode, the agent can only remove candidates the flow filter already approved. It cannot promote a rejected ticker, size a position, or override a monitor exit signal.
 
-**Decision**: We keep `renderStrategies()` as-is for reference (walk-forward scores). The new modular system runs **independently** on the client side and only affects chart markers.
+---
 
-### 1.4 Global State (Lines 424–431)
-Key globals already available:
-```js
-let _rawCandles = [];   // OHLCV array available after fetchAndRender()
-let _lwChart = null;    // Chart instance
+## Current Architecture (Problem)
+
+```
+Strategy signals → Flow filter (score ≥ 2) → Trend filter → open_trade()
+                         ↓
+                    Agent Firm ← [NEVER REACHED — flow_confirmed is empty]
+                         
+                    monitor.py → R1-R7 rules → close_trade()  [no agent]
 ```
 
-We will add:
-```js
-let _candleSeries = null;  // NEW: module-scoped candlestick series for setMarkers()
+| Decision | Who makes it | Agent involved? |
+|----------|-------------|-----------------|
+| Entry gate | Flow filter + Trend filter | ❌ Blocked by empty flow_confirmed |
+| Position size | `open_trade()` default lots | ❌ |
+| Exit (TP/SL) | `monitor.py` hardcoded | ❌ |
+| Exit (regime) | `monitor.py` R1-R6 rules | ❌ |
+| Watchlist ranking | None — binary quality gate only | ❌ |
+
+---
+
+## Target Architecture
+
+```
+Strategy signals ──→ Agent Firm (2-stage)
+                       │
+                       ├── Stage 1: Technical + Regime (cheap, $0.004)
+                       │      └── Both bearish? → VETO, skip rest
+                       │
+                       ├── Stage 2: Full 7-agent pipeline ($0.011)
+                       │      └── Output: approve/veto + size_hint + conviction
+                       │
+                       ▼
+                  Paper Trade (sized by agent conviction)
+                       │
+                       ▼
+                  Monitor (R1-R7 rules)
+                       │
+                       ├── Exit signal? → Agent Firm (exit review)
+                       │      └── Agent can: confirm exit / override (hold) / reduce size
+                       │
+                       ▼
+                  close_trade() or size adjustment
+```
+
+Key changes:
+- Agent sits **between** signals and execution, not behind a gate
+- Agent receives flow score as **input**, not as a pre-filter
+- Agent can **size** positions (the rules can't)
+- Agent gets **final say on exits** when monitor rules conflict
+- 2-stage pre-scan cuts cost 60-80% in bear markets
+
+---
+
+## ~~Phase 1: Make the Agent Run~~ ✅ SHIPPED (2026-06-05, commit 3616700)
+
+**Goal**: Agent evaluates live signals within cost budget. Ship today. **DONE.**
+
+### 1.1 Remove flow-filter dependency
+
+File: `scheduler/scanner.py`, line 776
+
+```python
+# BEFORE
+if _firm_cfg.is_active() and flow_confirmed:
+    _candidates = [... for r in flow_confirmed]
+
+# AFTER
+if _firm_cfg.is_active() and intersection_results:
+    _candidates = [
+        _SC(
+            ticker=r["ticker"],
+            strategy=(r["strategies"][0] if r.get("strategies") else "multi"),
+            score=float((r.get("flow") or {}).get("score") or 0),
+            scan_time=f"{date_str} {time_str}",
+            flow_verdict=(r.get("flow") or {}).get("verdict"),
+            foreign_score=None,
+            indicators={},
+        )
+        for r in intersection_results[:20]  # cap at 20 for cost control
+    ]
+    _decisions = _firm.evaluate(_candidates)
+    ...
+else:
+    print(f"[{time_str}] Agent firm: 0 candidates (intersection_results empty)")
+```
+
+Flow score arrives in `SignalCandidate.score` — the Risk Manager sees it as evidence, not as a gate. A score of -5 becomes a reason to veto, not a reason to skip evaluation.
+
+### 1.2 Add idle logging
+
+When `intersection_results` is empty (no strategy signals at all), log it:
+
+```python
+if _firm_cfg.is_active() and not intersection_results:
+    print(f"[{time_str}] Agent firm: idle (no strategy signals generated)")
+```
+
+### 1.3 Cost projection
+
+| Scenario | Candidates | Cost/scan | 5 scans/day |
+|----------|-----------|-----------|-------------|
+| Bull market | 15-20 | $0.22-0.30 | $1.10-1.50 |
+| Bear market | 3-8 | $0.04-0.12 | $0.20-0.60 |
+| Dead market | 0 | $0.00 | $0.00 |
+
+All within the $5 daily cap (`AGENT_FIRM_DAILY_CAP`).
+
+---
+
+## Phase 2: Give the Agent Unique Jobs (3-4 hours)
+
+**Goal**: Agent does things the rule-based systems can't.
+
+### 2.1 Position sizing by conviction
+
+File: `scheduler/scanner.py`, after agent evaluation
+
+```python
+for d in _decisions:
+    if d.decision == "approve" and d.size_hint:
+        # Pass size_hint to paper_trade.open_trade()
+        # 0.5 = half size, 1.0 = normal, 1.2 = aggressive
+        ...
+```
+
+The Risk Manager already outputs `size_hint`. It's just never consumed. Wire it into `paper_trade.open_trade()` as an optional `lots_multiplier` parameter.
+
+### 2.2 Bear-watchlist ranking digest
+
+File: new `scheduler/jobs.py` job, runs after daily scan
+
+The scanner already maintains a watchlist of oversold BEAR tickers with quality gates. The agent firm ranks them:
+
+```python
+# After the scan, if watchlist has entries:
+_candidates = [_SC(ticker=t, strategy="watchlist", score=0, ...) for t in watchlist_tickers]
+_decisions = _firm.evaluate(_candidates)
+# Sort by confidence descending, send Telegram:
+# "🐻 Bear Watchlist — Agent Ranking"
+# "1. BBCA (conviction 0.82): strong bull case when BULL regime flips — key support 8,200"
+# "2. BBRI (conviction 0.71): oversold, foreign starting to accumulate"
+```
+
+### 2.3 Exit review on monitor alerts
+
+File: `monitor.py`, for R2 (ADX-TOPPING) and R4 (DISTRIBUTION) alerts
+
+These rules currently fire alerts but don't auto-close (only R1, R3, R5, R6 auto-close for Swing Trend). When R2 or R4 fires, give the agent a chance to weigh in:
+
+```python
+if result['alert_type'] in ('R2_ADX_TOPPING', 'R4_DISTRIBUTION'):
+    _decision = _firm.evaluate([_SC(...)])  # single-candidate exit review
+    if _decision.decision == "approve":     # agent says "approve the exit"
+        close_trade(...)
+    else:
+        # Agent overrides — hold position, log rationale
 ```
 
 ---
 
-## Phase 2: Modularization — Build the Strategy Registry
+## Phase 3: Cost Optimization (2 hours)
 
-### 2.1 Strategy Interface Contract
+**Goal**: Cut per-signal cost 60-80% without losing decision quality.
 
-Every strategy is a plain JavaScript object with:
-```js
-{
-  name: string,           // Display name
-  description: string,    // Tooltip text
-  run: function(candles)  // → Array<Marker>
-}
+### 3.1 Two-stage agent pre-scan
+
+File: `engine/agent_firm/firm.py` — new function `evaluate_staged()`
+
+```
+Candidate → Stage 1: Technical + Regime (parallel, ~$0.004)
+    ├── Both bearish → auto-VETO, skip remaining 5 agents
+    └── At least one bullish → Stage 2: Flow + News + Bull + Bear + Risk (~$0.011)
+                                → Final approve/veto + size_hint
 ```
 
-**Marker shape** (lightweight-charts v4 format):
-```js
-{
-  time: string,           // ISO date or epoch
-  position: 'aboveBar' | 'belowBar' | 'inBar',
-  color: string,
-  shape: 'arrowUp' | 'arrowDown' | 'circle',
-  text: string,           // Optional label
-  size: number            // 1–4
-}
-```
+In bear markets, 60-80% of candidates will fail Stage 1. Cost per 20-candidate scan drops from $0.30 to $0.08-0.12.
 
-### 2.2 Strategy Registry Definition
+### 3.2 Shared market context
 
-Insert this code block **after the global variable declarations** (after line 431) and **before `toggleDrawer()`**:
+File: `engine/agent_firm/firm.py` — `_build_context()`
 
-```js
-// ═══════════════════════════════════════════════════════════════
-// STRATEGY REGISTRY
-// ═══════════════════════════════════════════════════════════════
+Currently fetches 8 per-ticker queries for every candidate. Market-wide data (open_trades, IHSG) is re-fetched N times. Cache once per scan:
 
-const strategies = {
+```python
+_market_ctx = None  # module-level, reset each scan
 
-  Momentum: {
-    name: 'Momentum Following',
-    description: '2 consecutive higher closes + volume ratio > 1.3x',
-    run(candles) {
-      const markers = [];
-      const N = candles.length;
-      if (N < 22) return markers;
-
-      // Pre-compute avg volume (20-period)
-      const avgVol = [];
-      for (let i = 0; i < N; i++) {
-        let sum = 0, count = 0;
-        for (let j = Math.max(0, i - 19); j <= i; j++) {
-          sum += candles[j].volume;
-          count++;
+def _build_context(state):
+    global _market_ctx
+    if _market_ctx is None:
+        _market_ctx = {
+            "open_trades": query("SELECT ... FROM paper_trades WHERE status='OPEN'"),
+            "ihsg": query("SELECT ... FROM ohlcv WHERE ticker='IHSG' ..."),
         }
-        avgVol.push(sum / count);
-      }
-
-      for (let i = 2; i < N; i++) {
-        const c0 = candles[i];
-        const c1 = candles[i - 1];
-        const c2 = candles[i - 2];
-
-        // Entry: 2 up days + volume spike
-        const streak2 = c1.close > c2.close && c0.close > c1.close;
-        const volOk = avgVol[i] > 0 && c0.volume / avgVol[i] > 1.3;
-
-        if (streak2 && volOk) {
-          markers.push({
-            time: c0.time,
-            position: 'belowBar',
-            color: '#22c55e',
-            shape: 'arrowUp',
-            text: 'M',
-            size: 2,
-          });
-        }
-      }
-      return markers;
-    },
-  },
-
-  Flow: {
-    name: 'Order Flow',
-    description: 'Delta-based: net positive flow for 3+ consecutive bars',
-    run(candles) {
-      const markers = [];
-      const N = candles.length;
-      if (N < 5) return markers;
-
-      // Compute delta per bar: (close - open) / (high - low) * volume
-      const deltas = candles.map(c => {
-        const range = c.high - c.low;
-        if (range === 0) return 0;
-        return ((c.close - c.open) / range) * c.volume;
-      });
-
-      let positiveStreak = 0;
-      for (let i = 0; i < N; i++) {
-        if (deltas[i] > 0) {
-          positiveStreak++;
-        } else {
-          positiveStreak = 0;
-        }
-
-        // Signal after 3+ positive deltas
-        if (positiveStreak >= 3) {
-          // Only mark once per streak
-          const prev = markers[markers.length - 1];
-          if (!prev || prev.time !== candles[i - 1]?.time) {
-            markers.push({
-              time: candles[i].time,
-              position: 'belowBar',
-              color: '#6366f1',
-              shape: 'arrowUp',
-              text: 'F',
-              size: 2,
-            });
-          }
-        }
-      }
-      return markers;
-    },
-  },
-
-  VWAPReversion: {
-    name: 'VWAP Reversion',
-    description: 'Price > 1.5% below VWAP + volume spike',
-    run(candles) {
-      const markers = [];
-      const N = candles.length;
-      if (N < 60) return markers;
-
-      // Compute VWAP (cumulative)
-      let cumTPVol = 0, cumVol = 0;
-      const vwap = [];
-      for (let i = 0; i < N; i++) {
-        const tp = (candles[i].high + candles[i].low + candles[i].close) / 3;
-        cumTPVol += tp * candles[i].volume;
-        cumVol += candles[i].volume;
-        vwap.push(cumTPVol / cumVol);
-      }
-
-      // Compute 20-period avg volume
-      const avgVol = [];
-      for (let i = 0; i < N; i++) {
-        let sum = 0;
-        for (let j = Math.max(0, i - 19); j <= i; j++) sum += candles[j].volume;
-        avgVol.push(sum / Math.min(i + 1, 20));
-      }
-
-      for (let i = 60; i < N; i++) {
-        const c = candles[i];
-        const dist = (c.close - vwap[i]) / vwap[i];
-        const volOk = avgVol[i] > 0 && c.volume / avgVol[i] > 1.3;
-
-        if (dist < -0.015 && volOk) {
-          markers.push({
-            time: c.time,
-            position: 'belowBar',
-            color: '#eab308',
-            shape: 'arrowUp',
-            text: 'V',
-            size: 2,
-          });
-        }
-      }
-      return markers;
-    },
-  },
-
-  Conservative: {
-    name: 'Conservative',
-    description: 'Vol ratio > 1.3 + close > open + above MA20 + normal ATR',
-    run(candles) {
-      const markers = [];
-      const N = candles.length;
-      if (N < 25) return markers;
-
-      // Compute MA20
-      const ma20 = [];
-      for (let i = 0; i < N; i++) {
-        let sum = 0;
-        for (let j = Math.max(0, i - 19); j <= i; j++) sum += candles[j].close;
-        ma20.push(sum / Math.min(i + 1, 20));
-      }
-
-      // Compute ATR14
-      const atr = [];
-      for (let i = 0; i < N; i++) {
-        if (i === 0) { atr.push(candles[i].high - candles[i].low); continue; }
-        const tr = Math.max(
-          candles[i].high - candles[i].low,
-          Math.abs(candles[i].high - candles[i - 1].close),
-          Math.abs(candles[i].low - candles[i - 1].close)
-        );
-        if (i < 14) {
-          let sum = 0;
-          for (let j = 0; j <= i; j++) {
-            const t = j === 0
-              ? candles[j].high - candles[j].low
-              : Math.max(candles[j].high - candles[j].low,
-                         Math.abs(candles[j].high - candles[j - 1].close),
-                         Math.abs(candles[j].low - candles[j - 1].close));
-            sum += t;
-          }
-          atr.push(sum / (i + 1));
-        } else {
-          atr.push((atr[i - 1] * 13 + tr) / 14);
-        }
-      }
-
-      // Compute ATR MA10
-      const atrMA = [];
-      for (let i = 0; i < N; i++) {
-        let sum = 0;
-        for (let j = Math.max(0, i - 9); j <= i; j++) sum += atr[j];
-        atrMA.push(sum / Math.min(i + 1, 10));
-      }
-
-      // Compute avg volume
-      const avgVol = [];
-      for (let i = 0; i < N; i++) {
-        let sum = 0;
-        for (let j = Math.max(0, i - 19); j <= i; j++) sum += candles[j].volume;
-        avgVol.push(sum / Math.min(i + 1, 20));
-      }
-
-      for (let i = 24; i < N; i++) {
-        const c = candles[i];
-        const vr = avgVol[i] > 0 ? c.volume / avgVol[i] : 0;
-        const bullish = c.close > c.open;
-        const aboveMA = c.close > ma20[i];
-        const atrOk = atr[i] < atrMA[i] * 1.5;
-
-        if (vr > 1.3 && bullish && aboveMA && atrOk) {
-          markers.push({
-            time: c.time,
-            position: 'belowBar',
-            color: '#06b6d4',
-            shape: 'arrowUp',
-            text: 'C',
-            size: 2,
-          });
-        }
-      }
-      return markers;
-    },
-  },
-
-};
-
-// Default active strategy
-let _activeStrategy = 'Momentum';
-
-// ═══════════════════════════════════════════════════════════════
+    return {**state, "market": _market_ctx}
 ```
 
-### 2.3 Promote Candle Series to Module Scope
-
-Inside `fetchAndRender()` (around line 576), change:
-
-```js
-// BEFORE (local variable):
-const candles = _lwChart.addCandlestickSeries({...});
-
-// AFTER (module-scoped):
-_candleSeries = _lwChart.addCandlestickSeries({
-  upColor:        '#26A69A', downColor:        '#EF5350',
-  borderUpColor:  '#26A69A', borderDownColor:  '#EF5350',
-  wickUpColor:    '#26A69A', wickDownColor:    '#EF5350',
-});
-```
-
-Then replace **all** downstream references from `candles` → `_candleSeries` within `fetchAndRender()`:
-- Line 602: `candles.setData(candleData)` → `_candleSeries.setData(candleData)`
-- Line 619: `candles.attachPrimitive(_vpPlugin)` → `_candleSeries.attachPrimitive(_vpPlugin)`
-
-**Rationale**: `setMarkers()` must be called on the candlestick series instance. Since `fetchAndRender()` is async and recreates the chart on timeframe change, we store the series reference globally.
+Saves 2 redundant queries per candidate (40 queries saved on a 20-candidate scan).
 
 ---
 
-## Phase 3: UI Binding — Inject Controls
+## Phase 4: Feedback Loop (future, 4-5 hours)
 
-### 3.1 Add Strategy Overlay to Chart
+**Goal**: Agent learns from outcomes. Depends on Phase 1-2 shipping and accumulating ≥50 closed paper trades with agent decisions.
 
-Insert the following HTML **inside `#lw_chart_wrap`**, after the `.ind-overlay` div (after line 357, before line 358):
+### 4.1 Automated cohort analysis
 
-```html
-<!-- Strategy Selector Overlay (bottom-left of chart) -->
-<div class="strat-overlay">
-  <select id="strat-select" class="strat-select">
-    <option value="Momentum" selected>Momentum</option>
-    <option value="Flow">Flow</option>
-    <option value="VWAPReversion">VWAP Reversion</option>
-    <option value="Conservative">Conservative</option>
-  </select>
-  <button id="strat-run" class="strat-run" onclick="runSelectedStrategy()">▶ Run</button>
-</div>
+Weekly cron job: run `analytics.py` cohort_summary + agent_agreement, persist to `agent_performance` table. Telegram digest:
+
+```
+📊 Agent Firm Weekly — Jun 1-7
+Approve: 12 trades, 58% win, +1.2% avg
+Veto:    8 trades (would have been -2.3% avg) ← agent saved Rp XM
 ```
 
-### 3.2 Add CSS for the New Overlay
+### 4.2 Confidence threshold tuning
 
-Insert this CSS block **inside the `<style>` section** (after the `.ind-overlay` styles, around line 166):
-
-```css
-/* ── STRATEGY OVERLAY ─────────────────────────────── */
-.strat-overlay {
-  position: absolute; bottom: 10px; left: 12px; z-index: 3;
-  display: flex; gap: 6px; align-items: center;
-}
-.strat-select {
-  font-size: 11px; font-weight: 600;
-  padding: 4px 10px; border-radius: 6px;
-  border: 1px solid var(--border);
-  background: rgba(8,9,13,.85); backdrop-filter: blur(10px);
-  color: var(--text); cursor: pointer;
-  outline: none; min-width: 140px;
-}
-.strat-select:focus {
-  border-color: rgba(99,102,241,.45);
-}
-.strat-select option {
-  background: var(--card); color: var(--text);
-}
-.strat-run {
-  font-size: 11px; font-weight: 700;
-  padding: 4px 12px; border-radius: 6px;
-  border: 1px solid rgba(99,102,241,.35);
-  background: rgba(99,102,241,.18);
-  color: var(--accent); cursor: pointer;
-  letter-spacing: .03em;
-  transition: all .15s;
-}
-.strat-run:hover {
-  background: rgba(99,102,241,.30);
-  box-shadow: 0 0 12px var(--accent-glow);
-}
-.strat-run:active {
-  transform: scale(0.96);
-}
-```
-
-### 3.3 Bind Event Listeners
-
-Insert this function **after the `strategies` registry definition** and **before `toggleDrawer()`**:
-
-```js
-// ═══════════════════════════════════════════════════════════════
-// STRATEGY RUNNER
-// ═══════════════════════════════════════════════════════════════
-
-function runSelectedStrategy() {
-  const select = document.getElementById('strat-select');
-  const key = select.value;
-  const strategy = strategies[key];
-
-  if (!strategy) {
-    console.warn('Unknown strategy:', key);
-    return;
-  }
-
-  if (!_candleSeries || !_rawCandles.length) {
-    console.warn('Chart not ready. Wait for data to load.');
-    return;
-  }
-
-  _activeStrategy = key;
-
-  // 1. Clear existing markers
-  _candleSeries.setMarkers([]);
-
-  // 2. Execute strategy
-  const markers = strategy.run(_rawCandles);
-
-  // 3. Apply new markers
-  _candleSeries.setMarkers(markers);
-
-  // 4. Log for debugging
-  console.log(`[Strategy] ${strategy.name} — ${markers.length} signals`);
-}
-```
-
-### 3.4 Auto-Run on Timeframe Change
-
-After `_lwChart.timeScale().fitContent()` at the end of `fetchAndRender()` (line 621), append:
-
-```js
-  // Auto-run active strategy when new data loads
-  if (_activeStrategy && strategies[_activeStrategy]) {
-    setTimeout(() => runSelectedStrategy(), 50);
-  }
-```
-
-**Rationale**: When the user switches from 1D → 1H or 1W, new candle data arrives. The previously selected strategy should automatically re-execute on the new dataset.
-
-### 3.5 Update Global Variables Declaration
-
-At the top of the `<script>` block (after line 431), add:
-
-```js
-let _candleSeries = null;   // NEW: module-scoped candlestick series
-let _activeStrategy = 'Momentum'; // NEW: currently selected strategy key
-```
+If approval win rate drops below 45%, automatically raise the confidence threshold by 0.1. Persist to `paper_config`. Agent becomes more conservative when it's wrong.
 
 ---
 
-## Phase 4: Visualization — Ensure Correct Marker Delivery
+## What NOT to Build
 
-### 4.1 Marker Format Verification
+- **SELL/short signal path (TODO C1).** IDX has no retail short-selling. A SELL alert you can't act on is noise. Drop from Sprint 18.
+- **Full macro context for all 7 agents (TODO C8).** The 2-stage pre-scan (Phase 3.1) achieves 80% of the benefit. Ship that first, then evaluate whether the remaining 5 agents need IHSG/VPIN/breadth context.
+- **Enforce mode (TODO C12).** Don't flip `AGENT_FIRM_ENFORCE=true` until Phase 1-2 ship and the agent has evaluated ≥100 live signals in shadow. Premature enforcement = premature optimization.
 
-lightweight-charts v4 expects markers with these exact fields:
+---
 
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| `time` | Time | Yes | Must match series data time format (ISO string or epoch) |
-| `position` | string | Yes | `'aboveBar'`, `'belowBar'`, `'inBar'` |
-| `color` | string | Yes | Hex color, e.g. `'#22c55e'` |
-| `shape` | string | Yes | `'arrowUp'`, `'arrowDown'`, `'circle'`, `'square'` |
-| `text` | string | No | Single-character label recommended |
-| `size` | number | No | `1`–`4`, default `1` |
+## Success Metrics
 
-### 4.2 Time Format Compatibility
+| Metric | Current | Target (after Phase 2) |
+|--------|---------|------------------------|
+| Signals evaluated/day | 0 | 15-100 (market-dependent) |
+| Daily API cost | $0.00 | $0.20-1.50 |
+| Veto rate (bear market) | N/A | 60-90% |
+| Approve win rate | N/A | ≥50% (tracked via cohort) |
+| Exit overrides (agent vs monitor) | 0 | ≥1/week with documented rationale |
+| Watchlist ranking digest | None | Daily Telegram |
 
-The current `candleData` mapping (line 589–591) uses `c.time` directly from the server. Ensure the server returns time in a format lightweight-charts accepts:
-- **Daily**: `'2024-01-15'` (YYYY-MM-DD)
-- **Hourly**: Unix timestamp (number) or `'2024-01-15 09:30'`
+---
 
-The strategy `run()` functions must use the **same time format** as the candle data. Since `_rawCandles` is passed directly, this is guaranteed as long as strategies use `c.time` verbatim.
+## Dependencies
 
-### 4.3 Clearing Markers on Strategy Switch
-
-The `runSelectedStrategy()` function already calls:
-```js
-_candleSeries.setMarkers([]);  // Clear old
-_candleSeries.setMarkers(markers); // Set new
 ```
-
-This is the **only** chart mutation. All other chart layers (candles, volume, VWMA, volume profile) remain untouched.
-
-### 4.4 Visual Styling of Markers
-
-Current color assignments per strategy:
-
-| Strategy | Color Code | Color Name | Letter |
-|----------|-----------|------------|--------|
-| Momentum | `#22c55e` | Green | M |
-| Flow | `#6366f1` | Indigo | F |
-| VWAP Reversion | `#eab308` | Yellow | V |
-| Conservative | `#06b6d4` | Cyan | C |
-
-These colors are distinct from the existing chart palette (green/red candles, amber VWMA, indigo volume profile) to ensure visual separation.
-
----
-
-## Summary of Line Changes in dive.html
-
-| Phase | Location | Action | Lines Affected |
-|-------|----------|--------|----------------|
-| 1 | `<style>` after `.ind-overlay` | Add `.strat-overlay`, `.strat-select`, `.strat-run` CSS | ~167–200 (new) |
-| 2 | `#lw_chart_wrap` after `.ind-overlay` | Add strategy `<select>` + `<button>` HTML | After line 357 |
-| 3 | `<script>` globals after line 431 | Add `_candleSeries`, `_activeStrategy` | ~432–433 |
-| 4 | `<script>` after globals | Insert `strategies` registry object | ~434–650 (new) |
-| 5 | `<script>` after registry | Insert `runSelectedStrategy()` function | ~651–680 (new) |
-| 6 | `fetchAndRender()` line 576 | Change `const candles` → `_candleSeries` | 576 |
-| 7 | `fetchAndRender()` line 602 | Change `candles.setData` → `_candleSeries.setData` | 602 |
-| 8 | `fetchAndRender()` line 619 | Change `candles.attachPrimitive` → `_candleSeries.attachPrimitive` | 619 |
-| 9 | `fetchAndRender()` after line 621 | Add auto-run on timeframe change | After 621 |
-
-**Total**: ~9 edit points, ~300 lines of new code.
-
----
-
-## Testing Checklist
-
-- [ ] Page loads without console errors
-- [ ] Dropdown shows 4 strategies: Momentum, Flow, VWAP Reversion, Conservative
-- [ ] Clicking "Run" places arrow markers on the chart
-- [ ] Switching strategy clears old markers and shows new ones
-- [ ] Switching timeframe (1H ↔ 1D ↔ 1W) re-runs the active strategy automatically
-- [ ] Existing features still work: timeframe buttons, indicator toggles, VWMA, volume profile
-- [ ] Server-side strategy table (renderStrategies) remains visible and unchanged
-- [ ] No markers appear if `_rawCandles` is empty (chart loading state)
-
----
-
-## Future Extensibility
-
-To add a new strategy:
-
-1. Implement the `run(candles)` function
-2. Add an entry to the `strategies` object
-3. Add an `<option>` to the `<select>` dropdown
-
-Example:
-```js
-strategies.MyNewStrategy = {
-  name: 'My New Strategy',
-  description: '...',
-  run(candles) {
-    // Your logic here
-    return [{ time: candles[i].time, position: 'belowBar', color: '#fff', shape: 'arrowUp', text: 'N', size: 2 }];
-  },
-};
+Phase 1 (run) ────── no dependencies, ship today
+Phase 2 (jobs) ───── depends on Phase 1
+Phase 3 (cost) ───── depends on Phase 1, can ship in parallel with Phase 2
+Phase 4 (feedback) ─ depends on Phase 2 accumulating ≥50 closed trades (~2-4 weeks)
 ```
-
-No changes to chart rendering, CSS, or event binding are required.

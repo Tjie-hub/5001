@@ -687,14 +687,67 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
               f" ({sum(1 for d in _decisions if d.decision == 'approve')} approved"
               f", {sum(1 for d in _decisions if d.decision == 'veto')} vetoed)")
 
+        # Build size-hint map and attach to every intersection result
+        _size_map = {d.ticker: d.size_hint or 1.0
+                     for d in _decisions if d.decision == "approve"}
+        for r in intersection_results:
+            r["agent_size_hint"] = _size_map.get(r["ticker"], 1.0)
+
         if _firm_cfg.get_enforce():
-            _approved = {d.ticker for d in _decisions if d.decision == "approve"}
-            return [r for r in intersection_results if r["ticker"] in _approved]
+            return [r for r in intersection_results if r["ticker"] in _size_map]
 
         return flow_confirmed
     except Exception as _err:
         print(f"[{time_str}] Agent firm error (fail-open): {_err}")
         return flow_confirmed
+
+
+def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
+    """Rank active BEAR watchlist tickers via agent firm; send Telegram digest.
+
+    Called after the bear watchlist scout so the agent can surface which
+    oversold bear names have the strongest bull case when regime flips.
+    Fail-silent: any error is logged and swallowed.
+    """
+    if not watchlist_tickers:
+        return
+    try:
+        from engine.agent_firm import config as _firm_cfg
+        from engine.agent_firm import firm as _firm
+        from engine.agent_firm.schemas import SignalCandidate as _SC
+
+        if not _firm_cfg.is_active():
+            return
+
+        _candidates = [
+            _SC(
+                ticker=t,
+                strategy="watchlist",
+                score=0.0,
+                scan_time=f"{date_str} {time_str}",
+                flow_verdict=None,
+                foreign_score=None,
+                indicators={},
+            )
+            for t in list(watchlist_tickers)[:20]
+        ]
+        _decisions = _firm.evaluate(_candidates)
+        _approved = [d for d in _decisions if d.decision == "approve"]
+        if not _approved:
+            return
+
+        _approved.sort(key=lambda d: d.confidence or 0.0, reverse=True)
+
+        msg = "🐻 <b>Bear Watchlist — Agent Ranking</b>\n\n"
+        for i, d in enumerate(_approved, 1):
+            conf_str = f"{d.confidence:.2f}" if d.confidence is not None else "N/A"
+            rationale = d.rationale or "N/A"
+            msg += f"{i}. {d.ticker} (conviction {conf_str}): {rationale}\n"
+
+        send_telegram(msg)
+        print(f"[{time_str}] Bear watchlist ranking sent: {[d.ticker for d in _approved]}")
+    except Exception as _err:
+        print(f"[{time_str}] Bear watchlist ranking error (fail-silent): {_err}")
 
 
 def _ensure_scheduled_signals_table(conn):
@@ -1097,6 +1150,9 @@ def scheduled_multi_strategy_scan():
             print(f"[{time_str}] Watchlist promoted (→BULL): {_promoted}")
 
         _wl_conn.close()
+
+        # Rank active watchlist via agent firm and send Telegram digest
+        rank_bear_watchlist_and_notify(list(_priority), date_str, time_str)
     except Exception as _wl_err:
         print(f"[{time_str}] Bear watchlist error (fail-open): {_wl_err}")
     # ── End bear watchlist ────────────────────────────────────────────────────
@@ -1137,8 +1193,10 @@ def scheduled_multi_strategy_scan():
                     })
                     continue
 
-                # Open paper trade
-                trade_result = open_trade(ticker, float(entry_price), notify=False)
+                # Open paper trade — apply agent size hint if present
+                _size_mult = r.get("agent_size_hint", 1.0)
+                trade_result = open_trade(ticker, float(entry_price), notify=False,
+                                          lots_multiplier=_size_mult)
 
                 if 'error' in trade_result:
                     print(f"[{time_str}] {ticker}: {trade_result['error']}")

@@ -15,6 +15,38 @@ logger = logging.getLogger(__name__)
 from utils.telegram import send_telegram
 
 
+def _agent_confirms_exit(trade: dict, result: dict) -> bool:
+    """Ask agent firm whether to confirm a probabilistic exit (R3_ADX_FADE / R4_DISTRIBUTION).
+
+    Returns True  → proceed with close (agent approved or firm disabled/error).
+    Returns False → hold (agent explicitly vetoed).
+    Fail-open: any exception returns True so the close proceeds.
+    """
+    try:
+        from engine.agent_firm import config as _cfg
+        from engine.agent_firm import firm as _firm
+        from engine.agent_firm.schemas import SignalCandidate as _SC
+
+        if not _cfg.is_active():
+            return True
+
+        _candidate = _SC(
+            ticker=trade["ticker"],
+            strategy=trade.get("strategy") or "swing trend",
+            score=0.0,
+            scan_time=result.get("reason", "exit_review"),
+            flow_verdict=None,
+            foreign_score=None,
+            indicators={},
+        )
+        _decisions = _firm.evaluate([_candidate])
+        if not _decisions:
+            return True
+        return _decisions[0].decision != "veto"
+    except Exception:
+        return True  # fail-open: close proceeds
+
+
 def _fetch_recent_closes(ticker: str, n: int = 5) -> list:
     """Fetch last N daily closes from walkforward DB."""
     try:
@@ -445,6 +477,16 @@ def check_all_open_trades():
                     conn.commit(); conn.close()
                 except Exception as e:
                     logger.error(f"[monitor] trail update failed: {e}")
+
+            # Agent exit review: probabilistic closes give agent a veto
+            if (result['action'] == 'CLOSE'
+                    and result.get('reason') in ('R3_ADX_FADE', 'R4_DISTRIBUTION')
+                    and not _agent_confirms_exit(trade, result)):
+                logger.info(
+                    f"[monitor] Agent overrode {result['reason']} exit for "
+                    f"{trade['ticker']} — holding position"
+                )
+                result = {**result, 'action': 'HOLD'}
 
             if result['action'] == 'CLOSE':
                 cur = _get_current_price(trade['ticker']) or float(trade.get('sl_price') or trade['entry_price'])
