@@ -697,6 +697,96 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
         return flow_confirmed
 
 
+def _ensure_scheduled_signals_table(conn):
+    """Create scheduled_signals table with signal_direction column; migrate if needed."""
+    conn.execute("""CREATE TABLE IF NOT EXISTS scheduled_signals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, scan_time TEXT, ticker TEXT,
+        strategies TEXT, flow_score INTEGER, flow_verdict TEXT,
+        smart_money TEXT, signal_reasons TEXT, signal_direction TEXT DEFAULT 'BUY',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+    existing_cols = {r[1] for r in conn.execute("PRAGMA table_info(scheduled_signals)").fetchall()}
+    if 'signal_direction' not in existing_cols:
+        conn.execute("ALTER TABLE scheduled_signals ADD COLUMN signal_direction TEXT DEFAULT 'BUY'")
+    conn.commit()
+
+
+def _save_signals_to_db(conn, signals, date_str, time_str):
+    """Insert signals into scheduled_signals. Each signal dict must have signal_direction."""
+    for r in signals:
+        flow = r.get('flow') or {}
+        score = r.get('flow_score') if r.get('flow_score') is not None else flow.get('score')
+        verdict = r.get('flow_verdict') or flow.get('verdict', '')
+        sm = r.get('smart_money') or flow.get('smart_money', '')
+        direction = r.get('signal_direction', 'BUY')
+        conn.execute(
+            "INSERT INTO scheduled_signals "
+            "(scan_time,ticker,strategies,flow_score,flow_verdict,smart_money,signal_reasons,signal_direction) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (
+                f"{date_str} {time_str}",
+                r['ticker'],
+                ",".join(r['strategies']),
+                score,
+                verdict,
+                sm,
+                " | ".join(r['signal_reasons']),
+                direction,
+            ),
+        )
+
+
+def scan_distribution_signals(ohlcv_map, date_str, time_str):
+    """Scan stockbit_flow DB for BEARISH tickers to generate SELL signals.
+
+    Criteria (all must hold):
+      - composite_score <= -3 (strong distribution)
+      - verdict contains BEARISH
+      - regime is BEAR or SIDEWAYS (never short BULL)
+      - close[-1] < close[-5] (price declining, confirming distribution)
+    """
+    results = []
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        rows = conn.execute(
+            """SELECT ticker, composite_score, smart_money
+               FROM stockbit_flow
+               WHERE trade_date = ?
+                 AND composite_score <= -3
+                 AND verdict LIKE '%BEARISH%'""",
+            (date_str,),
+        ).fetchall()
+        conn.close()
+    except Exception as _e:
+        logging.warning(f"[scan_distribution] DB query error: {_e}")
+        return []
+
+    for ticker, score, smart_money in rows:
+        df = ohlcv_map.get(ticker)
+        if df is None or len(df) < 10:
+            continue
+
+        regime = _safe_regime(df)
+        if regime == 'BULL':
+            continue
+
+        if float(df['close'].iloc[-1]) >= float(df['close'].iloc[-5]):
+            continue
+
+        results.append({
+            'ticker': ticker,
+            'strategies': ['distribution'],
+            'signal_direction': 'SELL',
+            'flow_score': score,
+            'flow_verdict': 'BEARISH',
+            'smart_money': smart_money or '',
+            'signal_reasons': [
+                f'BEARISH flow (score={score}), declining price, regime={regime}'
+            ],
+        })
+
+    return results
+
+
 def scheduled_multi_strategy_scan():
     """Multi-strategy signal scanner dengan flow filter."""
     from engine.strategies import check_current_entry_signal
@@ -813,18 +903,21 @@ def scheduled_multi_strategy_scan():
 
     try:
         conn = sqlite3.connect(DB_PATH)
-        conn.execute("""CREATE TABLE IF NOT EXISTS scheduled_signals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, scan_time TEXT, ticker TEXT,
-            strategies TEXT, flow_score INTEGER, flow_verdict TEXT,
-            smart_money TEXT, signal_reasons TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        _ensure_scheduled_signals_table(conn)
         for r in flow_confirmed:
-            flow = r.get('flow', {})
-            conn.execute("INSERT INTO scheduled_signals (scan_time,ticker,strategies,flow_score,flow_verdict,smart_money,signal_reasons) VALUES (?,?,?,?,?,?,?)",
-                (f"{date_str} {time_str}", r['ticker'], ",".join(r['strategies']), flow['score'], flow['verdict'], flow['smart_money'], " | ".join(r['signal_reasons'])))
+            r.setdefault('signal_direction', 'BUY')
+        _save_signals_to_db(conn, flow_confirmed, date_str, time_str)
+
+        # ── SELL/BEARISH signal path ──────────────────────────────────────────
+        sell_signals = scan_distribution_signals(ohlcv_map, date_str, time_str)
+        if sell_signals:
+            _save_signals_to_db(conn, sell_signals, date_str, time_str)
+            print(f"[{time_str}] SELL signals (distribution): {len(sell_signals)} tickers")
+        # ─────────────────────────────────────────────────────────────────────
+
         conn.commit()
         conn.close()
-        print(f"[{time_str}] Saved {len(flow_confirmed)} signals to DB")
+        print(f"[{time_str}] Saved {len(flow_confirmed)} BUY + {len(sell_signals)} SELL signals to DB")
     except Exception as e:
         print(f"[{time_str}] DB save error: {e}")
 

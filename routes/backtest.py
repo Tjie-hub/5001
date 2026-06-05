@@ -761,7 +761,8 @@ def api_signals_scheduled():
         conn = sqlite3.connect(DB_PATH)
         rows = conn.execute(
             "SELECT scan_time, ticker, strategies, flow_score, flow_verdict, "
-            "smart_money, signal_reasons "
+            "smart_money, signal_reasons, "
+            "COALESCE(signal_direction, 'BUY') "
             "FROM scheduled_signals WHERE date(scan_time) >= ? "
             "ORDER BY scan_time DESC, flow_score DESC",
             (since,),
@@ -778,6 +779,7 @@ def api_signals_scheduled():
             "flow_verdict": r[4],
             "smart_money": r[5],
             "signal_reasons": r[6],
+            "signal_direction": r[7],
         }
         for r in rows
     ]
