@@ -825,6 +825,18 @@ def scheduled_multi_strategy_scan():
         logging.warning(f"[scan] accdist summary error: {_ae}")
 
     try:
+        from engine.breadth import get_market_breadth as _get_breadth
+        _breadth_conn = sqlite3.connect(DB_PATH)
+        _breadth = _get_breadth(_breadth_conn, date_str)
+        _breadth_conn.close()
+        if _breadth['total'] > 0:
+            print(f"[{time_str}] Market breadth: {_breadth['label']} "
+                  f"(adv={_breadth['pct_advancing']}% dec={100-_breadth['pct_advancing']-(_breadth['unchanged']/_breadth['total']*100):.1f}% "
+                  f"above_ma20={_breadth['pct_above_ma20']}%)")
+    except Exception as _be:
+        logging.warning(f"[scan] breadth summary error: {_be}")
+
+    try:
         from engine.vpin import get_market_vpin_summary as _get_vpin
         _vpin_conn = sqlite3.connect(DB_PATH)
         _vpin_summary = _get_vpin(_vpin_conn, date_str)
