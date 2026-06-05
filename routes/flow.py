@@ -309,3 +309,22 @@ def api_market_risk():
         'foreign_net_5d': foreign_net,
     }
     return jsonify(risk)
+
+
+@flow_bp.route('/api/dashboard/risk', methods=['GET'])
+def api_dashboard_risk():
+    """Unified market risk dashboard — all sensors in one response.
+
+    Query params:
+      date — YYYY-MM-DD (default today)
+
+    Returns: date, risk_score, tier, components, ihsg, breadth,
+             foreign_flow (today/5d/20d/trend), vpin, accdist.
+    """
+    from engine.dashboard import get_risk_dashboard
+    query_date = request.args.get('date', str(date.today()))
+    try:
+        return jsonify(get_risk_dashboard(DB_PATH, query_date))
+    except Exception as e:
+        return jsonify({'error': str(e), 'date': query_date,
+                        'risk_score': 0.0, 'tier': 'GREEN'}), 500
