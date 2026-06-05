@@ -835,6 +835,14 @@ def scheduled_multi_strategy_scan():
         _rs_conn.close()
         _market_risk = _compute_risk(_rs_vpin, _rs_accdist, _rs_breadth, _rs_tech, _rs_foreign)
         print(f"[{time_str}] Market risk score: {_market_risk['score']:.1f}/100 — {_market_risk['tier']}")
+        # Route alert based on tier
+        try:
+            from engine.risk_alert import route_risk_alert as _route_alert
+            _alert_conn = sqlite3.connect(DB_PATH)
+            _route_alert(_alert_conn, _market_risk, date_str, time_str)
+            _alert_conn.close()
+        except Exception as _ra_err:
+            logging.warning(f"[scan] risk alert routing error: {_ra_err}")
     except Exception as _rse:
         logging.warning(f"[scan] risk score error: {_rse}")
 

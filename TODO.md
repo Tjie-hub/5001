@@ -178,7 +178,7 @@ _Source: macro_idx.md crash analysis (IHSG -34.84%, 9,135 → 5,952). Three brok
 
 ### 🟠 High — Alert & Response Infrastructure
 
-- [ ] **C7. Telegram alert routing by risk tier** — CRITICAL: immediate alert. RED: bundled hourly. ORANGE/YELLOW: end-of-day summary. GREEN: silent. ~2 hr.
+- [x] **C7. Telegram alert routing by risk tier** — `engine/risk_alert.py`: `route_risk_alert()` CRITICAL→immediate Telegram, RED/ORANGE→market_risk_log (sent=0), GREEN→silent. `get_pending_risk_alerts()`, `mark_alerts_sent()`, `build_risk_summary_message()`. Scheduler: hourly RED bundle at :30, EOD ORANGE/YELLOW summary at 16:00. Wired into scanner post-risk-score computation. 10 unit tests. SHIPPED 2026-06-05.
 - [ ] **C8. Scheduled market health report** — Daily Telegram report at 08:45 (pre-market): risk tier, VPIN status, breadth, foreign flow trend, key support/resistance levels. ~2 hr.
 - [ ] **C9. Auto circuit breaker** — When risk = CRITICAL: pause auto-trading, send alert, require manual override to resume. Hooks into `get_enforce()` / premover auto-execution. ~2 hr.
 - [ ] **C10. VPIN batch compute for all tickers** — Daily VPIN calculation for all tickers with sufficient broker_flow data. Persist to `vpin_scores` table. ~2 hr.

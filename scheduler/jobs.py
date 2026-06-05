@@ -361,3 +361,17 @@ def run_backtest_roller():
     except Exception as e:
         send_telegram(f"🔴 <b>Backtest Roller Error</b>\n<code>{str(e)[:200]}</code>")
         print(f"[{now_str}] Backtest roller error: {e}")
+
+
+def run_hourly_risk_bundle():
+    """Send bundled RED market risk alerts for the past hour."""
+    from engine.risk_alert import send_hourly_risk_bundle
+    now = datetime.now(WIB)
+    send_hourly_risk_bundle(now.strftime('%Y-%m-%d'), now.strftime('%H:%M'))
+
+
+def run_eod_risk_summary():
+    """Send ORANGE/YELLOW market risk EOD summary."""
+    from engine.risk_alert import send_eod_risk_summary
+    now = datetime.now(WIB)
+    send_eod_risk_summary(now.strftime('%Y-%m-%d'))

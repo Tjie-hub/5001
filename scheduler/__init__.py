@@ -47,6 +47,8 @@ from scheduler.jobs import (  # noqa: F401
     run_news_fetch,
     run_premover_eod,
     run_backtest_roller,
+    run_hourly_risk_bundle,
+    run_eod_risk_summary,
     _refresh_backtest_cache,
     _run_open_trade_monitor,
     _run_screener_intraday,
@@ -166,6 +168,14 @@ def start_scheduler():
     scheduler.add_job(run_backtest_roller, CronTrigger(
         day="1-7", day_of_week="sun", hour=10, minute=0, timezone=WIB),
         id="backtest_roller", name="Backtest Roller Sun 10:00")
+
+    # Market risk alert routing — hourly RED bundle at :30, EOD summary at 16:00
+    scheduler.add_job(run_hourly_risk_bundle, CronTrigger(
+        day_of_week="mon-fri", minute=30, timezone=WIB),
+        id="risk_bundle_hourly", name="Risk Bundle Hourly :30")
+    scheduler.add_job(run_eod_risk_summary, CronTrigger(
+        day_of_week="mon-fri", hour=16, minute=0, timezone=WIB),
+        id="risk_eod_summary", name="Risk EOD Summary 16:00")
 
     scheduler.start()
     print("Scheduler started:")
