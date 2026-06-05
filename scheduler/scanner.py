@@ -813,6 +813,31 @@ def scheduled_multi_strategy_scan():
 
     print(f"[{time_str}] Starting multi-strategy scan...")
 
+    # ── Composite market risk score ───────────────────────────────────────────
+    _market_risk = None
+    try:
+        from flow_filter import get_market_accdist_summary as _get_accdist_rs
+        from engine.vpin import get_market_vpin_summary as _get_vpin_rs
+        from engine.breadth import get_market_breadth as _get_breadth_rs
+        from engine.technicals import detect_ihsg_technicals as _detect_tech_rs
+        from engine.risk_score import compute_market_risk_score as _compute_risk
+        _rs_conn = sqlite3.connect(DB_PATH)
+        _rs_vpin = _get_vpin_rs(_rs_conn, date_str)
+        _rs_accdist = _get_accdist_rs(date_str)
+        _rs_breadth = _get_breadth_rs(_rs_conn, date_str)
+        _rs_tech = _detect_tech_rs(_rs_conn, date_str)
+        try:
+            _fb = _rs_conn.execute("SELECT SUM(lot_value) FROM broker_flow WHERE investor_type='Asing' AND side='BUY' AND trade_date<=? AND trade_date>=date(?,'-7 days')", (date_str, date_str)).fetchone()[0] or 0
+            _fs = _rs_conn.execute("SELECT SUM(lot_value) FROM broker_flow WHERE investor_type='Asing' AND side='SELL' AND trade_date<=? AND trade_date>=date(?,'-7 days')", (date_str, date_str)).fetchone()[0] or 0
+            _rs_foreign = _fb - _fs
+        except Exception:
+            _rs_foreign = None
+        _rs_conn.close()
+        _market_risk = _compute_risk(_rs_vpin, _rs_accdist, _rs_breadth, _rs_tech, _rs_foreign)
+        print(f"[{time_str}] Market risk score: {_market_risk['score']:.1f}/100 — {_market_risk['tier']}")
+    except Exception as _rse:
+        logging.warning(f"[scan] risk score error: {_rse}")
+
     # Market-wide sensors — log before scan so visible even on zero-signal days
     try:
         from flow_filter import get_market_accdist_summary as _get_accdist

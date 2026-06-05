@@ -9,6 +9,7 @@ from flow_filter import get_flow_batch, get_market_accdist_summary
 from engine.vpin import get_market_vpin_summary
 from engine.breadth import get_market_breadth
 from engine.technicals import detect_ihsg_technicals
+from engine.risk_score import compute_market_risk_score
 
 flow_bp = Blueprint("flow", __name__)
 
@@ -268,3 +269,43 @@ def api_market_breadth():
 
     conn.close()
     return jsonify({'summary': summary, 'series': series})
+
+
+@flow_bp.route('/api/market/risk', methods=['GET'])
+def api_market_risk():
+    """Composite market risk score (0-100) combining all sensors.
+
+    Query params:
+      date — YYYY-MM-DD (default today)
+    """
+    query_date = request.args.get('date', str(date.today()))
+    conn = sqlite3.connect(DB_PATH)
+
+    vpin_s = get_market_vpin_summary(conn, query_date)
+    accdist_s = get_market_accdist_summary(query_date)
+    breadth_s = get_market_breadth(conn, query_date)
+    tech_s = detect_ihsg_technicals(conn, query_date)
+
+    try:
+        foreign_buy = conn.execute(
+            "SELECT SUM(lot_value) FROM broker_flow WHERE investor_type='Asing' AND side='BUY' AND trade_date<=? AND trade_date>=date(?,'-7 days')",
+            (query_date, query_date),
+        ).fetchone()[0] or 0
+        foreign_sell = conn.execute(
+            "SELECT SUM(lot_value) FROM broker_flow WHERE investor_type='Asing' AND side='SELL' AND trade_date<=? AND trade_date>=date(?,'-7 days')",
+            (query_date, query_date),
+        ).fetchone()[0] or 0
+        foreign_net = foreign_buy - foreign_sell
+    except Exception:
+        foreign_net = None
+
+    conn.close()
+
+    risk = compute_market_risk_score(vpin_s, accdist_s, breadth_s, tech_s, foreign_net)
+    risk['date'] = query_date
+    risk['sensors'] = {
+        'vpin': vpin_s, 'accdist': accdist_s,
+        'breadth': breadth_s, 'technicals': tech_s,
+        'foreign_net_5d': foreign_net,
+    }
+    return jsonify(risk)
