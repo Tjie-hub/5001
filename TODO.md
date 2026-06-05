@@ -214,7 +214,7 @@ _These are frontend-only changes to `templates/dive.html`. They surface the back
 
 ### 🔵 Documentation
 
-- [ ] **G13. BRPT case study in docs/** — Formalize BRPT.md findings into `docs/BRPT_CASE_STUDY.md` as reference for extreme event handling design. Include: timeline, indicator contamination evidence, strategy failure analysis, gap detection methodology. ~1 hr.
+- [x] **G13. BRPT case study in docs/** — SHIPPED 2026-06-05. `docs/BRPT_CASE_STUDY.md`: full timeline (Apr-Jun 2026), ATR inflation analysis, VR miscontextualization, walk-forward blind spot, strategy failure table (all 10 strategies and why each failed), crash recovery validated (+22.4%), gap detection methodology, strategy heatmap motivating G7, and 5 design lessons for extreme event handling.
 
 ---
 
