@@ -1,4 +1,4 @@
-"""Market dashboard aggregator — pure data layer for /api/dashboard/risk."""
+"""Market dashboard aggregator — pure data layer for /api/dashboard/risk and /api/dashboard/watchlist."""
 
 import sqlite3
 from typing import Any
@@ -118,6 +118,132 @@ def _calc_ytd(conn: sqlite3.Connection, date: str) -> float | None:
     if start_row and end_row and start_row[0]:
         return round((end_row[0] - start_row[0]) / start_row[0] * 100, 2)
     return None
+
+
+# ── Watchlist ─────────────────────────────────────────────────────────────────
+
+def get_watchlist(db_path: str, date: str) -> dict[str, Any]:
+    """Compute BUY WATCH / AVOID / WAIT ticker lists for the dashboard.
+
+    BUY WATCH: intraday bounce >3% + volume >50M + foreign net buy today >5B
+    AVOID:     foreign net sell in 3d > 100B AND YTD drop >20%
+    WAIT:      intraday bounce >3% + volume >50M + foreign net sell today
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        year = date[:4]
+        jan_start = f'{year}-01-01'
+
+        # Today's full OHLCV for all tickers (ex-IHSG)
+        today_ohlcv: dict[str, dict] = {}
+        for row in conn.execute(
+            "SELECT ticker,open,high,low,close,volume "
+            "FROM ohlcv WHERE date=? AND ticker!='IHSG'",
+            (date,),
+        ):
+            today_ohlcv[row[0]] = {
+                'open': row[1], 'high': row[2], 'low': row[3],
+                'close': row[4], 'volume': row[5],
+            }
+
+        # Year-start closes — first trading date on or after Jan 1
+        first_date = conn.execute(
+            "SELECT MIN(date) FROM ohlcv WHERE date>=?", (jan_start,)
+        ).fetchone()[0]
+        jan_closes: dict[str, float] = {}
+        if first_date:
+            for row in conn.execute(
+                "SELECT ticker,close FROM ohlcv WHERE date=? AND ticker!='IHSG'",
+                (first_date,),
+            ):
+                jan_closes[row[0]] = float(row[1])
+
+        # Foreign flow: today and last-3-days per ticker
+        foreign_today: dict[str, float] = {}
+        for row in conn.execute(
+            "SELECT ticker,"
+            "  SUM(CASE WHEN side='BUY' THEN lot_value ELSE 0 END)"
+            "- SUM(CASE WHEN side='SELL' THEN lot_value ELSE 0 END) "
+            "FROM broker_flow "
+            "WHERE investor_type='Asing' AND trade_date=? "
+            "GROUP BY ticker",
+            (date,),
+        ):
+            foreign_today[row[0]] = float(row[1])
+
+        foreign_3d: dict[str, float] = {}
+        for row in conn.execute(
+            "SELECT ticker,"
+            "  SUM(CASE WHEN side='BUY' THEN lot_value ELSE 0 END)"
+            "- SUM(CASE WHEN side='SELL' THEN lot_value ELSE 0 END) "
+            "FROM broker_flow "
+            "WHERE investor_type='Asing' "
+            "  AND trade_date<=? AND trade_date>=date(?,'-3 days') "
+            "GROUP BY ticker",
+            (date, date),
+        ):
+            foreign_3d[row[0]] = float(row[1])
+
+        def _ytd(ticker: str) -> float | None:
+            c0 = jan_closes.get(ticker)
+            c1 = today_ohlcv.get(ticker, {}).get('close')
+            if c0 and c1 and c0 > 0:
+                return round((c1 - c0) / c0 * 100, 2)
+            return None
+
+        def _build_entry(ticker: str, include_bounce: bool = False) -> dict:
+            o = today_ohlcv.get(ticker, {})
+            close = o.get('close')
+            open_ = o.get('open')
+            low   = o.get('low')
+            chg   = round((close - open_) / open_ * 100, 2) if (close and open_) else None
+            bounce = (
+                round((close - low) / low * 100, 2)
+                if (include_bounce and close and low and low > 0)
+                else None
+            )
+            return {
+                'ticker': ticker,
+                'close': close,
+                'chg_pct': chg,
+                'bounce_pct': bounce,
+                'foreign_net_today': foreign_today.get(ticker, 0.0),
+                'foreign_net_3d': foreign_3d.get(ticker, 0.0),
+                'volume': o.get('volume'),
+                'ytd_pct': _ytd(ticker),
+            }
+
+        # Hammer tickers: bounce >3% AND volume >50M
+        hammer: set[str] = set()
+        for ticker, o in today_ohlcv.items():
+            low = o['low']
+            if low and low > 0 and o['volume'] and o['volume'] > 50_000_000:
+                if (o['close'] - low) / low * 100 > 3:
+                    hammer.add(ticker)
+
+        buy_watch: list[dict] = []
+        wait: list[dict] = []
+        for ticker in hammer:
+            net_today = foreign_today.get(ticker, 0.0)
+            if net_today > 5_000_000_000:
+                buy_watch.append(_build_entry(ticker, include_bounce=True))
+            elif net_today < 0:
+                wait.append(_build_entry(ticker, include_bounce=True))
+
+        # AVOID: foreign net sell in 3d > 100B AND YTD drop > 20%
+        avoid: list[dict] = []
+        for ticker, net_3d in foreign_3d.items():
+            ytd = _ytd(ticker)
+            if net_3d < -100_000_000_000 and ytd is not None and ytd < -20:
+                avoid.append(_build_entry(ticker))
+
+        buy_watch.sort(key=lambda x: x['foreign_net_today'], reverse=True)
+        avoid.sort(key=lambda x: x['foreign_net_3d'])
+        wait.sort(key=lambda x: (x['bounce_pct'] or 0), reverse=True)
+
+        return {'date': date, 'buy_watch': buy_watch, 'avoid': avoid, 'wait': wait}
+    finally:
+        conn.close()
 
 
 # ── Empty fallbacks ───────────────────────────────────────────────────────────

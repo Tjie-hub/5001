@@ -328,3 +328,23 @@ def api_dashboard_risk():
     except Exception as e:
         return jsonify({'error': str(e), 'date': query_date,
                         'risk_score': 0.0, 'tier': 'GREEN'}), 500
+
+
+@flow_bp.route('/api/dashboard/watchlist', methods=['GET'])
+def api_dashboard_watchlist():
+    """Watchlist dashboard — BUY WATCH / AVOID / WAIT ticker lists.
+
+    Query params:
+      date — YYYY-MM-DD (default today)
+
+    Returns: date, buy_watch, avoid, wait — each a list of ticker dicts
+             with close, chg_pct, bounce_pct, foreign_net_today,
+             foreign_net_3d, volume, ytd_pct.
+    """
+    from engine.dashboard import get_watchlist
+    query_date = request.args.get('date', str(date.today()))
+    try:
+        return jsonify(get_watchlist(DB_PATH, query_date))
+    except Exception as e:
+        return jsonify({'error': str(e), 'date': query_date,
+                        'buy_watch': [], 'avoid': [], 'wait': []}), 500
