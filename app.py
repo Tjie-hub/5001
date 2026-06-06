@@ -75,6 +75,11 @@ def portfolio_page():
     return render_template("portfolio.html")
 
 
+@app.route("/dashboard")
+def dashboard_page():
+    return render_template("watchlist.html")
+
+
 if __name__ == "__main__":
     init_screener_tables()
     init_flow_db()

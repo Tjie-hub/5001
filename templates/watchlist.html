@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Dashboard — IDX Strategy Suite</title>
+<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060b18; --bg-elev: #0b1024; --surface: #0f162e; --surface-2: #151d3a;
+  --surface-3: #1b2547; --border: #1b2547; --border-soft: #151f3a; --border-hi: #263358;
+  --text: #e8edf8; --text-dim: #97a3c0; --text-mute: #5c6890;
+  --indigo: #6366f1; --indigo-2: #818cf8; --indigo-dim: rgba(99,102,241,0.16);
+  --green: #10b981; --green-dim: rgba(16,185,129,0.14);
+  --red: #ef4444; --red-dim: rgba(239,68,68,0.14);
+  --amber: #f59e0b; --amber-dim: rgba(245,158,11,0.14);
+  --blue: #3b82f6; --blue-dim: rgba(59,130,246,0.14);
+  --orange: #f97316; --orange-dim: rgba(249,115,22,0.14);
+  --gray-dim: rgba(151,163,192,0.10);
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 6px; }
+
+/* Topbar */
+.topbar {
+  position: sticky; top: 0; z-index: 200;
+  height: 48px; background: rgba(6,11,24,0.94); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 16px; gap: 10px;
+}
+.brand { display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+.brand-mark { color: var(--indigo-2); }
+.topbar nav { display: flex; gap: 2px; }
+.topbar nav a { color: var(--text-dim); text-decoration: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; transition: all 0.15s; }
+.topbar nav a:hover { color: var(--text); background: var(--surface-2); }
+.topbar nav a.active { color: var(--text); background: var(--surface-2); }
+.spacer { flex: 1; }
+.topbar-risk {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
+  font-size: 11px;
+}
+.topbar-risk-score { font-family: var(--mono); font-size: 16px; font-weight: 700; }
+.refresh-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
+  font-size: 11px; color: var(--text-mute); cursor: pointer;
+  background: transparent; transition: all 0.15s;
+}
+.refresh-btn:hover { border-color: var(--border-hi); color: var(--text-dim); }
+.rdot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.rdot.spin { background: var(--amber); animation: none !important; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+.rdot { animation: pulse 2s infinite; }
+.clock { font-size: 11px; color: var(--text-mute); font-family: var(--mono); }
+
+/* Layout */
+.dashboard { padding: 14px; display: flex; flex-direction: column; gap: 12px; max-width: 1600px; margin: 0 auto; }
+
+/* Panel */
+.panel { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.ph { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border-soft); }
+.pt { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim); }
+.pb { padding: 14px; }
+.pb0 { padding: 0; }
+
+/* Risk gauge layout */
+.risk-layout { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
+.gauge-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.gauge-score { font-size: 44px; font-weight: 700; font-family: var(--mono); line-height: 1; }
+.gauge-tier {
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.8px; text-transform: uppercase; border: 1px solid transparent;
+}
+.tier-SAFE     { color:#10b981; background:rgba(16,185,129,0.14); border-color:rgba(16,185,129,0.3); }
+.tier-CAUTION  { color:#3b82f6; background:rgba(59,130,246,0.14); border-color:rgba(59,130,246,0.3); }
+.tier-WARNING  { color:#f59e0b; background:rgba(245,158,11,0.14); border-color:rgba(245,158,11,0.3); }
+.tier-DANGER   { color:#f97316; background:rgba(249,115,22,0.14); border-color:rgba(249,115,22,0.3); }
+.tier-CRITICAL { color:#ef4444; background:rgba(239,68,68,0.14); border-color:rgba(239,68,68,0.3); }
+
+/* Components grid */
+.comp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px,1fr)); gap: 8px; }
+.comp-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: 7px; padding: 9px 11px; }
+.comp-lbl { font-size: 10px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 3px; }
+.comp-val { font-size: 17px; font-weight: 600; font-family: var(--mono); }
+.comp-sub { font-size: 10px; color: var(--text-dim); margin-top: 1px; }
+
+/* 3-col row */
+.row3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* Stat grid */
+.sg { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.st { background: var(--surface); border-radius: 6px; padding: 8px 10px; }
+.sl { font-size: 10px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.4px; }
+.sv { font-size: 15px; font-weight: 600; font-family: var(--mono); margin-top: 1px; }
+.sv.big { font-size: 20px; }
+.pos { color: var(--green); } .neg { color: var(--red); } .neu { color: var(--text-dim); }
+
+/* Section label */
+.slbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-mute); font-weight: 600; margin: 10px 0 6px; }
+
+/* IHSG level pills */
+.levels { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+.lchip { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-family: var(--mono); border: 1px solid var(--border); color: var(--text-dim); }
+.lchip.sup { border-color: rgba(16,185,129,0.4); color: var(--green); background: var(--green-dim); }
+.lchip.res { border-color: rgba(239,68,68,0.4); color: var(--red); background: var(--red-dim); }
+.lchip.brk { border-color: rgba(239,68,68,0.7); color: var(--red); background: var(--red-dim); text-decoration: line-through; }
+
+/* Warning bar */
+.warnbar { margin-top: 8px; padding: 5px 10px; border-radius: 5px; font-size: 11px; display: flex; align-items: center; gap: 6px; }
+.warnbar.red  { background: var(--red-dim); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
+.warnbar.amb  { background: var(--amber-dim); border: 1px solid rgba(245,158,11,0.3); color: var(--amber); }
+
+/* Adv/dec bar */
+.adbar { height: 7px; border-radius: 3px; background: var(--red-dim); overflow: hidden; margin: 5px 0; }
+.adfill { height: 100%; border-radius: 3px; background: var(--green); }
+
+/* Gauge bar */
+.gbar { height: 5px; border-radius: 2px; background: var(--surface-3); overflow: hidden; margin: 4px 0; }
+.gbfill { height: 100%; border-radius: 2px; }
+
+/* Flow bars */
+.fbars { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.frow { display: flex; align-items: center; gap: 6px; }
+.flbl { font-size: 10px; color: var(--text-mute); width: 32px; flex-shrink: 0; }
+.ftrack { flex: 1; height: 14px; background: var(--surface); border-radius: 3px; position: relative; overflow: hidden; }
+.fcenter { position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--border-hi); }
+.fneg { position: absolute; right: 50%; top: 0; height: 100%; background: rgba(239,68,68,0.25); border-right: 1px solid rgba(239,68,68,0.5); }
+.fpos { position: absolute; left: 50%; top: 0; height: 100%; background: rgba(16,185,129,0.25); border-left: 1px solid rgba(16,185,129,0.5); }
+.fval { font-size: 10px; font-family: var(--mono); width: 76px; text-align: right; flex-shrink: 0; }
+
+/* Tables */
+.twrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead { position: sticky; top: 0; z-index: 5; }
+th {
+  background: var(--surface-2); padding: 7px 11px;
+  text-align: left; font-weight: 600; font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text-dim); border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+td { padding: 7px 11px; border-bottom: 1px solid var(--border-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tk { font-weight: 600; color: var(--indigo-2); cursor: pointer; }
+.tk:hover { text-decoration: underline; }
+.row-buy td   { background: rgba(16,185,129,0.03); }
+.row-buy:hover td  { background: rgba(16,185,129,0.07); }
+.row-avd td   { background: rgba(239,68,68,0.04); }
+.row-avd:hover td  { background: rgba(239,68,68,0.09); }
+.row-wt td    { background: rgba(245,158,11,0.03); }
+.row-wt:hover td   { background: rgba(245,158,11,0.07); }
+
+/* Sector heatmap */
+.hm td { text-align: center; }
+.hm th:first-child, .hm td:first-child { text-align: left; }
+.hcell { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-family: var(--mono); min-width: 52px; text-align: center; }
+.hsp { background: rgba(16,185,129,0.22); color: #10b981; }
+.hmp { background: rgba(16,185,129,0.10); color: #6ee7b7; }
+.hne { background: var(--surface); color: var(--text-mute); }
+.hmn { background: rgba(239,68,68,0.10); color: #fca5a5; }
+.hsn { background: rgba(239,68,68,0.22); color: #ef4444; }
+.wow { color: var(--green); font-weight: 600; font-size: 10px; }
+.wne { color: var(--text-mute); font-size: 10px; }
+.wuw { color: var(--red); font-weight: 600; font-size: 10px; }
+
+/* Empty */
+.empty { padding: 28px; text-align: center; color: var(--text-mute); font-size: 12px; }
+
+@media (max-width: 900px) {
+  .row3, .row2 { grid-template-columns: 1fr; }
+  .risk-layout { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="brand-mark">◆</span> IDX <span style="color:var(--text-dim);font-weight:400">Suite</span></div>
+  <nav>
+    <a href="/">Signals</a>
+    <a href="/screener">Screener</a>
+    <a href="/portfolio">Portfolio</a>
+    <a href="/dashboard" class="active">Dashboard</a>
+  </nav>
+  <div class="spacer"></div>
+  <div class="topbar-risk" id="topbarRisk" style="display:none">
+    <span style="font-size:10px;color:var(--text-mute)">RISK</span>
+    <span class="topbar-risk-score" id="topbarScore">—</span>
+    <span id="topbarTier" class="gauge-tier" style="font-size:9px;padding:1px 7px">—</span>
+  </div>
+  <span class="clock" id="clock"></span>
+  <button class="refresh-btn" onclick="loadAll()">
+    <div class="rdot" id="rdot"></div>
+    <span id="rlbl">Loading…</span>
+  </button>
+</div>
+
+<div class="dashboard">
+
+  <!-- D4: Risk Gauge -->
+  <div class="panel">
+    <div class="ph">
+      <span class="pt">Market Risk Gauge</span>
+      <span id="riskDate" style="font-size:10px;color:var(--text-mute);margin-left:auto"></span>
+    </div>
+    <div class="pb">
+      <div class="risk-layout">
+        <div class="gauge-wrap">
+          <svg id="gaugeSvg" width="200" height="108" viewBox="0 0 200 108"></svg>
+          <div class="gauge-score" id="gaugeScore">—</div>
+          <div class="gauge-tier" id="gaugeTier">—</div>
+        </div>
+        <div class="comp-grid" id="compGrid">
+          <div class="empty">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D5 + D6: Market panels -->
+  <div class="row3">
+    <div class="panel">
+      <div class="ph"><span class="pt">IHSG</span></div>
+      <div class="pb" id="ihsgBody"><div class="empty">Loading…</div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><span class="pt">Market Breadth</span></div>
+      <div class="pb" id="breadthBody"><div class="empty">Loading…</div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><span class="pt">Foreign Flow &amp; VPIN</span></div>
+      <div class="pb" id="flowBody"><div class="empty">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- D7: BUY WATCH -->
+  <div class="panel">
+    <div class="ph">
+      <span class="pt" style="color:var(--green)">▲ BUY WATCH</span>
+      <span id="buyCount" style="font-size:10px;color:var(--text-mute);margin-left:4px"></span>
+    </div>
+    <div class="pb0">
+      <div class="twrap" id="buyWatchTable"><div class="empty">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- D8 + D9: AVOID + WAIT -->
+  <div class="row2">
+    <div class="panel">
+      <div class="ph">
+        <span class="pt" style="color:var(--red)">✕ AVOID</span>
+        <span id="avoidCount" style="font-size:10px;color:var(--text-mute);margin-left:4px"></span>
+      </div>
+      <div class="pb0"><div class="twrap" id="avoidTable"><div class="empty">Loading…</div></div></div>
+    </div>
+    <div class="panel">
+      <div class="ph">
+        <span class="pt" style="color:var(--amber)">⏸ WAIT</span>
+        <span id="waitCount" style="font-size:10px;color:var(--text-mute);margin-left:4px"></span>
+      </div>
+      <div class="pb0"><div class="twrap" id="waitTable"><div class="empty">Loading…</div></div></div>
+    </div>
+  </div>
+
+  <!-- D10: Sector Heatmap -->
+  <div class="panel">
+    <div class="ph"><span class="pt">Sector Heatmap</span></div>
+    <div class="pb0"><div class="twrap hm" id="sectorGrid"><div class="empty">Loading…</div></div></div>
+  </div>
+
+</div><!-- /dashboard -->
+
+<script>
+// ── Tier config ───────────────────────────────────────────────────────────────
+const TIER_COLOR = { SAFE:'#10b981', CAUTION:'#3b82f6', WARNING:'#f59e0b', DANGER:'#f97316', CRITICAL:'#ef4444' };
+
+// ── SVG Gauge ─────────────────────────────────────────────────────────────────
+// Upper semicircle: cx=100,cy=100,r=80 in viewBox 0 0 200 108
+// angle 180° → left (20,100), angle 90° → top (100,20), angle 0° → right (180,100)
+// SVG: y-down, so: x=cx+r*cos(θ), y=cy-r*sin(θ)
+// Clockwise in screen (sweep=1) goes from left→top→right = upper semicircle ✓
+
+function polarPt(cx, cy, r, deg) {
+  const rad = deg * Math.PI / 180;
+  return [cx + r * Math.cos(rad), cy - r * Math.sin(rad)];
+}
+
+function arcSeg(cx, cy, r, a1, a2) {
+  // a1 > a2, going from left toward right, sweep=1 for upper semicircle
+  const [x1, y1] = polarPt(cx, cy, r, a1);
+  const [x2, y2] = polarPt(cx, cy, r, a2);
+  const span = a1 - a2;
+  const large = span >= 180 ? 1 : 0;
+  return `M${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${large} 1 ${x2.toFixed(2)},${y2.toFixed(2)}`;
+}
+
+const SEGS = [
+  { a1:180, a2:144, color:'#10b981' }, // SAFE 0-20
+  { a1:144, a2:108, color:'#3b82f6' }, // CAUTION 20-40
+  { a1:108, a2: 72, color:'#f59e0b' }, // WARNING 40-60
+  { a1: 72, a2: 36, color:'#f97316' }, // DANGER 60-80
+  { a1: 36, a2:  0, color:'#ef4444' }, // CRITICAL 80-100
+];
+
+function buildGauge(score, tier) {
+  const svg = document.getElementById('gaugeSvg');
+  const cx = 100, cy = 100, r = 80, sw = 13;
+  let h = '';
+
+  // Background track
+  h += `<path d="${arcSeg(cx,cy,r,180,0)}" fill="none" stroke="#1b2547" stroke-width="${sw}" stroke-linecap="round"/>`;
+
+  // Dim tier segments
+  for (const s of SEGS) {
+    h += `<path d="${arcSeg(cx,cy,r,s.a1,s.a2)}" fill="none" stroke="${s.color}" stroke-width="${sw}" stroke-linecap="butt" opacity="0.22"/>`;
+  }
+
+  // Filled arc
+  if (score !== null && score !== undefined && score > 0) {
+    const endAngle = 180 - Math.min(score, 99.9) / 100 * 180;
+    const color = TIER_COLOR[tier] || '#97a3c0';
+    h += `<path d="${arcSeg(cx,cy,r,180,endAngle)}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
+  }
+
+  // Scale ticks
+  for (let v = 0; v <= 100; v += 20) {
+    const ang = 180 - v / 100 * 180;
+    const [ix, iy] = polarPt(cx, cy, r + 4, ang);
+    const [ox, oy] = polarPt(cx, cy, r + 11, ang);
+    h += `<line x1="${ix.toFixed(1)}" y1="${iy.toFixed(1)}" x2="${ox.toFixed(1)}" y2="${oy.toFixed(1)}" stroke="#263358" stroke-width="1.5"/>`;
+  }
+
+  // Needle
+  if (score !== null && score !== undefined) {
+    const needleAng = 180 - Math.max(0, Math.min(score, 100)) / 100 * 180;
+    const [nx, ny] = polarPt(cx, cy, r - 16, needleAng);
+    h += `<line x1="${cx}" y1="${cy}" x2="${nx.toFixed(2)}" y2="${ny.toFixed(2)}" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.9"/>`;
+    h += `<circle cx="${cx}" cy="${cy}" r="4" fill="white" opacity="0.9"/>`;
+    h += `<circle cx="${cx}" cy="${cy}" r="2" fill="#060b18"/>`;
+  }
+
+  svg.innerHTML = h;
+}
+
+// ── Formatters ────────────────────────────────────────────────────────────────
+function fmt(v, d=1) { return v === null || v === undefined ? '—' : Number(v).toFixed(d); }
+
+function fmtPct(v, sign=true) {
+  if (v === null || v === undefined) return '—';
+  return (sign && v > 0 ? '+' : '') + Number(v).toFixed(1) + '%';
+}
+
+function fmtFlow(v) {
+  if (v === null || v === undefined) return '—';
+  const a = Math.abs(v), s = v < 0 ? '-' : '+';
+  if (a >= 1e12) return s + 'Rp' + (a/1e12).toFixed(2) + 'T';
+  if (a >= 1e9)  return s + 'Rp' + (a/1e9).toFixed(1) + 'B';
+  if (a >= 1e6)  return s + 'Rp' + (a/1e6).toFixed(0) + 'M';
+  return s + 'Rp' + a.toFixed(0);
+}
+
+function fmtVol(v) {
+  if (!v) return '—';
+  if (v >= 1e9) return (v/1e9).toFixed(1) + 'B';
+  if (v >= 1e6) return (v/1e6).toFixed(1) + 'M';
+  if (v >= 1e3) return (v/1e3).toFixed(0) + 'K';
+  return String(v);
+}
+
+function fmtPrice(v) {
+  if (v === null || v === undefined) return '—';
+  return Number(v).toLocaleString('id-ID');
+}
+
+function cc(v) { return v > 0 ? 'pos' : v < 0 ? 'neg' : 'neu'; }
+
+// ── D4: Render Risk ───────────────────────────────────────────────────────────
+function renderRisk(d) {
+  const score = d.risk_score, tier = d.tier || 'UNKNOWN';
+  buildGauge(score, tier);
+
+  const scoreEl = document.getElementById('gaugeScore');
+  scoreEl.textContent = score !== null ? Math.round(score) : '—';
+  scoreEl.style.color = TIER_COLOR[tier] || 'var(--text-dim)';
+
+  const tierEl = document.getElementById('gaugeTier');
+  tierEl.textContent = tier;
+  tierEl.className = 'gauge-tier tier-' + tier;
+
+  document.getElementById('riskDate').textContent = d.date || '';
+
+  // Topbar summary
+  document.getElementById('topbarRisk').style.display = 'flex';
+  document.getElementById('topbarScore').textContent = score !== null ? Math.round(score) : '—';
+  document.getElementById('topbarScore').style.color = TIER_COLOR[tier] || '';
+  const tbTier = document.getElementById('topbarTier');
+  tbTier.textContent = tier;
+  tbTier.className = 'gauge-tier tier-' + tier;
+  tbTier.style.fontSize = '9px'; tbTier.style.padding = '1px 7px';
+
+  // Components
+  const vpin = d.vpin || {}, b = d.breadth || {}, flow = d.foreign_flow || {}, ac = d.accdist || {};
+  document.getElementById('compGrid').innerHTML = `
+    <div class="comp-card">
+      <div class="comp-lbl">VPIN Avg</div>
+      <div class="comp-val" style="color:${(vpin.avg_vpin||0)>0.8?'var(--red)':'var(--text)'}">${fmt(vpin.avg_vpin,3)}</div>
+      <div class="comp-sub">${vpin.label||'—'}</div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-lbl">Toxic >0.8</div>
+      <div class="comp-val" style="color:${(vpin.pct_above_08||0)>30?'var(--red)':'var(--text)'}">${fmt(vpin.pct_above_08)}%</div>
+      <div class="comp-sub">${fmt(vpin.pct_above_095)}% above 0.95</div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-lbl">Advancing</div>
+      <div class="comp-val" style="color:${(b.pct_advancing||0)>=50?'var(--green)':'var(--red)'}">${fmt(b.pct_advancing)}%</div>
+      <div class="comp-sub">${b.advancers||0}↑  ${b.decliners||0}↓</div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-lbl">Above MA20</div>
+      <div class="comp-val" style="color:${(b.pct_above_ma20||0)>=50?'var(--green)':'var(--amber)'}">${fmt(b.pct_above_ma20)}%</div>
+      <div class="comp-sub">${b.label||'—'}</div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-lbl">Dist%</div>
+      <div class="comp-val" style="color:${(ac.dist_pct||0)>55?'var(--red)':'var(--green)'}">${fmt(ac.dist_pct)}%</div>
+      <div class="comp-sub">${ac.label||'—'}</div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-lbl">Foreign 5d</div>
+      <div class="comp-val" style="font-size:13px;color:${(flow.net_5d||0)>=0?'var(--green)':'var(--red)'}">${fmtFlow(flow.net_5d)}</div>
+      <div class="comp-sub">${flow.trend||'—'}</div>
+    </div>
+  `;
+}
+
+// ── D5: Render IHSG ───────────────────────────────────────────────────────────
+function renderIHSG(d) {
+  const i = d.ihsg || {}, body = document.getElementById('ihsgBody');
+  const ytd = i.ytd_pct, close = i.close, ma5 = i.ma5, ma20 = i.ma20;
+  const m5up = close && ma5 ? close > ma5 : null;
+  const m20up = close && ma20 ? close > ma20 : null;
+  const sbreaks = i.support_breaks || [];
+  const SUPP = [5000, 5500], RES = [6200, 6500];
+
+  body.innerHTML = `
+    <div class="sg">
+      <div class="st" style="grid-column:1/-1">
+        <div class="sl">Level</div>
+        <div class="sv big ${ytd!==null?cc(ytd):''}">${fmtPrice(close)}</div>
+      </div>
+      <div class="st">
+        <div class="sl">YTD</div>
+        <div class="sv ${ytd!==null?cc(ytd):''}">${fmtPct(ytd)}</div>
+      </div>
+      <div class="st">
+        <div class="sl">A/D Ratio</div>
+        <div class="sv ${(d.breadth||{}).adv_dec_ratio>=1?'pos':'neg'}">${fmt((d.breadth||{}).adv_dec_ratio,2)}x</div>
+      </div>
+      <div class="st">
+        <div class="sl">MA5</div>
+        <div class="sv">${fmtPrice(ma5)} <span style="font-size:10px;color:${m5up?'var(--green)':'var(--red)'}">${m5up===null?'':m5up?'▲':'▼'}</span></div>
+      </div>
+      <div class="st">
+        <div class="sl">MA20</div>
+        <div class="sv">${fmtPrice(ma20)} <span style="font-size:10px;color:${m20up?'var(--green)':'var(--red)'}">${m20up===null?'':m20up?'▲':'▼'}</span></div>
+      </div>
+    </div>
+    ${i.death_cross ? `<div class="warnbar red">⚠ Death Cross — MA5 below MA20</div>` : ''}
+    ${i.lower_high  ? `<div class="warnbar amb">⚠ Lower High pattern detected</div>` : ''}
+    <div class="slbl">Key Levels</div>
+    <div class="levels">
+      ${SUPP.map(l => `<span class="lchip ${sbreaks.includes(l)?'brk':'sup'}">${sbreaks.includes(l)?'✕':''} S${l.toLocaleString()}</span>`).join('')}
+      ${RES.map(l  => `<span class="lchip res">R ${l.toLocaleString()}</span>`).join('')}
+    </div>
+  `;
+}
+
+// ── D6a: Render Breadth ───────────────────────────────────────────────────────
+function renderBreadth(d) {
+  const b = d.breadth || {}, body = document.getElementById('breadthBody');
+  const adv = b.advancers||0, dec = b.decliners||0, unch = b.unchanged||0;
+  const tot = adv + dec + unch;
+  const advPct = tot > 0 ? adv/tot*100 : 50;
+  const ma20 = b.pct_above_ma20 || 0;
+
+  body.innerHTML = `
+    <div class="sg">
+      <div class="st"><div class="sl">Advancing</div><div class="sv pos">${adv}</div></div>
+      <div class="st"><div class="sl">Declining</div><div class="sv neg">${dec}</div></div>
+      <div class="st"><div class="sl">A/D Ratio</div><div class="sv ${(b.adv_dec_ratio||0)>=1?'pos':'neg'}">${fmt(b.adv_dec_ratio,2)}x</div></div>
+      <div class="st"><div class="sl">Unchanged</div><div class="sv neu">${unch}</div></div>
+    </div>
+    <div class="slbl">Advancers vs Decliners</div>
+    <div class="adbar"><div class="adfill" style="width:${advPct.toFixed(1)}%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-mute)">
+      <span style="color:var(--green)">${advPct.toFixed(1)}% advancing</span>
+      <span>${b.label||''}</span>
+    </div>
+    <div class="slbl">Stocks Above MA20</div>
+    <div class="gbar"><div class="gbfill" style="width:${ma20.toFixed(1)}%;background:${ma20>=50?'var(--green)':'var(--amber)'}"></div></div>
+    <div style="font-size:11px;color:${ma20>=50?'var(--green)':'var(--amber)'};font-family:var(--mono)">${ma20.toFixed(1)}%</div>
+  `;
+}
+
+// ── D6b: Render Flow + VPIN ───────────────────────────────────────────────────
+function renderFlow(d) {
+  const flow = d.foreign_flow || {}, vpin = d.vpin || {};
+  const body = document.getElementById('flowBody');
+  const maxF = Math.max(Math.abs(flow.today||0), Math.abs(flow.net_5d||0), Math.abs(flow.net_20d||0), 1);
+  const tc = flow.trend==='INFLOW' ? 'var(--green)' : flow.trend==='OUTFLOW' ? 'var(--red)' : 'var(--text-dim)';
+
+  function fbar(lbl, val) {
+    const pct = Math.min(Math.abs(val||0)/maxF*47, 47);
+    const pos = (val||0) >= 0;
+    return `<div class="frow">
+      <span class="flbl">${lbl}</span>
+      <div class="ftrack">
+        <div class="fcenter"></div>
+        ${pos ? `<div class="fpos" style="width:${pct}%"></div>` : `<div class="fneg" style="width:${pct}%"></div>`}
+      </div>
+      <span class="fval ${cc(val||0)}">${fmtFlow(val)}</span>
+    </div>`;
+  }
+
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-mute)">Foreign Asing</span>
+      <span style="font-size:11px;font-weight:700;color:${tc}">${flow.trend||'—'}</span>
+    </div>
+    <div class="fbars">
+      ${fbar('Today', flow.today)}
+      ${fbar('5d', flow.net_5d)}
+      ${fbar('20d', flow.net_20d)}
+    </div>
+    <div class="slbl">VPIN — Order Flow Toxicity</div>
+    <div class="sg" style="margin-top:4px">
+      <div class="st">
+        <div class="sl">Avg VPIN</div>
+        <div class="sv" style="color:${(vpin.avg_vpin||0)>0.8?'var(--red)':''}">${fmt(vpin.avg_vpin,3)}</div>
+      </div>
+      <div class="st">
+        <div class="sl">Toxic >0.8</div>
+        <div class="sv ${(vpin.pct_above_08||0)>30?'neg':''}">${fmt(vpin.pct_above_08)}%</div>
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--text-mute);margin-top:5px">${vpin.label||'—'}</div>
+  `;
+}
+
+// ── D7/D8/D9: Render Watchlists ───────────────────────────────────────────────
+function mkTable(items, rowCls, cols) {
+  if (!items || items.length === 0) return `<div class="empty">No tickers today</div>`;
+  const thead = `<thead><tr>${cols.map(c=>`<th>${c.h}</th>`).join('')}</tr></thead>`;
+  const tbody = items.map(r =>
+    `<tr class="${rowCls}">${cols.map(c=>`<td>${c.f(r)}</td>`).join('')}</tr>`
+  ).join('');
+  return `<table>${thead}<tbody>${tbody}</tbody></table>`;
+}
+
+function renderWatchlist(d) {
+  const bw = d.buy_watch||[], av = d.avoid||[], wt = d.wait||[];
+  document.getElementById('buyCount').textContent  = `(${bw.length})`;
+  document.getElementById('avoidCount').textContent = `(${av.length})`;
+  document.getElementById('waitCount').textContent  = `(${wt.length})`;
+
+  const tkLink = r => `<span class="tk" onclick="location.href='/dive/${r.ticker}'">${r.ticker}</span>`;
+
+  const buyCols = [
+    { h:'Ticker',    f: r => tkLink(r) },
+    { h:'Close',     f: r => fmtPrice(r.close) },
+    { h:'Chg%',      f: r => `<span class="${cc(r.chg_pct)}">${fmtPct(r.chg_pct)}</span>` },
+    { h:'Bounce%',   f: r => `<span class="pos">${fmtPct(r.bounce_pct, false)}</span>` },
+    { h:'Fgn Today', f: r => `<span class="${cc(r.foreign_net_today)}">${fmtFlow(r.foreign_net_today)}</span>` },
+    { h:'Fgn 3d',   f: r => `<span class="${cc(r.foreign_net_3d)}">${fmtFlow(r.foreign_net_3d)}</span>` },
+    { h:'Volume',    f: r => fmtVol(r.volume) },
+    { h:'YTD',       f: r => `<span class="${cc(r.ytd_pct)}">${fmtPct(r.ytd_pct)}</span>` },
+  ];
+  const avdCols = [
+    { h:'Ticker',   f: r => tkLink(r) },
+    { h:'Close',    f: r => fmtPrice(r.close) },
+    { h:'Chg%',     f: r => `<span class="${cc(r.chg_pct)}">${fmtPct(r.chg_pct)}</span>` },
+    { h:'Fgn 3d',  f: r => `<span class="neg">${fmtFlow(r.foreign_net_3d)}</span>` },
+    { h:'Volume',   f: r => fmtVol(r.volume) },
+    { h:'YTD',      f: r => `<span class="neg">${fmtPct(r.ytd_pct)}</span>` },
+  ];
+  const wtCols = [
+    { h:'Ticker',    f: r => tkLink(r) },
+    { h:'Close',     f: r => fmtPrice(r.close) },
+    { h:'Bounce%',   f: r => `<span class="pos">${fmtPct(r.bounce_pct, false)}</span>` },
+    { h:'Fgn Today', f: r => `<span class="neg">${fmtFlow(r.foreign_net_today)}</span>` },
+    { h:'Volume',    f: r => fmtVol(r.volume) },
+  ];
+
+  document.getElementById('buyWatchTable').innerHTML = mkTable(bw, 'row-buy', buyCols);
+  document.getElementById('avoidTable').innerHTML    = mkTable(av, 'row-avd', avdCols);
+  document.getElementById('waitTable').innerHTML     = mkTable(wt, 'row-wt',  wtCols);
+}
+
+// ── D10: Sector Heatmap ───────────────────────────────────────────────────────
+function renderSectors(sectors) {
+  const el = document.getElementById('sectorGrid');
+  if (!sectors || sectors.length === 0) {
+    el.innerHTML = `<div class="empty">No sector data available</div>`; return;
+  }
+
+  function hcls(v) {
+    if (v===null||v===undefined) return 'hne';
+    if (v >= 1.5) return 'hsp'; if (v >= 0.2) return 'hmp';
+    if (v >= -0.2) return 'hne'; if (v >= -1.5) return 'hmn';
+    return 'hsn';
+  }
+  function wbadge(w) {
+    if (w==='OVERWEIGHT')  return `<span class="wow">▲ OW</span>`;
+    if (w==='UNDERWEIGHT') return `<span class="wuw">▼ UW</span>`;
+    return `<span class="wne">– NE</span>`;
+  }
+  function hcell(v) {
+    return `<div class="hcell ${hcls(v)}">${v!==null&&v!==undefined ? fmtPct(v) : '—'}</div>`;
+  }
+
+  const rows = sectors.map(s => `
+    <tr>
+      <td style="font-weight:600;white-space:nowrap;padding:7px 11px">${s.sector}</td>
+      <td>${wbadge(s.weight)}</td>
+      <td>${hcell(s.ret_5d)}</td>
+      <td>${hcell(s.ret_10d)}</td>
+      <td>${hcell(s.ret_20d)}</td>
+      <td style="font-size:11px;font-family:var(--mono);color:var(--text-mute);text-align:center">${fmt(s.score,3)}</td>
+      <td style="font-size:11px;color:var(--text-mute);text-align:center">${s.n_tickers||0}</td>
+    </tr>
+  `).join('');
+
+  el.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Sector</th><th>Weight</th>
+        <th style="text-align:center">Ret 5d</th>
+        <th style="text-align:center">Ret 10d</th>
+        <th style="text-align:center">Ret 20d</th>
+        <th style="text-align:center">Score</th>
+        <th style="text-align:center">N</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+// ── Load & refresh ────────────────────────────────────────────────────────────
+let timer = 60, countdown = null;
+
+function setLoading(v) {
+  const dot = document.getElementById('rdot');
+  dot.classList.toggle('spin', v);
+  if (!v) { dot.style.background='var(--green)'; dot.style.animation='pulse 2s infinite'; }
+  else     { dot.style.background='var(--amber)'; dot.style.animation='none'; }
+}
+
+async function loadAll() {
+  setLoading(true);
+  document.getElementById('rlbl').textContent = 'Loading…';
+  if (countdown) clearInterval(countdown);
+
+  try {
+    const [risk, wl, sec] = await Promise.all([
+      fetch('/api/dashboard/risk').then(r=>r.json()),
+      fetch('/api/dashboard/watchlist').then(r=>r.json()),
+      fetch('/api/sector/rotation').then(r=>r.json()),
+    ]);
+    renderRisk(risk);
+    renderIHSG(risk);
+    renderBreadth(risk);
+    renderFlow(risk);
+    renderWatchlist(wl);
+    renderSectors(sec.sectors || sec);
+    timer = 60;
+  } catch(e) {
+    console.error(e);
+    document.getElementById('rlbl').textContent = 'Error — retry';
+    setLoading(false);
+    return;
+  }
+
+  setLoading(false);
+  countdown = setInterval(() => {
+    timer--;
+    document.getElementById('rlbl').textContent = `Refresh ${timer}s`;
+    if (timer <= 0) { clearInterval(countdown); loadAll(); }
+  }, 1000);
+}
+
+// ── Clock ─────────────────────────────────────────────────────────────────────
+function tick() {
+  const wib = new Date(new Date().toLocaleString('en-US', {timeZone:'Asia/Jakarta'}));
+  const p = n => String(n).padStart(2,'0');
+  document.getElementById('clock').textContent =
+    `WIB ${p(wib.getHours())}:${p(wib.getMinutes())}:${p(wib.getSeconds())}`;
+}
+tick(); setInterval(tick, 1000);
+loadAll();
+</script>
+</body>
+</html>

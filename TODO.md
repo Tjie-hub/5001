@@ -204,13 +204,13 @@ Replace scattered monitoring (Telegram + DB queries + macro_idx.md reports) with
 
 ### 🟠 Core — Frontend Dashboard (`templates/watchlist.html`)
 
-- [ ] **D4. Market Risk Gauge (sticky header)** — Large risk score (0-100) color-coded, tier label (SAFE/CAUTION/WARNING/DANGER/CRITICAL), mini 7-day sparkline, auto-refresh badge. ~3 hr.
-- [ ] **D5. IHSG Panel** — Current level, day chg%, intraday range, YTD, mini OHLC bars (10d), key support/resistance (5,500/5,000/6,200/6,500), MA status line. ~2 hr.
-- [ ] **D6. Breadth & Flow Panel** — Side-by-side gauges: adv/dec ratio, % above MA20, foreign net flow bar chart (10d). ~2 hr.
-- [ ] **D7. BUY WATCH Table** — Sortable columns: ticker, close, chg%, bounce%, foreign_net_3d, volume, entry_trigger, stop_loss. Color rows by conviction. ~3 hr.
-- [ ] **D8. AVOID Table** — Tickers to avoid: foreign distribution + YTD laggards. Red-tinted rows. ~1.5 hr.
-- [ ] **D9. WAIT List** — Distribution-into-bounce tickers. Amber rows. ~1 hr.
-- [ ] **D10. Sector Heatmap** — Grid: sectors as rows, columns for momentum/flow/VPIN. Green→red gradient. ~2 hr.
+- [x] **D4. Market Risk Gauge (sticky header)** — Large risk score (0-100) color-coded, tier label (SAFE/CAUTION/WARNING/DANGER/CRITICAL), mini 7-day sparkline, auto-refresh badge. ~3 hr.
+- [x] **D5. IHSG Panel** — Current level, day chg%, intraday range, YTD, mini OHLC bars (10d), key support/resistance (5,500/5,000/6,200/6,500), MA status line. ~2 hr.
+- [x] **D6. Breadth & Flow Panel** — Side-by-side gauges: adv/dec ratio, % above MA20, foreign net flow bar chart (10d). ~2 hr.
+- [x] **D7. BUY WATCH Table** — Sortable columns: ticker, close, chg%, bounce%, foreign_net_3d, volume, entry_trigger, stop_loss. Color rows by conviction. ~3 hr.
+- [x] **D8. AVOID Table** — Tickers to avoid: foreign distribution + YTD laggards. Red-tinted rows. ~1.5 hr.
+- [x] **D9. WAIT List** — Distribution-into-bounce tickers. Amber rows. ~1 hr.
+- [x] **D10. Sector Heatmap** — Grid: sectors as rows, columns for momentum/flow/VPIN. Green→red gradient. ~2 hr.
 
 ### 🟡 Nice-to-Have
 
