@@ -49,11 +49,14 @@ def handle_telegram_message(message):
                 "/status - Get trading status\n"
                 "/signals - Recent signals\n"
                 "/flow - Flow confirmation status\n"
+                "/dashboard - Market risk + top BUY WATCH\n"
                 "/help - Show this help message")
         elif command == 'signals':
             handle_signals_command(chat_id)
         elif command == 'flow':
             handle_flow_command(chat_id)
+        elif command == 'dashboard':
+            handle_dashboard_command(chat_id)
         else:
             send_telegram_reply(chat_id, f"❌ Unknown command: /{command}")
     else:
@@ -136,6 +139,62 @@ def handle_flow_command(chat_id):
         send_telegram_reply(chat_id, flow_msg)
     except Exception as e:
         send_telegram_reply(chat_id, f"❌ Error getting flow: {str(e)}")
+
+def handle_dashboard_command(chat_id):
+    """Send compact market dashboard: risk tier + IHSG + top 3 BUY WATCH."""
+    try:
+        from datetime import date as _date
+        from engine.dashboard import get_risk_dashboard, get_watchlist
+
+        today = str(_date.today())
+        risk = get_risk_dashboard(DB_PATH, today)
+        wl   = get_watchlist(DB_PATH, today)
+
+        score = risk.get('risk_score')
+        tier  = risk.get('tier', '—')
+        ihsg  = risk.get('ihsg', {})
+        flow  = risk.get('foreign_flow', {})
+
+        tier_emoji = {'SAFE': '🟢', 'CAUTION': '🔵', 'WARNING': '⚠️', 'DANGER': '🔴', 'CRITICAL': '🚨'}.get(tier, '❓')
+
+        close = ihsg.get('close')
+        ytd   = ihsg.get('ytd_pct')
+        ytd_s = f" (YTD {'+' if (ytd or 0)>0 else ''}{ytd:.1f}%)" if ytd is not None else ''
+
+        flow_5d = flow.get('net_5d')
+        def _fflow(v):
+            if v is None: return '—'
+            a, s = abs(v), '+' if v >= 0 else '-'
+            if a >= 1e12: return f"{s}Rp{a/1e12:.1f}T"
+            if a >= 1e9:  return f"{s}Rp{a/1e9:.1f}B"
+            return f"{s}Rp{a/1e6:.0f}M"
+
+        lines = [
+            f"📊 *Market Dashboard* — {today}",
+            f"",
+            f"{tier_emoji} Risk: *{round(score) if score is not None else '—'}/100* — {tier}",
+            f"🏦 IHSG: *{f'{close:,.0f}' if close else '—'}*{ytd_s}",
+            f"💸 Foreign 5d: {_fflow(flow_5d)} ({flow.get('trend','—')})",
+        ]
+
+        buy_watch = wl.get('buy_watch', [])[:3]
+        if buy_watch:
+            lines += ['', f"🟢 *BUY WATCH* ({len(wl.get('buy_watch',[]))} tickers)"]
+            for i, r in enumerate(buy_watch, 1):
+                bounce = f"+{r.get('bounce_pct',0):.1f}% bounce" if r.get('bounce_pct') else ''
+                fgn    = _fflow(r.get('foreign_net_today'))
+                lines.append(f"{i}. *{r['ticker']}* — {bounce}, Fgn {fgn}")
+        else:
+            lines += ['', '🟢 No BUY WATCH tickers today']
+
+        avoid = wl.get('avoid', [])
+        if avoid:
+            lines += ['', f"🔴 *AVOID* ({len(avoid)} tickers): {', '.join(r['ticker'] for r in avoid[:5])}"]
+
+        send_telegram_reply(chat_id, '\n'.join(lines))
+    except Exception as e:
+        send_telegram_reply(chat_id, f"❌ Dashboard error: {e}")
+
 
 @telegram_bp.route('/telegram/updates', methods=['POST'])
 def telegram_webhook():

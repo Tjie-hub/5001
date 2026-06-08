@@ -368,3 +368,20 @@ def api_dashboard_watchlist():
     except Exception as e:
         return jsonify({'error': str(e), 'date': query_date,
                         'buy_watch': [], 'avoid': [], 'wait': []}), 500
+
+
+@flow_bp.route('/api/dashboard/checklist', methods=['GET'])
+def api_dashboard_checklist():
+    """Pipeline health checklist — which daily jobs completed today.
+
+    Query params:
+      date — YYYY-MM-DD (default today)
+
+    Returns: date, items, last_scan, all_done.
+    """
+    from engine.dashboard import get_dashboard_checklist
+    query_date = request.args.get('date', str(date.today()))
+    try:
+        return jsonify(get_dashboard_checklist(DB_PATH, query_date))
+    except Exception as e:
+        return jsonify({'error': str(e), 'date': query_date, 'items': [], 'all_done': False}), 500

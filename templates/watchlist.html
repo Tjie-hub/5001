@@ -174,9 +174,59 @@ td { padding: 7px 11px; border-bottom: 1px solid var(--border-soft); font-varian
 /* Empty */
 .empty { padding: 28px; text-align: center; color: var(--text-mute); font-size: 12px; }
 
+/* Checklist */
+.chk-list { display: flex; flex-direction: column; gap: 6px; }
+.chk-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; background: var(--surface); }
+.chk-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.chk-done  .chk-icon { background: var(--green-dim); color: var(--green); }
+.chk-pend  .chk-icon { background: var(--gray-dim); color: var(--text-mute); }
+.chk-name  { font-size: 12px; font-weight: 500; flex: 1; }
+.chk-detail{ font-size: 10px; color: var(--text-mute); font-family: var(--mono); }
+
+/* Agent feed */
+.feed-wrap { max-height: 320px; overflow-y: auto; }
+.feed-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border-soft); }
+.feed-row:last-child { border-bottom: none; }
+.feed-time { font-size: 10px; color: var(--text-mute); font-family: var(--mono); white-space: nowrap; flex-shrink: 0; }
+.feed-body { flex: 1; min-width: 0; }
+.feed-ticker { font-weight: 600; color: var(--indigo-2); font-size: 12px; }
+.feed-strat  { font-size: 10px; color: var(--text-mute); }
+.feed-rationale { font-size: 10px; color: var(--text-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.verdict { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.3px; }
+.verdict-BUY    { background: var(--green-dim); color: var(--green); }
+.verdict-SELL   { background: var(--red-dim);   color: var(--red);   }
+.verdict-HOLD   { background: var(--gray-dim);  color: var(--text-dim); }
+.verdict-SKIP   { background: var(--gray-dim);  color: var(--text-mute); }
+.verdict-WATCH  { background: var(--blue-dim);  color: var(--blue);  }
+.verdict-REJECT { background: var(--amber-dim); color: var(--amber); }
+.conf-bar { height: 3px; border-radius: 2px; background: var(--surface-3); margin-top: 4px; }
+.conf-fill { height: 100%; border-radius: 2px; background: var(--indigo); }
+
+/* VPIN sparkline panel */
+.vpin-grid { display: grid; grid-template-columns: 180px 1fr; gap: 16px; align-items: center; }
+.spark-wrap { overflow: hidden; }
+
+/* Signal count badges */
+.sig-counts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.sig-badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+
+/* D15 — Mobile responsive */
 @media (max-width: 900px) {
   .row3, .row2 { grid-template-columns: 1fr; }
-  .risk-layout { grid-template-columns: 1fr; }
+  .risk-layout  { grid-template-columns: 1fr; }
+  .vpin-grid    { grid-template-columns: 1fr; }
+  .gauge-score  { font-size: 36px; }
+  .comp-grid    { grid-template-columns: repeat(2, 1fr); }
+  td, th        { padding: 5px 8px; }
+  .feed-rationale { display: none; }
+  table         { font-size: 11px; }
+}
+@media (max-width: 600px) {
+  .dashboard    { padding: 8px; gap: 8px; }
+  .comp-grid    { grid-template-columns: 1fr 1fr; }
+  .topbar nav a { padding: 4px 6px; font-size: 11px; }
+  .levels       { gap: 3px; }
+  .risk-layout  { gap: 10px; }
 }
 </style>
 </head>
@@ -274,6 +324,61 @@ td { padding: 7px 11px; border-bottom: 1px solid var(--border-soft); font-varian
   <div class="panel">
     <div class="ph"><span class="pt">Sector Heatmap</span></div>
     <div class="pb0"><div class="twrap hm" id="sectorGrid"><div class="empty">Loading…</div></div></div>
+  </div>
+
+  <!-- D13: VPIN Toxicity Panel -->
+  <div class="panel">
+    <div class="ph">
+      <span class="pt">VPIN Toxicity — 30d Trend</span>
+      <span id="vpinLabel" style="font-size:10px;margin-left:auto;color:var(--text-mute)"></span>
+    </div>
+    <div class="pb">
+      <div class="vpin-grid">
+        <div>
+          <div class="sg">
+            <div class="st"><div class="sl">Avg VPIN</div><div class="sv" id="vpinAvg">—</div></div>
+            <div class="st"><div class="sl">&gt;0.8</div><div class="sv" id="vpinPct08">—</div></div>
+            <div class="st"><div class="sl">&gt;0.95</div><div class="sv" id="vpinPct095">—</div></div>
+            <div class="st"><div class="sl">Status</div><div class="sv" id="vpinStatus" style="font-size:11px">—</div></div>
+          </div>
+        </div>
+        <div class="spark-wrap">
+          <div style="font-size:10px;color:var(--text-mute);margin-bottom:4px">avg_vpin (30 days) — threshold 0.8</div>
+          <svg id="vpinSpark" width="100%" height="64" style="display:block"></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D12 + D11: Checklist + Agent Feed -->
+  <div class="row2">
+
+    <!-- D12: Checklist Panel -->
+    <div class="panel">
+      <div class="ph">
+        <span class="pt">Daily Checklist</span>
+        <span id="chkStatus" style="font-size:10px;margin-left:auto"></span>
+      </div>
+      <div class="pb">
+        <div class="chk-list" id="chkList"><div class="empty">Loading…</div></div>
+        <div style="margin-top:10px;font-size:10px;color:var(--text-mute)">
+          Last scan: <span id="chkLastScan" style="font-family:var(--mono)">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D11: Agent Live Feed -->
+    <div class="panel">
+      <div class="ph">
+        <span class="pt">Agent Live Feed</span>
+        <div class="sig-counts" id="sigCounts" style="margin:0;margin-left:8px"></div>
+        <span id="sigTotal" style="font-size:10px;color:var(--text-mute);margin-left:auto"></span>
+      </div>
+      <div class="pb0">
+        <div class="feed-wrap" id="agentFeed"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+
   </div>
 
 </div><!-- /dashboard -->
@@ -654,6 +759,111 @@ function renderSectors(sectors) {
   `;
 }
 
+// ── D13: VPIN Sparkline ───────────────────────────────────────────────────────
+function renderVPINPanel(summary, series) {
+  const v = summary || {};
+  const color = { GREEN:'var(--green)', YELLOW:'var(--amber)', ORANGE:'var(--orange)',
+                  RED:'var(--red)', CRITICAL:'var(--red)' }[v.label] || 'var(--text-dim)';
+
+  document.getElementById('vpinAvg').textContent    = fmt(v.avg_vpin, 3);
+  document.getElementById('vpinAvg').style.color    = (v.avg_vpin||0) > 0.8 ? 'var(--red)' : '';
+  document.getElementById('vpinPct08').textContent  = fmt(v.pct_above_08) + '%';
+  document.getElementById('vpinPct095').textContent = fmt(v.pct_above_095) + '%';
+  document.getElementById('vpinStatus').textContent = v.label || '—';
+  document.getElementById('vpinStatus').style.color = color;
+  document.getElementById('vpinLabel').textContent  = v.label || '';
+
+  // Sparkline
+  const svg = document.getElementById('vpinSpark');
+  if (!series || series.length < 2) { svg.innerHTML = '<text x="8" y="32" fill="#5c6890" font-size="11">Insufficient data</text>'; return; }
+
+  const vals = series.map(s => s.avg_vpin !== undefined ? s.avg_vpin : s.summary?.avg_vpin || 0);
+  const sorted = [...series].sort((a,b) => (a.date||'') < (b.date||'') ? -1 : 1);
+  const sortedVals = sorted.map(s => typeof s.avg_vpin === 'number' ? s.avg_vpin : 0);
+
+  const W = 600, H = 64, pad = 4;
+  const mn = 0, mx = Math.max(1, ...sortedVals);
+  const xs = sortedVals.map((_, i) => pad + i / (sortedVals.length - 1) * (W - 2 * pad));
+  const ys = sortedVals.map(v2 => H - pad - (v2 - mn) / (mx - mn) * (H - 2 * pad));
+  const pts = xs.map((x, i) => `${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+
+  // 0.8 threshold line
+  const threshY = (H - pad - (0.8 - mn) / (mx - mn) * (H - 2 * pad)).toFixed(1);
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = `
+    <line x1="${pad}" y1="${threshY}" x2="${W-pad}" y2="${threshY}" stroke="rgba(239,68,68,0.35)" stroke-width="1" stroke-dasharray="4,3"/>
+    <text x="${W-pad+2}" y="${threshY}" fill="rgba(239,68,68,0.6)" font-size="9" dominant-baseline="middle">0.8</text>
+    <polyline points="${pts}" fill="none" stroke="var(--indigo-2)" stroke-width="1.5" stroke-linejoin="round"/>
+    ${sortedVals.map((v2, i) => v2 >= 0.8
+      ? `<circle cx="${xs[i].toFixed(1)}" cy="${ys[i].toFixed(1)}" r="3" fill="var(--red)" opacity="0.7"/>`
+      : '').join('')}
+  `;
+}
+
+// ── D12: Checklist ────────────────────────────────────────────────────────────
+function renderChecklist(d) {
+  const items = d.items || [];
+  const allDone = d.all_done;
+
+  document.getElementById('chkStatus').textContent = allDone ? '✓ All clear' : '⚠ Pending';
+  document.getElementById('chkStatus').style.color = allDone ? 'var(--green)' : 'var(--amber)';
+  document.getElementById('chkLastScan').textContent = d.last_scan ? d.last_scan.slice(0,16) : '—';
+
+  document.getElementById('chkList').innerHTML = items.map(item => `
+    <div class="chk-item ${item.done ? 'chk-done' : 'chk-pend'}">
+      <div class="chk-icon">${item.done ? '✓' : '○'}</div>
+      <span class="chk-name">${item.name}</span>
+      <span class="chk-detail">${item.detail}</span>
+    </div>
+  `).join('');
+}
+
+// ── D11: Agent Live Feed ──────────────────────────────────────────────────────
+const VERDICT_COLOR = {
+  BUY:'green', SELL:'red', HOLD:'neu', SKIP:'neu', WATCH:'blue', REJECT:'amb'
+};
+
+function renderAgentFeed(d) {
+  const decisions = d.recent_decisions || [];
+  const today     = d.signals_today || {};
+
+  // Signal count badges
+  const byVerdict = today.by_verdict || {};
+  const counts = Object.entries(byVerdict).map(([v, n]) =>
+    `<span class="sig-badge verdict-${v}" style="background:var(--${VERDICT_COLOR[v]||'gray'}-dim,var(--gray-dim));color:var(--${VERDICT_COLOR[v]||'text'}-dim,var(--text-dim))">${v} ${n}</span>`
+  ).join('');
+  document.getElementById('sigCounts').innerHTML = counts;
+  document.getElementById('sigTotal').textContent = today.total ? `${today.total} today` : '';
+
+  if (decisions.length === 0) {
+    document.getElementById('agentFeed').innerHTML = '<div class="empty">No agent decisions yet</div>';
+    return;
+  }
+
+  document.getElementById('agentFeed').innerHTML = decisions.map(r => {
+    const t = (r.scan_time||'').slice(11,16);
+    const conf = r.confidence !== null ? Math.round((r.confidence||0) * 100) : null;
+    const verdict = (r.decision||'').toUpperCase();
+    const size = r.size_hint ? ` · ${typeof r.size_hint === 'number' ? r.size_hint.toFixed(1)+'×' : r.size_hint}` : '';
+    const rationale = (r.rationale||'').slice(0, 120);
+    return `
+      <div class="feed-row">
+        <span class="feed-time">${t}</span>
+        <div class="feed-body">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span class="feed-ticker">${r.ticker||'—'}</span>
+            <span class="verdict verdict-${verdict}">${verdict}</span>
+            <span class="feed-strat">${r.strategy||''}${size}</span>
+            ${conf !== null ? `<span style="font-size:10px;color:var(--text-mute)">${conf}%</span>` : ''}
+          </div>
+          ${rationale ? `<div class="feed-rationale">${rationale}</div>` : ''}
+          ${conf !== null ? `<div class="conf-bar"><div class="conf-fill" style="width:${conf}%"></div></div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
 // ── Load & refresh ────────────────────────────────────────────────────────────
 let timer = 60, countdown = null;
 
@@ -670,10 +880,13 @@ async function loadAll() {
   if (countdown) clearInterval(countdown);
 
   try {
-    const [risk, wl, sec] = await Promise.all([
+    const [risk, wl, sec, signals, chk, vpinRes] = await Promise.all([
       fetch('/api/dashboard/risk').then(r=>r.json()),
       fetch('/api/dashboard/watchlist').then(r=>r.json()),
       fetch('/api/sector/rotation').then(r=>r.json()),
+      fetch('/api/dashboard/signals').then(r=>r.json()),
+      fetch('/api/dashboard/checklist').then(r=>r.json()),
+      fetch('/api/market/vpin?series=1').then(r=>r.json()),
     ]);
     renderRisk(risk);
     renderIHSG(risk);
@@ -681,6 +894,9 @@ async function loadAll() {
     renderFlow(risk);
     renderWatchlist(wl);
     renderSectors(sec.sectors || sec);
+    renderAgentFeed(signals);
+    renderChecklist(chk);
+    renderVPINPanel(vpinRes.summary || {}, vpinRes.series || []);
     timer = 60;
   } catch(e) {
     console.error(e);

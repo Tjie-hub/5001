@@ -214,11 +214,11 @@ Replace scattered monitoring (Telegram + DB queries + macro_idx.md reports) with
 
 ### 🟡 Nice-to-Have
 
-- [ ] **D11. Agent-Firm Live Feed** — Scrollable log of agent decisions with verdict badges. ~1.5 hr.
-- [ ] **D12. Checklist Panel** — Today's auto-checklist: data fetched ✓, signals scanned ✓, trades reviewed ✓. ~1 hr.
-- [ ] **D13. VPIN Toxicity Panel** — Gauge + % tickers above threshold + 30-day trend sparkline. ~1.5 hr.
-- [ ] **D14. Telegram `/dashboard` command** — Compact summary: risk tier + IHSG + top 3 BUY WATCH. ~1 hr.
-- [ ] **D15. Mobile-responsive** — Stack panels vertical, tables → cards, touch-friendly. ~1.5 hr.
+- [x] **D11. Agent-Firm Live Feed** — Scrollable log of agent decisions with verdict badges. ~1.5 hr.
+- [x] **D12. Checklist Panel** — Today's auto-checklist: data fetched ✓, signals scanned ✓, trades reviewed ✓. ~1 hr.
+- [x] **D13. VPIN Toxicity Panel** — Gauge + % tickers above threshold + 30-day trend sparkline. ~1.5 hr.
+- [x] **D14. Telegram `/dashboard` command** — Compact summary: risk tier + IHSG + top 3 BUY WATCH. ~1 hr.
+- [x] **D15. Mobile-responsive** — Stack panels vertical, tables → cards, touch-friendly. ~1.5 hr.
 
 ### 📋 Dependencies
 

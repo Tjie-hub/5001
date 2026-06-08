@@ -303,6 +303,51 @@ def get_watchlist(db_path: str, date: str) -> dict[str, Any]:
         conn.close()
 
 
+# ── Checklist ─────────────────────────────────────────────────────────────────
+
+def get_dashboard_checklist(db_path: str, date: str) -> dict[str, Any]:
+    """Return today's operational checklist — which pipeline steps ran.
+
+    Returns:
+        date, items (list of {name, done, count, detail}),
+        last_scan, all_done (OHLCV + signals both present).
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        def _count(sql: str, *params) -> int:
+            try:
+                return conn.execute(sql, params).fetchone()[0] or 0
+            except Exception:
+                return 0
+
+        ohlcv_count   = _count("SELECT COUNT(DISTINCT ticker) FROM ohlcv WHERE date=?", date)
+        flow_count    = _count("SELECT COUNT(*) FROM broker_flow WHERE trade_date=?", date)
+        signals_count = _count("SELECT COUNT(*) FROM scheduled_signals WHERE date(scan_time)=?", date)
+        agent_count   = _count("SELECT COUNT(*) FROM agent_decisions WHERE date(scan_time)=?", date)
+
+        try:
+            last_scan = conn.execute(
+                "SELECT MAX(scan_time) FROM scheduled_signals"
+            ).fetchone()[0]
+        except Exception:
+            last_scan = None
+
+        items = [
+            {'name': 'OHLCV data',      'done': ohlcv_count > 0,   'count': ohlcv_count,   'detail': f'{ohlcv_count} tickers'},
+            {'name': 'Broker flow',     'done': flow_count > 0,    'count': flow_count,    'detail': f'{flow_count} records'},
+            {'name': 'Signals scanned', 'done': signals_count > 0, 'count': signals_count, 'detail': f'{signals_count} signals'},
+            {'name': 'Agent reviews',   'done': agent_count > 0,   'count': agent_count,   'detail': f'{agent_count} decisions'},
+        ]
+        return {
+            'date': date,
+            'items': items,
+            'last_scan': last_scan,
+            'all_done': ohlcv_count > 0 and signals_count > 0,
+        }
+    finally:
+        conn.close()
+
+
 # ── Empty fallbacks ───────────────────────────────────────────────────────────
 
 def _empty_vpin():
