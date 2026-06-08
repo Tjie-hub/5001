@@ -421,3 +421,65 @@ def api_liquidity_ticker(ticker):
         return jsonify(get_liquidity_value(DB_PATH, ticker.upper(), query_date))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@flow_bp.route('/api/ticker/<ticker>/ohlcv/<freq>', methods=['GET'])
+def api_ticker_ohlcv_freq(ticker, freq):
+    """R15 — Multi-timeframe OHLCV aggregation.
+
+    Path params:
+      ticker — stock ticker (e.g. BBCA)
+      freq   — 'D' (daily), 'W' (weekly), 'ME' (monthly)
+
+    Query params:
+      limit  — max bars to return (default 52 for weekly, 24 for monthly, 250 daily)
+      start  — YYYY-MM-DD start date filter (optional)
+      end    — YYYY-MM-DD end date filter (optional)
+    """
+    import sqlite3
+    import pandas as pd
+    from engine.timeframe import aggregate_ohlcv, ohlcv_to_records, SUPPORTED_FREQS
+
+    freq_upper = freq.upper()
+    # Normalise 'M' → 'ME' for pandas 2.2+, but accept both from users
+    if freq_upper not in SUPPORTED_FREQS and freq_upper != 'M':
+        return jsonify({'error': f'freq must be one of D, W, M, ME'}), 400
+
+    defaults = {'D': 250, 'W': 52, 'ME': 24, 'M': 24}
+    limit = int(request.args.get('limit', defaults.get(freq_upper, 52)))
+    start = request.args.get('start')
+    end   = request.args.get('end')
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        sql  = "SELECT date, open, high, low, close, volume FROM ohlcv WHERE ticker=? ORDER BY date ASC"
+        df   = pd.read_sql_query(sql, conn, params=(ticker.upper(),))
+        conn.close()
+
+        if df.empty:
+            return jsonify({'ticker': ticker.upper(), 'freq': freq_upper,
+                            'bars': [], 'count': 0})
+
+        df['date'] = pd.to_datetime(df['date'])
+        df = df.set_index('date')
+
+        agg = aggregate_ohlcv(df, freq_upper)
+
+        if start:
+            agg = agg[agg.index >= pd.Timestamp(start)]
+        if end:
+            agg = agg[agg.index <= pd.Timestamp(end)]
+
+        # Most-recent bars last, then apply limit
+        agg = agg.tail(limit)
+
+        return jsonify({
+            'ticker': ticker.upper(),
+            'freq':   freq_upper,
+            'bars':   ohlcv_to_records(agg),
+            'count':  len(agg),
+        })
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

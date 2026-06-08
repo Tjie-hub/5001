@@ -11,31 +11,59 @@ import pandas as pd
 import sqlite3
 from config import DB_PATH
 
+# ── R16: Session-level indicator cache ───────────────────────────────────────
+# Keyed by (func_name, id(df), *params). Safe within a scan session because
+# ohlcv_map holds strong references to each df — id() stability guaranteed.
+# Call clear_indicator_cache() at the start of each scan to prevent stale hits.
+_INDICATOR_CACHE: dict = {}
+
+
+def clear_indicator_cache() -> int:
+    """Flush the session cache. Returns number of entries cleared."""
+    n = len(_INDICATOR_CACHE)
+    _INDICATOR_CACHE.clear()
+    return n
+
 
 def calc_atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
     # SMA-ATR intentional: less lag than Wilder's EWM, appropriate for position sizing.
     # Wilder's EWM is reserved for calc_adx where the formula requires it.
+    _key = ('atr', id(df), period)
+    if _key in _INDICATOR_CACHE:
+        return _INDICATOR_CACHE[_key]
     h, l, c = df['high'], df['low'], df['close']
     tr = pd.concat([h - l, (h - c.shift()).abs(), (l - c.shift()).abs()], axis=1).max(axis=1)
-    return tr.rolling(period, min_periods=period).mean()
+    result = tr.rolling(period, min_periods=period).mean()
+    _INDICATOR_CACHE[_key] = result
+    return result
 
 calc_atr.warmup_bars = lambda period=14: period
 
 
 def calc_vwap(df: pd.DataFrame, window: int = 60) -> pd.Series:
+    _key = ('vwap', id(df), window)
+    if _key in _INDICATOR_CACHE:
+        return _INDICATOR_CACHE[_key]
     tp = (df['high'] + df['low'] + df['close']) / 3
     cum_tp_vol = (tp * df['volume']).rolling(window, min_periods=window).sum()
     cum_vol    = df['volume'].rolling(window, min_periods=window).sum()
     # Zero-volume windows (trading halts) yield NaN — callers should handle.
-    return cum_tp_vol / cum_vol
+    result = cum_tp_vol / cum_vol
+    _INDICATOR_CACHE[_key] = result
+    return result
 
 calc_vwap.warmup_bars = lambda window=60: window
 
 
 def calc_vol_ratio(df: pd.DataFrame, period: int = 20) -> pd.Series:
     # Rolling mean includes current bar, dampening VR spikes ~10%. Intentional conservatism.
+    _key = ('vol_ratio', id(df), period)
+    if _key in _INDICATOR_CACHE:
+        return _INDICATOR_CACHE[_key]
     avg = df['volume'].rolling(period, min_periods=1).mean()
-    return df['volume'] / avg
+    result = df['volume'] / avg
+    _INDICATOR_CACHE[_key] = result
+    return result
 
 calc_vol_ratio.warmup_bars = lambda period=20: period
 # warmup_bars reflects full-window accuracy, not first-value availability.
@@ -131,8 +159,13 @@ calc_close_vs_ma.warmup_bars = lambda period=20: period
 
 def calc_weekly_trend(df: pd.DataFrame) -> tuple:
     """Returns (passes: bool, reason: str). Soft-pass if < 100 bars."""
+    _key = ('weekly_trend', id(df))
+    if _key in _INDICATOR_CACHE:
+        return _INDICATOR_CACHE[_key]
     if len(df) < 100:
-        return True, 'W:insufficient_data'
+        result = (True, 'W:insufficient_data')
+        _INDICATOR_CACHE[_key] = result
+        return result
     try:
         dfc = df.copy()
         if not isinstance(dfc.index, pd.DatetimeIndex):
@@ -140,17 +173,24 @@ def calc_weekly_trend(df: pd.DataFrame) -> tuple:
             dfc = dfc.set_index('date')
         weekly = dfc['close'].resample('W').last().dropna()
         if len(weekly) < 22:
-            return True, 'W:insufficient_weeks'
+            result = (True, 'W:insufficient_weeks')
+            _INDICATOR_CACHE[_key] = result
+            return result
         wma20    = weekly.rolling(20).mean()
         cur_c    = weekly.iloc[-1]
         cur_ma20 = wma20.iloc[-1]
         if pd.isna(cur_ma20) or cur_ma20 <= 0:
-            return True, 'W:ma20_nan'
+            result = (True, 'W:ma20_nan')
+            _INDICATOR_CACHE[_key] = result
+            return result
         ma20_5w  = wma20.iloc[-6] if len(wma20) >= 6 else wma20.iloc[0]
         slope    = float((cur_ma20 - ma20_5w) / ma20_5w * 100) if ma20_5w > 0 else 0.0
         if cur_c >= cur_ma20 and slope >= -1.0:
-            return True,  f'W:OK c={cur_c:.0f}≥ma20={cur_ma20:.0f} slope={slope:+.1f}%'
-        return False, f'W:FAIL c={cur_c:.0f}<ma20={cur_ma20:.0f} slope={slope:+.1f}%'
+            result = (True,  f'W:OK c={cur_c:.0f}≥ma20={cur_ma20:.0f} slope={slope:+.1f}%')
+        else:
+            result = (False, f'W:FAIL c={cur_c:.0f}<ma20={cur_ma20:.0f} slope={slope:+.1f}%')
+        _INDICATOR_CACHE[_key] = result
+        return result
     except Exception as e:
         return True, f'W:error({e})'
 

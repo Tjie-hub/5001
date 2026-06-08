@@ -268,6 +268,11 @@ def scan_momentum_signals():
 
     signals = []
     ohlcv_map = _load_ohlcv_bulk()
+
+    # R16: flush indicator cache at scan start
+    from engine.indicators import clear_indicator_cache as _clear_ic_single
+    _clear_ic_single()
+
     ihsg_df = ohlcv_map.get("IHSG")
     # Regime classifier — import sekali, cache per ticker per hari
     from engine.regime_filter import RegimeClassifier
@@ -1000,6 +1005,12 @@ def scheduled_multi_strategy_scan():
     # Get all tickers
     tickers = get_all_tickers()
     ohlcv_map = _load_ohlcv_bulk()
+
+    # R16: flush indicator cache so each scan session recomputes from fresh data
+    from engine.indicators import clear_indicator_cache as _clear_ic
+    _cleared = _clear_ic()
+    if _cleared:
+        logging.debug(f"[scan] indicator cache cleared ({_cleared} stale entries)")
 
     # Step 1: Adaptive strategy selection per ticker
     intersection_results = []

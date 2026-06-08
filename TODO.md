@@ -252,5 +252,5 @@ _Source: user request (2026-05-27). Pre-entry signal gate: restrict trades to hi
 
 - [x] R13. Structured logging (JSON, correlation IDs, log rotation)
 - [x] R14. Prometheus metrics endpoint (scan duration, signals generated, open trades)
-- [ ] R15. Multi-timeframe support (hourly/daily/weekly bar aggregation — like QC TradeBarConsolidator)
-- [ ] R16. Strategy warmup caching (avoid recomputing indicators every scan; cache per ticker per day)
+- [x] R15. Multi-timeframe support (hourly/daily/weekly bar aggregation — like QC TradeBarConsolidator)
+- [x] R16. Strategy warmup caching (avoid recomputing indicators every scan; cache per ticker per day)
