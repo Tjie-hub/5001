@@ -1,7 +1,10 @@
 import os
 import logging
+import sqlite3
+import time
+import uuid
 from dotenv import load_dotenv
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request, g
 from scheduler import start_scheduler
 from routes_backtest_multi import backtest_multi_bp
 from screener.routes import screener_bp
@@ -12,9 +15,11 @@ from routes.flow import flow_bp
 from routes.screener import screener_main_bp
 from routes.backtest import backtest_bp
 from routes.portfolio import portfolio_bp
+from utils.logging_config import setup_logging
 import threading
 
 load_dotenv()
+setup_logging()
 DB_PATH = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
 
 app = Flask(__name__)
@@ -27,12 +32,25 @@ app.register_blueprint(screener_main_bp)
 app.register_blueprint(backtest_bp)
 app.register_blueprint(portfolio_bp)
 
+@app.before_request
+def _assign_correlation_id():
+    g.correlation_id = request.headers.get('X-Request-ID') or str(uuid.uuid4())
+    g.request_start  = time.monotonic()
+
+
 @app.after_request
 def set_security_headers(response):
-    response.headers["X-Frame-Options"] = "SAMEORIGIN"
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers['X-Frame-Options']       = 'SAMEORIGIN'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-XSS-Protection']      = '1; mode=block'
+    response.headers['Referrer-Policy']        = 'strict-origin-when-cross-origin'
+    response.headers['X-Request-ID']           = g.get('correlation_id', '')
+    duration_ms = round((time.monotonic() - g.get('request_start', time.monotonic())) * 1000)
+    logging.getLogger('request').info(
+        '%s %s %d %dms', request.method, request.path,
+        response.status_code, duration_ms,
+        extra={'status': response.status_code, 'duration_ms': duration_ms},
+    )
     return response
 
 
@@ -78,6 +96,74 @@ def portfolio_page():
 @app.route("/dashboard")
 def dashboard_page():
     return render_template("watchlist.html")
+
+
+@app.route("/metrics")
+def prometheus_metrics():
+    """R14 — Prometheus-format metrics endpoint.
+
+    Exposes operational counters/gauges queryable by Prometheus or any
+    compatible scraper. No external library required.
+    """
+    lines: list[str] = []
+
+    def _gauge(name: str, desc: str, value, labels: dict | None = None) -> None:
+        label_str = ''
+        if labels:
+            parts = ','.join(f'{k}="{v}"' for k, v in labels.items())
+            label_str = '{' + parts + '}'
+        lines.append(f'# HELP {name} {desc}')
+        lines.append(f'# TYPE {name} gauge')
+        lines.append(f'{name}{label_str} {value if value is not None else "NaN"}')
+
+    def _q(conn, sql, *params):
+        try:
+            row = conn.execute(sql, params).fetchone()
+            return row[0] if row else None
+        except Exception:
+            return None
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        from datetime import date as _date
+        import datetime as _dt
+        today = str(_date.today())
+
+        open_trades     = _q(conn, "SELECT COUNT(*) FROM paper_trades WHERE status='OPEN'") or 0
+        signals_today   = _q(conn, "SELECT COUNT(*) FROM scheduled_signals WHERE date(scan_time)=?", today) or 0
+        buy_signals     = _q(conn, "SELECT COUNT(*) FROM scheduled_signals WHERE date(scan_time)=? AND signal_direction='BUY'", today) or 0
+        sell_signals    = _q(conn, "SELECT COUNT(*) FROM scheduled_signals WHERE date(scan_time)=? AND signal_direction='SELL'", today) or 0
+        agent_decisions = _q(conn, "SELECT COUNT(*) FROM agent_decisions WHERE date(scan_time)=?", today) or 0
+        ohlcv_tickers   = _q(conn, "SELECT COUNT(DISTINCT ticker) FROM ohlcv WHERE date=?", today) or 0
+        risk_score      = _q(conn, "SELECT risk_score FROM market_risk_log ORDER BY computed_at DESC LIMIT 1")
+        avg_vpin        = _q(conn, "SELECT AVG(vpin) FROM daily_screen WHERE date=? AND vpin IS NOT NULL", today)
+
+        last_scan_str   = _q(conn, "SELECT MAX(scan_time) FROM scheduled_signals")
+        last_scan_ts    = None
+        if last_scan_str:
+            try:
+                last_scan_ts = int(_dt.datetime.fromisoformat(last_scan_str).timestamp())
+            except ValueError:
+                pass
+
+        conn.close()
+    except Exception as e:
+        logging.warning('metrics db error: %s', e)
+        return f'# metrics db error: {e}\n', 500, {'Content-Type': 'text/plain; charset=utf-8'}
+
+    _gauge('idx_open_trades',          'Number of currently open paper trades', open_trades)
+    _gauge('idx_signals_today_total',  'Total signals generated today', signals_today)
+    _gauge('idx_signals_today_buy',    'BUY-direction signals today', buy_signals)
+    _gauge('idx_signals_today_sell',   'SELL-direction signals today', sell_signals)
+    _gauge('idx_agent_decisions_today','Agent decisions made today', agent_decisions)
+    _gauge('idx_ohlcv_tickers_today',  'Tickers with OHLCV data for today', ohlcv_tickers)
+    _gauge('idx_market_risk_score',    'Latest composite market risk score (0-100)', risk_score)
+    _gauge('idx_avg_vpin_today',       'Average VPIN across all tickers today', avg_vpin)
+    if last_scan_ts:
+        _gauge('idx_last_scan_timestamp', 'Unix timestamp of last scheduled scan', int(last_scan_ts))
+
+    body = '\n'.join(lines) + '\n'
+    return body, 200, {'Content-Type': 'text/plain; charset=utf-8; version=0.0.4'}
 
 
 if __name__ == "__main__":
