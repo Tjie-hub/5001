@@ -385,3 +385,39 @@ def api_dashboard_checklist():
         return jsonify(get_dashboard_checklist(DB_PATH, query_date))
     except Exception as e:
         return jsonify({'error': str(e), 'date': query_date, 'items': [], 'all_done': False}), 500
+
+
+@flow_bp.route('/api/liquidity/impact', methods=['GET'])
+def api_liquidity_impact():
+    """L4 — Backtest impact analysis: liquidity+value gate vs. no gate.
+
+    Query params:
+      date — YYYY-MM-DD reference date for ADV calculation (default today)
+
+    Returns: total_tickers, buckets (liquid_valued/liquid_only/value_only/neither)
+             each with count, avg_win_rate, avg_return; plus thresholds used.
+    """
+    from engine.liquidity import compute_filter_impact
+    query_date = request.args.get('date', str(date.today()))
+    try:
+        return jsonify(compute_filter_impact(DB_PATH, query_date))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@flow_bp.route('/api/liquidity/ticker/<ticker>', methods=['GET'])
+def api_liquidity_ticker(ticker):
+    """L5 — Per-ticker liquidity + value metrics.
+
+    Query params:
+      date — YYYY-MM-DD (default today)
+
+    Returns: adv_30d, market_cap, value_score, is_liquid, has_value,
+             pe_ttm, pbv, div_yield, ev_ebitda, peg_ratio.
+    """
+    from engine.liquidity import get_liquidity_value
+    query_date = request.args.get('date', str(date.today()))
+    try:
+        return jsonify(get_liquidity_value(DB_PATH, ticker.upper(), query_date))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

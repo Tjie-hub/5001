@@ -251,6 +251,7 @@ def scan_momentum_signals():
     _f_rs          = int(_cfg.get("filter_rs",          1))
     _f_regime      = int(_cfg.get("filter_regime",      1))
     _f_vpin        = int(_cfg.get("filter_vpin",        0))
+    _f_liquidity   = int(_cfg.get("filter_liquidity",   0))
 
     tickers = get_all_tickers()
     wf_map = {}
@@ -294,6 +295,22 @@ def scan_momentum_signals():
                 continue
         else:
             flow_reason = "fundamental filter OFF"
+
+        # Liquidity + value filter (L3) — blocks illiquid or bottom-quartile tickers
+        if _f_liquidity:
+            from engine.liquidity import passes_liquidity_gate as _liq_gate, passes_value_gate as _val_gate
+            _liq_conn = sqlite3.connect(DB_PATH)
+            try:
+                _liq_ok, _liq_reason = _liq_gate(_liq_conn, ticker, _today_str)
+                _val_ok, _val_reason = _val_gate(_liq_conn, ticker)
+            finally:
+                _liq_conn.close()
+            if not _liq_ok:
+                logging.debug(f"[scan_momentum] {ticker} blocked by liquidity: {_liq_reason}")
+                continue
+            if not _val_ok:
+                logging.debug(f"[scan_momentum] {ticker} blocked by value: {_val_reason}")
+                continue
 
         # Sector rotation filter — skip UNDERWEIGHT sectors
         # Routed through _sector_verdict so SECTORS_APP_MODE can layer

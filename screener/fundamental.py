@@ -34,6 +34,7 @@ COLUMNS = {
     "div_yield":     ("k", "div_yield",    "float",    "Dividend Yield (%)"),
     "rev_growth":    ("k", "rev_growth",   "float",    "Revenue Growth (%)"),
     "earn_growth":   ("k", "earn_growth",  "float",    "Earnings Growth (%)"),
+    "market_cap":    ("k", "market_cap",   "float",    "Market Cap (IDR)"),
     "flow_score":    ("f", "composite_score","int",    "Flow Score"),
     "flow_verdict":  ("f", "verdict",       "text",    "Flow Verdict"),
     "smart_money":   ("f", "smart_money",   "text",    "Smart Money"),
