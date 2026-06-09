@@ -273,6 +273,13 @@ def scan_momentum_signals():
     from engine.indicators import clear_indicator_cache as _clear_ic_single
     _clear_ic_single()
 
+    # Phase 3: flush agent firm market context cache
+    try:
+        from engine.agent_firm.firm import reset_market_ctx as _reset_mctx_single
+        _reset_mctx_single()
+    except Exception:
+        pass
+
     ihsg_df = ohlcv_map.get("IHSG")
     # Regime classifier — import sekali, cache per ticker per hari
     from engine.regime_filter import RegimeClassifier
@@ -704,7 +711,7 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
             )
             for r in intersection_results[:20]
         ]
-        _decisions = _firm.evaluate(_candidates)
+        _decisions = _firm.evaluate_staged(_candidates)
         print(f"[{time_str}] Agent firm: {len(_decisions)} evaluated"
               f" ({sum(1 for d in _decisions if d.decision == 'approve')} approved"
               f", {sum(1 for d in _decisions if d.decision == 'veto')} vetoed)")
@@ -753,7 +760,7 @@ def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
             )
             for t in list(watchlist_tickers)[:20]
         ]
-        _decisions = _firm.evaluate(_candidates)
+        _decisions = _firm.evaluate_staged(_candidates)
         _approved = [d for d in _decisions if d.decision == "approve"]
         if not _approved:
             return
@@ -1011,6 +1018,13 @@ def scheduled_multi_strategy_scan():
     _cleared = _clear_ic()
     if _cleared:
         logging.debug(f"[scan] indicator cache cleared ({_cleared} stale entries)")
+
+    # Phase 3: flush agent firm market context cache (open_trades/IHSG fetched once per scan)
+    try:
+        from engine.agent_firm.firm import reset_market_ctx as _reset_mctx
+        _reset_mctx()
+    except Exception:
+        pass
 
     # Step 1: Adaptive strategy selection per ticker
     intersection_results = []

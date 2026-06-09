@@ -13,7 +13,7 @@ import scheduler.scanner  # noqa: F401 — pre-load to keep in sys.modules acros
 
 def _mock_firm_module(decisions):
     m = MagicMock()
-    m.evaluate = MagicMock(return_value=decisions)
+    m.evaluate_staged = MagicMock(return_value=decisions)
     return m
 
 

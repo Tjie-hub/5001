@@ -48,7 +48,7 @@ def _make_signal(ticker, score=1.0):
 
 def _mock_firm_module(decisions_fn):
     m = MagicMock()
-    m.evaluate = MagicMock(side_effect=decisions_fn)
+    m.evaluate_staged = MagicMock(side_effect=decisions_fn)
     return m
 
 

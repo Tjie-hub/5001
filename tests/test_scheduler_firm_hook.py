@@ -24,7 +24,7 @@ def _make_result(ticker, flow_score, confirmed=False):
 
 def _mock_firm_module(evaluate_fn):
     m = MagicMock()
-    m.evaluate = MagicMock(side_effect=evaluate_fn)
+    m.evaluate_staged = MagicMock(side_effect=evaluate_fn)
     return m
 
 

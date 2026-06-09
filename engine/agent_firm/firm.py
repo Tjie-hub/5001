@@ -1,8 +1,10 @@
 """Agent firm orchestrator. Phase 2: LangGraph DAG, 7 agents.
 
 Public API:
-  evaluate(candidates) -> list[AgentDecision]      # sync, scheduler-facing
-  evaluate_async(candidates, client) -> ...        # async, for tests
+  evaluate(candidates) -> list[AgentDecision]            # sync, full pipeline
+  evaluate_staged(candidates) -> list[AgentDecision]     # sync, 2-stage pre-scan (Phase 3)
+  evaluate_async(candidates, client) -> ...              # async, for tests
+  reset_market_ctx() -> None                             # call at scan start to flush cache
 """
 
 import asyncio
@@ -19,12 +21,40 @@ from .tools import news_lookup
 from .tools.sqlite_query import query
 
 
+# ── Shared market context cache (Phase 3.2) ───────────────────────────────────
+# Reset once per scan batch via reset_market_ctx(); avoids N redundant queries
+# for open_trades and IHSG data when evaluating N candidates.
+
+_market_ctx: dict | None = None
+
+
+def reset_market_ctx() -> None:
+    """Call at the start of each scan batch to flush the per-scan market cache."""
+    global _market_ctx
+    _market_ctx = None
+
+
 # ── Context pre-fetch ────────────────────────────────────────────────────────
 
 def _build_context(state: AgentState) -> dict:
+    global _market_ctx
     import data.db as _db
     db_path = str(_db.DB_PATH)
     ticker = state["candidate"].ticker
+
+    if _market_ctx is None:
+        _market_ctx = {
+            "open_trades": query(
+                db_path,
+                "SELECT ticker, entry_price, lots, tp_price, sl_price "
+                "FROM paper_trades WHERE status='OPEN'",
+            ),
+            "ihsg": query(
+                db_path,
+                "SELECT date, close FROM ohlcv WHERE ticker='IHSG' ORDER BY date DESC LIMIT 20",
+            ),
+        }
+
     context = {
         "ohlcv": query(
             db_path,
@@ -66,11 +96,8 @@ def _build_context(state: AgentState) -> dict:
             (ticker,),
         ),
         "news_mentions": news_lookup.lookup(db_path, ticker, days=7),
-        "open_trades": query(
-            db_path,
-            "SELECT ticker, entry_price, lots, tp_price, sl_price "
-            "FROM paper_trades WHERE status='OPEN'",
-        ),
+        "open_trades": _market_ctx["open_trades"],
+        "ihsg": _market_ctx["ihsg"],
     }
     return {"db_path": db_path, "context": context}
 
@@ -245,6 +272,106 @@ def evaluate(
             for c in candidates
         ]
     return asyncio.run(evaluate_async(candidates, client))
+
+
+# ── Phase 3: Two-stage pre-scan ───────────────────────────────────────────────
+
+async def _run_stage1(
+    candidate: SignalCandidate,
+    client: DeepSeekClient,
+) -> tuple[AgentResult, AgentResult]:
+    """Stage 1: technical + regime in parallel (~$0.004 per candidate)."""
+    import data.db as _db
+    db_path = str(_db.DB_PATH)
+    ctx = {
+        "wf_scores": query(
+            db_path,
+            "SELECT strategy, consistency_pct, avg_return_pct, avg_sharpe, weighted_score "
+            "FROM wf_scores WHERE ticker=? ORDER BY weighted_score DESC",
+            (candidate.ticker,),
+        ),
+        "sector_data": query(
+            db_path,
+            "SELECT date, signal, vpin_label, vol_ratio FROM daily_screen "
+            "WHERE ticker=? ORDER BY date DESC LIMIT 10",
+            (candidate.ticker,),
+        ),
+    }
+    return await asyncio.gather(
+        technical.run(candidate, client, db_path),
+        regime.run(candidate, client, ctx),
+    )
+
+
+def _is_both_bearish(tech: AgentResult, reg: AgentResult) -> bool:
+    tech_bearish = tech.status == "ok" and (tech.output or {}).get("verdict") == "BEARISH"
+    reg_bearish = reg.status == "ok" and (reg.output or {}).get("regime_call") == "BEAR"
+    return tech_bearish and reg_bearish
+
+
+async def evaluate_staged_async(
+    candidates: list[SignalCandidate],
+    client: DeepSeekClient | None = None,
+) -> list[AgentDecision]:
+    """
+    Two-stage evaluation:
+      Stage 1 (cheap): technical + regime per candidate in parallel.
+      Both bearish → auto-VETO (saves ~$0.011 per candidate).
+      At least one bullish → Stage 2: full 7-agent pipeline.
+    In bear markets, 60-80% of candidates fail Stage 1.
+    """
+    if client is None:
+        client = DeepSeekClient()
+
+    stage1_pairs = await asyncio.gather(*[_run_stage1(c, client) for c in candidates])
+
+    vetoed: list[AgentDecision] = []
+    stage2_candidates: list[SignalCandidate] = []
+
+    for candidate, (tech_r, reg_r) in zip(candidates, stage1_pairs):
+        if _is_both_bearish(tech_r, reg_r):
+            tokens_in = tech_r.tokens_in + reg_r.tokens_in
+            tokens_out = tech_r.tokens_out + reg_r.tokens_out
+            decision = AgentDecision(
+                ticker=candidate.ticker,
+                strategy=candidate.strategy,
+                scan_time=candidate.scan_time,
+                quant_score=candidate.score,
+                decision="veto",
+                rationale="Stage 1 pre-screen: technical BEARISH + regime BEAR",
+                traces=[tech_r, reg_r],
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
+                cost_usd=DeepSeekClient._calc_cost(tokens_in, tokens_out),
+                duration_s=0.0,
+            )
+            vetoed.append(decision)
+            _persist(decision)
+        else:
+            stage2_candidates.append(candidate)
+
+    stage2_decisions = await evaluate_async(stage2_candidates, client) if stage2_candidates else []
+    return vetoed + stage2_decisions
+
+
+def evaluate_staged(
+    candidates: list[SignalCandidate],
+    client: DeepSeekClient | None = None,
+) -> list[AgentDecision]:
+    """Sync wrapper for evaluate_staged_async. Use instead of evaluate() in bear markets."""
+    if not config.is_active():
+        return [
+            AgentDecision(
+                ticker=c.ticker,
+                strategy=c.strategy,
+                scan_time=c.scan_time,
+                quant_score=c.score,
+                decision="bypassed",
+                rationale="Firm disabled",
+            )
+            for c in candidates
+        ]
+    return asyncio.run(evaluate_staged_async(candidates, client))
 
 
 # ── Persistence ───────────────────────────────────────────────────────────────

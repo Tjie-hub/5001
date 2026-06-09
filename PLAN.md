@@ -1,7 +1,7 @@
 # PLAN.md — Agent Firm Optimization
 
 **Date**: 2026-06-04
-**Status**: Phase 1 SHIPPED (2026-06-05, commit 3616700) — Phase 2 ready to start
+**Status**: Phase 1 SHIPPED (2026-06-05, commit 3616700) | Phase 2 SHIPPED (2026-06-05, commit 03e5d2b) | Phase 3 SHIPPED (2026-06-09)
 **Source**: Full agent firm audit (session 2026-06-04) + macro_idx.md crash analysis
 
 ---
@@ -178,7 +178,7 @@ if result['alert_type'] in ('R2_ADX_TOPPING', 'R4_DISTRIBUTION'):
 
 ---
 
-## Phase 3: Cost Optimization (2 hours)
+## ~~Phase 3: Cost Optimization~~ ✅ SHIPPED (2026-06-09)
 
 **Goal**: Cut per-signal cost 60-80% without losing decision quality.
 
