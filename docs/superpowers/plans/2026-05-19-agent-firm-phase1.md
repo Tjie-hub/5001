@@ -65,7 +65,7 @@
 **Files:**
 - Modify: `requirements.txt`
 
-- [ ] **Step 1: Read current requirements**
+- [x] **Step 1: Read current requirements**
 
 ```bash
 cat requirements.txt
@@ -73,7 +73,7 @@ cat requirements.txt
 
 Expected: shows existing deps (Flask, pandas, etc.)
 
-- [ ] **Step 2: Append new deps**
+- [x] **Step 2: Append new deps**
 
 Append these lines to `requirements.txt`:
 
@@ -86,7 +86,7 @@ pytest-asyncio>=0.23.0
 httpx>=0.27.0
 ```
 
-- [ ] **Step 3: Install into venv**
+- [x] **Step 3: Install into venv**
 
 ```bash
 venv/bin/pip install -r requirements.txt
@@ -94,7 +94,7 @@ venv/bin/pip install -r requirements.txt
 
 Expected: installs the new packages; no errors.
 
-- [ ] **Step 4: Verify imports**
+- [x] **Step 4: Verify imports**
 
 ```bash
 venv/bin/python -c "import openai, pydantic, respx, pytest, httpx; print('ok')"
@@ -102,7 +102,7 @@ venv/bin/python -c "import openai, pydantic, respx, pytest, httpx; print('ok')"
 
 Expected output: `ok`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add requirements.txt
@@ -121,14 +121,14 @@ git commit -m "chore(agent_firm): add openai, pydantic, respx, pytest deps"
 - Create: `tests/agent_firm/__init__.py`
 - Create: `tests/agent_firm/fixtures/.gitkeep`
 
-- [ ] **Step 1: Make directories**
+- [x] **Step 1: Make directories**
 
 ```bash
 mkdir -p engine/agent_firm/agents engine/agent_firm/tools engine/agent_firm/prompts \
          tests/agent_firm/fixtures
 ```
 
-- [ ] **Step 2: Create `engine/agent_firm/__init__.py`**
+- [x] **Step 2: Create `engine/agent_firm/__init__.py`**
 
 ```python
 """Agent firm: multi-agent LLM veto-gate for IDX signals.
@@ -143,7 +143,7 @@ from .firm import evaluate
 __all__ = ["SignalCandidate", "AgentDecision", "AgentResult", "evaluate"]
 ```
 
-- [ ] **Step 3: Create empty `__init__.py` files**
+- [x] **Step 3: Create empty `__init__.py` files**
 
 `engine/agent_firm/agents/__init__.py`:
 ```python
@@ -157,13 +157,13 @@ __all__ = ["SignalCandidate", "AgentDecision", "AgentResult", "evaluate"]
 ```python
 ```
 
-- [ ] **Step 4: Add `.gitkeep` files for empty dirs**
+- [x] **Step 4: Add `.gitkeep` files for empty dirs**
 
 ```bash
 touch engine/agent_firm/prompts/.gitkeep tests/agent_firm/fixtures/.gitkeep
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Note: `__init__.py` re-exports schemas and firm.evaluate which don't exist yet — this is expected. We're committing the skeleton; later tasks fill it in. The import lines will be removed temporarily in step 6.
 
@@ -192,7 +192,7 @@ git commit -m "feat(agent_firm): module skeleton"
 - Create: `engine/agent_firm/schemas.py`
 - Test: `tests/agent_firm/test_schemas.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/agent_firm/test_schemas.py`:
 
@@ -252,7 +252,7 @@ def test_agent_decision_rejects_invalid_decision():
         )
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_schemas.py -v
@@ -260,7 +260,7 @@ venv/bin/pytest tests/agent_firm/test_schemas.py -v
 
 Expected: ImportError or ModuleNotFoundError on `engine.agent_firm.schemas`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Create `engine/agent_firm/schemas.py`:
 
@@ -318,7 +318,7 @@ class AgentDecision(BaseModel):
     duration_s: float = 0.0
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_schemas.py -v
@@ -326,7 +326,7 @@ venv/bin/pytest tests/agent_firm/test_schemas.py -v
 
 Expected: 5 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/agent_firm/schemas.py tests/agent_firm/test_schemas.py
@@ -341,7 +341,7 @@ git commit -m "feat(agent_firm): pydantic schemas for candidate/result/decision"
 - Create: `engine/agent_firm/config.py`
 - Test: `tests/agent_firm/test_config.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/agent_firm/test_config.py`:
 
@@ -392,7 +392,7 @@ def test_pricing_defaults(monkeypatch):
     assert cfg.MODEL_ID == "deepseek-v4-pro"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_config.py -v
@@ -400,7 +400,7 @@ venv/bin/pytest tests/agent_firm/test_config.py -v
 
 Expected: ModuleNotFoundError on `engine.agent_firm.config`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Create `engine/agent_firm/config.py`:
 
@@ -443,7 +443,7 @@ def is_active() -> bool:
     return True
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_config.py -v
@@ -451,7 +451,7 @@ venv/bin/pytest tests/agent_firm/test_config.py -v
 
 Expected: 4 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/agent_firm/config.py tests/agent_firm/test_config.py
@@ -467,7 +467,7 @@ git commit -m "feat(agent_firm): config module with env-driven kill switches"
 - Test: extend `tests/agent_firm/conftest.py` (created here) and `tests/agent_firm/test_schemas.py` (no — keep separate)
 - Test: `tests/agent_firm/test_migration.py`
 
-- [ ] **Step 1: Read current `data/db.py`**
+- [x] **Step 1: Read current `data/db.py`**
 
 ```bash
 venv/bin/python -c "from data import db; print(dir(db))"
@@ -475,7 +475,7 @@ venv/bin/python -c "from data import db; print(dir(db))"
 
 Note location of `init_db()` and `get_db()`.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `tests/agent_firm/conftest.py`:
 
@@ -543,7 +543,7 @@ def test_indexes_exist(tmp_db):
     assert "idx_agent_traces_decision" in idx
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_migration.py -v
@@ -551,7 +551,7 @@ venv/bin/pytest tests/agent_firm/test_migration.py -v
 
 Expected: failures because tables don't exist yet.
 
-- [ ] **Step 4: Modify `data/db.py` to add the migration**
+- [x] **Step 4: Modify `data/db.py` to add the migration**
 
 Add this function to `data/db.py` (append after existing functions, before any `if __name__` block):
 
@@ -622,7 +622,7 @@ Concrete change: at the end of `init_db()` (after `conn.commit()` and `conn.clos
     init_agent_firm_tables()
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_migration.py -v
@@ -630,7 +630,7 @@ venv/bin/pytest tests/agent_firm/test_migration.py -v
 
 Expected: 4 passed.
 
-- [ ] **Step 6: Apply migration to dev DB**
+- [x] **Step 6: Apply migration to dev DB**
 
 ```bash
 venv/bin/python -c "from data.db import init_agent_firm_tables; init_agent_firm_tables(); print('migrated')"
@@ -650,7 +650,7 @@ agent_decisions
 agent_traces
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add data/db.py tests/agent_firm/conftest.py tests/agent_firm/test_migration.py
@@ -665,7 +665,7 @@ git commit -m "feat(agent_firm): SQLite migration for agent_decisions, agent_tra
 - Create: `engine/agent_firm/tools/sqlite_query.py`
 - Test: `tests/agent_firm/test_sqlite_query.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/agent_firm/test_sqlite_query.py`:
 
@@ -728,7 +728,7 @@ def test_query_with_no_params(tmp_path):
     assert rows[0]["c"] == 3
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_sqlite_query.py -v
@@ -736,7 +736,7 @@ venv/bin/pytest tests/agent_firm/test_sqlite_query.py -v
 
 Expected: ModuleNotFoundError on `engine.agent_firm.tools.sqlite_query`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Create `engine/agent_firm/tools/sqlite_query.py`:
 
@@ -766,7 +766,7 @@ def query(db_path: Path | str, sql: str, params: tuple = ()) -> list[dict[str, A
         conn.close()
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_sqlite_query.py -v
@@ -774,7 +774,7 @@ venv/bin/pytest tests/agent_firm/test_sqlite_query.py -v
 
 Expected: 4 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/agent_firm/tools/sqlite_query.py tests/agent_firm/test_sqlite_query.py
@@ -789,7 +789,7 @@ git commit -m "feat(agent_firm): sqlite_query read-only tool"
 - Create: `engine/agent_firm/client.py`
 - Test: `tests/agent_firm/test_client.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/agent_firm/test_client.py`:
 
@@ -863,7 +863,7 @@ asyncio_mode = auto
 testpaths = tests
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_client.py -v
@@ -871,7 +871,7 @@ venv/bin/pytest tests/agent_firm/test_client.py -v
 
 Expected: ModuleNotFoundError on `engine.agent_firm.client`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Create `engine/agent_firm/client.py`:
 
@@ -950,7 +950,7 @@ class DeepSeekClient:
         )
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_client.py -v
@@ -958,7 +958,7 @@ venv/bin/pytest tests/agent_firm/test_client.py -v
 
 Expected: 4 passed (test_chat_returns_content_tokens_cost, test_chat_retries_on_500_then_succeeds, test_chat_raises_after_retries_exhausted, test_cost_calc_zero_when_no_tokens).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/agent_firm/client.py tests/agent_firm/test_client.py pytest.ini
@@ -974,7 +974,7 @@ git commit -m "feat(agent_firm): DeepSeek async client with cost tracking and re
 - Create: `engine/agent_firm/agents/technical.py`
 - Test: `tests/agent_firm/test_technical.py`
 
-- [ ] **Step 1: Write the prompt file**
+- [x] **Step 1: Write the prompt file**
 
 Create `engine/agent_firm/prompts/technical_v1.md`:
 
@@ -1006,7 +1006,7 @@ Conviction guidance:
 If OHLCV data is insufficient (fewer than 10 bars), return verdict NEUTRAL with conviction 0.0 and reasoning "insufficient data".
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `tests/agent_firm/test_technical.py`:
 
@@ -1099,7 +1099,7 @@ async def test_technical_returns_failed_on_client_exception(tmp_path):
     assert "network down" in result.error
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_technical.py -v
@@ -1107,7 +1107,7 @@ venv/bin/pytest tests/agent_firm/test_technical.py -v
 
 Expected: ModuleNotFoundError on `engine.agent_firm.agents.technical`.
 
-- [ ] **Step 4: Write minimal implementation**
+- [x] **Step 4: Write minimal implementation**
 
 Create `engine/agent_firm/agents/technical.py`:
 
@@ -1175,7 +1175,7 @@ async def run(
         )
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_technical.py -v
@@ -1183,7 +1183,7 @@ venv/bin/pytest tests/agent_firm/test_technical.py -v
 
 Expected: 3 passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add engine/agent_firm/prompts/technical_v1.md \
@@ -1201,7 +1201,7 @@ git commit -m "feat(agent_firm): Technical Analyst agent (v1 prompt + run loop)"
 - Create: `engine/agent_firm/agents/risk.py`
 - Test: `tests/agent_firm/test_risk.py`
 
-- [ ] **Step 1: Write the prompt file**
+- [x] **Step 1: Write the prompt file**
 
 Create `engine/agent_firm/prompts/risk_v1.md`:
 
@@ -1240,7 +1240,7 @@ Confidence guidance:
 If a required analyst report is missing (status="failed"), treat it as neutral and lower your confidence accordingly.
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `tests/agent_firm/test_risk.py`:
 
@@ -1355,7 +1355,7 @@ async def test_risk_propagates_analyst_failures_in_payload():
     assert result.output["confidence"] == 0.3
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_risk.py -v
@@ -1363,7 +1363,7 @@ venv/bin/pytest tests/agent_firm/test_risk.py -v
 
 Expected: ModuleNotFoundError on `engine.agent_firm.agents.risk`.
 
-- [ ] **Step 4: Write minimal implementation**
+- [x] **Step 4: Write minimal implementation**
 
 Create `engine/agent_firm/agents/risk.py`:
 
@@ -1423,7 +1423,7 @@ async def run(
         )
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_risk.py -v
@@ -1431,7 +1431,7 @@ venv/bin/pytest tests/agent_firm/test_risk.py -v
 
 Expected: 4 passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add engine/agent_firm/prompts/risk_v1.md \
@@ -1449,7 +1449,7 @@ git commit -m "feat(agent_firm): Risk Manager agent (v1 prompt + run loop)"
 - Modify: `engine/agent_firm/__init__.py` (re-add re-exports)
 - Test: `tests/agent_firm/test_firm.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/agent_firm/test_firm.py`:
 
@@ -1579,7 +1579,7 @@ async def test_evaluate_async_marks_degraded_when_risk_fails(monkeypatch, tmp_pa
     assert "degraded" in (decisions[0].rationale or "").lower()
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_firm.py -v
@@ -1587,7 +1587,7 @@ venv/bin/pytest tests/agent_firm/test_firm.py -v
 
 Expected: ModuleNotFoundError on `engine.agent_firm.firm`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Create `engine/agent_firm/firm.py`:
 
@@ -1722,7 +1722,7 @@ def _persist(decision: AgentDecision) -> int:
         conn.close()
 ```
 
-- [ ] **Step 4: Re-add re-exports to `engine/agent_firm/__init__.py`**
+- [x] **Step 4: Re-add re-exports to `engine/agent_firm/__init__.py`**
 
 Replace the body of `engine/agent_firm/__init__.py` with:
 
@@ -1739,7 +1739,7 @@ from .schemas import AgentDecision, AgentResult, SignalCandidate
 __all__ = ["SignalCandidate", "AgentDecision", "AgentResult", "evaluate"]
 ```
 
-- [ ] **Step 5: Run all firm tests**
+- [x] **Step 5: Run all firm tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/ -v
@@ -1747,7 +1747,7 @@ venv/bin/pytest tests/agent_firm/ -v
 
 Expected: all previous tests still pass; new `test_firm.py` shows 3 passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add engine/agent_firm/firm.py engine/agent_firm/__init__.py tests/agent_firm/test_firm.py
@@ -1763,7 +1763,7 @@ git commit -m "feat(agent_firm): firm orchestrator with evaluate(), evaluate_asy
 
 This task hits the real DeepSeek API. It needs `DEEPSEEK_API_KEY` set in the environment.
 
-- [ ] **Step 1: Write the smoke probe**
+- [x] **Step 1: Write the smoke probe**
 
 Create `engine/agent_firm/smoke.py`:
 
@@ -1843,7 +1843,7 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 2: Run smoke probe disabled (verify SKIP path)**
+- [x] **Step 2: Run smoke probe disabled (verify SKIP path)**
 
 ```bash
 AGENT_FIRM_ENABLED=false venv/bin/python -m engine.agent_firm.smoke
@@ -1856,7 +1856,7 @@ SKIP: agent firm not active (FIRM_ENABLED=false or kill switch set)
 exit code: 0
 ```
 
-- [ ] **Step 3: Run smoke probe enabled (live DeepSeek call)**
+- [x] **Step 3: Run smoke probe enabled (live DeepSeek call)**
 
 First confirm `DEEPSEEK_API_KEY` is set in your shell:
 
@@ -1888,7 +1888,7 @@ exit code: 0
 
 If decision is `degraded` or duration is high, investigate before continuing.
 
-- [ ] **Step 4: Verify SQLite persistence**
+- [x] **Step 4: Verify SQLite persistence**
 
 ```bash
 sqlite3 "data/walkforward.db" "SELECT ticker, decision, confidence, cost_usd, duration_s FROM agent_decisions ORDER BY id DESC LIMIT 1;"
@@ -1897,7 +1897,7 @@ sqlite3 "data/walkforward.db" "SELECT role, prompt_version, tokens_in, tokens_ou
 
 Expected: one row in `agent_decisions` with `decision='approve'` (or `veto`), and two rows in `agent_traces` (`technical` and `risk`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/agent_firm/smoke.py
@@ -1912,7 +1912,7 @@ git commit -m "feat(agent_firm): tier 4 smoke probe for live DeepSeek heartbeat"
 - Modify: `app.py` (add Flask endpoint)
 - Modify: `templates/backtest_multi.html` (add badge div + fetch script)
 
-- [ ] **Step 1: Inspect current dashboard template head**
+- [x] **Step 1: Inspect current dashboard template head**
 
 ```bash
 head -50 templates/backtest_multi.html
@@ -1920,7 +1920,7 @@ head -50 templates/backtest_multi.html
 
 Note the location of the page `<body>` open tag and any existing top-of-page header element. Pick a stable anchor near the top of `<body>` where the badge can be inserted (look for a wrapping `<div class="container">` or similar).
 
-- [ ] **Step 2: Add the Flask endpoint**
+- [x] **Step 2: Add the Flask endpoint**
 
 Modify `app.py`. Find a stable region near the other `@app.route` declarations (e.g., next to `@app.route("/api/signals/today")`) and add:
 
@@ -1936,7 +1936,7 @@ def agent_status():
     })
 ```
 
-- [ ] **Step 3: Restart the Flask app & test the endpoint**
+- [x] **Step 3: Restart the Flask app & test the endpoint**
 
 ```bash
 curl -s http://localhost:5001/api/agent/status | python3 -m json.tool
@@ -1954,7 +1954,7 @@ Expected output:
 
 (If Flask is managed by systemd, restart with `sudo systemctl restart idx-walkforward-5001.service` first.)
 
-- [ ] **Step 4: Add badge HTML + script to template**
+- [x] **Step 4: Add badge HTML + script to template**
 
 Open `templates/backtest_multi.html`. Insert this fragment immediately AFTER the opening `<body>` tag (or after the existing top-of-page header if one exists):
 
@@ -1982,11 +1982,11 @@ Open `templates/backtest_multi.html`. Insert this fragment immediately AFTER the
 </script>
 ```
 
-- [ ] **Step 5: Reload dashboard in browser**
+- [x] **Step 5: Reload dashboard in browser**
 
 Visit `http://localhost:5001/` and confirm a small dark badge appears top-right reading `Agent firm: OFF`. Page layout should not shift.
 
-- [ ] **Step 6: Test enabled state**
+- [x] **Step 6: Test enabled state**
 
 ```bash
 AGENT_FIRM_ENABLED=true sudo systemctl restart idx-walkforward-5001.service
@@ -2003,7 +2003,7 @@ Reset to OFF before committing so production deploy stays neutral:
 sudo systemctl restart idx-walkforward-5001.service
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app.py templates/backtest_multi.html
@@ -2016,7 +2016,7 @@ git commit -m "feat(agent_firm): dashboard status badge + /api/agent/status endp
 
 ## Final Verification
 
-- [ ] **Run the full test suite**
+- [x] **Run the full test suite**
 
 ```bash
 venv/bin/pytest tests/agent_firm/ -v
@@ -2024,7 +2024,7 @@ venv/bin/pytest tests/agent_firm/ -v
 
 Expected: all tests pass. Suggested count: 25+ tests across 8 files.
 
-- [ ] **Confirm production behavior unchanged**
+- [x] **Confirm production behavior unchanged**
 
 ```bash
 AGENT_FIRM_ENABLED=false venv/bin/python -m engine.agent_firm.smoke
@@ -2032,7 +2032,7 @@ AGENT_FIRM_ENABLED=false venv/bin/python -m engine.agent_firm.smoke
 
 Expected: `SKIP` and exit 0 (firm doesn't run when disabled).
 
-- [ ] **Confirm DB schema is correct**
+- [x] **Confirm DB schema is correct**
 
 ```bash
 sqlite3 "data/walkforward.db" ".schema agent_decisions"
@@ -2041,11 +2041,11 @@ sqlite3 "data/walkforward.db" ".schema agent_traces"
 
 Expected: both schemas match the spec.
 
-- [ ] **Confirm dashboard shows OFF badge in browser**
+- [x] **Confirm dashboard shows OFF badge in browser**
 
 Visit `http://localhost:5001/` → small badge top-right reads `Agent firm: OFF`.
 
-- [ ] **Smoke test against live DeepSeek (one-time validation)**
+- [x] **Smoke test against live DeepSeek (one-time validation)**
 
 ```bash
 AGENT_FIRM_ENABLED=true venv/bin/python -m engine.agent_firm.smoke
@@ -2053,7 +2053,7 @@ AGENT_FIRM_ENABLED=true venv/bin/python -m engine.agent_firm.smoke
 
 Expected: `OK` and exit 0, with a row added to `agent_decisions` and 2 rows in `agent_traces`.
 
-- [ ] **Mark Phase 1 complete**
+- [x] **Mark Phase 1 complete**
 
 If all verifications pass, Phase 1 is done. Add a `git tag`:
 

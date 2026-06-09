@@ -41,7 +41,7 @@ scheduler/state.py   → (no imports)
 
 This module holds only the three module-level cache dicts that are currently defined at lines 308, 311, and 362 of `scheduler.py`. No logic — just the variables.
 
-- [ ] **Step 1: Create `scheduler/` directory and `state.py`**
+- [x] **Step 1: Create `scheduler/` directory and `state.py`**
 
 ```python
 # scheduler/state.py
@@ -51,7 +51,7 @@ _sector_scores_cache: tuple = (None, 0.0)
 _last_trades_state: dict = {}
 ```
 
-- [ ] **Step 2: Verify syntax**
+- [x] **Step 2: Verify syntax**
 
 ```bash
 python -c "from scheduler.state import _regime_clf_cache, _sector_scores_cache, _last_trades_state; print('state ok')"
@@ -61,7 +61,7 @@ Expected: `state ok`
 
 Note: This works because Python 3.3+ supports namespace packages — the `scheduler/` directory is importable even without `__init__.py`, as long as `scheduler.py` and `scheduler/__init__.py` are NOT both present yet. At this point only `scheduler.py` exists as the module. The `scheduler.state` sub-module is accessible regardless.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add scheduler/state.py
@@ -78,11 +78,11 @@ git commit -m "refactor(r5a): add scheduler/state.py — cache dicts"
 
 These four functions are used by both `scanner.py` and `jobs.py`. Copy them verbatim — no logic changes.
 
-- [ ] **Step 1: Read source lines to copy**
+- [x] **Step 1: Read source lines to copy**
 
 Read `scheduler.py` lines 1–116 to get the exact function bodies.
 
-- [ ] **Step 2: Create `scheduler/utils.py`**
+- [x] **Step 2: Create `scheduler/utils.py`**
 
 ```python
 # scheduler/utils.py
@@ -110,7 +110,7 @@ Then append, verbatim from `scheduler.py`:
 - `fetch_latest()` (lines 83–107)
 - `_load_ohlcv_bulk()` (lines 109–116)
 
-- [ ] **Step 3: Verify import**
+- [x] **Step 3: Verify import**
 
 ```bash
 python -c "from scheduler.utils import get_all_tickers, fetch_latest, _load_ohlcv_bulk, send_suspension_resume_alerts; print('utils ok')"
@@ -118,7 +118,7 @@ python -c "from scheduler.utils import get_all_tickers, fetch_latest, _load_ohlc
 
 Expected: `utils ok`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add scheduler/utils.py
@@ -135,11 +135,11 @@ git commit -m "refactor(r5a): add scheduler/utils.py — shared fetch helpers"
 
 These are all functions registered as APScheduler CronTrigger jobs in `start_scheduler()` that are NOT signal scanning or reporting.
 
-- [ ] **Step 1: Read source lines**
+- [x] **Step 1: Read source lines**
 
 Read `scheduler.py` to get exact bodies for: `refresh_wf_scores` (119–158), `run_flow_fetch` (691–729), `run_broker_flow_fetch` (732–765), `run_foreign_snapshot` (768–807), `run_news_fetch` (809–826), `_run_open_trade_monitor` (1194–1205), `_run_screener_intraday` (1208–1213), `_run_screener_eod` (1216–1221), `_refresh_backtest_cache` (1698–1743), `run_premover_eod` (1746–1757).
 
-- [ ] **Step 2: Create `scheduler/jobs.py`**
+- [x] **Step 2: Create `scheduler/jobs.py`**
 
 ```python
 # scheduler/jobs.py
@@ -171,7 +171,7 @@ Then append verbatim from `scheduler.py` (in order):
 - `_refresh_backtest_cache()` (lines 1698–1743)
 - `run_premover_eod()` (lines 1746–1757)
 
-- [ ] **Step 3: Verify import**
+- [x] **Step 3: Verify import**
 
 ```bash
 python -c "from scheduler.jobs import refresh_wf_scores, run_flow_fetch, run_broker_flow_fetch, run_foreign_snapshot, run_news_fetch, run_premover_eod; print('jobs ok')"
@@ -179,7 +179,7 @@ python -c "from scheduler.jobs import refresh_wf_scores, run_flow_fetch, run_bro
 
 Expected: `jobs ok`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add scheduler/jobs.py
@@ -196,7 +196,7 @@ git commit -m "refactor(r5a): add scheduler/jobs.py — data ingestion job funct
 
 This is the largest sub-module. It contains all signal scanning logic plus its private helpers.
 
-- [ ] **Step 1: Read source lines**
+- [x] **Step 1: Read source lines**
 
 Read `scheduler.py` to get exact bodies for:
 - `calc_votes(df)` (161–188)
@@ -215,7 +215,7 @@ Wait — re-read carefully: `daily_signal_scan` starts at line 584. `scan_moment
 - `scan_momentum_signals()` = lines 365–583
 - `daily_signal_scan()` = lines 584–688
 
-- [ ] **Step 2: Create `scheduler/scanner.py`**
+- [x] **Step 2: Create `scheduler/scanner.py`**
 
 ```python
 # scheduler/scanner.py
@@ -269,7 +269,7 @@ def _get_sector_scores_cached():
 
 Similarly, `scan_momentum_signals` uses `_regime_clf_cache` with direct dict mutation (`.get()`, `[]=`). Dict mutation works fine through the imported reference — no `global` needed since we're mutating the dict object, not rebinding the name. Leave those lines unchanged.
 
-- [ ] **Step 3: Verify import**
+- [x] **Step 3: Verify import**
 
 ```bash
 python -c "from scheduler.scanner import scan_momentum_signals, daily_signal_scan, scheduled_multi_strategy_scan, check_fundamental; print('scanner ok')"
@@ -277,7 +277,7 @@ python -c "from scheduler.scanner import scan_momentum_signals, daily_signal_sca
 
 Expected: `scanner ok`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add scheduler/scanner.py
@@ -292,11 +292,11 @@ git commit -m "refactor(r5a): add scheduler/scanner.py — signal scanning funct
 - Create: `scheduler/reports.py`
 - Reference: `scheduler.py` lines 1224–1695 (`daily_fetch_report`, `open_trades_status_report`, `flow_broker_report`, `auto_trade_status_report`)
 
-- [ ] **Step 1: Read source lines**
+- [x] **Step 1: Read source lines**
 
 Read `scheduler.py` lines 1224–1695 to get exact bodies for all four report functions.
 
-- [ ] **Step 2: Create `scheduler/reports.py`**
+- [x] **Step 2: Create `scheduler/reports.py`**
 
 ```python
 # scheduler/reports.py
@@ -382,7 +382,7 @@ _state._last_trades_state.update(current_state)
 
 Remove the `global _last_trades_state` line.
 
-- [ ] **Step 3: Verify import**
+- [x] **Step 3: Verify import**
 
 ```bash
 python -c "from scheduler.reports import daily_fetch_report, open_trades_status_report, flow_broker_report, auto_trade_status_report; print('reports ok')"
@@ -390,7 +390,7 @@ python -c "from scheduler.reports import daily_fetch_report, open_trades_status_
 
 Expected: `reports ok`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add scheduler/reports.py
@@ -416,11 +416,11 @@ This is the atomic switchover. When `scheduler/__init__.py` exists, Python's imp
 - `tests/test_suspension_alert.py` — `send_suspension_resume_alerts`
 - `tests/test_fundamental_refresh.py` — `_detect_price_shock, _load_stockbit_token, check_keystats_freshness`
 
-- [ ] **Step 1: Read `start_scheduler()` source**
+- [x] **Step 1: Read `start_scheduler()` source**
 
 Read `scheduler.py` lines 1760–1888 to get the exact function body and `__main__` block.
 
-- [ ] **Step 2: Create `scheduler/__init__.py`**
+- [x] **Step 2: Create `scheduler/__init__.py`**
 
 ```python
 # scheduler/__init__.py
@@ -487,13 +487,13 @@ Then append `start_scheduler()` verbatim from `scheduler.py` lines 1760–1871 (
 
 Then append the `__main__` block verbatim from lines 1873–1887.
 
-- [ ] **Step 3: Delete `scheduler.py`**
+- [x] **Step 3: Delete `scheduler.py`**
 
 ```bash
 git rm scheduler.py
 ```
 
-- [ ] **Step 4: Verify full test suite passes**
+- [x] **Step 4: Verify full test suite passes**
 
 ```bash
 venv/bin/pytest -x -q 2>&1 | tail -20
@@ -501,7 +501,7 @@ venv/bin/pytest -x -q 2>&1 | tail -20
 
 Expected: all tests pass (same count as before this refactor, currently 173).
 
-- [ ] **Step 5: Verify the app starts**
+- [x] **Step 5: Verify the app starts**
 
 ```bash
 python -c "from scheduler import start_scheduler; print('start_scheduler importable')"
@@ -509,7 +509,7 @@ python -c "from scheduler import start_scheduler; print('start_scheduler importa
 
 Expected: `start_scheduler importable`
 
-- [ ] **Step 6: Verify re-exports work for callers**
+- [x] **Step 6: Verify re-exports work for callers**
 
 ```bash
 python -c "
@@ -525,7 +525,7 @@ print('all re-exports ok')
 
 Expected: `all re-exports ok`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add scheduler/__init__.py

@@ -26,7 +26,7 @@
 - Modify: `engine/indicators.py`
 - Create: `tests/test_volume_context.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `tests/test_volume_context.py`:
 
@@ -121,7 +121,7 @@ def test_short_df_returns_normal():
     assert classify_volume_context(df) == "normal"
 ```
 
-- [ ] **Step 2: Run tests — expect FAIL**
+- [x] **Step 2: Run tests — expect FAIL**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_volume_context.py -v 2>&1 | tail -10
@@ -129,7 +129,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: `ImportError: cannot import name 'classify_volume_context'`
 
-- [ ] **Step 3: Implement `classify_volume_context()` at the end of `engine/indicators.py`**
+- [x] **Step 3: Implement `classify_volume_context()` at the end of `engine/indicators.py`**
 
 Append after the last line of `engine/indicators.py` (after `IndicatorCache.clear()`):
 
@@ -173,7 +173,7 @@ def classify_volume_context(df: pd.DataFrame) -> str:
     return "normal"
 ```
 
-- [ ] **Step 4: Run tests — expect PASS**
+- [x] **Step 4: Run tests — expect PASS**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_volume_context.py -v 2>&1 | tail -10
@@ -181,7 +181,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: 5 `PASSED`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/indicators.py tests/test_volume_context.py && git commit -m "feat(g4): add classify_volume_context() to engine/indicators.py"
@@ -195,7 +195,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/indicators
 - Modify: `engine/premover_detector.py` (scorers at lines ~218–229 and ~325–334)
 - Modify: `tests/test_volume_context.py` (add 1 integration test)
 
-- [ ] **Step 1: Write failing integration test**
+- [x] **Step 1: Write failing integration test**
 
 Append to `tests/test_volume_context.py`:
 
@@ -215,7 +215,7 @@ def test_score_ticker_reversal_includes_vol_context():
     )
 ```
 
-- [ ] **Step 2: Run test — expect FAIL**
+- [x] **Step 2: Run test — expect FAIL**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_volume_context.py::test_score_ticker_reversal_includes_vol_context -v 2>&1 | tail -8
@@ -223,7 +223,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: `AssertionError: score_ticker_reversal missing 'vol_context' key`
 
-- [ ] **Step 3: Add import + `vol_context` to `score_ticker_reversal()`**
+- [x] **Step 3: Add import + `vol_context` to `score_ticker_reversal()`**
 
 In `engine/premover_detector.py`, find the import block at the top. Add:
 
@@ -282,7 +282,7 @@ Then find `score_ticker()` return dict (around line 218). Change:
 
 to include `'vol_context': classify_volume_context(df),` — add it after `'close': ...` (wherever the return dict ends). Read the full return dict to confirm all keys, then add `vol_context` as the last entry.
 
-- [ ] **Step 4: Run integration test + full test file**
+- [x] **Step 4: Run integration test + full test file**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_volume_context.py -v 2>&1 | tail -12
@@ -290,7 +290,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: all 6 tests `PASSED`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/premover_detector.py tests/test_volume_context.py && git commit -m "feat(g4): add vol_context to score_ticker_reversal and score_ticker return dicts"
@@ -304,7 +304,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/premover_d
 - Modify: `engine/premover_detector.py` (`_init_table`, `_upsert_setup`, alert block)
 - Modify: `TODO.md`
 
-- [ ] **Step 1: Add `vol_context` column to `_init_table()` migration block**
+- [x] **Step 1: Add `vol_context` column to `_init_table()` migration block**
 
 In `engine/premover_detector.py`, find `_init_table()` around line 56. The migration block currently ends at line ~70:
 
@@ -331,7 +331,7 @@ Add `('vol_context', 'TEXT')` to this list:
     ]:
 ```
 
-- [ ] **Step 2: Add `vol_context` to REVERSAL_BREAKOUT INSERT in `_upsert_setup()`**
+- [x] **Step 2: Add `vol_context` to REVERSAL_BREAKOUT INSERT in `_upsert_setup()`**
 
 Find the REVERSAL_BREAKOUT INSERT block (around line 372):
 
@@ -391,7 +391,7 @@ Also update the CONTINUATION INSERT (around line 358) to include `vol_context`:
         ))
 ```
 
-- [ ] **Step 3: Add `vol_context` tag to Telegram alert (REVERSAL section)**
+- [x] **Step 3: Add `vol_context` tag to Telegram alert (REVERSAL section)**
 
 Find the REVERSAL alert loop (around line 450):
 
@@ -422,7 +422,7 @@ Change to:
                 msg += f"  Close: {s.get('close', 0):,.0f}\n\n"
 ```
 
-- [ ] **Step 4: Run full test suite**
+- [x] **Step 4: Run full test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/ -q --ignore=tests/agent_firm --ignore=tests/test_scheduler_firm_hook.py 2>&1 | tail -5
@@ -430,7 +430,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Verify on BRPT data**
+- [x] **Step 5: Verify on BRPT data**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -c "
@@ -452,11 +452,11 @@ print(f'Reasons: {result[\"reasons\"]}')
 
 Expected: `vol_context: crash_absorption` (BRPT is >20% below its 20d high after the crash).
 
-- [ ] **Step 6: Mark G4 done in `TODO.md`**
+- [x] **Step 6: Mark G4 done in `TODO.md`**
 
 Find:
 ```
-- [ ] **G4. VR spike context classifier**
+- [x] **G4. VR spike context classifier**
 ```
 
 Replace with:
@@ -464,7 +464,7 @@ Replace with:
 - [x] **G4. VR spike context classifier** — SHIPPED 2026-06-05. `classify_volume_context(df)` in `engine/indicators.py`: tags last-bar VR spike as crash_absorption/exhaustion_distribution/breakout_accumulation/normal. Added to `score_ticker_reversal()` + `score_ticker()` return dicts. Stored in `watchlist_premover.vol_context`. REVERSAL_BREAKOUT Telegram alerts show [CRASH_ABSORB]/[BRK_ACCUM]/[EXHAUST_DIST] tags. 6 unit tests.
 ```
 
-- [ ] **Step 7: Commit everything**
+- [x] **Step 7: Commit everything**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/premover_detector.py TODO.md docs/superpowers/plans/2026-06-05-g4-volume-context.md && git commit -m "feat(g4): surface vol_context in DB, upsert, and Telegram alerts — G4 complete"

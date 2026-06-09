@@ -29,7 +29,7 @@
 
 **Important:** `get_config()` at line 133 does `float(r["value"])` for ALL `paper_config` rows. Adding a string value like `"off"` would cause `ValueError`. We fix it defensively before adding any string keys.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `tests/test_premover_auto_trade.py`:
 
@@ -83,7 +83,7 @@ def test_get_config_survives_string_values(pt_db):
     assert cfg["capital"] == 50_000_000.0
 ```
 
-- [ ] **Step 2: Run tests — expect FAIL**
+- [x] **Step 2: Run tests — expect FAIL**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_premover_auto_trade.py -v 2>&1 | tail -10
@@ -91,7 +91,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: `ImportError: cannot import name 'get_premover_mode'`
 
-- [ ] **Step 3: Fix `get_config()` to handle non-numeric values**
+- [x] **Step 3: Fix `get_config()` to handle non-numeric values**
 
 In `paper_trade.py`, find `get_config()` at line 133. Change:
 
@@ -119,7 +119,7 @@ def get_config():
     return result
 ```
 
-- [ ] **Step 4: Add `premover_auto_log` table to `init_paper_table()`**
+- [x] **Step 4: Add `premover_auto_log` table to `init_paper_table()`**
 
 In `paper_trade.py`, find `init_paper_table()` (line 73). After the last `ADD COLUMN` migration block (around line 128), add:
 
@@ -146,7 +146,7 @@ Also add the default config key to the `configs` list in `init_paper_table()`. F
         ("auto_trade_from_premover", "off"),
 ```
 
-- [ ] **Step 5: Add `get_premover_mode()` and `set_premover_mode()`**
+- [x] **Step 5: Add `get_premover_mode()` and `set_premover_mode()`**
 
 Append to `paper_trade.py` after `_set_config()` (around line 480):
 
@@ -169,7 +169,7 @@ def set_premover_mode(mode: str) -> None:
     _set_config("auto_trade_from_premover", mode)
 ```
 
-- [ ] **Step 6: Run the 4 tests — expect PASS**
+- [x] **Step 6: Run the 4 tests — expect PASS**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_premover_auto_trade.py::test_default_premover_mode_is_off tests/test_premover_auto_trade.py::test_set_and_get_premover_mode tests/test_premover_auto_trade.py::test_set_premover_mode_invalid_raises tests/test_premover_auto_trade.py::test_get_config_survives_string_values -v 2>&1 | tail -10
@@ -177,7 +177,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: 4 `PASSED`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add paper_trade.py tests/test_premover_auto_trade.py && git commit -m "feat(g6): add premover mode helpers, premover_auto_log table, fix get_config for strings"
@@ -191,7 +191,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add paper_trade.py te
 - Modify: `paper_trade.py`
 - Modify: `tests/test_premover_auto_trade.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Append to `tests/test_premover_auto_trade.py`:
 
@@ -245,7 +245,7 @@ def test_evaluate_blocks_on_bear_regime(pt_db):
     assert "regime" in result["skip_reason"]
 ```
 
-- [ ] **Step 2: Run tests — expect FAIL**
+- [x] **Step 2: Run tests — expect FAIL**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_premover_auto_trade.py::test_evaluate_premover_trade_passes_all_gates tests/test_premover_auto_trade.py::test_evaluate_blocks_on_dd_circuit_breaker tests/test_premover_auto_trade.py::test_evaluate_blocks_on_bear_regime -v 2>&1 | tail -10
@@ -253,7 +253,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: `ImportError: cannot import name 'evaluate_premover_trade'`
 
-- [ ] **Step 3: Implement `evaluate_premover_trade` and `_log_premover_auto`**
+- [x] **Step 3: Implement `evaluate_premover_trade` and `_log_premover_auto`**
 
 Append to `paper_trade.py` after `set_premover_mode()`:
 
@@ -323,7 +323,7 @@ def _log_premover_auto(ticker: str, detected_at: str, pattern_type: str,
     conn.close()
 ```
 
-- [ ] **Step 4: Run the 3 new tests + all 4 prior tests**
+- [x] **Step 4: Run the 3 new tests + all 4 prior tests**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_premover_auto_trade.py -v 2>&1 | tail -15
@@ -331,7 +331,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: all 7 tests `PASSED`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add paper_trade.py tests/test_premover_auto_trade.py && git commit -m "feat(g6): add evaluate_premover_trade and _log_premover_auto"
@@ -344,7 +344,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add paper_trade.py te
 **Files:**
 - Modify: `scheduler/jobs.py`
 
-- [ ] **Step 1: Add `_send_premover_auto_summary()` helper to `scheduler/jobs.py`**
+- [x] **Step 1: Add `_send_premover_auto_summary()` helper to `scheduler/jobs.py`**
 
 In `scheduler/jobs.py`, before `run_premover_eod()` (around line 275), insert:
 
@@ -370,7 +370,7 @@ def _send_premover_auto_summary(rows: list, mode: str, send_fn) -> None:
 
 ```
 
-- [ ] **Step 2: Update `run_premover_eod()` to run evaluation after scan**
+- [x] **Step 2: Update `run_premover_eod()` to run evaluation after scan**
 
 Find `run_premover_eod()` (around line 275 in `scheduler/jobs.py`). Replace:
 
@@ -437,7 +437,7 @@ def run_premover_eod():
     _send_premover_auto_summary(summary_rows, mode, send_telegram)
 ```
 
-- [ ] **Step 3: Verify import works**
+- [x] **Step 3: Verify import works**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -c "from scheduler.jobs import run_premover_eod; print('OK')"
@@ -445,7 +445,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: `OK`
 
-- [ ] **Step 4: Run full test suite**
+- [x] **Step 4: Run full test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/ -q --ignore=tests/agent_firm --ignore=tests/test_scheduler_firm_hook.py 2>&1 | tail -5
@@ -453,7 +453,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add scheduler/jobs.py && git commit -m "feat(g6): update run_premover_eod with shadow/enforce auto-trade evaluation"
@@ -468,7 +468,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add scheduler/jobs.py
 - Modify: `tests/test_premover_auto_trade.py`
 - Modify: `TODO.md`
 
-- [ ] **Step 1: Write failing API test**
+- [x] **Step 1: Write failing API test**
 
 Append to `tests/test_premover_auto_trade.py`:
 
@@ -504,7 +504,7 @@ def test_api_premover_mode_get_and_post(pt_db, monkeypatch):
     assert resp.status_code == 400
 ```
 
-- [ ] **Step 2: Run test — expect FAIL**
+- [x] **Step 2: Run test — expect FAIL**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_premover_auto_trade.py::test_api_premover_mode_get_and_post -v 2>&1 | tail -10
@@ -512,7 +512,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: 404 or `AttributeError` — endpoint doesn't exist yet.
 
-- [ ] **Step 3: Add endpoints to `routes/backtest.py`**
+- [x] **Step 3: Add endpoints to `routes/backtest.py`**
 
 At the end of `routes/backtest.py`, append:
 
@@ -540,7 +540,7 @@ def api_premover_mode_set():
     return jsonify({'mode': get_premover_mode()})
 ```
 
-- [ ] **Step 4: Run all 8 tests**
+- [x] **Step 4: Run all 8 tests**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_premover_auto_trade.py -v 2>&1 | tail -15
@@ -548,7 +548,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: all 8 tests `PASSED`
 
-- [ ] **Step 5: Run full test suite**
+- [x] **Step 5: Run full test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/ -q --ignore=tests/agent_firm --ignore=tests/test_scheduler_firm_hook.py 2>&1 | tail -5
@@ -556,11 +556,11 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: all tests pass.
 
-- [ ] **Step 6: Mark G6 done in `TODO.md`**
+- [x] **Step 6: Mark G6 done in `TODO.md`**
 
 Find:
 ```
-- [ ] **G6. Premover → paper trade auto-execution**
+- [x] **G6. Premover → paper trade auto-execution**
 ```
 
 Replace with:
@@ -568,7 +568,7 @@ Replace with:
 - [x] **G6. Premover → paper trade auto-execution** — SHIPPED 2026-06-05. `get/set_premover_mode()`, `evaluate_premover_trade()`, `_log_premover_auto()` in `paper_trade.py`. `premover_auto_log` DB table. `run_premover_eod()` updated to evaluate + log + execute in shadow/enforce mode. Telegram shadow summary shows PASS/BLOCK+reason per setup. `GET/POST /api/paper/premover_mode`. Fixed `get_config()` to handle string values. 8 unit tests.
 ```
 
-- [ ] **Step 7: Commit everything**
+- [x] **Step 7: Commit everything**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add routes/backtest.py tests/test_premover_auto_trade.py TODO.md docs/superpowers/plans/2026-06-05-g6-premover-auto-trade.md && git commit -m "feat(g6): add /api/paper/premover_mode endpoints — G6 complete"

@@ -25,7 +25,7 @@
 - Create: `tests/test_fundamental_refresh.py`
 - Modify: `scheduler.py` (implementation only after tests are written)
 
-- [ ] **Step 1: Create the test file with failing tests**
+- [x] **Step 1: Create the test file with failing tests**
 
 ```python
 # tests/test_fundamental_refresh.py
@@ -93,7 +93,7 @@ class TestLoadStockbitToken:
         assert _load_stockbit_token(str(tf)) is None
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail (functions don't exist yet)**
+- [x] **Step 2: Run tests to confirm they fail (functions don't exist yet)**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -102,7 +102,7 @@ venv/bin/pytest tests/test_fundamental_refresh.py -v 2>&1 | head -30
 
 Expected: `ImportError: cannot import name '_detect_price_shock' from 'scheduler'`
 
-- [ ] **Step 3: Implement `_detect_price_shock` and `_load_stockbit_token` in `scheduler.py`**
+- [x] **Step 3: Implement `_detect_price_shock` and `_load_stockbit_token` in `scheduler.py`**
 
 Insert immediately after `check_fundamental()` ends (after line 181, before the `# Module-level regime classifier cache` comment):
 
@@ -167,7 +167,7 @@ def _load_stockbit_token(_token_file: str = None) -> str:
 _regime_clf_cache: dict = {}
 ```
 
-- [ ] **Step 4: Run Task 1 tests to confirm they pass**
+- [x] **Step 4: Run Task 1 tests to confirm they pass**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -176,7 +176,7 @@ venv/bin/pytest tests/test_fundamental_refresh.py::TestDetectPriceShock tests/te
 
 Expected: 10 tests PASSED
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -200,7 +200,7 @@ EOF
 - Modify: `tests/test_fundamental_refresh.py` (add new test class)
 - Modify: `scheduler.py` (add `check_keystats_freshness` after `_load_stockbit_token`)
 
-- [ ] **Step 1: Add failing tests for `check_keystats_freshness`**
+- [x] **Step 1: Add failing tests for `check_keystats_freshness`**
 
 Append to `tests/test_fundamental_refresh.py`:
 
@@ -278,7 +278,7 @@ class TestCheckKeystatsFreshness:
         assert "refreshed" in reason
 ```
 
-- [ ] **Step 2: Run new tests to confirm they fail**
+- [x] **Step 2: Run new tests to confirm they fail**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -287,7 +287,7 @@ venv/bin/pytest tests/test_fundamental_refresh.py::TestCheckKeystatsFreshness -v
 
 Expected: `ImportError: cannot import name 'check_keystats_freshness' from 'scheduler'`
 
-- [ ] **Step 3: Implement `check_keystats_freshness` in `scheduler.py`**
+- [x] **Step 3: Implement `check_keystats_freshness` in `scheduler.py`**
 
 Use the Edit tool. Insert after `_load_stockbit_token` (which ends with `return None`) and before `# Module-level regime classifier cache`.
 
@@ -376,7 +376,7 @@ def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
 # Module-level regime classifier cache: {ticker: (date_str, RegimeClassifier)}
 ```
 
-- [ ] **Step 4: Run all Task 2 tests**
+- [x] **Step 4: Run all Task 2 tests**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -385,7 +385,7 @@ venv/bin/pytest tests/test_fundamental_refresh.py -v
 
 Expected: All 15 tests PASSED (10 from Task 1 + 5 new)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -408,7 +408,7 @@ EOF
 **Files:**
 - Modify: `scheduler.py` lines 301–351 (the ticker loop in `scan_momentum_signals`)
 
-- [ ] **Step 1: Move `df` assignment above the fundamental block**
+- [x] **Step 1: Move `df` assignment above the fundamental block**
 
 In `scan_momentum_signals`, find and replace this block using the Edit tool:
 
@@ -447,7 +447,7 @@ In `scan_momentum_signals`, find and replace this block using the Edit tool:
             flow_reason = "fundamental filter OFF"
 ```
 
-- [ ] **Step 2: Remove the now-duplicate `df` assignment from the try block**
+- [x] **Step 2: Remove the now-duplicate `df` assignment from the try block**
 
 Find and replace in the same function:
 
@@ -468,7 +468,7 @@ Find and replace in the same function:
             vr     = calc_vol_ratio(df)
 ```
 
-- [ ] **Step 3: Run the full test suite**
+- [x] **Step 3: Run the full test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -477,7 +477,7 @@ venv/bin/pytest tests/ -v --tb=short 2>&1 | tail -20
 
 Expected: All 15 new tests pass + all pre-existing tests pass. Zero failures.
 
-- [ ] **Step 4: Smoke-check scheduler imports and function is reachable**
+- [x] **Step 4: Smoke-check scheduler imports and function is reachable**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -498,7 +498,7 @@ shock test: False
 token test: None
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -521,12 +521,12 @@ EOF
 **Files:**
 - Modify: `TODO.md`
 
-- [ ] **Step 1: Mark G5 complete in TODO.md**
+- [x] **Step 1: Mark G5 complete in TODO.md**
 
 In `TODO.md`, find:
 
 ```
-- [ ] **G5. Fundamental data auto-refresh on price shock**
+- [x] **G5. Fundamental data auto-refresh on price shock**
 ```
 
 Replace `- [ ]` with `- [x]` and append a completion note:
@@ -535,7 +535,7 @@ Replace `- [ ]` with `- [x]` and append a completion note:
 - [x] **G5. Fundamental data auto-refresh on price shock** — SHIPPED 2026-05-29. `check_keystats_freshness()` in `scheduler.py`: blocks stale+shock signals; allows stale-but-quiet through; attempts inline re-fetch via `.stockbit_token` before blocking.
 ```
 
-- [ ] **Step 2: Verify no stray `os.getenv` or hardcoded paths were introduced**
+- [x] **Step 2: Verify no stray `os.getenv` or hardcoded paths were introduced**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -544,7 +544,7 @@ grep -n "check_keystats_freshness\|_detect_price_shock\|_load_stockbit_token" sc
 
 Expected: 4 definition lines + 2 call sites (one in `check_keystats_freshness` calling the helpers, one in `scan_momentum_signals`).
 
-- [ ] **Step 3: Commit TODO update**
+- [x] **Step 3: Commit TODO update**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"

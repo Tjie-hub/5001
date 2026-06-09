@@ -28,7 +28,7 @@
 - Create: `engine/backtest_roller.py`
 - Create: `tests/test_backtest_roller.py`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 ```python
 # tests/test_backtest_roller.py
@@ -70,7 +70,7 @@ def test_init_table_creates_backtest_windows():
         assert col in cols, f"missing column: {col}"
 ```
 
-- [ ] **Step 2: Run test — expect FAIL**
+- [x] **Step 2: Run test — expect FAIL**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/test_backtest_roller.py::test_init_table_creates_backtest_windows -v 2>&1 | tail -10
@@ -78,7 +78,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/te
 
 Expected: `ModuleNotFoundError` or `ImportError`
 
-- [ ] **Step 3: Implement `engine/backtest_roller.py` with `_init_table`**
+- [x] **Step 3: Implement `engine/backtest_roller.py` with `_init_table`**
 
 ```python
 # engine/backtest_roller.py
@@ -127,7 +127,7 @@ def _init_table(conn: sqlite3.Connection) -> None:
     conn.commit()
 ```
 
-- [ ] **Step 4: Run test — expect PASS**
+- [x] **Step 4: Run test — expect PASS**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/test_backtest_roller.py::test_init_table_creates_backtest_windows -v 2>&1 | tail -10
@@ -135,7 +135,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/te
 
 Expected: `PASSED`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/backtest_roller.py tests/test_backtest_roller.py && git commit -m "feat(g1): add engine/backtest_roller.py with _init_table and backtest_windows schema"
@@ -149,7 +149,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/backtest_r
 - Modify: `engine/backtest_roller.py`
 - Modify: `tests/test_backtest_roller.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Append to `tests/test_backtest_roller.py`:
 
@@ -194,7 +194,7 @@ def test_roll_ticker_skips_short_df():
     assert result == {"new_complete": 0, "new_partial": 0}
 ```
 
-- [ ] **Step 2: Run tests — expect FAIL**
+- [x] **Step 2: Run tests — expect FAIL**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/test_backtest_roller.py::test_roll_ticker_inserts_complete_windows tests/test_backtest_roller.py::test_roll_ticker_idempotent tests/test_backtest_roller.py::test_roll_ticker_skips_short_df -v 2>&1 | tail -15
@@ -202,7 +202,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/te
 
 Expected: `AttributeError: module 'engine.backtest_roller' has no attribute 'roll_ticker'`
 
-- [ ] **Step 3: Implement `roll_ticker` (complete windows)**
+- [x] **Step 3: Implement `roll_ticker` (complete windows)**
 
 Append to `engine/backtest_roller.py` after `_init_table`:
 
@@ -366,7 +366,7 @@ def _roll_partial(ticker: str, df: pd.DataFrame, windows: list,
     return 1
 ```
 
-- [ ] **Step 4: Run tests — expect PASS**
+- [x] **Step 4: Run tests — expect PASS**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/test_backtest_roller.py::test_roll_ticker_inserts_complete_windows tests/test_backtest_roller.py::test_roll_ticker_idempotent tests/test_backtest_roller.py::test_roll_ticker_skips_short_df -v 2>&1 | tail -15
@@ -374,7 +374,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/te
 
 Expected: all 3 `PASSED` (may take 30–60s due to strategy runs)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/backtest_roller.py tests/test_backtest_roller.py && git commit -m "feat(g1): implement roll_ticker with complete window insertion and idempotency"
@@ -387,7 +387,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/backtest_r
 **Files:**
 - Modify: `tests/test_backtest_roller.py`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Append to `tests/test_backtest_roller.py`:
 
@@ -412,7 +412,7 @@ def test_roll_ticker_partial_window():
     assert result["new_partial"] == partial_rows
 ```
 
-- [ ] **Step 2: Run test — expect PASS**
+- [x] **Step 2: Run test — expect PASS**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/test_backtest_roller.py::test_roll_ticker_partial_window -v 2>&1 | tail -10
@@ -420,7 +420,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/te
 
 Expected: `PASSED`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add tests/test_backtest_roller.py && git commit -m "test(g1): add partial window test for roll_ticker"
@@ -434,7 +434,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add tests/test_backte
 - Modify: `engine/backtest_roller.py`
 - Modify: `tests/test_backtest_roller.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Append to `tests/test_backtest_roller.py`:
 
@@ -522,7 +522,7 @@ def test_export_meta_dataset_ticker_filter(tmp_path):
     assert all(e["ticker"] == "ACES" for e in data)
 ```
 
-- [ ] **Step 2: Run tests — expect FAIL**
+- [x] **Step 2: Run tests — expect FAIL**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/test_backtest_roller.py::test_roll_all_returns_summary tests/test_backtest_roller.py::test_export_meta_dataset_format tests/test_backtest_roller.py::test_export_meta_dataset_ticker_filter -v 2>&1 | tail -15
@@ -530,7 +530,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/te
 
 Expected: `AttributeError: module ... has no attribute 'roll_all'`
 
-- [ ] **Step 3: Implement `roll_all()` and `export_meta_dataset()`**
+- [x] **Step 3: Implement `roll_all()` and `export_meta_dataset()`**
 
 Append to `engine/backtest_roller.py`:
 
@@ -627,7 +627,7 @@ def export_meta_dataset(path: str = None, tickers: list = None,
     return len(records)
 ```
 
-- [ ] **Step 4: Run tests — expect PASS**
+- [x] **Step 4: Run tests — expect PASS**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/test_backtest_roller.py::test_roll_all_returns_summary tests/test_backtest_roller.py::test_export_meta_dataset_format tests/test_backtest_roller.py::test_export_meta_dataset_ticker_filter -v 2>&1 | tail -15
@@ -635,7 +635,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/te
 
 Expected: all 3 `PASSED`
 
-- [ ] **Step 5: Run full test file**
+- [x] **Step 5: Run full test file**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/test_backtest_roller.py -v 2>&1 | tail -20
@@ -643,7 +643,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/te
 
 Expected: all 7 tests `PASSED`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/backtest_roller.py tests/test_backtest_roller.py && git commit -m "feat(g1): add roll_all() and export_meta_dataset() to backtest_roller"
@@ -657,7 +657,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/backtest_r
 - Modify: `scheduler/jobs.py`
 - Modify: `scheduler/__init__.py`
 
-- [ ] **Step 1: Add `run_backtest_roller()` to `scheduler/jobs.py`**
+- [x] **Step 1: Add `run_backtest_roller()` to `scheduler/jobs.py`**
 
 Open `scheduler/jobs.py`. After `run_premover_eod()` (end of file, line ~287), append:
 
@@ -688,7 +688,7 @@ def run_backtest_roller():
         print(f"[{now_str}] Backtest roller error: {e}")
 ```
 
-- [ ] **Step 2: Add re-export to `scheduler/__init__.py`**
+- [x] **Step 2: Add re-export to `scheduler/__init__.py`**
 
 In `scheduler/__init__.py`, find the jobs re-export block (lines 42–53). Add `run_backtest_roller` to the import list:
 
@@ -708,7 +708,7 @@ from scheduler.jobs import (  # noqa: F401
 )
 ```
 
-- [ ] **Step 3: Add cron job to `start_scheduler()`**
+- [x] **Step 3: Add cron job to `start_scheduler()`**
 
 In `scheduler/__init__.py`, after the `run_premover_eod` job (around line 162), add before `scheduler.start()`:
 
@@ -725,7 +725,7 @@ And add to the `print` block after `scheduler.start()`:
     print("  🔄 BACKTEST ROLLER: 1st Sun/month 10:00 (rolling WF windows)")
 ```
 
-- [ ] **Step 4: Verify scheduler imports cleanly**
+- [x] **Step 4: Verify scheduler imports cleanly**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -c "from scheduler import run_backtest_roller; print('OK')"
@@ -733,7 +733,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -c "from scheduler
 
 Expected: `OK`
 
-- [ ] **Step 5: Run full test suite**
+- [x] **Step 5: Run full test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/ -x -q 2>&1 | tail -10
@@ -741,7 +741,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/ -
 
 Expected: all tests pass (no regressions)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add scheduler/jobs.py scheduler/__init__.py && git commit -m "feat(g1): add run_backtest_roller job to scheduler, monthly Sunday 10:00 WIB"
@@ -754,7 +754,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add scheduler/jobs.py
 **Files:**
 - Modify: `routes/backtest.py`
 
-- [ ] **Step 1: Add the route**
+- [x] **Step 1: Add the route**
 
 In `routes/backtest.py`, after the last `@backtest_bp.route` endpoint, append:
 
@@ -776,7 +776,7 @@ def api_backtest_roll():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 ```
 
-- [ ] **Step 2: Smoke-test the endpoint manually**
+- [x] **Step 2: Smoke-test the endpoint manually**
 
 ```bash
 curl -s -X POST http://localhost:5001/api/backtest/roll \
@@ -788,7 +788,7 @@ Expected: `{"status": "ok", "summary": {"new_complete": ..., "new_partial": ...,
 
 (If Flask isn't running, start it first: `systemctl restart idx-walkforward-5001.service`)
 
-- [ ] **Step 3: Run full test suite**
+- [x] **Step 3: Run full test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/ -x -q 2>&1 | tail -10
@@ -796,7 +796,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python -m pytest tests/ -
 
 Expected: all tests pass
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add routes/backtest.py && git commit -m "feat(g1): add POST /api/backtest/roll endpoint for on-demand window rolling"
@@ -808,7 +808,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add routes/backtest.p
 
 **Files:** No code changes — execute and verify.
 
-- [ ] **Step 1: Run the roller for the full ticker set**
+- [x] **Step 1: Run the roller for the full ticker set**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python3 -c "
@@ -829,7 +829,7 @@ Summary: {'new_complete': 2843, 'new_partial': 615, 'tickers_updated': 712, 'err
 Exported 3458 records to out/meta_dataset_backtest.json
 ```
 
-- [ ] **Step 2: Verify DB table**
+- [x] **Step 2: Verify DB table**
 
 ```bash
 python3 -c "
@@ -849,7 +849,7 @@ print(f'Latest partial test_end: {latest_partial}  (should be today or yesterday
 
 Expected: `latest_partial` should be today's date (2026-06-04) or the most recent OHLCV date.
 
-- [ ] **Step 3: Verify JSON file**
+- [x] **Step 3: Verify JSON file**
 
 ```bash
 python3 -c "
@@ -867,11 +867,11 @@ print(f'BRPT windows: {[(e[\"test_start\"], e[\"test_end\"]) for e in brpt]}')
 
 Expected: BRPT should have a partial window with `test_end` ≈ 2026-06-04.
 
-- [ ] **Step 4: Commit updated JSON artifact and mark G1 complete in TODO.md**
+- [x] **Step 4: Commit updated JSON artifact and mark G1 complete in TODO.md**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
-# Mark G1 done in TODO.md — change `- [ ] **G1.` to `- [x] **G1.`
+# Mark G1 done in TODO.md — change `- [x] **G1.` to `- [x] **G1.`
 sed -i 's/- \[ \] \*\*G1\. Backtest/- [x] **G1. Backtest/' TODO.md
 git add out/meta_dataset_backtest.json TODO.md
 git commit -m "feat(g1): initial backtest_windows population + regenerated meta_dataset_backtest.json"

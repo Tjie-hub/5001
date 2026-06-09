@@ -30,7 +30,7 @@
 - Create: `engine/vpin.py`
 - Create: `tests/test_vpin_engine.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_vpin_engine.py`:
 
@@ -132,7 +132,7 @@ def test_signal_map_keys_are_tuples():
         assert len(key) == 3
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -141,7 +141,7 @@ venv/bin/pytest tests/test_vpin_engine.py -v
 
 Expected: `ModuleNotFoundError: No module named 'engine.vpin'`
 
-- [ ] **Step 3: Create `engine/vpin.py`**
+- [x] **Step 3: Create `engine/vpin.py`**
 
 Content is the verbatim merge of `screener/vpin.py` (all functions) followed by `screener/vpin_multi.py` (all functions), with the one internal cross-file import removed. Create `engine/vpin.py`:
 
@@ -577,7 +577,7 @@ def format_vpin_alert(multi: dict) -> str:
     return '\n'.join(lines)
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -586,7 +586,7 @@ venv/bin/pytest tests/test_vpin_engine.py -v
 
 Expected: 7 tests PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -601,7 +601,7 @@ git commit -m "feat(r8): add engine/vpin.py — merged vpin + vpin_multi with te
 **Files:**
 - Modify: `scheduler.py:472`
 
-- [ ] **Step 1: Update the lazy import**
+- [x] **Step 1: Update the lazy import**
 
 In `scheduler.py`, find this line (around line 472):
 ```python
@@ -612,7 +612,7 @@ Replace with:
 from engine.vpin import calc_vpin_multi as _calc_vpin_multi
 ```
 
-- [ ] **Step 2: Verify the import resolves**
+- [x] **Step 2: Verify the import resolves**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -621,7 +621,7 @@ venv/bin/python3 -c "from engine.vpin import calc_vpin_multi; print('OK')"
 
 Expected output: `OK`
 
-- [ ] **Step 3: Run full test suite**
+- [x] **Step 3: Run full test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -630,7 +630,7 @@ venv/bin/pytest tests/ -q
 
 Expected: all tests pass (same count as before this task)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -648,7 +648,7 @@ git commit -m "fix(r8): update scheduler lazy import to engine.vpin"
 
 These shims let any external script that imports from `screener.vpin` keep working without changes. They are transitional — delete both files once no external callers remain.
 
-- [ ] **Step 1: Replace `screener/vpin.py` with shim**
+- [x] **Step 1: Replace `screener/vpin.py` with shim**
 
 Replace the entire contents of `screener/vpin.py` with:
 
@@ -657,7 +657,7 @@ Replace the entire contents of `screener/vpin.py` with:
 from engine.vpin import *  # noqa: F401,F403
 ```
 
-- [ ] **Step 2: Replace `screener/vpin_multi.py` with shim**
+- [x] **Step 2: Replace `screener/vpin_multi.py` with shim**
 
 Replace the entire contents of `screener/vpin_multi.py` with:
 
@@ -666,7 +666,7 @@ Replace the entire contents of `screener/vpin_multi.py` with:
 from engine.vpin import *  # noqa: F401,F403
 ```
 
-- [ ] **Step 3: Verify old import paths still work**
+- [x] **Step 3: Verify old import paths still work**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -679,7 +679,7 @@ print('shims OK')
 
 Expected output: `shims OK`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -694,7 +694,7 @@ git commit -m "feat(r8): replace screener/vpin*.py with re-export shims"
 **Files:**
 - Modify: `app.py:1919–1950`
 
-- [ ] **Step 1: Insert VPIN call before the `return jsonify` block**
+- [x] **Step 1: Insert VPIN call before the `return jsonify` block**
 
 In `app.py`, find the block starting at the line with `_ohlcv = df[...]` (just before `return jsonify`). Insert the following block **before** `_ohlcv = df[...]`:
 
@@ -724,7 +724,7 @@ In `app.py`, find the block starting at the line with `_ohlcv = df[...]` (just b
         }
 ```
 
-- [ ] **Step 2: Add `vpin` to the `return jsonify(...)` dict**
+- [x] **Step 2: Add `vpin` to the `return jsonify(...)` dict**
 
 In the `return jsonify({...})` block, add `'vpin': _vpin,` after `'premover_reversal': {...},`:
 
@@ -743,7 +743,7 @@ In the `return jsonify({...})` block, add `'vpin': _vpin,` after `'premover_reve
     })
 ```
 
-- [ ] **Step 3: Verify endpoint response includes `vpin` key**
+- [x] **Step 3: Verify endpoint response includes `vpin` key**
 
 ```bash
 curl -s http://localhost:5001/api/ticker/BBRI/full | python3 -c "
@@ -756,7 +756,7 @@ print('vpin value:', d.get('vpin'))
 
 Expected: `vpin key present: True` and either a dict with `signal`, `vpin_today`, etc. or `None`.
 
-- [ ] **Step 4: Run full test suite**
+- [x] **Step 4: Run full test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -765,7 +765,7 @@ venv/bin/pytest tests/ -q
 
 Expected: all tests pass
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -782,7 +782,7 @@ git commit -m "feat(r8): add vpin key to /api/ticker/<ticker>/full response"
 
 Three sub-changes: CSS, HTML, JS.
 
-- [ ] **Step 1: Add CSS for VPIN signal and regime badges**
+- [x] **Step 1: Add CSS for VPIN signal and regime badges**
 
 In `dive.html`, find the `<style>` block. After the last existing badge or `.regime` CSS rule (search for `.regime-badge` or similar), insert:
 
@@ -821,7 +821,7 @@ In `dive.html`, find the `<style>` block. After the last existing badge or `.reg
 .vpin-pressure-yes { color: #ef4444; font-weight: 700; }
 ```
 
-- [ ] **Step 2: Add drawer nav link**
+- [x] **Step 2: Add drawer nav link**
 
 In `dive.html`, find:
 ```html
@@ -833,7 +833,7 @@ Add the VPIN link after it:
 <a class="drawer-link" href="#sec-vpin"       onclick="toggleDrawer()">VPIN Flow</a>
 ```
 
-- [ ] **Step 3: Add VPIN HTML section**
+- [x] **Step 3: Add VPIN HTML section**
 
 In `dive.html`, find the closing `</div>` that ends the `#sec-strategies` wrapper `<div>` (the anonymous `<div>` containing `#sec-strategies`). It looks like:
 
@@ -880,7 +880,7 @@ Insert the VPIN section between those two divs:
   <div class="side">
 ```
 
-- [ ] **Step 4: Add `renderVpin()` JavaScript function**
+- [x] **Step 4: Add `renderVpin()` JavaScript function**
 
 In `dive.html`, find the `loadFull()` function. After the line `renderStrategies(d.strategies, d.price.close);` (inside `loadFull`), add:
 
@@ -928,7 +928,7 @@ Then add the `renderVpin` function definition **before** `loadFull` (or anywhere
   }
 ```
 
-- [ ] **Step 5: Verify in browser**
+- [x] **Step 5: Verify in browser**
 
 ```bash
 curl -s http://localhost:5001/dive/BBRI | grep -c "sec-vpin"
@@ -942,7 +942,7 @@ Then open `http://localhost:5001/dive/BBRI` in a browser. Verify:
 - If no data, shows "No VPIN data — need 5+ days of tick history."
 - Drawer nav has "VPIN Flow" link that scrolls to the card
 
-- [ ] **Step 6: Run full test suite**
+- [x] **Step 6: Run full test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -951,18 +951,18 @@ venv/bin/pytest tests/ -q
 
 Expected: all tests pass
 
-- [ ] **Step 7: Update TODO.md — mark R8 done**
+- [x] **Step 7: Update TODO.md — mark R8 done**
 
 In `TODO.md`, find:
 ```
-- [ ] **R8. Standardize VPIN**
+- [x] **R8. Standardize VPIN**
 ```
 Replace with:
 ```
 - [x] **R8. Standardize VPIN** — Merged screener/vpin.py + screener/vpin_multi.py → engine/vpin.py. Shims left for backward compat. vpin key added to /api/ticker/<ticker>/full. VPIN card added to dive.html. SHIPPED 2026-05-30.
 ```
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"

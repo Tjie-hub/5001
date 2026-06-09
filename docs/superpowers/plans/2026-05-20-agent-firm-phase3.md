@@ -33,7 +33,7 @@
 - Create: `engine/agent_firm/analytics.py`
 - Create: `tests/agent_firm/test_analytics.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/agent_firm/test_analytics.py`:
 
@@ -143,7 +143,7 @@ def test_cohort_summary_empty_db(tmp_path):
     assert result["baseline"]["n"] == 0
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_analytics.py::test_cohort_summary_approve_beats_baseline tests/agent_firm/test_analytics.py::test_cohort_summary_empty_db -v
@@ -151,7 +151,7 @@ venv/bin/pytest tests/agent_firm/test_analytics.py::test_cohort_summary_approve_
 
 Expected: `ModuleNotFoundError: No module named 'engine.agent_firm.analytics'`
 
-- [ ] **Step 3: Implement `cohort_summary`**
+- [x] **Step 3: Implement `cohort_summary`**
 
 Create `engine/agent_firm/analytics.py`:
 
@@ -214,7 +214,7 @@ def _stats(pnls: list[float]) -> dict[str, Any]:
     }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_analytics.py::test_cohort_summary_approve_beats_baseline tests/agent_firm/test_analytics.py::test_cohort_summary_empty_db -v
@@ -222,7 +222,7 @@ venv/bin/pytest tests/agent_firm/test_analytics.py::test_cohort_summary_approve_
 
 Expected: 2 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/agent_firm/analytics.py tests/agent_firm/test_analytics.py
@@ -237,7 +237,7 @@ git commit -m "feat(agent_firm): analytics.py — cohort_summary (Phase 3 audit)
 - Modify: `engine/agent_firm/analytics.py`
 - Modify: `tests/agent_firm/test_analytics.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/agent_firm/test_analytics.py`:
 
@@ -291,7 +291,7 @@ def test_agent_agreement_empty(tmp_path):
     assert result == []
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_analytics.py::test_agent_agreement_counts_roles tests/agent_firm/test_analytics.py::test_agent_agreement_empty -v
@@ -299,7 +299,7 @@ venv/bin/pytest tests/agent_firm/test_analytics.py::test_agent_agreement_counts_
 
 Expected: `ImportError: cannot import name 'agent_agreement'`
 
-- [ ] **Step 3: Add `agent_agreement` to analytics.py**
+- [x] **Step 3: Add `agent_agreement` to analytics.py**
 
 Append to `engine/agent_firm/analytics.py` after the `_stats` helper:
 
@@ -365,7 +365,7 @@ def _is_aligned(role: str, output: dict, decision: str) -> bool:
     return False
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_analytics.py::test_agent_agreement_counts_roles tests/agent_firm/test_analytics.py::test_agent_agreement_empty -v
@@ -373,7 +373,7 @@ venv/bin/pytest tests/agent_firm/test_analytics.py::test_agent_agreement_counts_
 
 Expected: 2 passed.
 
-- [ ] **Step 5: Run full analytics test file**
+- [x] **Step 5: Run full analytics test file**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_analytics.py -v
@@ -381,7 +381,7 @@ venv/bin/pytest tests/agent_firm/test_analytics.py -v
 
 Expected: 4 passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add engine/agent_firm/analytics.py tests/agent_firm/test_analytics.py
@@ -396,7 +396,7 @@ git commit -m "feat(agent_firm): agent_agreement analytics — per-role alignmen
 - Modify: `engine/agent_firm/analytics.py`
 - Modify: `tests/agent_firm/test_analytics.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/agent_firm/test_analytics.py`:
 
@@ -452,7 +452,7 @@ def test_decision_log_empty_db(tmp_path):
     assert result == []
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_analytics.py::test_decision_log_returns_rows tests/agent_firm/test_analytics.py::test_decision_log_no_paper_trade_outcome_is_none tests/agent_firm/test_analytics.py::test_decision_log_empty_db -v
@@ -460,7 +460,7 @@ venv/bin/pytest tests/agent_firm/test_analytics.py::test_decision_log_returns_ro
 
 Expected: `ImportError: cannot import name 'decision_log'`
 
-- [ ] **Step 3: Add `decision_log` to analytics.py**
+- [x] **Step 3: Add `decision_log` to analytics.py**
 
 Append to `engine/agent_firm/analytics.py`:
 
@@ -494,7 +494,7 @@ def decision_log(db_path: str, limit: int = 100) -> list[dict[str, Any]]:
         return []
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_analytics.py -v
@@ -502,7 +502,7 @@ venv/bin/pytest tests/agent_firm/test_analytics.py -v
 
 Expected: 7 passed (all analytics tests).
 
-- [ ] **Step 5: Run full agent_firm test suite to confirm no regressions**
+- [x] **Step 5: Run full agent_firm test suite to confirm no regressions**
 
 ```bash
 venv/bin/pytest tests/agent_firm/ -v --tb=short 2>&1 | tail -5
@@ -510,7 +510,7 @@ venv/bin/pytest tests/agent_firm/ -v --tb=short 2>&1 | tail -5
 
 Expected: all prior tests + 7 new analytics tests pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add engine/agent_firm/analytics.py tests/agent_firm/test_analytics.py
@@ -524,7 +524,7 @@ git commit -m "feat(agent_firm): decision_log analytics — chronological audit 
 **Files:**
 - Modify: `app.py`
 
-- [ ] **Step 1: Read the agent_status block**
+- [x] **Step 1: Read the agent_status block**
 
 ```bash
 grep -n "agent_status\|agent/status\|agent/audit\|DB_PATH" app.py | head -20
@@ -532,7 +532,7 @@ grep -n "agent_status\|agent/status\|agent/audit\|DB_PATH" app.py | head -20
 
 Note the line number of `@app.route("/api/agent/status"...)` (currently ~line 770). The new route goes directly after the closing `}` of `agent_status`.
 
-- [ ] **Step 2: Add the endpoint**
+- [x] **Step 2: Add the endpoint**
 
 In `app.py`, find the line `@app.route("/api/scheduler/run"...)` (currently ~line 804) and insert the following block immediately before it:
 
@@ -558,7 +558,7 @@ def agent_audit():
 
 ```
 
-- [ ] **Step 3: Verify no syntax error**
+- [x] **Step 3: Verify no syntax error**
 
 ```bash
 venv/bin/python -c "import app; print('app ok')"
@@ -566,7 +566,7 @@ venv/bin/python -c "import app; print('app ok')"
 
 Expected: `app ok`
 
-- [ ] **Step 4: Smoke-test the endpoint (if Flask dev server is running)**
+- [x] **Step 4: Smoke-test the endpoint (if Flask dev server is running)**
 
 ```bash
 curl -s http://localhost:5001/api/agent/audit | python3 -m json.tool 2>/dev/null | head -20 || echo "server not running — skip"
@@ -574,7 +574,7 @@ curl -s http://localhost:5001/api/agent/audit | python3 -m json.tool 2>/dev/null
 
 Expected: JSON with `cohorts`, `agreement`, `log` keys, or "server not running — skip".
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app.py
@@ -590,7 +590,7 @@ git commit -m "feat(agent_firm): /api/agent/audit endpoint (cohorts + agreement 
 
 The existing tab buttons are around line 524–532. The tab panels start around line 541. The `setActiveTab` function is around line 1231. Add the new tab in all three places.
 
-- [ ] **Step 1: Add the tab button**
+- [x] **Step 1: Add the tab button**
 
 In `templates/backtest_multi.html`, find:
 
@@ -604,7 +604,7 @@ Add immediately after it:
     <button class="tab" data-tab="audit">Agent Audit</button>
 ```
 
-- [ ] **Step 2: Add the tab panel**
+- [x] **Step 2: Add the tab panel**
 
 Find the closing tag of the last panel (search for `id="panel-calendar"`). After the closing `</section>` of that panel, add:
 
@@ -648,7 +648,7 @@ Find the closing tag of the last panel (search for `id="panel-calendar"`). After
 </section>
 ```
 
-- [ ] **Step 3: Wire lazy load into `setActiveTab`**
+- [x] **Step 3: Wire lazy load into `setActiveTab`**
 
 Find:
 
@@ -662,7 +662,7 @@ Add immediately after it:
   if (name === 'audit')    loadAuditData();
 ```
 
-- [ ] **Step 4: Add `loadAuditData` and `toggleRationale` JS**
+- [x] **Step 4: Add `loadAuditData` and `toggleRationale` JS**
 
 Find the closing of the `setActiveTab` function block (around `}` after the `updateIndicator` call). After the `updateIndicator` function definition, add the following new functions:
 
@@ -741,7 +741,7 @@ function toggleRationale(i) {
 }
 ```
 
-- [ ] **Step 5: Verify the HTML is valid (no unclosed tags)**
+- [x] **Step 5: Verify the HTML is valid (no unclosed tags)**
 
 ```bash
 venv/bin/python -c "
@@ -755,7 +755,7 @@ print('html parse ok')
 
 Expected: `html parse ok`
 
-- [ ] **Step 6: Verify app still imports cleanly**
+- [x] **Step 6: Verify app still imports cleanly**
 
 ```bash
 venv/bin/python -c "import app; print('app ok')"
@@ -763,7 +763,7 @@ venv/bin/python -c "import app; print('app ok')"
 
 Expected: `app ok`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add templates/backtest_multi.html
@@ -774,7 +774,7 @@ git commit -m "feat(agent_firm): Agent Audit dashboard tab — cohorts, agreemen
 
 ## Final Verification
 
-- [ ] **Run full test suite**
+- [x] **Run full test suite**
 
 ```bash
 venv/bin/pytest tests/agent_firm/ -v --tb=short 2>&1 | tail -10
@@ -782,7 +782,7 @@ venv/bin/pytest tests/agent_firm/ -v --tb=short 2>&1 | tail -10
 
 Expected: all prior tests pass + 7 new analytics tests pass (total 69+).
 
-- [ ] **Verify smoke probe still works**
+- [x] **Verify smoke probe still works**
 
 ```bash
 AGENT_FIRM_ENABLED=false venv/bin/python -m engine.agent_firm.smoke
@@ -791,7 +791,7 @@ echo "exit: $?"
 
 Expected: `SKIP` and exit 0.
 
-- [ ] **Verify scheduler imports cleanly**
+- [x] **Verify scheduler imports cleanly**
 
 ```bash
 venv/bin/python -c "import scheduler; print('scheduler ok')"
@@ -799,7 +799,7 @@ venv/bin/python -c "import scheduler; print('scheduler ok')"
 
 Expected: `scheduler ok`.
 
-- [ ] **Tag Phase 3**
+- [x] **Tag Phase 3**
 
 ```bash
 git tag -a phase3-agent-firm-audit -m "Phase 3 complete: decision audit dashboard + analytics module"

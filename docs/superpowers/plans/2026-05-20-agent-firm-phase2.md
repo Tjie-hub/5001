@@ -59,20 +59,20 @@
 **Files:**
 - Modify: `requirements.txt`
 
-- [ ] **Step 1: Read current requirements**
+- [x] **Step 1: Read current requirements**
 
 ```bash
 cat requirements.txt
 ```
 
-- [ ] **Step 2: Add langgraph**
+- [x] **Step 2: Add langgraph**
 
 Append to `requirements.txt`:
 ```
 langgraph>=0.2.0
 ```
 
-- [ ] **Step 3: Install**
+- [x] **Step 3: Install**
 
 ```bash
 venv/bin/pip install langgraph
@@ -80,7 +80,7 @@ venv/bin/pip install langgraph
 
 Expected: installs langgraph and its deps (langchain-core etc.)
 
-- [ ] **Step 4: Verify import**
+- [x] **Step 4: Verify import**
 
 ```bash
 venv/bin/python -c "import langgraph; print(langgraph.__version__)"
@@ -88,7 +88,7 @@ venv/bin/python -c "import langgraph; print(langgraph.__version__)"
 
 Expected: prints a version string.
 
-- [ ] **Step 5: Run existing tests to confirm no breakage**
+- [x] **Step 5: Run existing tests to confirm no breakage**
 
 ```bash
 venv/bin/pytest tests/agent_firm/ -v --tb=short 2>&1 | tail -5
@@ -96,7 +96,7 @@ venv/bin/pytest tests/agent_firm/ -v --tb=short 2>&1 | tail -5
 
 Expected: 31 passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add requirements.txt
@@ -111,7 +111,7 @@ git commit -m "chore(agent_firm): add langgraph dependency for Phase 2 DAG"
 - Modify: `engine/agent_firm/schemas.py`
 - Modify: `engine/agent_firm/config.py`
 
-- [ ] **Step 1: Write failing test for AgentState**
+- [x] **Step 1: Write failing test for AgentState**
 
 Add to `tests/agent_firm/test_schemas.py`:
 
@@ -136,7 +136,7 @@ def test_agent_state_has_required_keys():
     assert state["db_path"] == "/tmp/t.db"
 ```
 
-- [ ] **Step 2: Run to confirm it fails**
+- [x] **Step 2: Run to confirm it fails**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_schemas.py::test_agent_state_has_required_keys -v
@@ -144,7 +144,7 @@ venv/bin/pytest tests/agent_firm/test_schemas.py::test_agent_state_has_required_
 
 Expected: ImportError (`cannot import name 'AgentState'`).
 
-- [ ] **Step 3: Add AgentState to schemas.py**
+- [x] **Step 3: Add AgentState to schemas.py**
 
 Add at the bottom of `engine/agent_firm/schemas.py`:
 
@@ -167,7 +167,7 @@ class AgentState(TypedDict):
     decision: Optional[AgentDecision]
 ```
 
-- [ ] **Step 4: Write failing test for config additions**
+- [x] **Step 4: Write failing test for config additions**
 
 Add to `tests/agent_firm/test_config.py`:
 
@@ -191,7 +191,7 @@ def test_tavily_config_from_env(monkeypatch):
     assert config.TAVILY_MAX_RESULTS == 3
 ```
 
-- [ ] **Step 5: Add config vars**
+- [x] **Step 5: Add config vars**
 
 Add to `engine/agent_firm/config.py` after `PER_AGENT_TIMEOUT_S`:
 
@@ -200,7 +200,7 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 TAVILY_MAX_RESULTS = int(os.getenv("AGENT_FIRM_TAVILY_MAX", "5"))
 ```
 
-- [ ] **Step 6: Run tests**
+- [x] **Step 6: Run tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_schemas.py tests/agent_firm/test_config.py -v --tb=short
@@ -208,7 +208,7 @@ venv/bin/pytest tests/agent_firm/test_schemas.py tests/agent_firm/test_config.py
 
 Expected: all pass (6 config tests + 6 schema tests).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add engine/agent_firm/schemas.py engine/agent_firm/config.py tests/agent_firm/test_schemas.py tests/agent_firm/test_config.py
@@ -225,7 +225,7 @@ git commit -m "feat(agent_firm): AgentState TypedDict and Tavily config vars"
 
 The `news_mentions` table schema: `ticker TEXT, date TEXT, count INTEGER, headlines_json TEXT, updated_at TEXT`.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Create `tests/agent_firm/test_news_lookup.py`:
 
@@ -298,7 +298,7 @@ def test_lookup_caps_at_20_rows(tmp_path):
     assert len(rows) <= 20
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_news_lookup.py -v
@@ -306,7 +306,7 @@ venv/bin/pytest tests/agent_firm/test_news_lookup.py -v
 
 Expected: ModuleNotFoundError.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `engine/agent_firm/tools/news_lookup.py`:
 
@@ -341,7 +341,7 @@ def lookup(db_path: str, ticker: str, days: int = 7) -> list[dict[str, Any]]:
         conn.close()
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_news_lookup.py -v
@@ -349,7 +349,7 @@ venv/bin/pytest tests/agent_firm/test_news_lookup.py -v
 
 Expected: 4 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/agent_firm/tools/news_lookup.py tests/agent_firm/test_news_lookup.py
@@ -364,7 +364,7 @@ git commit -m "feat(agent_firm): news_lookup tool reads news_mentions table"
 - Create: `engine/agent_firm/tools/web_search.py`
 - Create: `tests/agent_firm/test_web_search.py`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Create `tests/agent_firm/test_web_search.py`:
 
@@ -428,7 +428,7 @@ async def test_search_returns_empty_on_http_error(monkeypatch):
     assert results == []
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_web_search.py -v
@@ -436,7 +436,7 @@ venv/bin/pytest tests/agent_firm/test_web_search.py -v
 
 Expected: ModuleNotFoundError.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `engine/agent_firm/tools/web_search.py`:
 
@@ -474,7 +474,7 @@ async def search(query: str, max_results: int | None = None) -> list[dict]:
         return []
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_web_search.py -v
@@ -482,7 +482,7 @@ venv/bin/pytest tests/agent_firm/test_web_search.py -v
 
 Expected: 3 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/agent_firm/tools/web_search.py tests/agent_firm/test_web_search.py
@@ -500,7 +500,7 @@ git commit -m "feat(agent_firm): web_search tool via Tavily REST (fail-safe)"
 
 Flow agent reads `context["stockbit_flow"]`, `context["broker_flow"]`, `context["stockbit_flow_bars"]`.
 
-- [ ] **Step 1: Create prompt file**
+- [x] **Step 1: Create prompt file**
 
 Create `engine/agent_firm/prompts/flow_v1.md`:
 
@@ -532,7 +532,7 @@ Guidance:
 - If all data is missing or NULL: return NEUTRAL with reasoning "insufficient flow data"
 ```
 
-- [ ] **Step 2: Write failing test**
+- [x] **Step 2: Write failing test**
 
 Create `tests/agent_firm/test_flow.py`:
 
@@ -605,7 +605,7 @@ async def test_flow_returns_failed_on_client_exception():
     assert "timeout" in result.error
 ```
 
-- [ ] **Step 3: Run to confirm failure**
+- [x] **Step 3: Run to confirm failure**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_flow.py -v
@@ -613,7 +613,7 @@ venv/bin/pytest tests/agent_firm/test_flow.py -v
 
 Expected: ModuleNotFoundError on `engine.agent_firm.agents.flow`.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 Create `engine/agent_firm/agents/flow.py`:
 
@@ -668,7 +668,7 @@ async def run(
         )
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_flow.py -v
@@ -676,7 +676,7 @@ venv/bin/pytest tests/agent_firm/test_flow.py -v
 
 Expected: 3 passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add engine/agent_firm/prompts/flow_v1.md engine/agent_firm/agents/flow.py tests/agent_firm/test_flow.py
@@ -692,7 +692,7 @@ git commit -m "feat(agent_firm): Flow Specialist agent (v1 prompt + run loop)"
 - Create: `engine/agent_firm/agents/regime.py`
 - Create: `tests/agent_firm/test_regime.py`
 
-- [ ] **Step 1: Create prompt file**
+- [x] **Step 1: Create prompt file**
 
 Create `engine/agent_firm/prompts/regime_v1.md`:
 
@@ -724,7 +724,7 @@ Guidance:
 - macro_risk HIGH: if vol_ratio spikes coincide with negative signal labels
 ```
 
-- [ ] **Step 2: Write failing test**
+- [x] **Step 2: Write failing test**
 
 Create `tests/agent_firm/test_regime.py`:
 
@@ -794,7 +794,7 @@ async def test_regime_returns_failed_on_client_exception():
     assert "network down" in result.error
 ```
 
-- [ ] **Step 3: Run to confirm failure**
+- [x] **Step 3: Run to confirm failure**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_regime.py -v
@@ -802,7 +802,7 @@ venv/bin/pytest tests/agent_firm/test_regime.py -v
 
 Expected: ModuleNotFoundError.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 Create `engine/agent_firm/agents/regime.py`:
 
@@ -856,7 +856,7 @@ async def run(
         )
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_regime.py -v
@@ -864,7 +864,7 @@ venv/bin/pytest tests/agent_firm/test_regime.py -v
 
 Expected: 3 passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add engine/agent_firm/prompts/regime_v1.md engine/agent_firm/agents/regime.py tests/agent_firm/test_regime.py
@@ -880,7 +880,7 @@ git commit -m "feat(agent_firm): Regime Analyst agent (v1 prompt + run loop)"
 - Create: `engine/agent_firm/agents/news.py`
 - Create: `tests/agent_firm/test_news.py`
 
-- [ ] **Step 1: Create prompt file**
+- [x] **Step 1: Create prompt file**
 
 Create `engine/agent_firm/prompts/news_v1.md`:
 
@@ -910,7 +910,7 @@ Guidance:
 - If no news data at all: sentiment=NEUTRAL, catalyst=neutral, key_headline=null, summary="no recent news found"
 ```
 
-- [ ] **Step 2: Write failing test**
+- [x] **Step 2: Write failing test**
 
 Create `tests/agent_firm/test_news.py`:
 
@@ -982,7 +982,7 @@ async def test_news_returns_failed_on_client_exception(monkeypatch):
     assert "api down" in result.error
 ```
 
-- [ ] **Step 3: Run to confirm failure**
+- [x] **Step 3: Run to confirm failure**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_news.py -v
@@ -990,7 +990,7 @@ venv/bin/pytest tests/agent_firm/test_news.py -v
 
 Expected: ModuleNotFoundError.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 Create `engine/agent_firm/agents/news.py`:
 
@@ -1048,7 +1048,7 @@ async def run(
         )
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_news.py -v
@@ -1056,7 +1056,7 @@ venv/bin/pytest tests/agent_firm/test_news.py -v
 
 Expected: 3 passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add engine/agent_firm/prompts/news_v1.md engine/agent_firm/agents/news.py tests/agent_firm/test_news.py
@@ -1074,7 +1074,7 @@ git commit -m "feat(agent_firm): News/Sentiment agent with Tavily web search"
 
 Bull receives a list of `AgentResult` objects (technical, flow, regime, news).
 
-- [ ] **Step 1: Create prompt file**
+- [x] **Step 1: Create prompt file**
 
 Create `engine/agent_firm/prompts/bull_v1.md`:
 
@@ -1095,7 +1095,7 @@ Output strictly as JSON. No markdown, no code fences:
 If all analysts are negative, still make the best bull case possible — your role is to steelman the position, not to agree with the bears. Find the least-bad reading of the data.
 ```
 
-- [ ] **Step 2: Write failing test**
+- [x] **Step 2: Write failing test**
 
 Create `tests/agent_firm/test_bull.py`:
 
@@ -1164,7 +1164,7 @@ async def test_bull_returns_failed_on_client_exception():
     assert "llm down" in result.error
 ```
 
-- [ ] **Step 3: Run to confirm failure**
+- [x] **Step 3: Run to confirm failure**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_bull.py -v
@@ -1172,7 +1172,7 @@ venv/bin/pytest tests/agent_firm/test_bull.py -v
 
 Expected: ModuleNotFoundError.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 Create `engine/agent_firm/agents/bull.py`:
 
@@ -1227,7 +1227,7 @@ async def run(
         )
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_bull.py -v
@@ -1235,7 +1235,7 @@ venv/bin/pytest tests/agent_firm/test_bull.py -v
 
 Expected: 3 passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add engine/agent_firm/prompts/bull_v1.md engine/agent_firm/agents/bull.py tests/agent_firm/test_bull.py
@@ -1253,7 +1253,7 @@ git commit -m "feat(agent_firm): Bull Researcher agent (v1 prompt + run loop)"
 
 Bear receives analyst results AND the bull's `AgentResult`.
 
-- [ ] **Step 1: Create prompt file**
+- [x] **Step 1: Create prompt file**
 
 Create `engine/agent_firm/prompts/bear_v1.md`:
 
@@ -1276,7 +1276,7 @@ Output strictly as JSON. No markdown, no code fences:
 If all analysts are positive, still make the best bear case possible — your role is to find what could go wrong, even in favorable conditions. Consider: crowded trade risk, stop-loss cascade risk, sector rotation risk, macro surprise risk.
 ```
 
-- [ ] **Step 2: Write failing test**
+- [x] **Step 2: Write failing test**
 
 Create `tests/agent_firm/test_bear.py`:
 
@@ -1352,7 +1352,7 @@ async def test_bear_returns_failed_on_client_exception():
     assert "conn reset" in result.error
 ```
 
-- [ ] **Step 3: Run to confirm failure**
+- [x] **Step 3: Run to confirm failure**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_bear.py -v
@@ -1360,7 +1360,7 @@ venv/bin/pytest tests/agent_firm/test_bear.py -v
 
 Expected: ModuleNotFoundError.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 Create `engine/agent_firm/agents/bear.py`:
 
@@ -1417,7 +1417,7 @@ async def run(
         )
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_bear.py -v
@@ -1425,7 +1425,7 @@ venv/bin/pytest tests/agent_firm/test_bear.py -v
 
 Expected: 3 passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add engine/agent_firm/prompts/bear_v1.md engine/agent_firm/agents/bear.py tests/agent_firm/test_bear.py
@@ -1442,7 +1442,7 @@ git commit -m "feat(agent_firm): Bear Researcher agent (v1 prompt + run loop)"
 
 The `risk.run()` signature is unchanged: `run(candidate, analyst_results, client)`. In Phase 2 the caller passes all 6 upstream results. The prompt is updated to reference all roles.
 
-- [ ] **Step 1: Create prompt file**
+- [x] **Step 1: Create prompt file**
 
 Create `engine/agent_firm/prompts/risk_v2.md`:
 
@@ -1483,7 +1483,7 @@ Confidence guidance:
 - 0.0-0.4: conflicting analysts, missing inputs, or low quant score
 ```
 
-- [ ] **Step 2: Write failing test for risk v2 behaviour**
+- [x] **Step 2: Write failing test for risk v2 behaviour**
 
 Add to a new file `tests/agent_firm/test_risk_v2.py`:
 
@@ -1559,7 +1559,7 @@ async def test_risk_v2_all_6_reports_in_payload():
     assert len(roles) == 6
 ```
 
-- [ ] **Step 3: Run to confirm test_risk_v2.py passes with current risk.py**
+- [x] **Step 3: Run to confirm test_risk_v2.py passes with current risk.py**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_risk_v2.py -v
@@ -1567,7 +1567,7 @@ venv/bin/pytest tests/agent_firm/test_risk_v2.py -v
 
 The tests should pass even now (risk.run() already accepts a list of any length). If they do, skip step 4; otherwise note the failure.
 
-- [ ] **Step 4: Update risk.py to point to risk_v2.md**
+- [x] **Step 4: Update risk.py to point to risk_v2.md**
 
 In `engine/agent_firm/agents/risk.py`, change:
 
@@ -1583,7 +1583,7 @@ _PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "risk_v2.md"
 PROMPT_VERSION = "v2"
 ```
 
-- [ ] **Step 5: Run all risk tests**
+- [x] **Step 5: Run all risk tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_risk.py tests/agent_firm/test_risk_v2.py -v
@@ -1591,7 +1591,7 @@ venv/bin/pytest tests/agent_firm/test_risk.py tests/agent_firm/test_risk_v2.py -
 
 Expected: all 6 tests pass (test_risk.py still passes because it uses mock client output regardless of prompt).
 
-- [ ] **Step 6: Run full suite**
+- [x] **Step 6: Run full suite**
 
 ```bash
 venv/bin/pytest tests/agent_firm/ -v --tb=short 2>&1 | tail -5
@@ -1599,7 +1599,7 @@ venv/bin/pytest tests/agent_firm/ -v --tb=short 2>&1 | tail -5
 
 Expected: all prior tests + new tests pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add engine/agent_firm/prompts/risk_v2.md engine/agent_firm/agents/risk.py tests/agent_firm/test_risk_v2.py
@@ -1617,14 +1617,14 @@ git commit -m "feat(agent_firm): Risk Manager v2 prompt (reads all 6 upstream re
 
 This is the core task. The public API (`evaluate`, `evaluate_async`) stays identical. Internally, `firm.py` becomes a LangGraph StateGraph.
 
-- [ ] **Step 1: Create recorded fixtures directory**
+- [x] **Step 1: Create recorded fixtures directory**
 
 ```bash
 mkdir -p "/home/tjiesar/10 Projects/idx-walkforward-5001/tests/agent_firm/fixtures/recorded"
 touch "/home/tjiesar/10 Projects/idx-walkforward-5001/tests/agent_firm/fixtures/recorded/.gitkeep"
 ```
 
-- [ ] **Step 2: Write failing test**
+- [x] **Step 2: Write failing test**
 
 Create `tests/agent_firm/test_firm_v2.py`:
 
@@ -1740,7 +1740,7 @@ def test_evaluate_returns_bypassed_when_disabled(monkeypatch, tmp_path):
     assert out[0].decision == "bypassed"
 ```
 
-- [ ] **Step 3: Run to confirm failure**
+- [x] **Step 3: Run to confirm failure**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_firm_v2.py -v
@@ -1748,7 +1748,7 @@ venv/bin/pytest tests/agent_firm/test_firm_v2.py -v
 
 Expected: ImportError or test failure (firm.py still has Phase 1 implementation with only 2 agents).
 
-- [ ] **Step 4: Rewrite firm.py**
+- [x] **Step 4: Rewrite firm.py**
 
 Replace the entire contents of `engine/agent_firm/firm.py` with:
 
@@ -2041,7 +2041,7 @@ def _persist(decision: AgentDecision) -> int:
         conn.close()
 ```
 
-- [ ] **Step 5: Run firm_v2 tests**
+- [x] **Step 5: Run firm_v2 tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/test_firm_v2.py -v --tb=short
@@ -2049,7 +2049,7 @@ venv/bin/pytest tests/agent_firm/test_firm_v2.py -v --tb=short
 
 Expected: 2 passed.
 
-- [ ] **Step 6: Run full test suite**
+- [x] **Step 6: Run full test suite**
 
 ```bash
 venv/bin/pytest tests/agent_firm/ -v --tb=short 2>&1 | tail -10
@@ -2057,7 +2057,7 @@ venv/bin/pytest tests/agent_firm/ -v --tb=short 2>&1 | tail -10
 
 Expected: all prior tests still pass (test_firm.py Phase 1 tests may fail if they relied on the old firm.py internals — if so, check what broke and fix). The old `test_firm.py` tests for `evaluate_async` and `evaluate` check the public API which is unchanged; they should still pass if the DB schema is correct.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add engine/agent_firm/firm.py tests/agent_firm/test_firm_v2.py \
@@ -2074,7 +2074,7 @@ git commit -m "feat(agent_firm): LangGraph DAG orchestrator — 7-agent pipeline
 
 Add the agent firm hook inside `scheduled_multi_strategy_scan()`, after `flow_confirmed` is assembled and before `send_telegram()`.
 
-- [ ] **Step 1: Read the relevant section**
+- [x] **Step 1: Read the relevant section**
 
 ```bash
 grep -n "flow_confirmed\|send_telegram\|Step 7\|Step 8\|auto_trade" scheduler.py | head -20
@@ -2082,7 +2082,7 @@ grep -n "flow_confirmed\|send_telegram\|Step 7\|Step 8\|auto_trade" scheduler.py
 
 Note the line number where `flow_confirmed` is finalized and where `send_telegram` is first called for the signal block.
 
-- [ ] **Step 2: Write failing test**
+- [x] **Step 2: Write failing test**
 
 Create `tests/test_scheduler_firm_hook.py`:
 
@@ -2155,7 +2155,7 @@ def test_firm_hook_skipped_when_disabled(monkeypatch):
         assert len(evaluate_calls) == 0
 ```
 
-- [ ] **Step 3: Run to confirm these tests pass already (they test the hook logic, not scheduler internals)**
+- [x] **Step 3: Run to confirm these tests pass already (they test the hook logic, not scheduler internals)**
 
 ```bash
 venv/bin/pytest tests/test_scheduler_firm_hook.py -v --tb=short
@@ -2163,7 +2163,7 @@ venv/bin/pytest tests/test_scheduler_firm_hook.py -v --tb=short
 
 Expected: both pass (they test our logic, not scheduler.py changes yet).
 
-- [ ] **Step 4: Add the hook to scheduler.py**
+- [x] **Step 4: Add the hook to scheduler.py**
 
 Read `scheduler.py` around line where `flow_confirmed` is finalized (look for the DB save block). Insert the agent firm block AFTER the DB save and BEFORE the `if len(flow_confirmed) > 0:` send_telegram block.
 
@@ -2202,7 +2202,7 @@ The block to insert (find the right line using `grep -n "Step 7\|auto-open\|open
 
 Insert this block right before the `# Step 7: Auto-open paper trades` comment (or equivalent).
 
-- [ ] **Step 5: Verify syntax**
+- [x] **Step 5: Verify syntax**
 
 ```bash
 venv/bin/python -c "import scheduler; print('ok')"
@@ -2210,7 +2210,7 @@ venv/bin/python -c "import scheduler; print('ok')"
 
 Expected: `ok` (no syntax errors).
 
-- [ ] **Step 6: Run full test suite**
+- [x] **Step 6: Run full test suite**
 
 ```bash
 venv/bin/pytest tests/agent_firm/ -v --tb=short 2>&1 | tail -5
@@ -2218,7 +2218,7 @@ venv/bin/pytest tests/agent_firm/ -v --tb=short 2>&1 | tail -5
 
 Expected: all agent_firm tests pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add scheduler.py tests/test_scheduler_firm_hook.py
@@ -2235,7 +2235,7 @@ git commit -m "feat(agent_firm): wire evaluate() into scheduled_multi_strategy_s
 
 Extend `/api/agent/status` with a `today_stats` field and add a stats line to the badge.
 
-- [ ] **Step 1: Read the existing agent_status endpoint in app.py**
+- [x] **Step 1: Read the existing agent_status endpoint in app.py**
 
 ```bash
 grep -n "agent_status\|agent/status\|today_stats" app.py
@@ -2243,7 +2243,7 @@ grep -n "agent_status\|agent/status\|today_stats" app.py
 
 Note the line numbers.
 
-- [ ] **Step 2: Update the endpoint**
+- [x] **Step 2: Update the endpoint**
 
 Find the `agent_status` function in `app.py` and replace it with:
 
@@ -2283,7 +2283,7 @@ def agent_status():
     })
 ```
 
-- [ ] **Step 3: Update the badge in templates/backtest_multi.html**
+- [x] **Step 3: Update the badge in templates/backtest_multi.html**
 
 Find the existing `<div id="agent-firm-badge"` block (inserted in Phase 1) and replace the `<script>` section so it also renders today's stats:
 
@@ -2310,7 +2310,7 @@ Find the existing `<div id="agent-firm-badge"` block (inserted in Phase 1) and r
 </script>
 ```
 
-- [ ] **Step 4: Test the endpoint (if Flask server is running)**
+- [x] **Step 4: Test the endpoint (if Flask server is running)**
 
 ```bash
 curl -s http://localhost:5001/api/agent/status | python3 -m json.tool
@@ -2327,7 +2327,7 @@ Expected (server off is fine — skip if not running):
 }
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app.py templates/backtest_multi.html
@@ -2338,7 +2338,7 @@ git commit -m "feat(agent_firm): dashboard stats line — today's evaluated/appr
 
 ## Final Verification
 
-- [ ] **Run full test suite**
+- [x] **Run full test suite**
 
 ```bash
 venv/bin/pytest tests/agent_firm/ -v
@@ -2346,7 +2346,7 @@ venv/bin/pytest tests/agent_firm/ -v
 
 Expected: 50+ tests across all files, all passing.
 
-- [ ] **Verify smoke probe still works**
+- [x] **Verify smoke probe still works**
 
 ```bash
 AGENT_FIRM_ENABLED=false venv/bin/python -m engine.agent_firm.smoke
@@ -2355,7 +2355,7 @@ echo "exit: $?"
 
 Expected: `SKIP` and exit 0.
 
-- [ ] **Verify scheduler imports cleanly**
+- [x] **Verify scheduler imports cleanly**
 
 ```bash
 venv/bin/python -c "import scheduler; print('scheduler ok')"
@@ -2363,7 +2363,7 @@ venv/bin/python -c "import scheduler; print('scheduler ok')"
 
 Expected: `scheduler ok`.
 
-- [ ] **Tag Phase 2**
+- [x] **Tag Phase 2**
 
 ```bash
 git tag -a phase2-agent-firm-7-agents -m "Phase 2 complete: LangGraph DAG + 7 agents + shadow mode"

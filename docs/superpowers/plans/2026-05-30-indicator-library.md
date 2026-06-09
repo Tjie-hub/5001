@@ -34,7 +34,7 @@
 - Create: `engine/indicators.py`
 - Create: `tests/test_indicators.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 # tests/test_indicators.py
@@ -163,7 +163,7 @@ class TestCalcRelativeStrength:
         assert calc_relative_strength(None, None) == 1.0
 ```
 
-- [ ] **Step 2: Run to confirm import failure**
+- [x] **Step 2: Run to confirm import failure**
 
 ```
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -172,7 +172,7 @@ pytest tests/test_indicators.py -v 2>&1 | head -20
 
 Expected: `ModuleNotFoundError: No module named 'engine.indicators'`
 
-- [ ] **Step 3: Create `engine/indicators.py`**
+- [x] **Step 3: Create `engine/indicators.py`**
 
 ```python
 # engine/indicators.py
@@ -243,7 +243,7 @@ def calc_relative_strength(ticker_df: pd.DataFrame, ihsg_df: pd.DataFrame,
 calc_relative_strength.warmup_bars = lambda period=20: period + 1
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```
 pytest tests/test_indicators.py -v
@@ -251,7 +251,7 @@ pytest tests/test_indicators.py -v
 
 Expected: All 16 tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/indicators.py tests/test_indicators.py
@@ -266,7 +266,7 @@ git commit -m "feat(r9): create engine/indicators.py with strategies.py indicato
 - Modify: `engine/indicators.py`
 - Modify: `tests/test_indicators.py`
 
-- [ ] **Step 1: Append failing tests to `tests/test_indicators.py`**
+- [x] **Step 1: Append failing tests to `tests/test_indicators.py`**
 
 ```python
 class TestCalcAdx:
@@ -357,7 +357,7 @@ class TestWarmupMetadata:
         assert get_warmup([]) == 0
 ```
 
-- [ ] **Step 2: Run to confirm failures**
+- [x] **Step 2: Run to confirm failures**
 
 ```
 pytest tests/test_indicators.py::TestCalcAdx tests/test_indicators.py::TestWarmupMetadata -v 2>&1 | head -20
@@ -365,7 +365,7 @@ pytest tests/test_indicators.py::TestCalcAdx tests/test_indicators.py::TestWarmu
 
 Expected: `ImportError` for `calc_adx`, `get_warmup`.
 
-- [ ] **Step 3: Append to `engine/indicators.py`**
+- [x] **Step 3: Append to `engine/indicators.py`**
 
 ```python
 def calc_adx(df: pd.DataFrame, period: int = 14) -> pd.Series:
@@ -446,7 +446,7 @@ def get_warmup(funcs: list) -> int:
     return max(fn.warmup_bars() for fn in funcs)
 ```
 
-- [ ] **Step 4: Run all tests**
+- [x] **Step 4: Run all tests**
 
 ```
 pytest tests/test_indicators.py -v
@@ -454,7 +454,7 @@ pytest tests/test_indicators.py -v
 
 Expected: All tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/indicators.py tests/test_indicators.py
@@ -469,7 +469,7 @@ git commit -m "feat(r9): add regime_filter indicators, calc_weekly_trend, warmup
 - Modify: `engine/indicators.py`
 - Modify: `tests/test_indicators.py`
 
-- [ ] **Step 1: Append failing tests to `tests/test_indicators.py`**
+- [x] **Step 1: Append failing tests to `tests/test_indicators.py`**
 
 ```python
 class TestIndicatorCache:
@@ -510,7 +510,7 @@ class TestIndicatorCache:
         assert result is not None and abs(result['2025-01-01'] - 20.0) < 0.001
 ```
 
-- [ ] **Step 2: Run to confirm failures**
+- [x] **Step 2: Run to confirm failures**
 
 ```
 pytest tests/test_indicators.py::TestIndicatorCache -v 2>&1 | head -15
@@ -518,7 +518,7 @@ pytest tests/test_indicators.py::TestIndicatorCache -v 2>&1 | head -15
 
 Expected: `ImportError: cannot import name 'IndicatorCache'`
 
-- [ ] **Step 3: Append `IndicatorCache` to `engine/indicators.py`**
+- [x] **Step 3: Append `IndicatorCache` to `engine/indicators.py`**
 
 ```python
 import sqlite3
@@ -591,7 +591,7 @@ class IndicatorCache:
             conn.close()
 ```
 
-- [ ] **Step 4: Run all tests**
+- [x] **Step 4: Run all tests**
 
 ```
 pytest tests/test_indicators.py -v
@@ -599,7 +599,7 @@ pytest tests/test_indicators.py -v
 
 Expected: All tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/indicators.py tests/test_indicators.py
@@ -615,7 +615,7 @@ git commit -m "feat(r9): add IndicatorCache to engine/indicators.py"
 
 Remove 7 `calc_*` definitions; replace with a single import block. Also replace two inline `rolling().mean()` calls with `calc_sma`.
 
-- [ ] **Step 1: Add import block at top of `engine/strategies.py`**
+- [x] **Step 1: Add import block at top of `engine/strategies.py`**
 
 After the existing `import numpy as np` / `import pandas as pd` lines, add:
 
@@ -632,7 +632,7 @@ from engine.indicators import (
 )
 ```
 
-- [ ] **Step 2: Delete `calc_vwap` definition**
+- [x] **Step 2: Delete `calc_vwap` definition**
 
 Remove these lines (currently around line 36):
 ```python
@@ -644,7 +644,7 @@ def calc_vwap(df: pd.DataFrame, window: int = 60) -> pd.Series:
     return cum_tp_vol / cum_vol
 ```
 
-- [ ] **Step 3: Delete `calc_atr` definition**
+- [x] **Step 3: Delete `calc_atr` definition**
 
 Remove these lines (currently around line 43):
 ```python
@@ -658,7 +658,7 @@ def calc_atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
     return tr.rolling(period).mean()
 ```
 
-- [ ] **Step 4: Delete `calc_vol_ratio`, `calc_relative_strength`, `calc_delta` definitions**
+- [x] **Step 4: Delete `calc_vol_ratio`, `calc_relative_strength`, `calc_delta` definitions**
 
 Remove these three functions (currently around lines 52–74):
 ```python
@@ -670,7 +670,7 @@ def calc_delta(df: pd.DataFrame) -> pd.Series:
     ...
 ```
 
-- [ ] **Step 5: Delete `calc_vwma` definition**
+- [x] **Step 5: Delete `calc_vwma` definition**
 
 Remove these lines (currently around line 365):
 ```python
@@ -680,11 +680,11 @@ def calc_vwma(df: pd.DataFrame, period: int = 20) -> pd.Series:
             df['volume'].rolling(period).sum()
 ```
 
-- [ ] **Step 6: Delete `calc_weekly_trend` definition**
+- [x] **Step 6: Delete `calc_weekly_trend` definition**
 
 Remove the entire `calc_weekly_trend` function (currently around lines 1202–1238).
 
-- [ ] **Step 7: Replace inline rolling in `filter_above_ma50`**
+- [x] **Step 7: Replace inline rolling in `filter_above_ma50`**
 
 Find (around line 139):
 ```python
@@ -695,7 +695,7 @@ Replace with:
     return df['close'] > calc_sma(df, 50)
 ```
 
-- [ ] **Step 8: Replace inline rolling in `strategy_conservative`**
+- [x] **Step 8: Replace inline rolling in `strategy_conservative`**
 
 Find (around line 348):
 ```python
@@ -706,7 +706,7 @@ Replace with:
     ma20  = calc_sma(df, 20)
 ```
 
-- [ ] **Step 9: Run full test suite**
+- [x] **Step 9: Run full test suite**
 
 ```
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -715,7 +715,7 @@ pytest tests/ -v --tb=short 2>&1 | tail -30
 
 Expected: All tests pass.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add engine/strategies.py
@@ -729,7 +729,7 @@ git commit -m "refactor(r9): remove calc_* from strategies.py, import from engin
 **Files:**
 - Modify: `engine/regime_filter.py`
 
-- [ ] **Step 1: Add import after existing imports in `engine/regime_filter.py`**
+- [x] **Step 1: Add import after existing imports in `engine/regime_filter.py`**
 
 After the `try/except yfinance` block (around line 24), add:
 
@@ -743,7 +743,7 @@ from engine.indicators import (
 )
 ```
 
-- [ ] **Step 2: Delete `calc_adx` definition**
+- [x] **Step 2: Delete `calc_adx` definition**
 
 Remove the entire function (lines 33–55):
 ```python
@@ -751,11 +751,11 @@ def calc_adx(df: pd.DataFrame, period: int = 14) -> pd.Series:
     ...
 ```
 
-- [ ] **Step 3: Delete `calc_ma_slope`, `calc_vr_mean`, `calc_price_range_pct`, `calc_close_vs_ma` definitions**
+- [x] **Step 3: Delete `calc_ma_slope`, `calc_vr_mean`, `calc_price_range_pct`, `calc_close_vs_ma` definitions**
 
 Remove all four functions (lines 58–82).
 
-- [ ] **Step 4: Run full test suite**
+- [x] **Step 4: Run full test suite**
 
 ```
 pytest tests/ -v --tb=short 2>&1 | tail -30
@@ -763,7 +763,7 @@ pytest tests/ -v --tb=short 2>&1 | tail -30
 
 Expected: All tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/regime_filter.py
@@ -778,7 +778,7 @@ git commit -m "refactor(r9): remove calc_* from regime_filter.py, import from en
 - Modify: `engine/optimizer.py`
 - Modify: `engine/swing_screener.py`
 
-- [ ] **Step 1: Update `engine/optimizer.py` imports**
+- [x] **Step 1: Update `engine/optimizer.py` imports**
 
 Find the `from engine.strategies import (...)` block (lines 13–23). Remove `calc_atr`, `calc_delta`, `calc_vol_ratio`, `calc_vwap` from it. Add a new import line directly above it:
 
@@ -793,7 +793,7 @@ from engine.strategies import (
 )
 ```
 
-- [ ] **Step 2: Update `engine/swing_screener.py`**
+- [x] **Step 2: Update `engine/swing_screener.py`**
 
 Find (line 21):
 ```python
@@ -804,7 +804,7 @@ Replace with:
 from engine.indicators import calc_atr, calc_vol_ratio
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 ```
 pytest tests/ -v --tb=short 2>&1 | tail -20
@@ -812,7 +812,7 @@ pytest tests/ -v --tb=short 2>&1 | tail -20
 
 Expected: All tests pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add engine/optimizer.py engine/swing_screener.py
@@ -828,7 +828,7 @@ git commit -m "refactor(r9): update optimizer.py + swing_screener.py imports to 
 - Modify: `scheduler/scanner.py`
 - Modify: `monitor.py`
 
-- [ ] **Step 1: Update `routes/backtest.py`**
+- [x] **Step 1: Update `routes/backtest.py`**
 
 Find the inline import (around line 918, inside a function body):
 ```python
@@ -839,7 +839,7 @@ Replace with:
 from engine.indicators import calc_vol_ratio
 ```
 
-- [ ] **Step 2: Update `scheduler/scanner.py`**
+- [x] **Step 2: Update `scheduler/scanner.py`**
 
 Find the inline import (around line 218, inside a function body):
 ```python
@@ -850,7 +850,7 @@ Replace with:
 from engine.indicators import calc_vol_ratio, calc_relative_strength
 ```
 
-- [ ] **Step 3: Update `monitor.py`**
+- [x] **Step 3: Update `monitor.py`**
 
 Find the inline import (around line 252, inside a function body):
 ```python
@@ -861,7 +861,7 @@ Replace with:
 from engine.indicators import calc_atr
 ```
 
-- [ ] **Step 4: Run full test suite**
+- [x] **Step 4: Run full test suite**
 
 ```
 pytest tests/ -v --tb=short 2>&1 | tail -20
@@ -869,7 +869,7 @@ pytest tests/ -v --tb=short 2>&1 | tail -20
 
 Expected: All tests pass.
 
-- [ ] **Step 5: Confirm no stale imports remain**
+- [x] **Step 5: Confirm no stale imports remain**
 
 ```
 grep -rn "from engine.strategies import calc_" . --include="*.py" | grep -v __pycache__ | grep -v ".claude/worktrees"
@@ -877,7 +877,7 @@ grep -rn "from engine.strategies import calc_" . --include="*.py" | grep -v __py
 
 Expected: No output.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add routes/backtest.py scheduler/scanner.py monitor.py
@@ -891,7 +891,7 @@ git commit -m "refactor(r9): update inline imports in backtest/scanner/monitor t
 **Files:**
 - Modify: `engine/walkforward_multi.py`
 
-- [ ] **Step 1: Add import at top of `engine/walkforward_multi.py`**
+- [x] **Step 1: Add import at top of `engine/walkforward_multi.py`**
 
 After the existing `.strategies` import block (around line 21), add:
 
@@ -899,7 +899,7 @@ After the existing `.strategies` import block (around line 21), add:
 from engine.indicators import get_warmup, calc_atr, calc_adx, calc_ma_slope, calc_vwap
 ```
 
-- [ ] **Step 2: Replace the constant (around line 217)**
+- [x] **Step 2: Replace the constant (around line 217)**
 
 Find:
 ```python
@@ -912,7 +912,7 @@ Replace with:
     WARMUP_BARS = get_warmup([calc_vwap, calc_adx, calc_ma_slope, calc_atr])  # → 60
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 ```
 pytest tests/ -v --tb=short 2>&1 | tail -20
@@ -920,7 +920,7 @@ pytest tests/ -v --tb=short 2>&1 | tail -20
 
 Expected: All tests pass. `WARMUP_BARS` evaluates to 60 (still covers all indicator warmup windows).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add engine/walkforward_multi.py
@@ -934,14 +934,14 @@ git commit -m "refactor(r9): replace hardcoded WARMUP_BARS=75 with get_warmup() 
 **Files:**
 - Modify: `scheduler/utils.py`
 
-- [ ] **Step 1: Add import at top of `scheduler/utils.py`**
+- [x] **Step 1: Add import at top of `scheduler/utils.py`**
 
 After existing imports, add:
 ```python
 from engine.indicators import IndicatorCache
 ```
 
-- [ ] **Step 2: Add cache invalidation inside `fetch_latest` after successful save**
+- [x] **Step 2: Add cache invalidation inside `fetch_latest` after successful save**
 
 Find in `fetch_latest()` (around line 85):
 ```python
@@ -965,7 +965,7 @@ Insert between the print and the suspension scan:
             from engine.suspension_detector import scan_all as _scan_suspensions
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 ```
 pytest tests/ -v --tb=short 2>&1 | tail -20
@@ -973,7 +973,7 @@ pytest tests/ -v --tb=short 2>&1 | tail -20
 
 Expected: All tests pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add scheduler/utils.py
@@ -984,7 +984,7 @@ git commit -m "feat(r9): invalidate IndicatorCache per-ticker in fetch_latest"
 
 ## Task 10: Final verification and TODO update
 
-- [ ] **Step 1: Run full test suite**
+- [x] **Step 1: Run full test suite**
 
 ```
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -993,7 +993,7 @@ pytest tests/ -v 2>&1 | tail -40
 
 Expected: All tests pass with no `ImportError` or `AttributeError`.
 
-- [ ] **Step 2: Verify all imports resolved**
+- [x] **Step 2: Verify all imports resolved**
 
 ```bash
 python3 -c "
@@ -1009,7 +1009,7 @@ print('All imports OK')
 
 Expected: `All imports OK`
 
-- [ ] **Step 3: Verify no stale `calc_*` imports from strategies**
+- [x] **Step 3: Verify no stale `calc_*` imports from strategies**
 
 ```bash
 grep -rn "from engine.strategies import calc_" . --include="*.py" | grep -v __pycache__ | grep -v ".claude/worktrees"
@@ -1017,18 +1017,18 @@ grep -rn "from engine.strategies import calc_" . --include="*.py" | grep -v __py
 
 Expected: No output.
 
-- [ ] **Step 4: Mark R9 complete in `TODO.md`**
+- [x] **Step 4: Mark R9 complete in `TODO.md`**
 
 Find:
 ```
-- [ ] **R9. Build indicator library** — Extract manual calculations from `strategies.py` into `engine/indicators.py` with auto-warmup, NaN handling, caching. ~6 hr.
+- [x] **R9. Build indicator library** — Extract manual calculations from `strategies.py` into `engine/indicators.py` with auto-warmup, NaN handling, caching. ~6 hr.
 ```
 Replace with:
 ```
 - [x] **R9. Build indicator library** — `engine/indicators.py`: 13 `calc_*` functions, `warmup_bars` metadata, `get_warmup()`, `IndicatorCache` (SQLite). Full migration: 9 files updated, no shims. `WARMUP_BARS` in WF harness replaced with `get_warmup()`. SHIPPED 2026-05-30.
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add TODO.md

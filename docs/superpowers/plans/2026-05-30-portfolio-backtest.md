@@ -35,7 +35,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
 **Files:**
 - Create: `tests/test_portfolio_backtest.py`
 
-- [ ] **Step 1: Write the test file**
+- [x] **Step 1: Write the test file**
 
 ```python
 """Tests for engine/portfolio_backtest.py"""
@@ -165,7 +165,7 @@ def test_per_ticker_allocation_sums_to_capital():
     assert abs(total - 9_000_000) < 10  # rounding tolerance
 ```
 
-- [ ] **Step 2: Run tests — confirm they all FAIL**
+- [x] **Step 2: Run tests — confirm they all FAIL**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
@@ -175,7 +175,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
 
 Expected: all 9 tests FAIL with `ModuleNotFoundError: No module named 'engine.portfolio_backtest'`
 
-- [ ] **Step 3: Commit the test file**
+- [x] **Step 3: Commit the test file**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
@@ -190,7 +190,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
 **Files:**
 - Create: `engine/portfolio_backtest.py`
 
-- [ ] **Step 1: Create the engine file**
+- [x] **Step 1: Create the engine file**
 
 ```python
 """engine/portfolio_backtest.py — Portfolio-level backtesting across N tickers."""
@@ -365,7 +365,7 @@ def run_portfolio_backtest(
     }
 ```
 
-- [ ] **Step 2: Run tests — confirm they all PASS**
+- [x] **Step 2: Run tests — confirm they all PASS**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
@@ -375,7 +375,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
 
 Expected: 9 passed
 
-- [ ] **Step 3: Run full suite to confirm no regressions**
+- [x] **Step 3: Run full suite to confirm no regressions**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
@@ -386,7 +386,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
 
 Expected: 106 passed (97 + 9 new)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
@@ -402,7 +402,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
 - Create: `routes/portfolio.py`
 - Modify: `app.py`
 
-- [ ] **Step 1: Create `routes/portfolio.py`**
+- [x] **Step 1: Create `routes/portfolio.py`**
 
 ```python
 """routes/portfolio.py — Portfolio backtest API."""
@@ -449,7 +449,7 @@ def api_portfolio_backtest():
     return jsonify({'sector': sector, 'strategy': strategy, 'capital': capital, **result})
 ```
 
-- [ ] **Step 2: Wire into `app.py`**
+- [x] **Step 2: Wire into `app.py`**
 
 Add after the existing blueprint imports (e.g. after `from routes.backtest import backtest_bp`):
 
@@ -471,7 +471,7 @@ def portfolio_page():
     return render_template("portfolio.html")
 ```
 
-- [ ] **Step 3: Verify import and routes registered**
+- [x] **Step 3: Verify import and routes registered**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
@@ -485,7 +485,7 @@ print([r for r in rules if 'portfolio' in r])
 
 Expected: `['/api/portfolio/sectors', '/api/portfolio/backtest', '/portfolio']`
 
-- [ ] **Step 4: Run full test suite**
+- [x] **Step 4: Run full test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
@@ -496,7 +496,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
 
 Expected: 106 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
@@ -511,7 +511,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
 **Files:**
 - Create: `templates/portfolio.html`
 
-- [ ] **Step 1: Create the template**
+- [x] **Step 1: Create the template**
 
 ```html
 <!DOCTYPE html>
@@ -962,7 +962,7 @@ init();
 </html>
 ```
 
-- [ ] **Step 2: Verify the page loads in the browser**
+- [x] **Step 2: Verify the page loads in the browser**
 
 ```bash
 curl -s http://localhost:5001/portfolio | grep -c "Portfolio Backtest"
@@ -970,7 +970,7 @@ curl -s http://localhost:5001/portfolio | grep -c "Portfolio Backtest"
 
 Expected: `1` (the page title appears once)
 
-- [ ] **Step 3: Smoke test the API**
+- [x] **Step 3: Smoke test the API**
 
 ```bash
 curl -s -X POST http://localhost:5001/api/portfolio/backtest \
@@ -981,7 +981,7 @@ curl -s -X POST http://localhost:5001/api/portfolio/backtest \
 
 Expected: JSON with `tickers_used`, `portfolio`, `per_ticker`, `correlation` keys (Telecom has only 6 tickers so it runs fast)
 
-- [ ] **Step 4: Run full test suite**
+- [x] **Step 4: Run full test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
@@ -992,7 +992,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
 
 Expected: 106 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
@@ -1007,11 +1007,11 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \
 **Files:**
 - Modify: `TODO.md`
 
-- [ ] **Step 1: Update TODO.md**
+- [x] **Step 1: Update TODO.md**
 
 Change:
 ```
-- [ ] **R6. Portfolio-level backtesting** — Create `engine/portfolio_backtest.py` ...
+- [x] **R6. Portfolio-level backtesting** — Create `engine/portfolio_backtest.py` ...
 ```
 
 To:
@@ -1019,7 +1019,7 @@ To:
 - [x] **R6. Portfolio-level backtesting** — `engine/portfolio_backtest.py` equal-split capital, equity merge, portfolio Sharpe/drawdown/rolling metrics, correlation matrix. `routes/portfolio.py` + `/portfolio` dashboard: 4 Lightweight Charts panels, concurrent-positions canvas, sortable per-ticker table, correlation heatmap. 9 unit tests. SHIPPED 2026-05-30.
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && \

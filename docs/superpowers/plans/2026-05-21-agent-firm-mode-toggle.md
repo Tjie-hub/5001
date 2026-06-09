@@ -15,7 +15,7 @@
 **Files:**
 - Modify: `engine/agent_firm/config.py`
 
-- [ ] **Step 1: Add `_runtime`, `set_mode()`, `get_enforce()`, update `is_active()`**
+- [x] **Step 1: Add `_runtime`, `set_mode()`, `get_enforce()`, update `is_active()`**
 
 Replace the existing `is_active()` function with the following additions at the bottom of the file:
 
@@ -97,7 +97,7 @@ def is_active() -> bool:
     return True
 ```
 
-- [ ] **Step 2: Verify syntax**
+- [x] **Step 2: Verify syntax**
 
 ```bash
 python3 -c "from engine.agent_firm import config; print(config.is_active(), config.get_enforce())"
@@ -105,7 +105,7 @@ python3 -c "from engine.agent_firm import config; print(config.is_active(), conf
 
 Expected: `True False` (since AGENT_FIRM_ENABLED=true in .env, ENFORCE not set)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add engine/agent_firm/config.py
@@ -119,7 +119,7 @@ git commit -m "feat(agent-firm): add runtime mode override with set_mode/get_enf
 **Files:**
 - Modify: `app.py:808-814` (agent_status), insert after line 814
 
-- [ ] **Step 1: Update `agent_status` to use `get_enforce()`**
+- [x] **Step 1: Update `agent_status` to use `get_enforce()`**
 
 In `app.py` line 810, change:
 ```python
@@ -130,7 +130,7 @@ to:
         "enforce": _agent_config.get_enforce(),
 ```
 
-- [ ] **Step 2: Add `POST /api/agent/config` route after `agent_status`**
+- [x] **Step 2: Add `POST /api/agent/config` route after `agent_status`**
 
 Insert after the closing of `agent_status` (after line 814, before `@app.route("/api/agent/audit"`):
 
@@ -150,7 +150,7 @@ def agent_config():
     })
 ```
 
-- [ ] **Step 3: Verify endpoint**
+- [x] **Step 3: Verify endpoint**
 
 ```bash
 curl -s -X POST http://localhost:5001/api/agent/config \
@@ -182,7 +182,7 @@ Expected:
 }
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app.py
@@ -196,7 +196,7 @@ git commit -m "feat(agent-firm): add POST /api/agent/config for runtime mode swi
 **Files:**
 - Modify: `scheduler.py:800`
 
-- [ ] **Step 1: Swap `FIRM_ENFORCE` for `get_enforce()`**
+- [x] **Step 1: Swap `FIRM_ENFORCE` for `get_enforce()`**
 
 Line 800, change:
 ```python
@@ -207,7 +207,7 @@ to:
             if _firm_cfg.get_enforce():
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add scheduler.py
@@ -221,7 +221,7 @@ git commit -m "feat(agent-firm): scheduler uses get_enforce() to respect runtime
 **Files:**
 - Modify: `templates/backtest_multi.html:477-495` (badge script), `templates/backtest_multi.html:508-518` (top-right div)
 
-- [ ] **Step 1: Insert pill HTML into `top-right` div**
+- [x] **Step 1: Insert pill HTML into `top-right` div**
 
 In the `<div class="top-right">` block (lines 508-518), insert the pill before the closing `</div>` (before line 518's `</div>`), after the tweaks button:
 
@@ -233,7 +233,7 @@ In the `<div class="top-right">` block (lines 508-518), insert the pill before t
     </div>
 ```
 
-- [ ] **Step 2: Add `updateFirmPill` and `setFirmMode` JS functions**
+- [x] **Step 2: Add `updateFirmPill` and `setFirmMode` JS functions**
 
 Replace the existing badge `<script>` block (lines 477-496) with this expanded version:
 
@@ -300,11 +300,11 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
 </script>
 ```
 
-- [ ] **Step 3: Verify in browser**
+- [x] **Step 3: Verify in browser**
 
 Open `http://localhost:5001` — topbar should show OFF/SHADOW/ENFORCE pill with SHADOW highlighted amber (current state). Click ENFORCE, confirm dialog should appear. Click cancel — pill stays on SHADOW. Click OFF — pill goes neutral.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add templates/backtest_multi.html

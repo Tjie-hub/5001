@@ -1,6 +1,6 @@
 # G2 — Suspension / Data-Gap Detector — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ✅ SHIPPED 2026-05-28 — 15 unit tests, 1,477 suspension events detected. See `engine/suspension_detector.py`.
 
 **Goal:** Build a standalone module that scans the project's OHLCV history for trading-day gaps, classifies each as a real suspension or a benign data-fetch gap by price discontinuity, persists events to SQLite, and exposes a small read API for downstream consumers (G8/G9/etc).
 
@@ -40,7 +40,7 @@ Everything else (alerts, chart markers, indicator math) is explicit non-goal per
 - Create: `engine/suspension_detector.py`
 - Create: `tests/test_suspension_detector.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_suspension_detector.py`:
 
@@ -84,12 +84,12 @@ def test_detect_gaps_none_returns_empty_list():
     assert detect_gaps(None) == []
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `pytest tests/test_suspension_detector.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'engine.suspension_detector'`.
 
-- [ ] **Step 3: Write the minimal module**
+- [x] **Step 3: Write the minimal module**
 
 Create `engine/suspension_detector.py`:
 
@@ -135,12 +135,12 @@ def detect_gaps(
     return []
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `pytest tests/test_suspension_detector.py -v`
 Expected: PASS (4 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/suspension_detector.py tests/test_suspension_detector.py
@@ -157,7 +157,7 @@ This task forces the core detection loop: iterate consecutive bars, count calend
 - Modify: `engine/suspension_detector.py`
 - Modify: `tests/test_suspension_detector.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/test_suspension_detector.py`:
 
@@ -191,12 +191,12 @@ def test_detect_gaps_brpt_shaped_suspension():
     assert ev.ticker == ""
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_suspension_detector.py::test_detect_gaps_brpt_shaped_suspension -v`
 Expected: FAIL — `assert len(events) == 1` fails because `detect_gaps` still returns `[]`.
 
-- [ ] **Step 3: Implement the detection loop**
+- [x] **Step 3: Implement the detection loop**
 
 Replace `engine/suspension_detector.py` with the full implementation (adds imports for `date`/`datetime`/`timedelta`, the trading-day-counter helper, and the iteration). Open the file and replace its contents with:
 
@@ -289,12 +289,12 @@ def detect_gaps(
     return events
 ```
 
-- [ ] **Step 4: Run the full test file**
+- [x] **Step 4: Run the full test file**
 
 Run: `pytest tests/test_suspension_detector.py -v`
 Expected: PASS (5 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/suspension_detector.py tests/test_suspension_detector.py
@@ -310,7 +310,7 @@ Tests the `else` branch of the classifier: 4-trading-day fetcher miss with conti
 **Files:**
 - Modify: `tests/test_suspension_detector.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/test_suspension_detector.py`:
 
@@ -334,14 +334,14 @@ def test_detect_gaps_data_gap_when_price_continuous():
     assert ev.gap_pct == pytest.approx(0.005, rel=1e-6)
 ```
 
-- [ ] **Step 2: Run test to verify it passes (already covered by Task 2's impl)**
+- [x] **Step 2: Run test to verify it passes (already covered by Task 2's impl)**
 
 Run: `pytest tests/test_suspension_detector.py::test_detect_gaps_data_gap_when_price_continuous -v`
 Expected: PASS — Task 2's implementation already handles the `else` branch. This test pins the behavior so a future refactor can't silently drop the classifier.
 
 If it fails, the classifier branch is broken — re-check the `abs(gap_pct) * 100.0 >= price_jump_pct` comparison in `detect_gaps`.
 
-- [ ] **Step 3: Commit (tests-only)**
+- [x] **Step 3: Commit (tests-only)**
 
 ```bash
 git add tests/test_suspension_detector.py
@@ -357,7 +357,7 @@ Verifies that an Idul Fitri holiday cluster — many calendar days between two b
 **Files:**
 - Modify: `tests/test_suspension_detector.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/test_suspension_detector.py`:
 
@@ -389,12 +389,12 @@ def test_detect_gaps_normal_weekend_returns_empty():
     assert detect_gaps(df) == []
 ```
 
-- [ ] **Step 2: Run tests**
+- [x] **Step 2: Run tests**
 
 Run: `pytest tests/test_suspension_detector.py -v`
 Expected: PASS (8 tests). Calendar-aware counting is already in place from Task 2.
 
-- [ ] **Step 3: Commit (tests-only)**
+- [x] **Step 3: Commit (tests-only)**
 
 ```bash
 git add tests/test_suspension_detector.py
@@ -411,7 +411,7 @@ Adds the SQLite layer. Schema is applied inline via `_ensure_schema()`. `scan_al
 - Modify: `engine/suspension_detector.py`
 - Modify: `tests/test_suspension_detector.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_suspension_detector.py`:
 
@@ -463,12 +463,12 @@ def test_scan_all_is_idempotent():
         conn.close()
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `pytest tests/test_suspension_detector.py -v`
 Expected: FAIL — `ImportError: cannot import name 'scan_all'`.
 
-- [ ] **Step 3: Implement `_ensure_schema` and `scan_all`**
+- [x] **Step 3: Implement `_ensure_schema` and `scan_all`**
 
 Open `engine/suspension_detector.py` and append at the bottom of the file (do NOT rewrite the existing contents):
 
@@ -554,12 +554,12 @@ def scan_all(
             conn.close()
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `pytest tests/test_suspension_detector.py -v`
 Expected: PASS (10 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/suspension_detector.py tests/test_suspension_detector.py
@@ -576,7 +576,7 @@ Implements the consumer-facing read API. Three behaviors verified: ticker with n
 - Modify: `engine/suspension_detector.py`
 - Modify: `tests/test_suspension_detector.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_suspension_detector.py`:
 
@@ -664,12 +664,12 @@ def test_get_status_data_gap_does_not_trip_post_suspension():
         conn.close()
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `pytest tests/test_suspension_detector.py -v`
 Expected: FAIL — `ImportError: cannot import name 'get_status'`.
 
-- [ ] **Step 3: Implement `get_status` and the inclusive-counting helper**
+- [x] **Step 3: Implement `get_status` and the inclusive-counting helper**
 
 Append to `engine/suspension_detector.py`:
 
@@ -762,12 +762,12 @@ def get_status(
             conn.close()
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `pytest tests/test_suspension_detector.py -v`
 Expected: PASS (14 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/suspension_detector.py tests/test_suspension_detector.py
@@ -783,7 +783,7 @@ Adds one fail-soft call at the end of the successful branch of `fetch_latest()` 
 **Files:**
 - Modify: `scheduler.py` (the `fetch_latest()` function, starts at line 50)
 
-- [ ] **Step 1: Show current contents of `fetch_latest()`**
+- [x] **Step 1: Show current contents of `fetch_latest()`**
 
 Open `scheduler.py` and verify the function looks like this around lines 50-65 (re-read with `Read` if uncertain):
 
@@ -806,7 +806,7 @@ def fetch_latest():
         )
 ```
 
-- [ ] **Step 2: Apply the edit**
+- [x] **Step 2: Apply the edit**
 
 Use `Edit` to replace the success-branch print with the success-print + suspension-scan block:
 
@@ -830,7 +830,7 @@ new_string:
     except Exception as e:
 ```
 
-- [ ] **Step 3: Smoke-test the import path**
+- [x] **Step 3: Smoke-test the import path**
 
 Run from repo root:
 ```bash
@@ -838,12 +838,12 @@ python -c "from engine.suspension_detector import scan_all; print('import ok')"
 ```
 Expected output: `import ok`.
 
-- [ ] **Step 4: Re-run the unit tests to confirm nothing broke**
+- [x] **Step 4: Re-run the unit tests to confirm nothing broke**
 
 Run: `pytest tests/test_suspension_detector.py -v`
 Expected: PASS (14 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scheduler.py
@@ -859,7 +859,7 @@ Runs `scan_all()` once against the real `data/walkforward.db` to populate histor
 **Files:**
 - No code changes.
 
-- [ ] **Step 1: Run the backfill**
+- [x] **Step 1: Run the backfill**
 
 From repo root:
 
@@ -869,7 +869,7 @@ python -c "from engine.suspension_detector import scan_all; print(scan_all(), 'e
 
 Expected: a single integer count printed (likely small — handfuls to low hundreds across 972 tickers).
 
-- [ ] **Step 2: Spot-check the known suspensions**
+- [x] **Step 2: Spot-check the known suspensions**
 
 ```bash
 sqlite3 data/walkforward.db "SELECT ticker, last_normal_date, resume_date, missing_td, ROUND(gap_pct,3) AS gap, classification FROM suspension_events WHERE ticker IN ('BRPT','DEWA','BULL') ORDER BY ticker, resume_date;"
@@ -879,7 +879,7 @@ Expected: at least one `suspension` row each for BRPT, DEWA, and BULL with `gap_
 
 If any of those three tickers is missing from the result, the suspension wasn't detected — investigate before declaring G2 done. Most likely cause: the price-jump threshold or the trading-day threshold needs tuning, or the OHLCV data doesn't show the gap (the fetcher may have backfilled across it).
 
-- [ ] **Step 3: Audit the classification breakdown**
+- [x] **Step 3: Audit the classification breakdown**
 
 ```bash
 sqlite3 data/walkforward.db "SELECT classification, COUNT(*) FROM suspension_events GROUP BY classification;"
@@ -887,7 +887,7 @@ sqlite3 data/walkforward.db "SELECT classification, COUNT(*) FROM suspension_eve
 
 Expected: a mix of `suspension` and `data_gap`. If `data_gap` dominates by 10x+, that's expected (yfinance is noisy) — it confirms the classifier is doing its job by *not* flagging those as suspensions.
 
-- [ ] **Step 4: No commit needed**
+- [x] **Step 4: No commit needed**
 
 This task only writes to the new SQLite table inside `data/walkforward.db`, which is not under version control. No commit.
 
@@ -895,11 +895,11 @@ This task only writes to the new SQLite table inside `data/walkforward.db`, whic
 
 ## Done criteria
 
-- [ ] `pytest tests/test_suspension_detector.py -v` is green (14 tests).
-- [ ] `from engine.suspension_detector import scan_all, get_status, GapEvent` succeeds from repo root.
-- [ ] `scheduler.py` `fetch_latest()` calls `scan_all()` fail-soft on the success branch.
-- [ ] `suspension_events` table is populated; BRPT, DEWA, BULL each have at least one `suspension` row.
-- [ ] No edits to `engine/strategies.py` (no indicator math touched), no Telegram code added, no `dive.html` changes. The follow-on tickets (G8 / G9 / R9) remain open.
+- [x] `pytest tests/test_suspension_detector.py -v` is green (14 tests).
+- [x] `from engine.suspension_detector import scan_all, get_status, GapEvent` succeeds from repo root.
+- [x] `scheduler.py` `fetch_latest()` calls `scan_all()` fail-soft on the success branch.
+- [x] `suspension_events` table is populated; BRPT, DEWA, BULL each have at least one `suspension` row.
+- [x] No edits to `engine/strategies.py` (no indicator math touched), no Telegram code added, no `dive.html` changes. The follow-on tickets (G8 / G9 / R9) remain open.
 
 ---
 

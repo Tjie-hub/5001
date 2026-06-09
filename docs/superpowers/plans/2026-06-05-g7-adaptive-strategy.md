@@ -26,7 +26,7 @@
 - Modify: `scheduler/scanner.py` (after `get_ticker_best_strategies()` at line ~565)
 - Create: `tests/test_adaptive_strategy.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `tests/test_adaptive_strategy.py`:
 
@@ -157,7 +157,7 @@ def test_bull_strong_adx_above_45(wf_db):
     assert "conservative" in result
 ```
 
-- [ ] **Step 2: Run tests — expect FAIL**
+- [x] **Step 2: Run tests — expect FAIL**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_adaptive_strategy.py -v 2>&1 | tail -10
@@ -165,7 +165,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: `ImportError: cannot import name 'adaptive_strategy_selector'`
 
-- [ ] **Step 3: Implement `adaptive_strategy_selector()`**
+- [x] **Step 3: Implement `adaptive_strategy_selector()`**
 
 In `scheduler/scanner.py`, find `get_ticker_best_strategies()` (line ~542). After its closing line (`return ["vol_weighted", "vwap_reversion"]` at ~565), insert:
 
@@ -246,7 +246,7 @@ def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
     return get_ticker_best_strategies(ticker, min_consistency)
 ```
 
-- [ ] **Step 4: Run the 5 tests — expect PASS**
+- [x] **Step 4: Run the 5 tests — expect PASS**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_adaptive_strategy.py -v 2>&1 | tail -12
@@ -254,7 +254,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: 5 `PASSED` (note: `_make_regime_df` uses real `detect_regime()` which needs sufficient bar count and realistic data — tests may be approximate; if a regime test fails due to ADX not reaching threshold, adjust `adx_val` in fixture or accept fallback behavior)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add scheduler/scanner.py tests/test_adaptive_strategy.py && git commit -m "feat(g7): add adaptive_strategy_selector() with regime-aware strategy picking"
@@ -269,7 +269,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add scheduler/scanner
 - Modify: `routes/backtest.py`
 - Modify: `TODO.md`
 
-- [ ] **Step 1: Replace `get_ticker_best_strategies` call in `scheduled_multi_strategy_scan()`**
+- [x] **Step 1: Replace `get_ticker_best_strategies` call in `scheduled_multi_strategy_scan()`**
 
 In `scheduler/scanner.py`, find the line (around line 621):
 ```python
@@ -321,7 +321,7 @@ def _safe_regime(df: pd.DataFrame) -> str:
         return 'UNKNOWN'
 ```
 
-- [ ] **Step 2: Add inspection endpoint to `routes/backtest.py`**
+- [x] **Step 2: Add inspection endpoint to `routes/backtest.py`**
 
 At the end of `routes/backtest.py`, append:
 
@@ -383,7 +383,7 @@ def api_adaptive_strategy(ticker):
     })
 ```
 
-- [ ] **Step 3: Verify import and test suite**
+- [x] **Step 3: Verify import and test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -c "
@@ -397,7 +397,7 @@ print('OK')
 
 Expected: `Routes: ['/api/scanner/adaptive_strategy/<ticker>']` and `OK`
 
-- [ ] **Step 4: Run full test suite**
+- [x] **Step 4: Run full test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/ -q --ignore=tests/agent_firm --ignore=tests/test_scheduler_firm_hook.py 2>&1 | tail -5
@@ -405,11 +405,11 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Mark G7 done in `TODO.md`**
+- [x] **Step 5: Mark G7 done in `TODO.md`**
 
 Find:
 ```
-- [ ] **G7. Adaptive strategy switching by regime**
+- [x] **G7. Adaptive strategy switching by regime**
 ```
 
 Replace with:
@@ -417,7 +417,7 @@ Replace with:
 - [x] **G7. Adaptive strategy switching by regime** — SHIPPED 2026-06-05. `adaptive_strategy_selector(ticker, df, min_consistency)` in `scheduler/scanner.py`: detects regime+ADX sub-band (BULL_MODERATE/BULL_STRONG/BEAR/SIDEWAYS), maps to preferred strategies, intersects with wf_scores consistency gate, falls back to get_ticker_best_strategies() if empty. BEAR always returns []. Wired into scheduled_multi_strategy_scan(). `adaptive_regime` key added to scan results. `GET /api/scanner/adaptive_strategy/<ticker>` endpoint. 5 unit tests.
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add scheduler/scanner.py routes/backtest.py TODO.md docs/superpowers/plans/2026-06-05-g7-adaptive-strategy.md && git commit -m "feat(g7): wire adaptive_strategy_selector into scanner + inspection endpoint — G7 complete"

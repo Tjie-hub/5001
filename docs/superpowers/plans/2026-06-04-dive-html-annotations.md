@@ -26,7 +26,7 @@
 - Create: `tests/test_api_ticker_full.py`
 - Modify: `routes/screener.py:314-341` (the `return jsonify({...})` block)
 
-- [ ] **Step 1: Create test file with fixture**
+- [x] **Step 1: Create test file with fixture**
 
 Create `tests/test_api_ticker_full.py`:
 
@@ -148,7 +148,7 @@ def _get_full(client):
     return json.loads(resp.data)
 ```
 
-- [ ] **Step 2: Write failing test for `suspensions` field**
+- [x] **Step 2: Write failing test for `suspensions` field**
 
 Append to `tests/test_api_ticker_full.py`:
 
@@ -177,7 +177,7 @@ def test_suspensions_has_correct_fields(client):
     assert abs(s["gap_pct"] - (-0.20)) < 0.001
 ```
 
-- [ ] **Step 3: Run tests to confirm they fail**
+- [x] **Step 3: Run tests to confirm they fail**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -186,7 +186,7 @@ pytest tests/test_api_ticker_full.py::test_full_includes_suspensions_key -v
 
 Expected: `FAILED` — `KeyError: 'suspensions'` or `AssertionError`.
 
-- [ ] **Step 4: Add `suspensions` field to `api_ticker_full`**
+- [x] **Step 4: Add `suspensions` field to `api_ticker_full`**
 
 In `routes/screener.py`, inside `api_ticker_full()`, add this block just before `conn.close()`:
 
@@ -211,7 +211,7 @@ suspensions = [
 
 Then add `'suspensions': suspensions,` to the `return jsonify({...})` dict.
 
-- [ ] **Step 5: Run tests to confirm they pass**
+- [x] **Step 5: Run tests to confirm they pass**
 
 ```bash
 pytest tests/test_api_ticker_full.py::test_full_includes_suspensions_key \
@@ -221,7 +221,7 @@ pytest tests/test_api_ticker_full.py::test_full_includes_suspensions_key \
 
 Expected: all 3 PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add routes/screener.py tests/test_api_ticker_full.py
@@ -236,7 +236,7 @@ git commit -m "feat(g9): add suspensions field to /api/ticker/full"
 - Modify: `routes/screener.py` (inside `api_ticker_full`)
 - Modify: `tests/test_api_ticker_full.py` (add tests)
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Append to `tests/test_api_ticker_full.py`:
 
@@ -254,7 +254,7 @@ def test_recommended_strategy_is_string_or_none(client):
     assert d["recommended_strategy"] is None or isinstance(d["recommended_strategy"], str)
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 ```bash
 pytest tests/test_api_ticker_full.py::test_full_includes_recommended_strategy_key -v
@@ -262,7 +262,7 @@ pytest tests/test_api_ticker_full.py::test_full_includes_recommended_strategy_ke
 
 Expected: `FAILED` — `KeyError`.
 
-- [ ] **Step 3: Implement `recommended_strategy`**
+- [x] **Step 3: Implement `recommended_strategy`**
 
 In `routes/screener.py`, add two module-level constants near the top of the file (after the imports, before the first route):
 
@@ -300,7 +300,7 @@ else:
 
 Add `'recommended_strategy': recommended_strategy,` to the `return jsonify({...})` dict.
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 pytest tests/test_api_ticker_full.py::test_full_includes_recommended_strategy_key \
@@ -309,7 +309,7 @@ pytest tests/test_api_ticker_full.py::test_full_includes_recommended_strategy_ke
 
 Expected: both PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add routes/screener.py tests/test_api_ticker_full.py
@@ -324,7 +324,7 @@ git commit -m "feat(g10): add recommended_strategy field to /api/ticker/full"
 - Modify: `routes/screener.py`
 - Modify: `tests/test_api_ticker_full.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Append to `tests/test_api_ticker_full.py`:
 
@@ -392,7 +392,7 @@ def test_fundamental_empty_flags_when_healthy(client):
     assert d["fundamental"]["flags"] == []
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 ```bash
 pytest tests/test_api_ticker_full.py::test_full_includes_fundamental_key -v
@@ -400,7 +400,7 @@ pytest tests/test_api_ticker_full.py::test_full_includes_fundamental_key -v
 
 Expected: `FAILED` — `KeyError`.
 
-- [ ] **Step 3: Implement `fundamental` field**
+- [x] **Step 3: Implement `fundamental` field**
 
 In `routes/screener.py`, add before `conn.close()`:
 
@@ -433,7 +433,7 @@ else:
 
 Add `'fundamental': fundamental,` to the `return jsonify({...})` dict.
 
-- [ ] **Step 4: Run all backend tests**
+- [x] **Step 4: Run all backend tests**
 
 ```bash
 pytest tests/test_api_ticker_full.py -v
@@ -441,7 +441,7 @@ pytest tests/test_api_ticker_full.py -v
 
 Expected: all tests PASS (3 from Task 1 + 2 from Task 2 + 5 from Task 3 = 10 total).
 
-- [ ] **Step 5: Run full suite to check no regressions**
+- [x] **Step 5: Run full suite to check no regressions**
 
 ```bash
 pytest --tb=short -q
@@ -449,7 +449,7 @@ pytest --tb=short -q
 
 Expected: existing tests still pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add routes/screener.py tests/test_api_ticker_full.py
@@ -465,7 +465,7 @@ git commit -m "feat(g12): add fundamental field with flags to /api/ticker/full"
 
 No automated test for pure LWC DOM code — verified visually in Task 9.
 
-- [ ] **Step 1: Add `_contextMarkers` module variable**
+- [x] **Step 1: Add `_contextMarkers` module variable**
 
 In `templates/dive.html`, find the line:
 
@@ -479,7 +479,7 @@ Add immediately after it:
 let _contextMarkers = [];  // G9 + G11 markers — persist across strategy changes
 ```
 
-- [ ] **Step 2: Add `refreshContextMarkers()` helper**
+- [x] **Step 2: Add `refreshContextMarkers()` helper**
 
 Find the line:
 
@@ -498,7 +498,7 @@ function refreshContextMarkers() {
 }
 ```
 
-- [ ] **Step 3: Update `runSelectedStrategy()` — clear case**
+- [x] **Step 3: Update `runSelectedStrategy()` — clear case**
 
 Find the block:
 
@@ -520,7 +520,7 @@ Replace `_candleSeries.setMarkers([])` with `refreshContextMarkers()`:
     }
 ```
 
-- [ ] **Step 4: Update `runSelectedStrategy()` — non-daily timeframe case**
+- [x] **Step 4: Update `runSelectedStrategy()` — non-daily timeframe case**
 
 Find the block:
 
@@ -548,7 +548,7 @@ Replace `_candleSeries.setMarkers([])` with `refreshContextMarkers()`:
     }
 ```
 
-- [ ] **Step 5: Update `runSelectedStrategy()` — merge with context markers**
+- [x] **Step 5: Update `runSelectedStrategy()` — merge with context markers**
 
 Find the line:
 
@@ -564,7 +564,7 @@ Find the line:
     _candleSeries.setMarkers(_merged);
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add templates/dive.html
@@ -578,7 +578,7 @@ git commit -m "feat(g9-g11): add _contextMarkers infrastructure to dive.html"
 **Files:**
 - Modify: `templates/dive.html`
 
-- [ ] **Step 1: Add `renderSuspensions()` function**
+- [x] **Step 1: Add `renderSuspensions()` function**
 
 Find the function `function renderPremover(pm) {` and add the following new function immediately before it:
 
@@ -600,7 +600,7 @@ Find the function `function renderPremover(pm) {` and add the following new func
   }
 ```
 
-- [ ] **Step 2: Update `renderPrice()` signature for G10**
+- [x] **Step 2: Update `renderPrice()` signature for G10**
 
 Find the existing function signature:
 
@@ -614,7 +614,7 @@ Change to:
   function renderPrice(p, regime, recommendedStrategy) {
 ```
 
-- [ ] **Step 3: Add tooltip to the regime badge inside `renderPrice()`**
+- [x] **Step 3: Add tooltip to the regime badge inside `renderPrice()`**
 
 Find these two lines inside `renderPrice()`:
 
@@ -631,7 +631,7 @@ Add one line after them:
       : (regime === 'BEAR' ? 'No entry in BEAR regime' : '');
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add templates/dive.html
@@ -645,7 +645,7 @@ git commit -m "feat(g9-g10): add renderSuspensions and regime strategy hint"
 **Files:**
 - Modify: `templates/dive.html`
 
-- [ ] **Step 1: Add `renderCrashMarkers()` function**
+- [x] **Step 1: Add `renderCrashMarkers()` function**
 
 Find the function `function renderSuspensions(suspensions) {` added in Task 5 and add the following new function immediately before it:
 
@@ -695,7 +695,7 @@ Find the function `function renderSuspensions(suspensions) {` added in Task 5 an
   }
 ```
 
-- [ ] **Step 2: Call `renderCrashMarkers()` after chart data loads**
+- [x] **Step 2: Call `renderCrashMarkers()` after chart data loads**
 
 Find the line at the end of `fetchAndRender`'s success block:
 
@@ -720,7 +720,7 @@ Add `renderCrashMarkers();` just before the `_lwChart.timeScale().fitContent();`
     }
 ```
 
-- [ ] **Step 3: Clear `_contextMarkers` at the top of `fetchAndRender` to avoid duplicates on TF switch**
+- [x] **Step 3: Clear `_contextMarkers` at the top of `fetchAndRender` to avoid duplicates on TF switch**
 
 Find the beginning of the `fetchAndRender` function. The function sets chart data via `_candleSeries.setData(candleData)`. Add a reset just before the crash markers call added in Step 2:
 
@@ -733,7 +733,7 @@ Replace the single `renderCrashMarkers();` line added in Step 2 with both lines 
 
 Note: This means on TF switch, suspension markers are temporarily lost until `loadFull()` re-runs. Since `loadFull()` is called once on page load and isn't re-called on TF switch, also call `renderSuspensions` with cached data. Handle this in Task 8 (wire-up).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add templates/dive.html
@@ -747,7 +747,7 @@ git commit -m "feat(g11): add crash annotation markers to dive.html chart"
 **Files:**
 - Modify: `templates/dive.html`
 
-- [ ] **Step 1: Add HTML badge to topbar**
+- [x] **Step 1: Add HTML badge to topbar**
 
 Find the topbar HTML:
 
@@ -761,7 +761,7 @@ Add immediately after it:
   <span class="fund-badge" id="tb-fund" style="display:none"></span>
 ```
 
-- [ ] **Step 2: Add CSS for `.fund-badge`**
+- [x] **Step 2: Add CSS for `.fund-badge`**
 
 Find the existing `.pm-badge` CSS block (around line 107):
 
@@ -784,7 +784,7 @@ Add the following new rule immediately after the `.pm-badge` block (after its cl
     }
 ```
 
-- [ ] **Step 3: Add `renderFundamental()` JS function**
+- [x] **Step 3: Add `renderFundamental()` JS function**
 
 Find the `function renderPremover(pm) {` function. Add the following new function immediately before it:
 
@@ -802,7 +802,7 @@ Find the `function renderPremover(pm) {` function. Add the following new functio
   }
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add templates/dive.html
@@ -816,7 +816,7 @@ git commit -m "feat(g12): add fundamental red flag badge to dive.html topbar"
 **Files:**
 - Modify: `templates/dive.html`
 
-- [ ] **Step 1: Cache suspensions at module level**
+- [x] **Step 1: Cache suspensions at module level**
 
 Find the line:
 
@@ -830,7 +830,7 @@ Add immediately after it:
 let _suspensionsCache = [];  // cached from /full for re-application on TF switch
 ```
 
-- [ ] **Step 2: Update `renderSuspensions()` to save to cache**
+- [x] **Step 2: Update `renderSuspensions()` to save to cache**
 
 Find the `renderSuspensions` function added in Task 5 and update it to save to the cache:
 
@@ -853,7 +853,7 @@ Find the `renderSuspensions` function added in Task 5 and update it to save to t
   }
 ```
 
-- [ ] **Step 3: Re-apply suspensions after TF switch resets `_contextMarkers`**
+- [x] **Step 3: Re-apply suspensions after TF switch resets `_contextMarkers`**
 
 In Task 6 Step 3, we added `_contextMarkers = []` then `renderCrashMarkers()`. Now add suspension re-application after crash markers:
 
@@ -872,7 +872,7 @@ Replace with:
     renderSuspensions(_suspensionsCache);
 ```
 
-- [ ] **Step 4: Wire all render functions into `loadFull()`**
+- [x] **Step 4: Wire all render functions into `loadFull()`**
 
 Find the `loadFull()` function. It currently ends with:
 
@@ -914,7 +914,7 @@ Full updated block:
     renderFundamental(d.fundamental);
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add templates/dive.html
@@ -928,7 +928,7 @@ git commit -m "feat(g9-g12): wire all annotation render calls into loadFull()"
 **Files:**
 - Modify: `TODO.md`
 
-- [ ] **Step 1: Run full test suite**
+- [x] **Step 1: Run full test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -937,7 +937,7 @@ pytest --tb=short -q
 
 Expected: all tests pass including the 10 new `test_api_ticker_full.py` tests.
 
-- [ ] **Step 2: Start the Flask app and open BRPT in the browser**
+- [x] **Step 2: Start the Flask app and open BRPT in the browser**
 
 ```bash
 python app.py &
@@ -954,11 +954,11 @@ Verify:
 - Selecting a strategy from dropdown: strategy markers appear merged with context markers.
 - Deselecting strategy (choosing "— Strategy —"): context markers remain, strategy markers clear.
 
-- [ ] **Step 3: Mark G9–G12 complete in TODO.md**
+- [x] **Step 3: Mark G9–G12 complete in TODO.md**
 
 In `TODO.md`, find the G9–G12 items under `## 🔲 Sprint 17` and change their `- [ ]` to `- [x]`, adding `SHIPPED 2026-06-04` after each description. Also update the `_Last updated` line at the top.
 
-- [ ] **Step 4: Final commit**
+- [x] **Step 4: Final commit**
 
 ```bash
 git add TODO.md

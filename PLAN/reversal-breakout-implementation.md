@@ -1,6 +1,6 @@
 # REVERSAL_BREAKOUT Pattern — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ✅ SHIPPED 2026-05-18 — implemented in `engine/premover_detector.py`.
 
 **Goal:** Add REVERSAL_BREAKOUT pattern detection to the premover detector so stocks exploding from a low base with unusual volume are caught early (e.g., ASPR at ~200 instead of ~450).
 
@@ -15,7 +15,7 @@
 **Files:**
 - Modify: `engine/premover_detector.py:29-49`
 
-- [ ] **Step 1: Read the current `_init_table()` function**
+- [x] **Step 1: Read the current `_init_table()` function**
 
 ```python
 def _init_table(conn: sqlite3.Connection):
@@ -41,7 +41,7 @@ def _init_table(conn: sqlite3.Connection):
     conn.commit()
 ```
 
-- [ ] **Step 2: Replace `_init_table()` to add migration logic**
+- [x] **Step 2: Replace `_init_table()` to add migration logic**
 
 Replace the entire function. The new version creates the table with new columns, then runs ALTER TABLE migrations for existing tables:
 
@@ -99,7 +99,7 @@ def _init_table(conn: sqlite3.Connection):
     conn.commit()
 ```
 
-- [ ] **Step 3: Add constant for reversal threshold**
+- [x] **Step 3: Add constant for reversal threshold**
 
 After `ALERT_THRESHOLD = 50` on line 26, add:
 
@@ -115,7 +115,7 @@ REVERSAL_THRESHOLD = 45  # REVERSAL_BREAKOUT pattern — lower threshold for ear
 **Files:**
 - Modify: `engine/premover_detector.py` (insert after `score_ticker()` function, which ends around line 164)
 
-- [ ] **Step 1: Add the new scoring function**
+- [x] **Step 1: Add the new scoring function**
 
 Insert the new function between `score_ticker()` and `run_scan()`. Here's the complete function:
 
@@ -231,7 +231,7 @@ def score_ticker_reversal(df: pd.DataFrame, flow_score: float = None) -> dict:
     }
 ```
 
-- [ ] **Step 2: Verify function syntax**
+- [x] **Step 2: Verify function syntax**
 
 Run: `python3 -c "import ast; ast.parse(open('engine/premover_detector.py').read()); print('OK')"`
 Expected: `OK`
@@ -243,7 +243,7 @@ Expected: `OK`
 **Files:**
 - Modify: `engine/premover_detector.py` (insert helper before `run_scan()`)
 
-- [ ] **Step 1: Add insert helper function**
+- [x] **Step 1: Add insert helper function**
 
 Insert before `run_scan()` (around line 167):
 
@@ -281,7 +281,7 @@ def _upsert_setup(conn: sqlite3.Connection, ticker: str, detected_at: str,
     return conn.execute('SELECT changes()').fetchone()[0] > 0
 ```
 
-- [ ] **Step 2: Verify syntax**
+- [x] **Step 2: Verify syntax**
 
 Run: `python3 -c "import ast; ast.parse(open('engine/premover_detector.py').read()); print('OK')"`
 Expected: `OK`
@@ -293,7 +293,7 @@ Expected: `OK`
 **Files:**
 - Modify: `engine/premover_detector.py` (the `run_scan()` function starting around line 167)
 
-- [ ] **Step 1: Replace `run_scan()` with dual-pattern version**
+- [x] **Step 1: Replace `run_scan()` with dual-pattern version**
 
 Replace `run_scan()` entirely:
 
@@ -386,7 +386,7 @@ def run_scan(db_path: str, send_alert_fn=None) -> list:
     return new_setups
 ```
 
-- [ ] **Step 2: Verify syntax**
+- [x] **Step 2: Verify syntax**
 
 Run: `python3 -c "import ast; ast.parse(open('engine/premover_detector.py').read()); print('OK')"`
 Expected: `OK`
@@ -398,7 +398,7 @@ Expected: `OK`
 **Files:**
 - Modify: `engine/premover_detector.py` (the `get_watchlist()` function starting around line 243)
 
-- [ ] **Step 1: Update `get_watchlist()` with pattern_type filter**
+- [x] **Step 1: Update `get_watchlist()` with pattern_type filter**
 
 Replace the function:
 
@@ -456,7 +456,7 @@ def get_watchlist(db_path: str, min_score: int = ALERT_THRESHOLD,
 **Files:**
 - Modify: `app.py:1742-1765`
 
-- [ ] **Step 1: Add reversal scoring alongside existing score_ticker call**
+- [x] **Step 1: Add reversal scoring alongside existing score_ticker call**
 
 Replace the premover scoring block (lines 1742-1765) to include both patterns:
 
@@ -499,7 +499,7 @@ Then add `'premover_reversal': _pm_rev` to the returned JSON dict (somewhere in 
 **Files:**
 - Modify: `app.py:1875-1881`
 
-- [ ] **Step 1: Add pattern_type query param to the watchlist API**
+- [x] **Step 1: Add pattern_type query param to the watchlist API**
 
 Replace the function:
 
@@ -522,7 +522,7 @@ def api_premover_watchlist():
 **Files:**
 - None (one-shot validation script)
 
-- [ ] **Step 1: Write and run a validation script**
+- [x] **Step 1: Write and run a validation script**
 
 ```bash
 cd /home/tjiesar/idx-walkforward-5001
@@ -585,7 +585,7 @@ PYEOF
 
 Expected output: ASPR triggers REVERSAL_BREAKOUT on April 24 (score >= 45) or no later than April 27.
 
-- [ ] **Step 2: Run the full scan live (EOD)**
+- [x] **Step 2: Run the full scan live (EOD)**
 
 ```bash
 cd /home/tjiesar/idx-walkforward-5001
@@ -610,7 +610,7 @@ Expected: No errors. Shows REVERSAL_BREAKOUT and CONTINUATION setups.
 - `docs/reversal-breakout-pattern-design.md`
 - `PLAN/reversal-breakout-implementation.md`
 
-- [ ] **Step 1: Review diff and commit**
+- [x] **Step 1: Review diff and commit**
 
 ```bash
 cd /home/tjiesar/idx-walkforward-5001

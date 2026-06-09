@@ -34,7 +34,7 @@
 - Modify: `engine/regime_filter.py`
 - Create: `tests/test_regime_3class.py`
 
-- [ ] **Step 1: Create test file with failing tests for `label_regime_from_future`**
+- [x] **Step 1: Create test file with failing tests for `label_regime_from_future`**
 
 ```python
 # tests/test_regime_3class.py
@@ -123,7 +123,7 @@ def test_detect_bear():
     assert detect_regime(_make_ohlcv(closes)) == 'BEAR'
 ```
 
-- [ ] **Step 2: Run tests — confirm they FAIL**
+- [x] **Step 2: Run tests — confirm they FAIL**
 
 ```bash
 venv/bin/pytest tests/test_regime_3class.py -v 2>&1 | head -40
@@ -131,7 +131,7 @@ venv/bin/pytest tests/test_regime_3class.py -v 2>&1 | head -40
 
 Expected: 9 failures (functions still return old labels).
 
-- [ ] **Step 3: Update `label_regime_from_future` in `engine/regime_filter.py`**
+- [x] **Step 3: Update `label_regime_from_future` in `engine/regime_filter.py`**
 
 Replace the existing function body (currently uses `abs()` + int labels) with:
 
@@ -154,7 +154,7 @@ def label_regime_from_future(df: pd.DataFrame, forward_days: int = 5,
     return labels
 ```
 
-- [ ] **Step 4: Update `detect_regime` in `engine/regime_filter.py`**
+- [x] **Step 4: Update `detect_regime` in `engine/regime_filter.py`**
 
 Replace the existing function body:
 
@@ -189,7 +189,7 @@ def detect_regime(df: pd.DataFrame) -> str:
         return 'SIDEWAYS'
 ```
 
-- [ ] **Step 5: Run tests — confirm they PASS**
+- [x] **Step 5: Run tests — confirm they PASS**
 
 ```bash
 venv/bin/pytest tests/test_regime_3class.py -v 2>&1 | head -40
@@ -197,7 +197,7 @@ venv/bin/pytest tests/test_regime_3class.py -v 2>&1 | head -40
 
 Expected: 9 PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add engine/regime_filter.py tests/test_regime_3class.py
@@ -212,7 +212,7 @@ git commit -m "feat(regime): 3-class signed labels — BULL/BEAR/SIDEWAYS primit
 - Modify: `engine/regime_filter.py`
 - Modify: `tests/test_regime_3class.py`
 
-- [ ] **Step 1: Add failing tests for multinomial classifier**
+- [x] **Step 1: Add failing tests for multinomial classifier**
 
 Append to `tests/test_regime_3class.py`:
 
@@ -275,7 +275,7 @@ def test_classifier_class_counts_in_metrics():
     assert sum(cc.values()) == metrics['n_samples']
 ```
 
-- [ ] **Step 2: Run new tests — confirm they FAIL**
+- [x] **Step 2: Run new tests — confirm they FAIL**
 
 ```bash
 venv/bin/pytest tests/test_regime_3class.py::test_classifier_trains_3class -v
@@ -283,7 +283,7 @@ venv/bin/pytest tests/test_regime_3class.py::test_classifier_trains_3class -v
 
 Expected: FAIL — classifier still uses binary int labels.
 
-- [ ] **Step 3: Update `RegimeClassifier.train()` in `engine/regime_filter.py`**
+- [x] **Step 3: Update `RegimeClassifier.train()` in `engine/regime_filter.py`**
 
 Replace the `train()` method body:
 
@@ -334,7 +334,7 @@ def train(self, df: pd.DataFrame, forward_days: int = 5,
     }
 ```
 
-- [ ] **Step 4: Update `RegimeClassifier.predict()` in `engine/regime_filter.py`**
+- [x] **Step 4: Update `RegimeClassifier.predict()` in `engine/regime_filter.py`**
 
 Replace the `predict()` method body:
 
@@ -363,7 +363,7 @@ def predict(self, df: pd.DataFrame) -> Tuple[str, float]:
     return str(self.model.classes_[idx]), conf
 ```
 
-- [ ] **Step 5: Run all classifier tests**
+- [x] **Step 5: Run all classifier tests**
 
 ```bash
 venv/bin/pytest tests/test_regime_3class.py -v
@@ -371,7 +371,7 @@ venv/bin/pytest tests/test_regime_3class.py -v
 
 Expected: all PASS (14 tests).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add engine/regime_filter.py tests/test_regime_3class.py
@@ -386,7 +386,7 @@ git commit -m "feat(regime): RegimeClassifier multinomial 3-class BULL/BEAR/SIDE
 - Modify: `engine/regime_filter.py`
 - Modify: `tests/test_regime_3class.py`
 
-- [ ] **Step 1: Add failing tests**
+- [x] **Step 1: Add failing tests**
 
 Append to `tests/test_regime_3class.py`:
 
@@ -441,7 +441,7 @@ def test_adaptive_has_regime_and_confidence():
     assert result['strategy'] == 'Regime Adaptive'
 ```
 
-- [ ] **Step 2: Run new tests — confirm they FAIL**
+- [x] **Step 2: Run new tests — confirm they FAIL**
 
 ```bash
 venv/bin/pytest tests/test_regime_3class.py -k "macro or adaptive" -v
@@ -449,7 +449,7 @@ venv/bin/pytest tests/test_regime_3class.py -k "macro or adaptive" -v
 
 Expected: 7 failures.
 
-- [ ] **Step 3: Update `apply_macro_overlay` in `engine/regime_filter.py`**
+- [x] **Step 3: Update `apply_macro_overlay` in `engine/regime_filter.py`**
 
 Replace the existing function body:
 
@@ -478,7 +478,7 @@ def apply_macro_overlay(regime: str, macro: dict) -> tuple:
     return final_regime, reason
 ```
 
-- [ ] **Step 4: Update `strategy_regime_adaptive` in `engine/regime_filter.py`**
+- [x] **Step 4: Update `strategy_regime_adaptive` in `engine/regime_filter.py`**
 
 Replace the existing function body:
 
@@ -521,7 +521,7 @@ def strategy_regime_adaptive(df: pd.DataFrame, capital: float = 50_000_000,
     return result
 ```
 
-- [ ] **Step 5: Run all tests**
+- [x] **Step 5: Run all tests**
 
 ```bash
 venv/bin/pytest tests/test_regime_3class.py -v
@@ -529,7 +529,7 @@ venv/bin/pytest tests/test_regime_3class.py -v
 
 Expected: all PASS (21 tests).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add engine/regime_filter.py tests/test_regime_3class.py
@@ -544,7 +544,7 @@ git commit -m "feat(regime): macro overlay BULL→SIDEWAYS; strategy_regime_adap
 - Create: `engine/watchlist.py`
 - Create: `tests/test_watchlist.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 # tests/test_watchlist.py
@@ -680,7 +680,7 @@ def test_compute_rsi_downtrend_low():
     assert rsi < 40
 ```
 
-- [ ] **Step 2: Run tests — confirm they FAIL**
+- [x] **Step 2: Run tests — confirm they FAIL**
 
 ```bash
 venv/bin/pytest tests/test_watchlist.py -v 2>&1 | head -20
@@ -688,7 +688,7 @@ venv/bin/pytest tests/test_watchlist.py -v 2>&1 | head -20
 
 Expected: ImportError — `engine.watchlist` does not exist yet.
 
-- [ ] **Step 3: Create `engine/watchlist.py`**
+- [x] **Step 3: Create `engine/watchlist.py`**
 
 ```python
 """Bear dip-scout watchlist — add, promote, expire, and query functions.
@@ -835,7 +835,7 @@ def priority_tickers(conn: sqlite3.Connection) -> List[str]:
     return [r[0] for r in rows]
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 venv/bin/pytest tests/test_watchlist.py -v
@@ -843,7 +843,7 @@ venv/bin/pytest tests/test_watchlist.py -v
 
 Expected: all PASS (9 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/watchlist.py tests/test_watchlist.py
@@ -857,7 +857,7 @@ git commit -m "feat(watchlist): bear dip-scout module — add/promote/expire/pri
 **Files:**
 - Modify: `scheduler.py`
 
-- [ ] **Step 1: Add watchlist table migration to scheduler startup**
+- [x] **Step 1: Add watchlist table migration to scheduler startup**
 
 In `scheduler.py`, find `def start_scheduler():` and add the migration call before `scheduler.start()`:
 
@@ -877,7 +877,7 @@ def start_scheduler():
     # ... rest of existing code unchanged ...
 ```
 
-- [ ] **Step 2: Add bear lane to `scheduled_multi_strategy_scan`**
+- [x] **Step 2: Add bear lane to `scheduled_multi_strategy_scan`**
 
 In `scheduler.py`, locate the block that begins `# ── Agent Firm evaluation` (the hook restored in the prior session). Insert the **bear lane block** immediately AFTER the DB save try/except and BEFORE the agent firm block:
 
@@ -961,7 +961,7 @@ In `scheduler.py`, locate the block that begins `# ── Agent Firm evaluation`
     # ── End bear watchlist ────────────────────────────────────────────────────
 ```
 
-- [ ] **Step 3: Verify syntax**
+- [x] **Step 3: Verify syntax**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && venv/bin/python -m py_compile scheduler.py && echo "OK"
@@ -969,7 +969,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && venv/bin/python -m py_com
 
 Expected: `OK`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add scheduler.py
@@ -985,7 +985,7 @@ git commit -m "feat(scheduler): bear dip-scout watchlist lane — add/promote/ex
 
 The goal: replace all 6 occurrences of `"UNCERTAIN"` → `"SIDEWAYS"`, update the TRENDING emoji logic, and update the regime gate check.
 
-- [ ] **Step 1: Replace `"UNCERTAIN"` fallback strings**
+- [x] **Step 1: Replace `"UNCERTAIN"` fallback strings**
 
 Run this to find all occurrences and confirm count:
 ```bash
@@ -999,7 +999,7 @@ For **each** of these, replace `"UNCERTAIN"` with `"SIDEWAYS"`. Use the Edit too
 sed -i 's/"UNCERTAIN"/"SIDEWAYS"/g' app.py
 ```
 
-- [ ] **Step 2: Update regime gate check (line ~1164)**
+- [x] **Step 2: Update regime gate check (line ~1164)**
 
 Find and replace:
 ```python
@@ -1015,7 +1015,7 @@ Replace with:
 
 (SIDEWAYS tickers are still tradeable via VWAP reversion — only BEAR blocks entry in the live gate.)
 
-- [ ] **Step 3: Update emoji logic (line ~1199)**
+- [x] **Step 3: Update emoji logic (line ~1199)**
 
 Find:
 ```python
@@ -1027,13 +1027,13 @@ Replace with:
                 regime_emoji = "📈" if r.get("regime") == "BULL" else "🐻" if r.get("regime") == "BEAR" else "➡️" if r.get("regime") == "SIDEWAYS" else "❓"
 ```
 
-- [ ] **Step 4: Verify syntax**
+- [x] **Step 4: Verify syntax**
 
 ```bash
 venv/bin/python -m py_compile app.py && echo "OK"
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app.py
@@ -1047,7 +1047,7 @@ git commit -m "fix(app): replace UNCERTAIN→SIDEWAYS, TRENDING→BULL in regime
 **Files:**
 - Modify: `templates/dive.html`
 
-- [ ] **Step 1: Find and replace CSS regime classes**
+- [x] **Step 1: Find and replace CSS regime classes**
 
 Find (lines 104–106):
 ```css
@@ -1063,7 +1063,7 @@ Replace with:
     .regime-badge.SIDEWAYS { background: rgba(234,179,8,.12);  color: var(--yellow); }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add templates/dive.html
@@ -1079,7 +1079,7 @@ git commit -m "fix(templates): regime badge classes BULL/BEAR/SIDEWAYS"
 - Modify: `engine/agent_firm/analytics.py`
 - Modify: `engine/agent_firm/smoke.py`
 
-- [ ] **Step 1: Update `regime_v1.md` — output schema to new labels**
+- [x] **Step 1: Update `regime_v1.md` — output schema to new labels**
 
 Find the JSON output block and guidance section in `regime_v1.md`. Replace:
 
@@ -1112,7 +1112,7 @@ Guidance:
 - UNKNOWN: wf_scores empty or all data missing
 ```
 
-- [ ] **Step 2: Update `analytics.py` line 110**
+- [x] **Step 2: Update `analytics.py` line 110**
 
 Find:
 ```python
@@ -1128,7 +1128,7 @@ Replace with:
 
 Note: historical `agent_traces` rows that stored `"TRENDING"` are unaffected — they predate this change and the analytics window is recent data only.
 
-- [ ] **Step 3: Update `smoke.py` canned regime value**
+- [x] **Step 3: Update `smoke.py` canned regime value**
 
 Find:
 ```python
@@ -1140,7 +1140,7 @@ Replace with:
     regime="BULL",
 ```
 
-- [ ] **Step 4: Run agent firm tests**
+- [x] **Step 4: Run agent firm tests**
 
 ```bash
 venv/bin/pytest tests/agent_firm/ -v --timeout=10 -x -q 2>&1 | tail -20
@@ -1148,7 +1148,7 @@ venv/bin/pytest tests/agent_firm/ -v --timeout=10 -x -q 2>&1 | tail -20
 
 Expected: all PASS (smoke tests skip if firm disabled, which is fine).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add engine/agent_firm/prompts/regime_v1.md engine/agent_firm/analytics.py engine/agent_firm/smoke.py
@@ -1162,7 +1162,7 @@ git commit -m "fix(agent-firm): regime labels BULL/BEAR/SIDEWAYS — prompt, ana
 **Files:**
 - No new files — verification only
 
-- [ ] **Step 1: Run full test suite**
+- [x] **Step 1: Run full test suite**
 
 ```bash
 venv/bin/pytest tests/ -v -q --timeout=30 2>&1 | tail -30
@@ -1170,7 +1170,7 @@ venv/bin/pytest tests/ -v -q --timeout=30 2>&1 | tail -30
 
 Expected: all PASS.
 
-- [ ] **Step 2: Run regime smoke test (live DB)**
+- [x] **Step 2: Run regime smoke test (live DB)**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001"
@@ -1196,7 +1196,7 @@ conn.close()
 
 Expected: each ticker prints one of `BULL / BEAR / SIDEWAYS` for both rule and ML (no crashes, no `TRENDING`/`UNCERTAIN`).
 
-- [ ] **Step 3: Run agent firm smoke test**
+- [x] **Step 3: Run agent firm smoke test**
 
 ```bash
 set -a; source .env; set +a
@@ -1205,7 +1205,7 @@ venv/bin/python -m engine.agent_firm.smoke
 
 Expected: `decision=… OK` (or `SKIP` if firm disabled in env).
 
-- [ ] **Step 4: Final commit**
+- [x] **Step 4: Final commit**
 
 ```bash
 git add -u

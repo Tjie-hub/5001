@@ -26,7 +26,7 @@
 - Create: `tests/test_strategy_crash_recovery.py`
 - Modify: `engine/strategies.py` (append after line 1958)
 
-- [ ] **Step 1: Write failing tests (5 tests)**
+- [x] **Step 1: Write failing tests (5 tests)**
 
 Create `tests/test_strategy_crash_recovery.py`:
 
@@ -190,7 +190,7 @@ def test_entry_window_expires():
     assert len(result["trades"]) == 0, "expected 0 trades when confirmation never fires"
 ```
 
-- [ ] **Step 2: Run tests — expect FAIL**
+- [x] **Step 2: Run tests — expect FAIL**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_strategy_crash_recovery.py -v 2>&1 | tail -15
@@ -198,7 +198,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: `ImportError: cannot import name 'strategy_crash_recovery'`
 
-- [ ] **Step 3: Implement `strategy_crash_recovery()`**
+- [x] **Step 3: Implement `strategy_crash_recovery()`**
 
 Open `engine/strategies.py`. The file ends at line 1959. Append after the last line (after `print(f"Details: {result['details']}")`):
 
@@ -338,7 +338,7 @@ def strategy_crash_recovery(df: pd.DataFrame, capital: float = 50_000_000,
     }
 ```
 
-- [ ] **Step 4: Run the 5 backtest tests — expect PASS**
+- [x] **Step 4: Run the 5 backtest tests — expect PASS**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_strategy_crash_recovery.py::test_no_trades_without_gap tests/test_strategy_crash_recovery.py::test_entry_after_crash_resume tests/test_strategy_crash_recovery.py::test_sl_is_resume_bar_low tests/test_strategy_crash_recovery.py::test_tp_is_50pct_retracement tests/test_strategy_crash_recovery.py::test_entry_window_expires -v 2>&1 | tail -15
@@ -346,7 +346,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: 5 `PASSED`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/strategies.py tests/test_strategy_crash_recovery.py && git commit -m "feat(g3): add strategy_crash_recovery backtest function"
@@ -359,7 +359,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/strategies
 **Files:**
 - Modify: `engine/walkforward_multi.py:8-20` (imports) and `:156-167` (STRATEGY_FUNCS)
 
-- [ ] **Step 1: Add import to `engine/walkforward_multi.py`**
+- [x] **Step 1: Add import to `engine/walkforward_multi.py`**
 
 In `engine/walkforward_multi.py`, find the imports block (lines 8–20):
 
@@ -398,7 +398,7 @@ from .strategies import (
 )
 ```
 
-- [ ] **Step 2: Add to `STRATEGY_FUNCS` dict**
+- [x] **Step 2: Add to `STRATEGY_FUNCS` dict**
 
 In `engine/walkforward_multi.py` lines 156–167, change:
 
@@ -435,7 +435,7 @@ STRATEGY_FUNCS = {
 }
 ```
 
-- [ ] **Step 3: Verify import works**
+- [x] **Step 3: Verify import works**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -c "
@@ -448,7 +448,7 @@ print('OK')
 
 Expected output includes `'Crash Recovery'` and ends with `OK`.
 
-- [ ] **Step 4: Run full test suite (no regressions)**
+- [x] **Step 4: Run full test suite (no regressions)**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/ -q --ignore=tests/agent_firm --ignore=tests/test_scheduler_firm_hook.py 2>&1 | tail -5
@@ -456,7 +456,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: all tests pass (206+ passing).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/walkforward_multi.py && git commit -m "feat(g3): add Crash Recovery to STRATEGY_FUNCS in walkforward_multi"
@@ -471,7 +471,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/walkforwar
 - Modify: `engine/strategies.py:1186-1214` (`check_current_entry_signal` router)
 - Modify: `tests/test_strategy_crash_recovery.py` (append 2 tests)
 
-- [ ] **Step 1: Write failing tests for the live checker**
+- [x] **Step 1: Write failing tests for the live checker**
 
 Append to `tests/test_strategy_crash_recovery.py`:
 
@@ -550,7 +550,7 @@ def test_check_signal_with_recent_suspension(tmp_path):
     assert "resume_date" in result["details"]
 ```
 
-- [ ] **Step 2: Run the 2 new tests — expect FAIL**
+- [x] **Step 2: Run the 2 new tests — expect FAIL**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_strategy_crash_recovery.py::test_check_signal_no_recent_suspension tests/test_strategy_crash_recovery.py::test_check_signal_with_recent_suspension -v 2>&1 | tail -10
@@ -558,7 +558,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: `ImportError: cannot import name 'check_crash_recovery_signal'`
 
-- [ ] **Step 3: Implement `check_crash_recovery_signal()`**
+- [x] **Step 3: Implement `check_crash_recovery_signal()`**
 
 In `engine/strategies.py`, append after `strategy_crash_recovery` (after the closing `}` of its return statement):
 
@@ -673,7 +673,7 @@ def check_crash_recovery_signal(ticker: str, df: pd.DataFrame,
     }
 ```
 
-- [ ] **Step 4: Wire into `check_current_entry_signal()` router**
+- [x] **Step 4: Wire into `check_current_entry_signal()` router**
 
 In `engine/strategies.py`, find `check_current_entry_signal()` (line ~1167). In the `else:` routing block, add before the final `else` fallback:
 
@@ -714,7 +714,7 @@ The full router block should now look like:
         ...
 ```
 
-- [ ] **Step 5: Run all 7 tests — expect PASS**
+- [x] **Step 5: Run all 7 tests — expect PASS**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/test_strategy_crash_recovery.py -v 2>&1 | tail -15
@@ -722,7 +722,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: all 7 `PASSED`
 
-- [ ] **Step 6: Run full test suite**
+- [x] **Step 6: Run full test suite**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -m pytest tests/ -q --ignore=tests/agent_firm --ignore=tests/test_scheduler_firm_hook.py 2>&1 | tail -5
@@ -730,7 +730,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Project
 
 Expected: all tests pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/strategies.py tests/test_strategy_crash_recovery.py && git commit -m "feat(g3): add check_crash_recovery_signal and wire into check_current_entry_signal router"
@@ -742,7 +742,7 @@ cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add engine/strategies
 
 **Files:** `TODO.md`, no code changes.
 
-- [ ] **Step 1: Verify BRPT crash recovery on live data**
+- [x] **Step 1: Verify BRPT crash recovery on live data**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && "/home/tjiesar/10 Projects/idx-walkforward-5001/venv/bin/python3" -c "
@@ -764,11 +764,11 @@ for t in result['trades']:
 
 Expected: 1–2 trades on BRPT, including one near 2026-05-26 entry.
 
-- [ ] **Step 2: Mark G3 done in `TODO.md`**
+- [x] **Step 2: Mark G3 done in `TODO.md`**
 
 Find line:
 ```
-- [ ] **G3. Crash recovery strategy pattern**
+- [x] **G3. Crash recovery strategy pattern**
 ```
 
 Change to:
@@ -776,7 +776,7 @@ Change to:
 - [x] **G3. Crash recovery strategy pattern** — SHIPPED 2026-06-05. `strategy_crash_recovery()` in `engine/strategies.py`: detects gap ≥5 cal-days + ≥20% gap-down, enters on VR>2x+bullish confirmation within 3 bars, SL=resume bar low, TP=50% gap retracement. `check_crash_recovery_signal()` for live use. Added to `STRATEGY_FUNCS`. 7 unit tests.
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && git add TODO.md && git commit -m "chore(g3): mark G3 complete in TODO.md"
