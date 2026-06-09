@@ -84,6 +84,17 @@ def jwt_expiry(token):
         return -1
 
 
+def _jwt_iat(token):
+    """Return issued-at unix timestamp, or 0 if unreadable."""
+    try:
+        payload = token.split(".")[1]
+        payload += "=" * (4 - len(payload) % 4)
+        data = json.loads(base64.urlsafe_b64decode(payload))
+        return data.get("iat", 0)
+    except Exception:
+        return 0
+
+
 def should_skip_refresh():
     """Return True if current token is still fresh — skip Playwright entirely."""
     if not TOKEN_FILE.exists():
@@ -328,17 +339,19 @@ def credential_login():
 
             page.goto("https://stockbit.com/login", wait_until="domcontentloaded", timeout=45000)
 
-            # Detect session redirect: if still logged in, /login redirects to /stream
+            # Detect session redirect: still logged in → logout first to force fresh JWT
             if "login" not in page.url:
-                log("Session masih valid — capture token dari halaman stream")
-                time.sleep(3)
-                page.goto("https://stockbit.com/symbol/BBCA", wait_until="domcontentloaded", timeout=45000)
-                time.sleep(8)
-                if not captured_token:
-                    page.evaluate("window.scrollBy(0, 300)")
-                    time.sleep(2)
-                page.remove_listener("request", on_request)
-                return captured_token
+                log("Session masih valid — logout dulu agar dapat fresh JWT")
+                try:
+                    page.goto("https://stockbit.com/logout", wait_until="domcontentloaded", timeout=15000)
+                except Exception:
+                    pass
+                time.sleep(2)
+                page.goto("https://stockbit.com/login", wait_until="domcontentloaded", timeout=45000)
+                # If still not on login page after logout, clear storage manually
+                if "login" not in page.url:
+                    context.clear_cookies()
+                    page.goto("https://stockbit.com/login", wait_until="domcontentloaded", timeout=45000)
 
             # Actually on login page — fill credentials
             page.wait_for_selector("input[type='email'], input[name='username'], input[placeholder*='Email' i]", timeout=15000)
@@ -445,16 +458,23 @@ def main():
     token = auto_refresh()
 
     if token and verify_token(token):
-        TOKEN_FILE.write_text(token)
-        log(f"✅ Token refreshed (len={len(token)})")
-        return
+        # Reject stale re-capture: if token was issued >20h ago it will expire
+        # before the next cron run — force fresh credential login instead.
+        hours_old = (time.time() - _jwt_iat(token)) / 3600
+        if hours_old < 20:
+            TOKEN_FILE.write_text(token)
+            log(f"✅ Token refreshed (len={len(token)}, age={hours_old:.1f}h)")
+            return
+        log(f"⚠ Captured token is {hours_old:.1f}h old — forcing credential re-login")
 
     # Gagal capture — cek token lama masih valid?
     if TOKEN_FILE.exists():
         old_token = TOKEN_FILE.read_text().strip()
         if old_token and verify_token(old_token):
-            log("⚠ Capture gagal, tapi token lama masih valid")
-            return
+            hours_old = (time.time() - _jwt_iat(old_token)) / 3600
+            if hours_old < 20:
+                log("⚠ Capture gagal, tapi token lama masih valid")
+                return
 
     # Coba credential login sebagai last resort
     log("Trying credential login as fallback...")

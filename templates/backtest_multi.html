@@ -14,22 +14,24 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 <style>
 :root {
-  --bg: #0a0e1a;
-  --bg-elev: #0f1423;
-  --surface: #151c2e;
-  --surface-2: #1b2339;
-  --surface-3: #222c48;
-  --border: #222c48;
-  --border-soft: #1c2339;
-  --text: #e6eaf5;
-  --text-dim: #9aa3be;
-  --text-mute: #6b7394;
+  --bg: #060b18;
+  --bg-elev: #0b1024;
+  --surface: #0f162e;
+  --surface-2: #151d3a;
+  --surface-3: #1b2547;
+  --border: #1b2547;
+  --border-soft: #151f3a;
+  --border-hi: #263358;
+  --text: #e8edf8;
+  --text-dim: #97a3c0;
+  --text-mute: #5c6890;
   --indigo: #6366f1;
   --indigo-2: #818cf8;
-  --indigo-dim: rgba(99,102,241,0.14);
-  --indigo-ring: rgba(99,102,241,0.35);
+  --indigo-dim: rgba(99,102,241,0.16);
+  --indigo-ring: rgba(99,102,241,0.40);
   --green: #10b981;
   --green-dim: rgba(16,185,129,0.14);
   --red: #ef4444;
@@ -38,9 +40,15 @@
   --amber-dim: rgba(245,158,11,0.14);
   --blue: #3b82f6;
   --blue-dim: rgba(59,130,246,0.14);
-  --gray-dim: rgba(154,163,190,0.14);
-  --shadow-card: 0 1px 0 rgba(255,255,255,0.03) inset, 0 8px 24px rgba(0,0,0,0.35);
+  --gray-dim: rgba(151,163,192,0.10);
+  --shadow-card: 0 1px 0 rgba(255,255,255,0.02) inset, 0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
   --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --transition: .18s cubic-bezier(.4,0,.2,1);
 }
 * { box-sizing: border-box; }
 html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font-family:'Inter', system-ui, sans-serif; font-size:13px; line-height:1.4; -webkit-font-smoothing:antialiased; }
@@ -472,6 +480,51 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
 .ftoggle .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; transition:background .15s; }
 .ftoggle.on  .dot { background:var(--green); }
 .ftoggle.off .dot { background:var(--text-mute); }
+
+.skel-row { display:flex; gap:10px; padding:10px 14px; align-items:center; }
+.skel-row .skel-cell { height:14px; border-radius:4px; }
+.skel-table { border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.skeleton { background:linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%); background-size:200% 100%; animation:shimmer 1.5s ease-in-out infinite; border-radius:6px; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ── Search bar ── */
+.search-wrap { position:relative; display:inline-flex; align-items:center; }
+.search-wrap input { height:28px; width:140px; padding:0 10px 0 30px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; color:var(--text); font-family:var(--mono); text-transform:uppercase; transition:all var(--transition); }
+.search-wrap input:focus { width:200px; border-color:rgba(99,102,241,.5); box-shadow:0 0 0 3px var(--indigo-dim); outline:none; }
+.search-wrap input::placeholder { color:var(--text-mute); text-transform:none; }
+.search-wrap .search-icon { position:absolute; left:9px; top:50%; transform:translateY(-50%); color:var(--text-mute); pointer-events:none; }
+.search-wrap .search-clear { position:absolute; right:4px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-mute); cursor:pointer; font-size:14px; display:none; }
+.search-wrap .search-clear.visible { display:block; }
+.search-wrap .search-shortcut { position:absolute; right:6px; top:50%; transform:translateY(-50%); font-size:9px; color:var(--text-mute); background:var(--surface-2); padding:1px 5px; border-radius:3px; pointer-events:none; font-family:var(--mono); }
+.search-wrap input:focus ~ .search-shortcut, .search-wrap input:not(:placeholder-shown) ~ .search-shortcut { display:none; }
+
+/* ── Tab keyboard hints ── */
+.tab-kbd { font-size:9px; opacity:.4; margin-left:2px; font-family:var(--mono); }
+
+/* ── Mobile improvements ── */
+@media(max-width:700px){
+  body { overflow-x:hidden; }
+  .topbar { grid-template-columns:1fr auto; padding:0 12px; gap:6px; }
+  .topbar .top-center { display:none; }
+  .topbar .brand-sub { display:none; }
+  .tabs { padding:0 8px; gap:0; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .tabs::-webkit-scrollbar { display:none; }
+  .tabs-wrap { overflow:hidden; }
+  .tab { padding:11px 10px 10px; font-size:11px; white-space:nowrap; flex-shrink:0; }
+  .tab-kbd { display:none; }
+  .page { padding:14px 10px 60px; max-width:100vw; overflow-x:hidden; }
+  .grid-cards { grid-template-columns:1fr; }
+  .grid-cards .card { min-width:0; }
+  .search-wrap input { width:100px; }
+  .search-wrap input:focus { width:150px; }
+  .top-right { gap:4px; }
+  .top-right .muted { display:none; }
+}
+@media(max-width:400px){
+  .tab-count { display:none; }
+  .kpi-row { grid-template-columns:1fr; }
+  .summary-bar { grid-template-columns:1fr; }
+}
 </style>
 </head>
 <body>
@@ -549,6 +602,12 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
     <div class="wib-clock"><span id="wib-time">--:--:--</span><span class="wib-label">WIB</span></div>
   </div>
   <div class="top-right">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="global-search" placeholder="Search ticker…" autocomplete="off">
+      <button class="search-clear" id="search-clear" onclick="clearSearch()">×</button>
+      <span class="search-shortcut">⌘K</span>
+    </div>
     <span class="muted">Last update</span>
     <span class="mono" id="last-upd">—</span>
     <span class="mono" id="top-date"></span>
@@ -569,16 +628,17 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
 <!-- Tabs -->
 <div class="tabs-wrap">
   <nav class="tabs" id="tabs-nav">
-    <button class="tab active" data-tab="monitor">Monitor <span class="tab-count" id="count-monitor">0</span></button>
-    <button class="tab" data-tab="signals">Signals <span class="tab-count" id="count-signals">0</span></button>
-    <button class="tab" data-tab="closed">Closed Today <span class="tab-count" id="count-closed">0</span></button>
-    <button class="tab" data-tab="scanner">Scanner</button>
-    <button class="tab" data-tab="backtest">Backtest</button>
-    <button class="tab" data-tab="intraday">Intraday</button>
-    <button class="tab" data-tab="paper">Paper Trades</button>
-    <button class="tab" data-tab="brokerflow">Broker Flow</button>
-    <button class="tab" data-tab="sector">Sector Rotation</button>
-    <button class="tab" data-tab="calendar">Calendar</button>
+    <button class="tab active" data-tab="monitor">Monitor <span class="tab-count" id="count-monitor">0</span><span class="tab-kbd">1</span></button>
+    <button class="tab" data-tab="signals">Signals <span class="tab-count" id="count-signals">0</span><span class="tab-kbd">2</span></button>
+    <button class="tab" data-tab="closed">Closed Today <span class="tab-count" id="count-closed">0</span><span class="tab-kbd">3</span></button>
+    <button class="tab" data-tab="scanner">Scanner<span class="tab-kbd">4</span></button>
+    <button class="tab" data-tab="fundamental">Fundamental</button>
+    <button class="tab" data-tab="backtest">Backtest<span class="tab-kbd">5</span></button>
+    <button class="tab" data-tab="intraday">Intraday<span class="tab-kbd">6</span></button>
+    <button class="tab" data-tab="paper">Paper Trades<span class="tab-kbd">7</span></button>
+    <button class="tab" data-tab="brokerflow">Broker Flow<span class="tab-kbd">8</span></button>
+    <button class="tab" data-tab="sector">Sector Rotation<span class="tab-kbd">9</span></button>
+    <button class="tab" data-tab="calendar">Calendar<span class="tab-kbd">0</span></button>
     <button class="tab" data-tab="audit">Agent Audit</button>
     <div class="tab-indicator" id="tab-ind"></div>
   </nav>
@@ -704,6 +764,11 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
   </div>
 
   <div id="scanner-results"></div>
+</section>
+
+<!-- ===== FUNDAMENTAL SCREENER ===== -->
+<section class="tab-panel" id="panel-fundamental">
+  <iframe src="/screener" style="width:100%;height:calc(100vh - 100px);border:none;" id="fund-iframe" loading="lazy"></iframe>
 </section>
 
 <!-- ===== BACKTEST ===== -->
@@ -939,7 +1004,8 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
       <button class="btn btn-secondary" onclick="loadSectorRotation()">↻ Refresh</button>
     </div>
   </div>
-  <div id="sector-loading" style="text-align:center;padding:40px;color:var(--text-mute);display:none;">Computing sector scores…</div>
+  <div id="sector-loading" style="text-align:center;padding:40px;color:var(--text-mute);display:none;">Loading sector data…</div>
+  <div id="sector-skeleton" class="skel-table" style="display:none"><div class="skel-row"><div class="skel-cell skeleton" style="width:20px"></div><div class="skel-cell skeleton" style="flex:1"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div></div><div class="skel-row"><div class="skel-cell skeleton" style="width:20px"></div><div class="skel-cell skeleton" style="flex:1"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div></div><div class="skel-row"><div class="skel-cell skeleton" style="width:20px"></div><div class="skel-cell skeleton" style="flex:1"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div></div></div>
   <div class="table-wrap" id="sector-table-wrap">
     <table class="data" id="sector-table">
       <thead><tr>
@@ -1023,6 +1089,45 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
 </section>
 
 </main>
+
+<!-- Dive Modal -->
+<div class="modal-backdrop" id="dive-modal" onclick="if(event.target===this)closeDiveModal()">
+  <div class="modal" style="width:95vw; max-width:1200px; max-height:92vh;">
+    <div class="modal-head">
+      <div>
+        <div class="mt-ticker" id="dive-ticker">—</div>
+        <div class="mt-sub" id="dive-sub">Deep Dive Analysis</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="dive-regime" style="font-size:10px;padding:3px 8px;border-radius:4px;"></span>
+        <button class="close-x" onclick="closeDiveModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <div id="dive-loading" style="text-align:center;padding:60px;color:var(--text-mute);">Loading chart data…</div>
+      <div id="dive-content" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 320px;gap:0;min-height:500px;">
+          <div style="position:relative;min-height:500px;" id="dive-chart-wrap"></div>
+          <div style="background:var(--bg-elev);border-left:1px solid var(--border);padding:14px;overflow-y:auto;max-height:600px;">
+            <div class="section-title" style="margin-bottom:8px;">Price</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;font-size:12px;">
+              <div><span style="color:var(--text-mute)">Close</span> <span class="mono" id="dv-close" style="float:right">—</span></div>
+              <div><span style="color:var(--text-mute)">Change</span> <span class="mono" id="dv-chg" style="float:right">—</span></div>
+              <div><span style="color:var(--text-mute)">Volume</span> <span class="mono" id="dv-vol" style="float:right">—</span></div>
+              <div><span style="color:var(--text-mute)">High</span> <span class="mono" id="dv-high" style="float:right">—</span></div>
+              <div><span style="color:var(--text-mute)">Low</span> <span class="mono" id="dv-low" style="float:right">—</span></div>
+              <div><span style="color:var(--text-mute)">Date</span> <span class="mono" id="dv-date" style="float:right">—</span></div>
+            </div>
+            <div class="section-title" style="margin-bottom:8px;">Strategies</div>
+            <div id="dv-strategies" style="font-size:11px;"></div>
+            <div class="section-title" style="margin:12px 0 8px;">Flow</div>
+            <div id="dv-flow" style="font-size:11px;color:var(--text-mute);">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Close Position Modal -->
 <div class="modal-backdrop" id="close-popover" onclick="if(event.target===this)closePopover()">
@@ -1667,7 +1772,7 @@ function renderScanBody() {
         <div style="display:flex;gap:5px;">
           <button class="btn btn-sm btn-primary" onclick="openTrade('${r.ticker}',${r.close||0})">Trade</button>
           <button class="btn btn-sm btn-ghost" onclick="gotoBacktest('${r.ticker}')">BT</button>
-          <button class="btn btn-sm btn-ghost" onclick="window.open('/dive/${r.ticker}','_blank')">Dive</button>
+          <button class="btn btn-sm btn-ghost" onclick="openDiveModal('${r.ticker}')">Dive</button>
         </div>
       </td>`;
     tbody.appendChild(tr);
@@ -1740,7 +1845,7 @@ function renderSwingOnset(data) {
       <div class="card-actions">
         <button class="btn-action buy" onclick="openTrade('${r.ticker}',${r.close||0},${r.initial_sl_hint||0},${r.tp_projection||0},'Swing Trend')">+ Paper Trade</button>
         <button class="btn-action" onclick="gotoBacktest('${r.ticker}')">Backtest →</button>
-        <button class="btn-action" onclick="window.open('/dive/${r.ticker}','_blank')">Dive ↗</button>
+        <button class="btn-action" onclick="openDiveModal('${r.ticker}')">Dive ↗</button>
       </div>`;
     grid.appendChild(card);
   });
@@ -2297,6 +2402,149 @@ document.getElementById('tabs-nav').addEventListener('click', e => {
     }
   } catch(_) {}
 })();
+
+/* ── Global search ── */
+const searchInput = document.getElementById('global-search');
+const searchClear = document.getElementById('search-clear');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toUpperCase();
+  searchClear.classList.toggle('visible', q.length > 0);
+  document.querySelectorAll('#monitor-grid .card, #closed-grid .card, #signals-list .card').forEach(card => {
+    card.style.display = (!q || (card.dataset.t||'').toUpperCase().includes(q)) ? '' : 'none';
+  });
+  if (q) { const m = document.querySelector('.tab-panel.active .card:not([style*="none"])'); if(m) m.scrollIntoView({behavior:'smooth',block:'center'}); }
+});
+function clearSearch() { searchInput.value=''; searchClear.classList.remove('visible'); searchInput.dispatchEvent(new Event('input')); }
+
+/* ── Keyboard shortcuts ── */
+const TAB_KEYS = ['monitor','signals','closed','scanner','fundamental','backtest','intraday','paper','brokerflow','sector','calendar'];
+document.addEventListener('keydown', e => {
+  const tag = document.activeElement?.tagName?.toLowerCase();
+  const isInput = tag === 'input' || tag === 'textarea' || tag === 'select' || document.activeElement?.isContentEditable;
+  if ((e.ctrlKey||e.metaKey) && e.key === 'k') { e.preventDefault(); searchInput.focus(); searchInput.select(); return; }
+  if (e.key === 'r' && !e.ctrlKey && !e.metaKey && !isInput) { e.preventDefault(); refreshAll(); return; }
+  if (!e.ctrlKey && !e.metaKey && !e.altKey && !isInput) { const idx = e.key==='0'?9:parseInt(e.key)-1; if(idx>=0 && idx<TAB_KEYS.length) { e.preventDefault(); setActiveTab(TAB_KEYS[idx]); } }
+  if (e.key === 'Escape' && document.activeElement === searchInput) { clearSearch(); searchInput.blur(); }
+});
+
+/* ── URL hash sync ── */
+const _setActiveTab = setActiveTab;
+setActiveTab = function(name) { _setActiveTab(name); window.location.hash = name; };
+(function(){ const h = window.location.hash.replace('#',''); if (h && document.querySelector('.tab[data-tab="'+h+'"]')) setActiveTab(h); })();
+
+/* ── Preload sector + calendar ── */
+setTimeout(() => { if (typeof loadSectorRotation==='function') loadSectorRotation(); if (typeof loadCalendar==='function') loadCalendar(); }, 2000);
+
+/* ── Auto-refresh signals ── */
+setInterval(() => { if (typeof loadSignals==='function') loadSignals(); }, 60000);
+
+/* ── Dive Modal ── */
+let _diveChart = null, _diveSeries = null, _diveVolumeSeries = null, _diveMarkers = [];
+
+async function openDiveModal(ticker) {
+  document.getElementById('dive-ticker').textContent = ticker;
+  document.getElementById('dive-sub').textContent = 'Deep Dive Analysis';
+  document.getElementById('dive-loading').style.display = 'block';
+  document.getElementById('dive-content').style.display = 'none';
+  document.getElementById('dive-modal').classList.add('open');
+  if (_diveChart) { _diveChart.remove(); _diveChart = null; _diveSeries = null; _diveVolumeSeries = null; _diveMarkers = []; }
+  try {
+    const r = await fetch('/api/ticker/' + ticker + '/full');
+    const d = await r.json();
+    if (d.error) { document.getElementById('dive-loading').textContent = d.error; return; }
+    renderDive(d);
+  } catch(e) { document.getElementById('dive-loading').textContent = 'Failed to load: ' + e.message; }
+}
+
+function renderDive(d) {
+  document.getElementById('dive-loading').style.display = 'none';
+  document.getElementById('dive-content').style.display = 'block';
+
+  // Price bar
+  const p = d.price || {};
+  const sign = (p.chg||0) >= 0 ? '+' : '';
+  document.getElementById('dv-close').textContent = (p.close||0).toLocaleString();
+  document.getElementById('dv-chg').textContent = `${sign}${(p.chg||0).toLocaleString()} (${sign}${(p.chg_pct||0).toFixed(2)}%)`;
+  document.getElementById('dv-chg').style.color = (p.chg||0) >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('dv-vol').textContent = p.volume ? (p.volume>=1e9?(p.volume/1e9).toFixed(1)+'B':p.volume>=1e6?(p.volume/1e6).toFixed(1)+'M':'') : '—';
+  document.getElementById('dv-high').textContent = (p.high||0).toLocaleString();
+  document.getElementById('dv-low').textContent = (p.low||0).toLocaleString();
+  document.getElementById('dv-date').textContent = p.date || '—';
+
+  // Regime
+  const regime = d.regime || '—';
+  const rb = document.getElementById('dive-regime');
+  rb.textContent = regime;
+  rb.style.background = regime==='BULL'?'var(--green-dim)':regime==='BEAR'?'var(--red-dim)':'var(--gray-dim)';
+  rb.style.color = regime==='BULL'?'var(--green)':regime==='BEAR'?'var(--red)':'var(--text-dim)';
+
+  // Strategies
+  const strats = d.strategies || [];
+  document.getElementById('dv-strategies').innerHTML = strats.length
+    ? strats.map(s => {
+        const hasSignal = s.has_signal;
+        const wf = s.consistency_pct != null ? s.consistency_pct.toFixed(0)+'%' : '—';
+        const ret = s.avg_return_pct != null ? (s.avg_return_pct>=0?'+':'')+s.avg_return_pct.toFixed(1)+'%' : '—';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border-soft);">
+          <span style="color:var(--text-dim)">${s.name}</span>
+          <span style="display:flex;gap:8px;align-items:center">
+            <span class="mono" style="font-size:10px;color:var(--text-mute)">WF ${wf}</span>
+            <span class="mono" style="font-size:10px;color:${(s.avg_return_pct||0)>=0?'var(--green)':'var(--red)'}">${ret}</span>
+            ${hasSignal ? '<span class="chip chip-signal" style="font-size:9px">BUY</span>' : '<span style="color:var(--text-mute);font-size:10px">—</span>'}
+          </span></div>`;
+      }).join('')
+    : '<div style="color:var(--text-mute)">No strategy data</div>';
+
+  // Flow
+  const flow = d.flow?.latest || {};
+  document.getElementById('dv-flow').innerHTML = flow.verdict
+    ? `<span style="color:${(flow.score||0)>0?'var(--green)':(flow.score||0)<0?'var(--red)':'var(--text-dim)'}">${flow.verdict} · Score ${flow.score!=null?(flow.score>=0?'+':'')+flow.score:'—'} · Smart Money: ${flow.smart_money||'—'}</span>`
+    : 'No flow data';
+
+  // Chart
+  renderDiveChart(d);
+}
+
+function renderDiveChart(d) {
+  const wrap = document.getElementById('dive-chart-wrap');
+  wrap.innerHTML = '';
+  const w = wrap.clientWidth || 800;
+  const h = Math.max(500, wrap.clientHeight || 500);
+  const chart = LightweightCharts.createChart(wrap, {
+    layout: { background:{type:'solid',color:'#0f162e'}, textColor:'#97a3c0' },
+    grid: { vertLines:{color:'#1b2547'}, horzLines:{color:'#1b2547'} },
+    crosshair: { mode:0 }, timeScale: { borderColor:'#1b2547', timeVisible:true },
+    rightPriceScale: { borderColor:'#1b2547' }, width: w, height: h
+  });
+  _diveChart = chart;
+
+  // Try ohlcv from full response, or show loading
+  let candleData = (d.ohlcv||[]).map(c => ({
+    time: c.date, open: c.open, high: c.high, low: c.low, close: c.close
+  }));
+  if (!candleData.length) {
+    // No data yet — show placeholder text on chart
+    wrap.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-mute);font-size:14px">Chart data loading…<br><span style="font-size:11px">OHLCV may not be cached yet. Run backtest first.</span></div>';
+    return;
+  }
+  _diveSeries = chart.addCandlestickSeries({ upColor:'#10b981', downColor:'#ef4444', borderUpColor:'#10b981', borderDownColor:'#ef4444', wickUpColor:'#10b981', wickDownColor:'#ef4444' });
+  _diveSeries.setData(candleData);
+  chart.timeScale().fitContent();
+
+  // Volume
+  const volData = (d.ohlcv||[]).map(c => ({ time: c.date, value: c.volume||0, color: (c.close>=c.open?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)') }));
+  if (volData.length) {
+    _diveVolumeSeries = chart.addHistogramSeries({ priceFormat:{type:'volume'}, priceScaleId:'', scaleMargins:{top:.8,bottom:0} });
+    _diveVolumeSeries.setData(volData);
+  }
+
+  window.addEventListener('resize', () => { if (_diveChart) { _diveChart.applyOptions({ width: wrap.clientWidth, height: Math.max(500, wrap.clientHeight) }); } });
+}
+
+function closeDiveModal() {
+  document.getElementById('dive-modal').classList.remove('open');
+  if (_diveChart) { _diveChart.remove(); _diveChart = null; _diveSeries = null; _diveVolumeSeries = null; }
+}
 </script>
 </body>
 </html>
