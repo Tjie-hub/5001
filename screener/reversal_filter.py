@@ -103,23 +103,28 @@ def classify_reversal(
     return None
 
 
+# Conviction budget (sums to 100 at the cap):
+#   base 40 + broker 18 + idx30 12 + oversold depth 15 + delta swing 15
+_SWING_FULL_BONUS_AT = 1_000_000_000.0   # IDR swing that earns the full 15 pts
+
+
 def _build(direction, smart_money, strong_set, *, extreme_pct, oversold_pct,
            in_idx30, prev_delta, today_delta) -> dict:
     """Assemble conviction score + human-readable reasons for a qualified setup."""
     reasons = []
-    conviction = 50.0
+    conviction = 40.0
 
     swing = abs(today_delta - prev_delta)
     reasons.append(f"delta flip {prev_delta/1e9:+.2f}B -> {today_delta/1e9:+.2f}B (swing {swing/1e9:.2f}B)")
 
     if _norm(smart_money) in strong_set:
-        conviction += 20.0
+        conviction += 18.0
         reasons.append(f"broker {_norm(smart_money)} (strong)")
     else:
         reasons.append("broker confirms direction")
 
     if in_idx30:
-        conviction += 15.0
+        conviction += 12.0
         reasons.append("IDX30 (top liquidity)")
     else:
         reasons.append("LQ45")
@@ -128,6 +133,10 @@ def _build(direction, smart_money, strong_set, *, extreme_pct, oversold_pct,
     conviction += max(0.0, depth_bonus)
     edge = "below 30d high" if direction == "long" else "above 30d low"
     reasons.append(f"{extreme_pct:.1f}% {edge}")
+
+    swing_bonus = min(15.0, swing / _SWING_FULL_BONUS_AT * 15.0)
+    conviction += swing_bonus
+    reasons.append(f"swing {swing/1e9:.2f}B (+{swing_bonus:.0f})")
 
     return {
         "direction": direction,

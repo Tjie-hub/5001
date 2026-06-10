@@ -157,6 +157,28 @@ def test_idx30_strong_broker_outranks_weak_lq45():
     assert strong["conviction"] > weak["conviction"]
 
 
+def test_larger_delta_swing_scores_higher():
+    """Two otherwise-identical setups: the bigger order-flow swing wins.
+
+    Regression for BRPT (1.07B swing) ranking near ISAT/UNTR (~0.05B / 0.01B):
+    swing magnitude must contribute to conviction, not just broker/liquidity.
+    """
+    big = classify_reversal(
+        prev_delta=-500_000_000, today_delta=+570_000_000,   # swing 1.07B
+        smart_money="ACCUMULATION", verdict="BULLISH",
+        pct_below_30d_high=30.0, pct_above_30d_low=10.0,
+        in_lq45=1, in_idx30=1,
+    )
+    small = classify_reversal(
+        prev_delta=-20_000_000, today_delta=+30_000_000,     # swing 0.05B
+        smart_money="ACCUMULATION", verdict="BULLISH",
+        pct_below_30d_high=30.0, pct_above_30d_low=10.0,
+        in_lq45=1, in_idx30=1,
+    )
+    assert big is not None and small is not None
+    assert big["conviction"] > small["conviction"]
+
+
 # ── Scan layer (DB-backed) ───────────────────────────────────────────────────────
 
 def _seed_db():
