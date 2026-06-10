@@ -337,43 +337,63 @@ def credential_login():
 
             page.on("request", on_request)
 
+            # Force-clear stale session before navigating to login
+            try:
+                context.clear_cookies()
+                page.evaluate("() => { try { localStorage.clear(); sessionStorage.clear(); } catch(e) {} }")
+            except Exception:
+                pass
+
             page.goto("https://stockbit.com/login", wait_until="domcontentloaded", timeout=45000)
+            time.sleep(3)  # let React render login form
 
-            # Detect session redirect: still logged in → logout first to force fresh JWT
+            # If session somehow survived, force logout then re-navigate
             if "login" not in page.url:
-                log("Session masih valid — logout dulu agar dapat fresh JWT")
-                try:
-                    page.goto("https://stockbit.com/logout", wait_until="domcontentloaded", timeout=15000)
-                except Exception:
-                    pass
-                time.sleep(2)
+                log("Session masih redirect — force clear + re-navigate")
+                context.clear_cookies()
                 page.goto("https://stockbit.com/login", wait_until="domcontentloaded", timeout=45000)
-                # If still not on login page after logout, clear storage manually
-                if "login" not in page.url:
-                    context.clear_cookies()
-                    page.goto("https://stockbit.com/login", wait_until="domcontentloaded", timeout=45000)
+                time.sleep(3)
 
-            # Actually on login page — fill credentials
-            page.wait_for_selector("input[type='email'], input[name='username'], input[placeholder*='Email' i]", timeout=15000)
-            email_input = page.locator("input[type='email'], input[name='username'], input[placeholder*='Email' i]").first
+            # Stockbit login: id='username' (type=text), id='password'
+            EMAIL_SEL = "#username, input[id='username'], input[placeholder*='Email' i], input[placeholder*='username' i]"
+            page.wait_for_selector(EMAIL_SEL, state="visible", timeout=20000)
+            email_input = page.locator(EMAIL_SEL).first
             email_input.fill(STOCKBIT_USER)
 
             page.wait_for_selector("input[type='password']", timeout=10000)
             page.locator("input[type='password']").first.fill(STOCKBIT_PASS)
 
-            # Submit
-            page.locator("button[type='submit'], button:has-text('Login'), button:has-text('Masuk')").first.click()
+            # Submit — use keyboard Enter (more natural, avoids bot detection on click)
+            page.locator("input[type='password']").first.press("Enter")
 
             # Wait for redirect away from login page
+            redirect_ok = False
             try:
                 page.wait_for_url(lambda url: "login" not in url, timeout=20000)
                 log("Login redirect detected")
+                redirect_ok = True
             except Exception:
-                log("No redirect detected — checking for errors")
-                if page.locator("text=Invalid, text=salah, text=incorrect").count() > 0:
-                    log("ERROR: Wrong credentials")
-                    page.remove_listener("request", on_request)
-                    return None
+                cur_url = page.url
+                cur_title = page.title()
+                log(f"No redirect detected — url={cur_url} title={cur_title}")
+                # Save screenshot for diagnosis
+                try:
+                    ss_path = str(LOG_FILE.parent / "login_debug.png")
+                    page.screenshot(path=ss_path)
+                    log(f"Screenshot saved: {ss_path}")
+                except Exception as ss_err:
+                    log(f"Screenshot failed: {ss_err}")
+                # Check for error messages (check each selector separately)
+                err_texts = ["Invalid", "salah", "incorrect", "captcha", "Captcha", "CAPTCHA", "verifikasi", "robot"]
+                for err in err_texts:
+                    if page.locator(f"text={err}").count() > 0:
+                        log(f"ERROR page text found: '{err}'")
+                        break
+
+            if not redirect_ok:
+                log("Credential login: no redirect — aborting, session not established")
+                page.remove_listener("request", on_request)
+                return None
 
             # Navigate to symbol page to capture token
             time.sleep(3)
