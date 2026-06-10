@@ -94,8 +94,10 @@ def start_scheduler():
         day_of_week="mon-fri", hour=8, minute=30, timezone=WIB),
         id="backtest_cache_refresh", name="Backtest Cache 08:30")
 
-    # Flow fetch — hourly 09:30–15:15 WIB
-    for hour, minute in [(9,30),(10,30),(11,30),(12,30),(13,30),(14,30),(15,15)]:
+    # Flow fetch — hourly 09:30–15:15 WIB, plus a post-close fetch at 16:05
+    # (IDX closes 16:00; 16:05 captures the final pre-closing/closing-auction flow
+    # so the EOD reversal scan at 16:15 sees the *complete* day's smart-money flow).
+    for hour, minute in [(9,30),(10,30),(11,30),(12,30),(13,30),(14,30),(15,15),(16,5)]:
         scheduler.add_job(run_flow_fetch, CronTrigger(
             day_of_week="mon-fri", hour=hour, minute=minute, timezone=WIB),
             id=f"flow_fetch_{hour:02d}{minute:02d}")
@@ -115,10 +117,14 @@ def start_scheduler():
             timezone=WIB, day_of_week="mon-fri"),
             id=f"screener_intraday_{hour:02d}{minute:02d}", name=f"Screener Intraday {label}")
 
-    # Screener EOD VPIN batch — 15:30 WIB
+    # Screener EOD VPIN batch + reversal watchlist — 16:15 WIB
+    # Runs AFTER the 16:00 close (and after the 16:05 flow fetch) so the daily
+    # close price, full-day order-flow delta, and smart-money flow are all final.
+    # Running before the close used a mid-auction close and an incomplete tape,
+    # which silently produced an empty/wrong next-day reversal watchlist.
     scheduler.add_job(_run_screener_eod, CronTrigger(
-        day_of_week="mon-fri", hour=15, minute=30, timezone=WIB),
-        id="screener_eod", name="Screener EOD 15:30")
+        day_of_week="mon-fri", hour=16, minute=15, timezone=WIB),
+        id="screener_eod", name="Screener EOD 16:15")
 
     # Daily fetch report — 17:30 WIB
     scheduler.add_job(daily_fetch_report, CronTrigger(
@@ -146,6 +152,13 @@ def start_scheduler():
     scheduler.add_job(auto_trade_status_report, CronTrigger(
         day_of_week="mon-fri", hour=9, minute=0, timezone=WIB),
         id="auto_trade_status", name="Auto-Trade Status 09:00")
+
+    # News mentions fetch — pre-market 08:00 WIB so the 09:05 open scan (agent-firm
+    # news agent) sees overnight + pre-market headlines (US close ~04:00 WIB, global
+    # commodities, pre-open IDX disclosures) instead of yesterday's 17:00 data.
+    scheduler.add_job(run_news_fetch, CronTrigger(
+        day_of_week="mon-fri", hour=8, minute=0, timezone=WIB),
+        id="news_fetch_premarket", name="News Mentions Fetch 08:00 (pre-market)")
 
     # News mentions fetch — 17:00 WIB (before flow report at 17:15)
     scheduler.add_job(run_news_fetch, CronTrigger(
