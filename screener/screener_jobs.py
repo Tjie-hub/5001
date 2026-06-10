@@ -226,6 +226,27 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
     except Exception as _fe:
         logger.error(f"[screener] Coverage fallback error: {_fe}")
 
+    # ── Reversal watchlist pre-scan: flag next-day liquid bounce/fade setups ──
+    try:
+        from screener.reversal_filter import scan_reversals, persist_watchlist
+        with db.get_conn() as rconn:
+            rev = scan_reversals(rconn, trade_date)
+            persist_watchlist(rconn, trade_date, rev)
+        logger.info(f"[screener] Reversal watchlist: {len(rev)} setups for next session")
+        if send_telegram and rev:
+            try:
+                top = rev[:8]
+                lines = [f"📋 <b>Reversal Watchlist</b> ({trade_date} EOD)",
+                         f"{len(rev)} liquid setups for besok:\n"]
+                for r in top:
+                    d = "▲" if r["direction"] == "long" else "▼"
+                    lines.append(f"{d} <b>{r['ticker']}</b> conv {r['conviction']:.0f} @ {r['close']:,}")
+                send_telegram("\n".join(lines))
+            except Exception:
+                pass
+    except Exception as _re:
+        logger.error(f"[screener] Reversal scan error: {_re}")
+
     duration = round(time.time() - t0, 1)
     ok = intraday_result['ok']
     err = intraday_result['err']
