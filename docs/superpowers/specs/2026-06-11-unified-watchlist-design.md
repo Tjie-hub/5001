@@ -53,9 +53,11 @@ missing or empty source degrades gracefully (skipped, never fails the panel).
 2. Group by `ticker`.
 3. For each ticker group, produce one merged row:
    - `sources`: list of source tags present (e.g. `["REVERSAL", "PREMOVER"]`).
-   - `direction`: the direction of the **highest-strength** contributing source.
-   - `strength`: the max single-source strength, **+15 confluence bonus** when ≥2
-     sources agree on that same direction (capped at 100).
+   - `direction`: the **REVERSAL source's direction when present** (it is the only
+     validated, directional, broker-confirmed source); otherwise the direction of
+     the highest-strength contributing source.
+   - `strength`: the strongest source that **agrees with the chosen direction**,
+     **+15 confluence bonus** when ≥2 sources agree on that direction (capped 100).
    - `confluence`: `true` when ≥2 sources agree on the shown direction.
    - `conflict`: `true` when at least one source disagrees on direction (opposite
      of the shown direction). Conflicting rows are **flagged**, not strength-merged.

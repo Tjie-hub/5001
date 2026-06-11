@@ -114,7 +114,10 @@ def test_latest_date_default_when_none(tmp_path):
     assert [r["ticker"] for r in items] == ["NEW"]
 
 
-def test_conflict_blocks_confluence_bonus(tmp_path):
+def test_reversal_direction_wins_over_conflicting_sources(tmp_path):
+    # REVERSAL is the validated, directional, broker-confirmed source: its
+    # direction wins even when more (and higher-strength) sources disagree.
+    # Conflict is flagged; strength comes from the chosen direction; no bonus.
     db = str(tmp_path / "wl.db")
     _make_db(db,
              reversal=[("2026-06-10", "XYZ", "short", 50.0, 100, "STRONG_SELL", "BEARISH")],
@@ -122,10 +125,25 @@ def test_conflict_blocks_confluence_bonus(tmp_path):
              bear=[("XYZ", "promoted", 65.0)])
     items = build_unified_watchlist(db, "2026-06-10")
     r = items[0]
-    assert r["direction"] == "long"     # dominant (65) wins
+    assert r["direction"] == "short"    # reversal wins despite 2 stronger long sources
     assert r["conflict"] is True
-    assert r["confluence"] is True      # 2 long sources agree
-    assert r["strength"] == 65.0       # NO bonus because a conflict exists
+    assert r["confluence"] is False     # only the reversal source is short
+    assert r["strength"] == 50.0       # strength from the chosen (short) direction
+
+
+def test_reversal_long_confirmed_by_premover_boosts(tmp_path):
+    # When reversal and premover agree LONG, confluence applies and strength is
+    # the max of the agreeing sources (+15), even if premover is the stronger one.
+    db = str(tmp_path / "wl.db")
+    _make_db(db,
+             reversal=[("2026-06-10", "ABC", "long", 60.0, 100, "ACCUMULATION", "BULLISH")],
+             premover=[("ABC", "2026-06-10", 90.0, 100, "CONTINUATION")])
+    items = build_unified_watchlist(db, "2026-06-10")
+    r = items[0]
+    assert r["direction"] == "long"
+    assert r["confluence"] is True
+    assert r["conflict"] is False
+    assert r["strength"] == 100.0      # max agreeing (90) + 15 bonus, capped at 100
 
 
 def test_premover_floor_includes_at_threshold(tmp_path):
