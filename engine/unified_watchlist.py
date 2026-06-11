@@ -1,9 +1,10 @@
 """engine/unified_watchlist.py — merge reversal + premover + bear-dip watchlists.
 
-Weighted union: every flagged ticker appears once. Each source is normalized to a
-0-100 strength. When >=2 sources agree on a direction the row gets a +15 confluence
-bonus (capped at 100); when sources disagree the row is flagged (conflict) and the
-higher-strength source's direction is shown without a merge bonus.
+Weighted union: every flagged ticker appears once. Each upstream source produces
+0-100 strength values by convention (no runtime normalization). When >=2 sources
+agree on a direction the row gets a +15 confluence bonus (capped at 100); when
+sources disagree the row is flagged (conflict) and the higher-strength source's
+direction is shown without a merge bonus.
 
 Each source is read in its own try/except so a missing or empty table degrades
 gracefully (the source is skipped, never failing the whole panel).
@@ -116,11 +117,11 @@ def build_unified_watchlist(db_path: str, scan_date: Optional[str] = None) -> li
     for ticker, group in by_ticker.items():
         dominant = max(group, key=lambda x: x["strength"])
         direction = dominant["direction"]
-        agree = [g for g in group if g["direction"] == direction]
+        n_agree = sum(1 for g in group if g["direction"] == direction)
         conflict = any(g["direction"] != direction for g in group)
-        confluence = len(agree) >= 2
+        confluence = n_agree >= 2
         strength = dominant["strength"]
-        if confluence:
+        if confluence and not conflict:
             strength = min(100.0, strength + CONFLUENCE_BONUS)
 
         close = None

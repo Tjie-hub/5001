@@ -114,6 +114,28 @@ def test_latest_date_default_when_none(tmp_path):
     assert [r["ticker"] for r in items] == ["NEW"]
 
 
+def test_conflict_blocks_confluence_bonus(tmp_path):
+    db = str(tmp_path / "wl.db")
+    _make_db(db,
+             reversal=[("2026-06-10", "XYZ", "short", 50.0, 100, "STRONG_SELL", "BEARISH")],
+             premover=[("XYZ", "2026-06-10", 60.0, 100, "CONTINUATION")],
+             bear=[("XYZ", "promoted", 65.0)])
+    items = build_unified_watchlist(db, "2026-06-10")
+    r = items[0]
+    assert r["direction"] == "long"     # dominant (65) wins
+    assert r["conflict"] is True
+    assert r["confluence"] is True      # 2 long sources agree
+    assert r["strength"] == 65.0       # NO bonus because a conflict exists
+
+
+def test_premover_floor_includes_at_threshold(tmp_path):
+    db = str(tmp_path / "wl.db")
+    _make_db(db, premover=[("EDGE", "2026-06-10", 55.0, 100, "CONTINUATION")])
+    items = build_unified_watchlist(db, "2026-06-10")
+    assert len(items) == 1
+    assert items[0]["ticker"] == "EDGE"
+
+
 def test_endpoint_shape(tmp_path, monkeypatch):
     db = str(tmp_path / "wl.db")
     _make_db(db, reversal=[("2026-06-10", "BRPT", "short", 74.4, 1760, "MT", "BEARISH")])
