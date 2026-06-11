@@ -370,6 +370,25 @@ def api_dashboard_watchlist():
                         'buy_watch': [], 'avoid': [], 'wait': []}), 500
 
 
+@flow_bp.route('/api/dashboard/unified-watchlist', methods=['GET'])
+def api_dashboard_unified_watchlist():
+    """Unified watchlist — reversal + premover + bear-dip merged and ranked.
+
+    Query params:
+      date — reversal EOD date (default: latest scan_date in reversal_watchlist).
+
+    Returns: date, count, items (ranked, one row per ticker).
+    """
+    from engine.unified_watchlist import build_unified_watchlist
+    query_date = request.args.get('date')  # None -> builder uses latest
+    try:
+        items = build_unified_watchlist(DB_PATH, query_date)
+        return jsonify({'date': query_date or 'latest', 'count': len(items), 'items': items})
+    except Exception as e:
+        return jsonify({'error': str(e), 'date': query_date or 'latest',
+                        'count': 0, 'items': []}), 500
+
+
 @flow_bp.route('/api/dashboard/checklist', methods=['GET'])
 def api_dashboard_checklist():
     """Pipeline health checklist — which daily jobs completed today.
