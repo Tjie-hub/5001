@@ -136,6 +136,36 @@ def test_premover_floor_includes_at_threshold(tmp_path):
     assert items[0]["ticker"] == "EDGE"
 
 
+def test_ranking_prioritizes_actionable_over_premover_noise(tmp_path):
+    # A premover-only name with max score (100) must NOT outrank the validated
+    # reversal setup or a confluence cluster. Tier order: reversal, confluence
+    # (premover/bear agreement), bear-only, premover-only.
+    db = str(tmp_path / "wl.db")
+    _make_db(db,
+             reversal=[("2026-06-10", "REVO", "long", 60.0, 100, "ACCUMULATION", "BULLISH")],
+             premover=[("NOISE", "2026-06-10", 100.0, 200, "REVERSAL_BREAKOUT"),
+                       ("CONF", "2026-06-10", 80.0, 300, "CONTINUATION")],
+             bear=[("BEARO", "active", 52.0),
+                   ("CONF", "promoted", 65.0)])  # CONF in premover+bear, both long -> confluence
+    items = build_unified_watchlist(db, "2026-06-10")
+    order = [r["ticker"] for r in items]
+    assert order.index("REVO") < order.index("CONF")    # validated reversal first
+    assert order.index("CONF") < order.index("BEARO")   # confluence before bear-only
+    assert order.index("BEARO") < order.index("NOISE")  # bear before premover-only
+    # premover-only NOISE sinks last despite strength 100 > REVO 60
+    assert order[-1] == "NOISE"
+
+
+def test_output_capped_to_max_rows(tmp_path):
+    from engine.unified_watchlist import MAX_ROWS
+    db = str(tmp_path / "wl.db")
+    many = [(f"T{i:03d}", "2026-06-10", 100.0, 100, "REVERSAL_BREAKOUT")
+            for i in range(MAX_ROWS + 25)]
+    _make_db(db, premover=many)
+    items = build_unified_watchlist(db, "2026-06-10")
+    assert len(items) == MAX_ROWS
+
+
 def test_endpoint_shape(tmp_path, monkeypatch):
     db = str(tmp_path / "wl.db")
     _make_db(db, reversal=[("2026-06-10", "BRPT", "short", 74.4, 1760, "MT", "BEARISH")])

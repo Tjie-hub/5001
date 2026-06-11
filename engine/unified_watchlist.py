@@ -8,6 +8,11 @@ direction is shown without a merge bonus.
 
 Each source is read in its own try/except so a missing or empty table degrades
 gracefully (the source is skipped, never failing the whole panel).
+
+Ranking is tiered by actionability (see _priority): confluence first, then
+reversal setups, then bear-dip, then premover-only — with strength breaking ties
+within a tier. Output is capped at MAX_ROWS so the noisy premover source cannot
+bury or flood the validated setups.
 """
 import logging
 import sqlite3
@@ -19,6 +24,24 @@ PREMOVER_FLOOR = 55.0       # min premover score to include (cuts noise)
 CONFLUENCE_BONUS = 15.0     # added when >=2 sources agree on direction
 BEAR_BASE = 50.0            # bear dip-scout has no native 0-100 score
 BEAR_PROMOTED_BONUS = 15.0  # promoted entries rank above merely-active ones
+MAX_ROWS = 40               # cap panel size (premover alone emits hundreds)
+
+
+def _priority(row: dict) -> int:
+    """Actionability tier for ranking. Lower = surfaced first.
+
+    A flat strength sort lets premover (which emits hundreds of score-100 rows)
+    bury the validated, directional reversal setups. Tier by actionability so
+    cross-source agreement and reversal setups always rank above premover noise,
+    then break ties within a tier by strength.
+    """
+    if "REVERSAL" in row["sources"]:
+        return 0                       # validated, directional, broker-confirmed — always first
+    if row["confluence"]:
+        return 1                       # multi-source agreement (premover/bear)
+    if "BEAR_DIP" in row["sources"]:
+        return 2                       # curated oversold-quality watch
+    return 3                           # premover-only — supporting context / noise
 
 
 def _conn(db_path: str) -> sqlite3.Connection:
@@ -146,5 +169,5 @@ def build_unified_watchlist(db_path: str, scan_date: Optional[str] = None) -> li
             "detail": {g["source"].lower(): g["raw"] for g in group},
         })
 
-    result.sort(key=lambda x: (-x["strength"], x["ticker"]))
-    return result
+    result.sort(key=lambda x: (_priority(x), -x["strength"], x["ticker"]))
+    return result[:MAX_ROWS]
