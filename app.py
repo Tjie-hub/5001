@@ -10,6 +10,7 @@ from routes_backtest_multi import backtest_multi_bp
 from screener.routes import screener_bp
 from screener.db import init_screener_tables
 from stockbit_fetcher import init_flow_db
+from data.db import init_agent_firm_tables
 from routes.telegram import telegram_bp, telegram_poller_loop
 from routes.flow import flow_bp
 from routes.screener import screener_main_bp
@@ -169,6 +170,7 @@ def prometheus_metrics():
 if __name__ == "__main__":
     init_screener_tables()
     init_flow_db()
+    init_agent_firm_tables()
     start_scheduler()
     poller_thread = threading.Thread(target=telegram_poller_loop, daemon=True)
     poller_thread.start()

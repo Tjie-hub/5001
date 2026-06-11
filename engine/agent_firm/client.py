@@ -7,11 +7,19 @@ Adds:
 """
 
 import asyncio
+import json
+import re
 import time
 
 from openai import AsyncOpenAI, APIError, RateLimitError, APIStatusError
 
 from . import config
+
+
+def _strip_fences(text: str) -> str:
+    """Strip markdown code fences DeepSeek sometimes wraps around JSON."""
+    m = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
+    return m.group(1).strip() if m else text.strip()
 
 
 class DeepSeekClient:
@@ -43,8 +51,9 @@ class DeepSeekClient:
                     model=self.model,
                     messages=messages,
                     timeout=timeout,
+                    response_format={"type": "json_object"},
                 )
-                content = resp.choices[0].message.content
+                content = _strip_fences(resp.choices[0].message.content or "")
                 usage = resp.usage
                 tokens_in = getattr(usage, "prompt_tokens", 0) if usage else 0
                 tokens_out = getattr(usage, "completion_tokens", 0) if usage else 0
