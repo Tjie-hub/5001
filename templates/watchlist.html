@@ -210,6 +210,15 @@ td { padding: 7px 11px; border-bottom: 1px solid var(--border-soft); font-varian
 .sig-counts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
 .sig-badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
 
+/* Unified watchlist */
+.src-badge { display:inline-block; font-size:9px; padding:1px 5px; border-radius:3px;
+  background:var(--border-soft); color:var(--text-dim); margin-right:3px; }
+.src-badge.conf { background:var(--green-dim,#1d3); color:#fff; }
+.src-badge.warn { background:var(--red-dim,#d33); color:#fff; }
+tr.row-conf { background:rgba(40,200,120,0.08); }
+.dir-long  { color:var(--green,#1a8f4a); }
+.dir-short { color:var(--red,#c0392b); }
+
 /* D15 — Mobile responsive */
 @media (max-width: 900px) {
   .row3, .row2 { grid-template-columns: 1fr; }
@@ -367,15 +376,14 @@ td { padding: 7px 11px; border-bottom: 1px solid var(--border-soft); font-varian
       </div>
     </div>
 
-    <!-- D11: Agent Live Feed -->
+    <!-- Unified Watchlist -->
     <div class="panel">
       <div class="ph">
-        <span class="pt">Agent Live Feed</span>
-        <div class="sig-counts" id="sigCounts" style="margin:0;margin-left:8px"></div>
-        <span id="sigTotal" style="font-size:10px;color:var(--text-mute);margin-left:auto"></span>
+        <span class="pt">Unified Watchlist</span>
+        <span id="uwlDate" style="font-size:10px;color:var(--text-mute);margin-left:auto"></span>
       </div>
       <div class="pb0">
-        <div class="feed-wrap" id="agentFeed"><div class="empty">Loading…</div></div>
+        <div class="twrap" id="unifiedWatch"><div class="empty">Loading…</div></div>
       </div>
     </div>
 
@@ -819,49 +827,36 @@ function renderChecklist(d) {
   `).join('');
 }
 
-// ── D11: Agent Live Feed ──────────────────────────────────────────────────────
-const VERDICT_COLOR = {
-  BUY:'green', SELL:'red', HOLD:'neu', SKIP:'neu', WATCH:'blue', REJECT:'amb'
-};
-
-function renderAgentFeed(d) {
-  const decisions = d.recent_decisions || [];
-  const today     = d.signals_today || {};
-
-  // Signal count badges
-  const byVerdict = today.by_verdict || {};
-  const counts = Object.entries(byVerdict).map(([v, n]) =>
-    `<span class="sig-badge verdict-${v}" style="background:var(--${VERDICT_COLOR[v]||'gray'}-dim,var(--gray-dim));color:var(--${VERDICT_COLOR[v]||'text'}-dim,var(--text-dim))">${v} ${n}</span>`
-  ).join('');
-  document.getElementById('sigCounts').innerHTML = counts;
-  document.getElementById('sigTotal').textContent = today.total ? `${today.total} today` : '';
-
-  if (decisions.length === 0) {
-    document.getElementById('agentFeed').innerHTML = '<div class="empty">No agent decisions yet</div>';
+function renderUnifiedWatchlist(d) {
+  const items = (d && d.items) || [];
+  document.getElementById('uwlDate').textContent =
+    d && d.date ? `${d.count||items.length} · ${d.date}` : '';
+  const el = document.getElementById('unifiedWatch');
+  if (items.length === 0) {
+    el.innerHTML = '<div class="empty">No watchlist setups</div>';
     return;
   }
-
-  document.getElementById('agentFeed').innerHTML = decisions.map(r => {
-    const t = (r.scan_time||'').slice(11,16);
-    const conf = r.confidence !== null ? Math.round((r.confidence||0) * 100) : null;
-    const verdict = (r.decision||'').toUpperCase();
-    const size = r.size_hint ? ` · ${typeof r.size_hint === 'number' ? r.size_hint.toFixed(1)+'×' : r.size_hint}` : '';
-    const rationale = (r.rationale||'').slice(0, 120);
-    return `
-      <div class="feed-row">
-        <span class="feed-time">${t}</span>
-        <div class="feed-body">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span class="feed-ticker">${r.ticker||'—'}</span>
-            <span class="verdict verdict-${verdict}">${verdict}</span>
-            <span class="feed-strat">${r.strategy||''}${size}</span>
-            ${conf !== null ? `<span style="font-size:10px;color:var(--text-mute)">${conf}%</span>` : ''}
-          </div>
-          ${rationale ? `<div class="feed-rationale">${rationale}</div>` : ''}
-          ${conf !== null ? `<div class="conf-bar"><div class="conf-fill" style="width:${conf}%"></div></div>` : ''}
-        </div>
-      </div>`;
+  const body = items.map((r, i) => {
+    const arrow  = r.direction === 'short' ? '▼' : '▲';
+    const dirCls = r.direction === 'short' ? 'dir-short' : 'dir-long';
+    const badges = (r.sources || []).map(s => `<span class="src-badge">${s}</span>`).join('');
+    const conf   = r.confluence ? '<span class="src-badge conf">CONFLUENCE</span>' : '';
+    const warn   = r.conflict   ? '<span class="src-badge warn">⚠</span>' : '';
+    const broker = (r.detail && r.detail.reversal && r.detail.reversal.smart_money) || '—';
+    const close  = (r.close != null) ? Number(r.close).toLocaleString() : '—';
+    return `<tr class="${r.confluence ? 'row-conf' : ''}">
+      <td>${i + 1}</td>
+      <td><b>${r.ticker}</b></td>
+      <td class="${dirCls}">${arrow} ${r.direction}</td>
+      <td>${(r.strength ?? 0).toFixed(1)}</td>
+      <td>${close}</td>
+      <td>${badges}${conf}${warn}</td>
+      <td>${broker}</td>
+    </tr>`;
   }).join('');
+  el.innerHTML = `<table><thead><tr>
+      <th>#</th><th>Ticker</th><th>Dir</th><th>Str</th><th>Close</th><th>Sources</th><th>Broker</th>
+    </tr></thead><tbody>${body}</tbody></table>`;
 }
 
 // ── Load & refresh ────────────────────────────────────────────────────────────
@@ -880,11 +875,11 @@ async function loadAll() {
   if (countdown) clearInterval(countdown);
 
   try {
-    const [risk, wl, sec, signals, chk, vpinRes] = await Promise.all([
+    const [risk, wl, sec, uwl, chk, vpinRes] = await Promise.all([
       fetch('/api/dashboard/risk').then(r=>r.json()),
       fetch('/api/dashboard/watchlist').then(r=>r.json()),
       fetch('/api/sector/rotation').then(r=>r.json()),
-      fetch('/api/dashboard/signals').then(r=>r.json()),
+      fetch('/api/dashboard/unified-watchlist').then(r=>r.json()),
       fetch('/api/dashboard/checklist').then(r=>r.json()),
       fetch('/api/market/vpin?series=1').then(r=>r.json()),
     ]);
@@ -894,7 +889,7 @@ async function loadAll() {
     renderFlow(risk);
     renderWatchlist(wl);
     renderSectors(sec.sectors || sec);
-    renderAgentFeed(signals);
+    renderUnifiedWatchlist(uwl);
     renderChecklist(chk);
     renderVPINPanel(vpinRes.summary || {}, vpinRes.series || []);
     timer = 60;
