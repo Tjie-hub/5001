@@ -748,6 +748,25 @@ def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
         if not _firm_cfg.is_active():
             return
 
+        # Skip tickers already approved today — avoids redundant LLM calls
+        _conn = sqlite3.connect(DB_PATH)
+        try:
+            _already = {
+                row[0] for row in _conn.execute(
+                    "SELECT ticker FROM agent_decisions "
+                    "WHERE strategy='watchlist' AND decision='approve' "
+                    "AND date(scan_time)=?",
+                    (date_str,),
+                )
+            }
+        finally:
+            _conn.close()
+
+        _fresh = [t for t in list(watchlist_tickers)[:20] if t not in _already]
+        if not _fresh:
+            print(f"[{time_str}] Bear watchlist ranking: all tickers already approved today, skipping")
+            return
+
         _candidates = [
             _SC(
                 ticker=t,
@@ -758,7 +777,7 @@ def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
                 foreign_score=None,
                 indicators={},
             )
-            for t in list(watchlist_tickers)[:20]
+            for t in _fresh
         ]
         _decisions = _firm.evaluate_staged(_candidates)
         _approved = [d for d in _decisions if d.decision == "approve"]

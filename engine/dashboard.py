@@ -153,7 +153,7 @@ def get_signals_dashboard(db_path: str, date: str) -> dict[str, Any]:
         for row in conn.execute(
             "SELECT flow_verdict, signal_direction, COUNT(*) "
             "FROM scheduled_signals "
-            "WHERE date(scan_time)=? "
+            "WHERE date(scan_time)=? AND signal_direction='BUY' "
             "GROUP BY flow_verdict, signal_direction",
             (date,),
         ):
