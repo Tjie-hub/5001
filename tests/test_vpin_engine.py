@@ -89,6 +89,32 @@ def test_calc_vpin_multi_returns_dict_with_5_rows():
     conn.close()
 
 
+def test_calc_vpin_multi_saturated_window_neutralizes_zscore():
+    """A VPIN window saturated near 1.0 has near-zero variance, so a tiny dip
+    must NOT manufacture an extreme z-score that contradicts the absolute
+    TOXIC label. Reviewer saw vpin 0.985 / z -3.0σ / regime NORMAL together —
+    internally inconsistent. With a degenerate-variance floor, z collapses to 0.
+    """
+    conn = _make_conn()
+    # 9 days pinned at 0.99, today dips to 0.97 -> std ~0.006, raw z ~ -3.0
+    vpins = [0.99] * 9 + [0.97]
+    for i, v in enumerate(vpins):
+        conn.execute(
+            "INSERT INTO daily_screen VALUES (?,?,?,?,?,?,?,?,?,?)",
+            ("BRPT", f"2026-06-{i+1:02d}", v, 100, 100,
+             5000.0, 1000000, 1.3, 4900.0, "BUY"),
+        )
+    result = calc_vpin_multi(conn, "BRPT", "2026-06-10")
+    assert result is not None
+    # Absolute label is still TOXIC (>0.60) — that's correct and unchanged.
+    assert result["vpin_label"] == "TOXIC"
+    # But the relative z must be neutralized, not an extreme -3.0.
+    assert result["vpin_z"] == 0.0, (
+        f"saturated window should neutralize z, got {result['vpin_z']}"
+    )
+    conn.close()
+
+
 def test_signal_map_keys_are_tuples():
     for key in SIGNAL_MAP:
         assert isinstance(key, tuple)

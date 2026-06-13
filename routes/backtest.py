@@ -17,6 +17,29 @@ from engine.strategies import check_current_entry_signal, get_ticker_data
 backtest_bp = Blueprint("backtest", __name__)
 
 
+def dedupe_and_filter_scan_rows(rows):
+    """Clean scanner output before returning to the frontend.
+
+    1. Dedupe by (ticker, strategy) — keep the richest duplicate, preferring
+       rows that carry a close and/or a WF score over emptier ones.
+    2. Suppress rows with neither a close nor a WF score: such a signal can't
+       be priced or ranked, so it's noise (reviewer saw BAIK/GRPH like this).
+    """
+    def _richness(r):
+        return (r.get("close") is not None) + (r.get("wf_score") is not None)
+
+    best = {}
+    for r in rows:
+        key = (r.get("ticker"), r.get("strategy"))
+        if key not in best or _richness(r) > _richness(best[key]):
+            best[key] = r
+
+    return [
+        r for r in best.values()
+        if r.get("close") is not None or r.get("wf_score") is not None
+    ]
+
+
 def attach_flow_data(results, include_flow=True, flow_threshold=2):
     """
     Attach flow data to scan results.
@@ -618,6 +641,9 @@ def api_multi_quick_scan():
             if r['ticker'] in wf_map:
                 r['wf_score'] = wf_map[r['ticker']]
 
+        # Dedupe by (ticker, strategy) and drop unactionable rows (no close/WF)
+        results = dedupe_and_filter_scan_rows(results)
+
         # Attach flow for intersection results
         include_flow = body.get('include_flow', True)
         flow_threshold = body.get('flow_threshold', 2)
@@ -725,22 +751,29 @@ def api_multi_quick_scan():
         for strategy_results in results_by_strategy.values():
             flat_results.extend(strategy_results)
 
+        # Dedupe by (ticker, strategy) and drop unactionable rows (no close/WF)
+        flat_results = dedupe_and_filter_scan_rows(flat_results)
+
         # Attach flow once on flat list (not per-strategy — avoids 9x redundant fetches)
         include_flow = body.get('include_flow', False)
         flow_threshold = body.get('flow_threshold', 2)
         flat_results = attach_flow_data(flat_results, include_flow, flow_threshold)
+
+        by_strategy = {s: 0 for s in strategies}
+        for r in flat_results:
+            by_strategy[r['strategy']] = by_strategy.get(r['strategy'], 0) + 1
 
         return jsonify({
             'success': True,
             'results': flat_results,
             'summary': {
                 'total_tickers_scanned': len(tickers),
-                'total_signals': sum(len(r) for r in results_by_strategy.values()),
+                'total_signals': len(flat_results),
                 'tickers_with_signal': len(set(r['ticker'] for r in flat_results if r.get('has_signal', False))),
                 'filter_mode': filter_mode,
                 'strategies': strategies,
                 'intersection_mode': False,
-                'by_strategy': {s: len(results_by_strategy[s]) for s in strategies}
+                'by_strategy': by_strategy
             },
             'multi_strategy': True
         })

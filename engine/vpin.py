@@ -32,6 +32,12 @@ VPIN_THRESHOLDS = {
     # > 0.60 = Toxic
 }
 
+# Minimum VPIN std-dev for a meaningful z-score. When VPIN saturates near a
+# bound (e.g. pinned ~1.0 for days), variance collapses and a tiny dip would
+# otherwise manufacture an extreme z that contradicts the absolute label.
+# Below this floor we report z = 0 (no meaningful deviation).
+VPIN_Z_MIN_STD = 0.02
+
 
 def classify_vpin(vpin: float) -> str:
     """Return human-readable VPIN label."""
@@ -494,7 +500,7 @@ def calc_vpin_multi(
     variance = sum((v - mean_vpin) ** 2 for v in vpins) / n
     std_vpin = variance ** 0.5
 
-    vpin_z = (today_vpin - mean_vpin) / std_vpin if std_vpin > 0.001 else 0.0
+    vpin_z = (today_vpin - mean_vpin) / std_vpin if std_vpin >= VPIN_Z_MIN_STD else 0.0
 
     # ── VPIN Regime ──────────────────────────────────────────────────────
     if vpin_z >= 2.0:
@@ -546,7 +552,7 @@ def calc_vpin_multi(
     vpin_collapse = False
     if len(vpins) >= 3:
         v_2d_ago = vpins[-3]
-        if std_vpin > 0.001:
+        if std_vpin >= VPIN_Z_MIN_STD:
             z_2d_ago = (v_2d_ago - mean_vpin) / std_vpin
             if z_2d_ago >= 1.5 and vpin_z < 0.5:
                 vpin_collapse = True
