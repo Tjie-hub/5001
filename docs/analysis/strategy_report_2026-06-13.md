@@ -151,3 +151,37 @@ Candidates reviewed:
 - [ScienceDirect — Reversal returns & liquidity provision in emerging markets](https://www.sciencedirect.com/science/article/pii/S1042444X20300530) · [RFS — Short-Term Reversals and Longer-Term Momentum around the World](https://academic.oup.com/rfs/article-abstract/38/12/3673/8240327) · [Dimensional — Novy-Marx Q&A on short-run reversals](https://www.dimensional.com/ie-en/insights/q-and-a-on-short-run-reversals-with-mamdouh-medhat-and-robert-novy-marx)
 - [NBER w20439 — Daniel & Moskowitz, Momentum Crashes](https://www.nber.org/papers/w20439) · [SSRN version](https://www.ssrn.com/abstract=2486272)
 - [Motley Fool — Bear market stocks](https://www.fool.com/investing/how-to-invest/bear-market-stocks/) · [SmartFinance — bear market strategies](https://smartfinance.fyi/articles/bear-market-survival-guide-10-proven-strategies-when-stocks-crash)
+
+---
+
+## 6. Implementation status (completed 2026-06-13, commit `0475edf`)
+
+### Shipped
+| Phase | Item | Result |
+|---|---|---|
+| 0.1 | Pending scanner/dashboard changes committed | `7c2e7d6` |
+| 0.2 | `weighted_score` profitability gate (score=0 when avg_return≤0) + selector SQL requires `avg_return_pct > 0` | losing strategies unselectable immediately; scores backfill at next 16:00 WF refresh |
+| 0.3 | WF Sharpe on per-trade returns, annualized by trade frequency, clamped ±10 | unit-tested sane range |
+| 0.4 | MSCI event guard 15–24 Jun (paper_config `event_guard_*`): momentum blocked, size ×0.5 | visible in `/health`; arms Monday |
+| 0.5 | `disabled_strategies` = vwap_reversion, vol_weighted, conservative | live |
+| 1.1 | `strategy_panic_rebound` + checker + router (counter-trend, bypasses weekly gate) | 10 tests pass incl. look-ahead regression |
+| 1.3 | R8 time-stop in monitor: 14d default, 7d panic rebound; TP exits no longer mislogged as STOPPED_OUT | live — **NEST (31 days old) will time-stop at the next monitor cycle** |
+| 2.1/2.2 | Macro panic gate (IHSG<200MA + vol>p75): strips momentum family AND Panic Rebound; BEAR regime routes Crash Recovery; counter-trend entries bypass UPTREND filter and carry strategy SL/TP | `macro_panic_state: true` right now — agent is correctly Crash-Recovery-only |
+| 2.3 | Gated replay over 22,408 traded windows | **PASS**: −0.291%/window gated vs −0.327% ungated; Jan-2026 windows 40% gated |
+| 3 | `/api/dashboard/strategy_pnl` attribution + WF re-validation Telegram alert | live; Momentum Following −3.50M Rp (0% win) / Swing Trend −0.68M Rp exposed |
+| — | **Bonus fix**: indicator cache keyed by `id(df)` returned stale series from GC'd walkforward frames | key now includes len + last-row fingerprint |
+
+### Panic Rebound walkforward — honest result (4 variants tested)
+| Variant | Entries | Exits | n | avg/window |
+|---|---|---|---|---|
+| v1 | −15%/VR1.5/green close | SL@signal low, TP 50% | 122 | −0.25% |
+| v2 | −20%/VR2.0/washout+close-pos | SL@low, TP 38.2% | 44 | −0.73% |
+| **v3 (shipped)** | v2 entries | **no SL**, TP 38.2% or 5-bar time-stop | 44 | **+0.05%** (+0.87/+0.42 in normal-regime quarters) |
+| v4 | v1 entries | v3 exits | 130 | −0.20% |
+
+Two structural lessons: **(1)** hard stops + mean reversion realize entry noise as losses — v3 uses a fixed horizon per the reversal literature; **(2)** the edge exists for *single-stock* panics in a calm market and inverts during *market-wide* panic (2025-04 tariff and 2026 MSCI buckets negative in every variant) — so the scanner strips Panic Rebound whenever macro panic state is on. The original "+1% in 2026 buckets" acceptance was **not met**: the 2026-specific edge lives in Crash Recovery, exactly as the audit's regime table predicted. Panic Rebound ships as a SIDEWAYS/calm-market strategy with thin-sample caveats (44 windows); the WF re-validation alert will flag it if live performance degrades.
+
+### Still open (by design)
+- 1.4 shadow observation: needs 5 live sessions (Mon 15 Jun onward).
+- 2.4 post-MSCI re-evaluation: decision lands 23 Jun; guard expires 24 Jun via config.
+- Windows backfill: data-limited (~2 years OHLCV → max 4–5 windows/ticker); revisit if longer history is fetched.
