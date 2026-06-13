@@ -5,6 +5,7 @@ import pytest
 
 from engine.indicators import (
     _INDICATOR_CACHE,
+    _df_key,
     clear_indicator_cache,
     calc_atr,
     calc_vwap,
@@ -53,7 +54,7 @@ class TestCalcAtrCache:
     def test_result_cached_after_first_call(self):
         df = _make_df()
         calc_atr(df, 14)
-        assert ('atr', id(df), 14) in _INDICATOR_CACHE
+        assert ('atr', _df_key(df), 14) in _INDICATOR_CACHE
 
     def test_second_call_returns_same_object(self):
         df = _make_df()
@@ -65,15 +66,15 @@ class TestCalcAtrCache:
         df = _make_df()
         calc_atr(df, 14)
         calc_atr(df, 7)
-        assert ('atr', id(df), 14) in _INDICATOR_CACHE
-        assert ('atr', id(df), 7)  in _INDICATOR_CACHE
+        assert ('atr', _df_key(df), 14) in _INDICATOR_CACHE
+        assert ('atr', _df_key(df), 7)  in _INDICATOR_CACHE
 
     def test_different_dfs_cached_separately(self):
         df1, df2 = _make_df(seed=0), _make_df(seed=1)
         calc_atr(df1, 14)
         calc_atr(df2, 14)
-        assert ('atr', id(df1), 14) in _INDICATOR_CACHE
-        assert ('atr', id(df2), 14) in _INDICATOR_CACHE
+        assert ('atr', _df_key(df1), 14) in _INDICATOR_CACHE
+        assert ('atr', _df_key(df2), 14) in _INDICATOR_CACHE
 
     def test_cached_value_matches_fresh(self):
         df = _make_df()
@@ -90,7 +91,7 @@ class TestCalcVolRatioCache:
     def test_result_cached(self):
         df = _make_df()
         calc_vol_ratio(df, 20)
-        assert ('vol_ratio', id(df), 20) in _INDICATOR_CACHE
+        assert ('vol_ratio', _df_key(df), 20) in _INDICATOR_CACHE
 
     def test_second_call_is_cache_hit(self):
         df = _make_df()
@@ -113,7 +114,7 @@ class TestCalcVwapCache:
     def test_result_cached(self):
         df = _make_df()
         calc_vwap(df, 60)
-        assert ('vwap', id(df), 60) in _INDICATOR_CACHE
+        assert ('vwap', _df_key(df), 60) in _INDICATOR_CACHE
 
     def test_second_call_is_cache_hit(self):
         df = _make_df()
@@ -129,7 +130,7 @@ class TestCalcWeeklyTrendCache:
     def test_result_cached(self):
         df = _make_df(n=150)
         calc_weekly_trend(df)
-        assert ('weekly_trend', id(df)) in _INDICATOR_CACHE
+        assert ('weekly_trend', _df_key(df)) in _INDICATOR_CACHE
 
     def test_second_call_is_cache_hit(self):
         df = _make_df(n=150)
@@ -141,7 +142,7 @@ class TestCalcWeeklyTrendCache:
         df = _make_df(n=50)  # < 100 bars → soft-pass
         result = calc_weekly_trend(df)
         assert result == (True, 'W:insufficient_data')
-        assert ('weekly_trend', id(df)) in _INDICATOR_CACHE
+        assert ('weekly_trend', _df_key(df)) in _INDICATOR_CACHE
 
     def test_cached_tuple_matches_fresh(self):
         df = _make_df(n=150)

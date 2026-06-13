@@ -139,11 +139,15 @@ def test_signals_decision_entry_has_required_fields():
 # ── scheduled_signals today ───────────────────────────────────────────────────
 
 def test_signals_today_count_by_verdict():
-    """Today's signals grouped by flow_verdict."""
+    """Today's BUY-direction signals grouped by flow_verdict.
+
+    The dashboard counts signal_direction='BUY' only (SELL rows are excluded),
+    so the SELL row below must not appear in totals or by_verdict.
+    """
     rows = [
         (f'{DATE} 10:00:00', 'BBRI', 'BUY',     'BUY'),
         (f'{DATE} 10:01:00', 'BBCA', 'BUY',     'BUY'),
-        (f'{DATE} 10:02:00', 'TLKM', 'SELL',    'SELL'),
+        (f'{DATE} 10:02:00', 'TLKM', 'SELL',    'SELL'),   # SELL direction — excluded
         (f'{DATE} 10:03:00', 'ASII', 'NEUTRAL',  'BUY'),
     ]
     db = _make_db(rows_signals=rows)
@@ -151,18 +155,18 @@ def test_signals_today_count_by_verdict():
     result = get_signals_dashboard(db, DATE)
 
     st = result['signals_today']
-    assert st['total'] == 4
+    assert st['total'] == 3
     assert st['by_verdict']['BUY'] == 2
-    assert st['by_verdict']['SELL'] == 1
+    assert 'SELL' not in st['by_verdict']
     assert st['by_verdict']['NEUTRAL'] == 1
 
 
 def test_signals_today_count_by_direction():
-    """by_direction uses signal_direction column (BUY vs SELL)."""
+    """by_direction reflects the BUY-only filter — only BUY signals are counted."""
     rows = [
         (f'{DATE} 10:00:00', 'BBRI', 'BUY',  'BUY'),
-        (f'{DATE} 10:01:00', 'TLKM', 'SELL', 'SELL'),
-        (f'{DATE} 10:02:00', 'ASII', 'SELL', 'SELL'),
+        (f'{DATE} 10:01:00', 'TLKM', 'SELL', 'SELL'),   # excluded by BUY-only filter
+        (f'{DATE} 10:02:00', 'ASII', 'SELL', 'SELL'),   # excluded by BUY-only filter
     ]
     db = _make_db(rows_signals=rows)
     from engine.dashboard import get_signals_dashboard
@@ -170,7 +174,7 @@ def test_signals_today_count_by_direction():
 
     st = result['signals_today']
     assert st['by_direction']['BUY'] == 1
-    assert st['by_direction']['SELL'] == 2
+    assert 'SELL' not in st['by_direction']
 
 
 def test_signals_today_excludes_other_dates():
