@@ -53,6 +53,29 @@ def refresh_wf_scores():
         except Exception as e:
             print(f"[WF] {ticker} error: {e}")
     conn.commit()
+
+    # Strategy health re-validation: alert when a live-selectable strategy's
+    # cross-ticker average walk-forward return is negative. This is how the
+    # Jan-2026 regime break should have been caught in days, not months.
+    try:
+        from scheduler.scanner import _get_disabled_strategies
+        disabled = _get_disabled_strategies()
+        rows = conn.execute(
+            "SELECT strategy, ROUND(AVG(avg_return_pct),2), COUNT(*) "
+            "FROM wf_scores GROUP BY strategy"
+        ).fetchall()
+        losing = [(s, r) for s, r, n in rows
+                  if s not in disabled and r is not None and r < 0 and n >= 50]
+        if losing:
+            msg = "⚠️ <b>WF Re-validation: strategi live dengan avg return negatif</b>\n\n"
+            for s, r in sorted(losing, key=lambda x: x[1]):
+                msg += f"  {s}: {r:+.2f}%/window\n"
+            msg += "\nPertimbangkan menambahkan ke disabled_strategies (paper_config)."
+            send_telegram(msg)
+            print(f"[WF] Re-validation alert: {len(losing)} losing live strategies")
+    except Exception as _rv_err:
+        print(f"[WF] Re-validation check error: {_rv_err}")
+
     conn.close()
     print(f"[WF] refresh_wf_scores selesai: {updated}/{len(tickers)} ticker diupdate")
 

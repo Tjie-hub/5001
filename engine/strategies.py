@@ -1200,6 +1200,9 @@ def check_current_entry_signal(ticker: str, strategy: str, df: pd.DataFrame = No
     elif strategy == 'Crash Recovery':
         # Counter-trend — bypass the weekly-trend gate (irrelevant for crash bounce)
         return check_crash_recovery_signal(ticker, df)
+    elif strategy == 'Panic Rebound':
+        # Counter-trend — bypass the weekly-trend gate (the signal IS a downtrend)
+        return check_panic_rebound_signal(df)
     else:
         return {
             'has_signal': False,
@@ -2165,6 +2168,7 @@ def check_crash_recovery_signal(ticker: str, df: pd.DataFrame,
     sl_pct = (entry_approx - sl_approx) / entry_approx if entry_approx > sl_approx else 0.02
 
     details = {
+        'price':       float(round(entry_approx, 2)),
         'vr':          round(float(vr_val), 2) if not pd.isna(vr_val) else None,
         'bullish':     is_bullish,
         'resume_date': resume_date,
@@ -2193,5 +2197,215 @@ def check_crash_recovery_signal(ticker: str, df: pd.DataFrame,
     return {
         'has_signal': False,
         'reason': f"Crash Recovery: conditions not met ({', '.join(missing)})",
+        'details': details,
+    }
+
+
+# ─────────────────────────────────────────────
+# PANIC REBOUND CONSTANTS
+# ─────────────────────────────────────────────
+# v3 params (2026-06-13, walkforward-selected over 4 variants):
+#   v1 -15%/VR1.5/green close, SL at signal low      → -0.25%/window
+#   v2 -20%/VR2.0/washout+close_pos, SL at low        → -0.73%/window
+#   v3 = v2 entries, NO hard SL, fixed horizon        → +0.05%/window,
+#        with +0.87%/+0.42% in normal-regime quarters
+#   v4 = v1 entries, v3 exits                          → -0.20%/window
+# Two lessons encoded here: (1) stops + mean reversion realize entry noise
+# as losses — exits are TP (38.2% retrace) or the 5-bar time-stop, and the
+# signal-low distance survives only as a synthetic sizing input; (2) the
+# edge exists for SINGLE-STOCK panics in a calm market and inverts during
+# market-wide panic (2025-04 tariff, 2026 MSCI crash buckets all negative)
+# — so the scanner only routes this strategy when macro panic state is OFF.
+PANIC_DROP_PCT       = -0.20   # 5-day return threshold — oversold panic
+PANIC_DROP_BARS      = 5       # lookback bars for the drop measurement
+PANIC_VR_MIN         = 2.0     # volume ratio confirmation (capitulation volume)
+PANIC_CLOSE_POS_MIN  = 0.60    # close in upper 40% of signal-bar range
+PANIC_WASHOUT_BARS   = 10      # signal-bar low must be the N-bar lowest low
+PANIC_TP_RETRACEMENT = 0.382   # TP at 38.2% retracement of the 5-day drop
+PANIC_SL_BUFFER      = 0.995   # SL slightly below signal low (retest noise)
+PANIC_TIME_STOP_BARS = 5       # reversal alpha decays in days — force exit
+PANIC_MIN_PRICE      = 100     # skip gocap tickers (ARB-trap risk)
+
+
+# ─────────────────────────────────────────────
+# STRATEGY 12 — PANIC REBOUND (short-term reversal)
+# ─────────────────────────────────────────────
+
+def strategy_panic_rebound(df: pd.DataFrame, capital: float = 50_000_000,
+                            filters: list = None) -> dict:
+    """
+    Short-term reversal / liquidity provision after panic selling.
+    Entry: 5-day return <= -15%, signal bar closes green (selling exhaustion),
+           VR > 1.5x, price >= 100. Enter next bar open.
+    SL: signal-bar low.
+    TP: signal close + 50% x 5-day drop amount.
+    Time-stop: 5 bars — reversal alpha decays fast (RFS 2025).
+    """
+    if len(df) < PANIC_DROP_BARS + 2:
+        return {'strategy': 'Panic Rebound', 'trades': [], 'equity': [capital],
+                'final_capital': capital, 'initial_capital': capital}
+
+    df = df.copy().reset_index(drop=True)
+    ret5 = df['close'] / df['close'].shift(PANIC_DROP_BARS) - 1.0
+    vr = calc_vol_ratio(df, 20)
+
+    capital_cur = capital
+    equity = [capital_cur]
+    trades = []
+    in_trade = False
+    entry_price = tp_level = sl_level = 0.0
+    entry_date = ''
+    entry_idx = -1
+    lots = 0
+
+    enter_next_bar = False
+    pend_sl = pend_tp = 0.0
+
+    for i in range(PANIC_DROP_BARS + 1, len(df)):
+        row = df.iloc[i]
+        date = str(row['date'])[:10]
+
+        if enter_next_bar and not in_trade:
+            raw_entry = row['open']
+            ep = apply_costs(raw_entry, 'BUY')
+            sl_price = apply_costs(pend_sl, 'SELL')
+            sl_pct = (ep - sl_price) / ep if ep > sl_price else 0.02
+            if sl_pct < 0.005:
+                sl_pct = 0.02
+                sl_price = ep * (1.0 - sl_pct)
+            if pend_tp > ep * 1.02:
+                lots_n = lot_size(capital_cur, ep, 0.02, sl_pct)
+                cost = ep * lots_n * 100
+                if cost <= capital_cur and lots_n > 0:
+                    entry_price = ep
+                    sl_level = sl_price
+                    tp_level = pend_tp
+                    lots = lots_n
+                    in_trade = True
+                    entry_date = date
+                    entry_idx = i
+            enter_next_bar = False
+
+        if in_trade:
+            hi, lo, cur = row['high'], row['low'], row['close']
+            exit_reason = None
+            # No hard SL: stops + mean reversion realize entry noise as
+            # losses (v1/v2 walkforward). Risk is bounded by the time-stop.
+            if hi >= tp_level:
+                exit_price = apply_costs(tp_level, 'SELL')
+                exit_reason = 'TP'
+            elif i - entry_idx >= PANIC_TIME_STOP_BARS:
+                exit_price = apply_costs(cur, 'SELL')
+                exit_reason = 'TIME'
+            elif i == len(df) - 1:
+                exit_price = apply_costs(cur, 'SELL')
+                exit_reason = 'EOD'
+            if exit_reason:
+                gross = (exit_price - entry_price) * lots * 100
+                pnl_pct = (exit_price - entry_price) / entry_price
+                capital_cur += gross
+                trades.append(Trade(
+                    entry_date=entry_date, exit_date=date,
+                    entry_price=entry_price, exit_price=exit_price,
+                    lots=lots, direction='BUY', exit_reason=exit_reason,
+                    pnl_rp=gross, pnl_pct=pnl_pct * 100,
+                    strategy='Panic Rebound'
+                ))
+                equity.append(capital_cur)
+                in_trade = False
+            continue
+
+        # Signal evaluation on bar i (all data through bar i only)
+        r5 = ret5.iloc[i]
+        vr_val = vr.iloc[i]
+        bar_range = float(row['high']) - float(row['low'])
+        close_pos = ((float(row['close']) - float(row['low'])) / bar_range
+                     if bar_range > 0 else 0.0)
+        lo_start = max(0, i - PANIC_WASHOUT_BARS + 1)
+        is_washout_low = float(row['low']) <= float(df['low'].iloc[lo_start:i + 1].min())
+        if (not pd.isna(r5) and r5 <= PANIC_DROP_PCT
+                and close_pos >= PANIC_CLOSE_POS_MIN
+                and is_washout_low
+                and row['close'] >= PANIC_MIN_PRICE
+                and not pd.isna(vr_val) and vr_val >= PANIC_VR_MIN):
+            drop_amount = float(df['close'].iloc[i - PANIC_DROP_BARS]) - float(row['close'])
+            pend_tp = float(row['close']) + PANIC_TP_RETRACEMENT * drop_amount
+            pend_sl = float(row['low']) * PANIC_SL_BUFFER
+            enter_next_bar = True
+
+    return {
+        'strategy':        'Panic Rebound',
+        'trades':          trades,
+        'equity':          equity,
+        'final_capital':   capital_cur,
+        'initial_capital': capital,
+    }
+
+
+def check_panic_rebound_signal(df: pd.DataFrame) -> dict:
+    """
+    Live signal check for Panic Rebound on the last bar.
+    Same conditions as the backtest signal bar; suggested entry is next open
+    (approximated by last close), SL = last bar low, TP = 50% drop retracement.
+    """
+    if df is None or len(df) < PANIC_DROP_BARS + 1:
+        return {'has_signal': False, 'reason': 'Insufficient data', 'details': {}}
+
+    last = df.iloc[-1]
+    close_now = float(last['close'])
+    ref_close = float(df['close'].iloc[-1 - PANIC_DROP_BARS])
+    r5 = close_now / ref_close - 1.0 if ref_close > 0 else 0.0
+
+    vr_series = calc_vol_ratio(df, 20)
+    vr_val = vr_series.iloc[-1]
+    has_volume = (not pd.isna(vr_val)) and float(vr_val) >= PANIC_VR_MIN
+    bar_range = float(last['high']) - float(last['low'])
+    close_pos = ((close_now - float(last['low'])) / bar_range
+                 if bar_range > 0 else 0.0)
+    is_bullish = close_pos >= PANIC_CLOSE_POS_MIN
+    is_washout_low = float(last['low']) <= float(
+        df['low'].iloc[-PANIC_WASHOUT_BARS:].min())
+    price_ok = close_now >= PANIC_MIN_PRICE
+
+    drop_amount = ref_close - close_now
+    tp_approx = close_now + PANIC_TP_RETRACEMENT * drop_amount
+    sl_approx = float(apply_costs(float(last['low']) * PANIC_SL_BUFFER, 'SELL'))
+
+    details = {
+        'price':     float(round(close_now, 2)),
+        'ret5_pct':  round(r5 * 100, 1),
+        'vr':        round(float(vr_val), 2) if not pd.isna(vr_val) else None,
+        'bullish':   is_bullish,
+        'sl':        round(sl_approx, 0),
+        'tp':        round(tp_approx, 0),
+        'time_stop': PANIC_TIME_STOP_BARS,
+    }
+
+    if (r5 <= PANIC_DROP_PCT and is_bullish and is_washout_low
+            and has_volume and price_ok and tp_approx > close_now * 1.02):
+        return {
+            'has_signal': True,
+            'reason': (f"Panic Rebound: {r5*100:.1f}% in {PANIC_DROP_BARS}d, "
+                       f"green close, VR={float(vr_val):.1f}x"),
+            'details': details,
+        }
+
+    missing = []
+    if r5 > PANIC_DROP_PCT:
+        missing.append(f'drop {r5*100:.1f}%>{PANIC_DROP_PCT*100:.0f}%')
+    if not is_bullish:
+        missing.append(f'close_pos {close_pos:.2f}<{PANIC_CLOSE_POS_MIN}')
+    if not is_washout_low:
+        missing.append(f'not {PANIC_WASHOUT_BARS}-bar washout low')
+    if not has_volume:
+        vtxt = f'{float(vr_val):.1f}x' if not pd.isna(vr_val) else 'n/a'
+        missing.append(f'VR={vtxt}<{PANIC_VR_MIN}x')
+    if not price_ok:
+        missing.append(f'price<{PANIC_MIN_PRICE}')
+    if tp_approx <= close_now * 1.02:
+        missing.append('insufficient TP headroom')
+    return {
+        'has_signal': False,
+        'reason': f"Panic Rebound: conditions not met ({', '.join(missing)})",
         'details': details,
     }

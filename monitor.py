@@ -206,6 +206,38 @@ def _check_trade(trade: dict) -> dict:
             }]
         }
 
+    # TIME STOP (R8): capital parked in a dead trade is dead capital in a
+    # bear market (BSML sat 27 days to exit flat). Panic Rebound's reversal
+    # alpha decays within ~5 bars, so it gets a tighter leash.
+    _strategy_l = (trade.get('strategy') or '').strip().lower()
+    _ts_days = 7 if _strategy_l == 'panic rebound' else 14
+    try:
+        from paper_trade import get_config as _ts_cfg
+        _ts_days = int(_ts_cfg().get(
+            'time_stop_days_panic' if _strategy_l == 'panic rebound' else 'time_stop_days',
+            _ts_days))
+    except Exception:
+        pass
+    try:
+        from datetime import date as _d
+        _age_days = (_d.today() - _d.fromisoformat(str(trade.get('entry_date'))[:10])).days
+    except Exception:
+        _age_days = 0
+    if _ts_days > 0 and _age_days >= _ts_days:
+        return {
+            'should_close': True,
+            'trail_update': trail_update,
+            'alerts': [{
+                'ticker': ticker, 'trade_id': trade_id,
+                'alert_type': 'R8_TIME_STOP', 'severity': 'INFO',
+                'message': (
+                    f"⏱ <b>TIME STOP — AUTO-CLOSED</b> — {ticker}\n"
+                    f"Open {_age_days}d (limit {_ts_days}d), no TP/SL resolution\n"
+                    f"Current: {current:,.0f}  Entry: {entry_price:,.0f}  P&L: {pnl_pct:+.2f}%"
+                )
+            }]
+        }
+
     # 1. Near SL (within 0.5% of SL level)
     if current <= sl_price * 1.005:
         alerts.append({
@@ -520,12 +552,18 @@ def check_all_open_trades():
             except Exception as e:
                 logger.error(f"[monitor] trail update failed: {e}")
 
-        # Auto-close if stop loss is hit
+        # Auto-close on TP / SL / time-stop — record the actual trigger,
+        # not a blanket STOPPED_OUT (TP hits were being logged as stops).
         if result['should_close']:
+            _trigger = (result['alerts'][0]['alert_type'] if result.get('alerts')
+                        else 'STOPPED_OUT')
+            _reason = {'TARGET_REACHED': 'TP_HIT',
+                       'STOPPED_OUT': 'STOPPED_OUT',
+                       'R8_TIME_STOP': 'R8_TIME_STOP'}.get(_trigger, 'STOPPED_OUT')
             cur = _get_current_price(trade['ticker']) or float(trade.get('sl_price') or trade['entry_price'])
             try:
-                close_trade(int(trade['id']), float(cur), 'STOPPED_OUT', notify=False)
-                logger.info(f"[monitor] Auto-closed {trade['ticker']} (STOPPED_OUT)")
+                close_trade(int(trade['id']), float(cur), _reason, notify=False)
+                logger.info(f"[monitor] Auto-closed {trade['ticker']} ({_reason})")
             except Exception as e:
                 logger.error(f"[monitor] close_trade failed: {e}")
 

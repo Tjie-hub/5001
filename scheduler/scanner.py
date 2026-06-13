@@ -512,7 +512,19 @@ def daily_signal_scan():
     print(f"[{datetime.now(WIB).strftime('%H:%M')}] Scan selesai. {len(signals)} signals ditemukan.")
 
     # ── AUTO-OPEN PAPER TRADE ──
-    if signals:
+    # Momentum-family entries are blocked during macro panic state
+    # (Daniel-Moskowitz) and the MSCI event-risk window.
+    _guard_on, _guard_mult = _event_guard_active()
+    if signals and _macro_panic_state():
+        print(f"[AutoTrade] Macro panic state — momentum entries blocked ({len(signals)} signals skipped)")
+        signals_to_open = []
+    elif signals and _guard_on:
+        print(f"[AutoTrade] Event guard active — momentum entries blocked ({len(signals)} signals skipped)")
+        signals_to_open = []
+    else:
+        signals_to_open = signals
+
+    if signals_to_open:
         try:
             import sys, os
             sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -523,7 +535,7 @@ def daily_signal_scan():
             opened   = get_open_trades()
 
             auto_opened = []
-            for s in signals:
+            for s in signals_to_open:
                 if len(opened) >= max_open:
                     print(f"[AutoTrade] Max posisi ({max_open}) tercapai, skip {s['ticker']}")
                     break
@@ -571,7 +583,10 @@ def daily_signal_scan():
 def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
     """
     Get best strategies for ticker from WF scores.
-    Returns list of strategies with consistency >= min_consistency.
+    Returns list of strategies with consistency >= min_consistency AND a
+    positive walk-forward return. No fallback: a ticker with no profitable
+    strategy generates no BUY signal (2026-06-13 audit — the old
+    vol_weighted/vwap_reversion fallback routed money-losing strategies).
     """
     import sqlite3
     try:
@@ -580,31 +595,115 @@ def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
             SELECT strategy, consistency_pct, weighted_score
             FROM wf_scores
             WHERE ticker = ? AND consistency_pct >= ?
+              AND avg_return_pct > 0 AND weighted_score > 0
             ORDER BY weighted_score DESC
         """, (ticker, min_consistency)).fetchall()
         conn.close()
-
-        if not rows:
-            # Fallback: use default strategies
-            return ["vol_weighted", "vwap_reversion"]
-
-        return [r[0] for r in rows]
+        disabled = _get_disabled_strategies()
+        return [r[0] for r in rows if r[0] not in disabled]
     except Exception as e:
         print(f"[get_best_strategies] {ticker} error: {e}")
-        return ["vol_weighted", "vwap_reversion"]  # Fallback
+        return []
 
 
 # Regime → preferred strategy candidates.
 # Keys: BULL_MODERATE (ADX 25-45), BULL_STRONG (ADX >=45), BEAR, SIDEWAYS.
 # Strategy names match STRATEGY_FUNCS keys in engine/walkforward_multi.py.
+# 2026-06-13 audit: SIDEWAYS used to route vwap_reversion/vol_weighted —
+# both lose money in every regime bucket. BEAR now allows Crash Recovery
+# (+3.3%/window in the 2026 bear) instead of nothing. Panic Rebound trades
+# single-stock washouts in BEAR/SIDEWAYS tickers but is stripped whenever
+# the MACRO panic state is on (its walkforward edge inverts in market-wide
+# panics — see the v1-v4 history above strategy_panic_rebound).
 _REGIME_STRATEGY_MAP = {
     'BULL_MODERATE': ['Trend Following Breakout', 'momentum',
                       'Inside Bar Breakout', 'NR7 Breakout'],
     'BULL_STRONG':   ['conservative', 'momentum', 'Trend Following Breakout'],
-    'BEAR':          [],
-    'SIDEWAYS':      ['vwap_reversion', 'vol_weighted'],
+    'BEAR':          ['Crash Recovery', 'Panic Rebound'],
+    'SIDEWAYS':      ['Panic Rebound'],
 }
 _BULL_STRONG_ADX = 45.0
+
+# Counter-trend strategies: event-driven, gated by their own signal checkers.
+# They bypass the wf_scores consistency gate (too few historical windows) and
+# survive the macro panic gate — they are the panic-state book.
+_COUNTER_TREND_BOOK = {'Crash Recovery', 'Panic Rebound'}
+
+# Momentum/trend family — blocked in macro panic state (Daniel-Moskowitz:
+# momentum crashes concentrate in post-decline high-vol rebounds) and during
+# binary event-risk windows (MSCI review).
+_MOMENTUM_FAMILY = {
+    'momentum', 'Trend Following Breakout', 'Inside Bar Breakout',
+    'NR7 Breakout', 'ORB', 'orb_intraday', 'ORB_intraday',
+    'Swing Trend', 'conservative', 'Momentum Following',
+}
+
+_DEFAULT_DISABLED = 'vwap_reversion,vol_weighted,conservative'
+
+
+def _get_disabled_strategies() -> set:
+    """Strategies suppressed from live BUY signal generation (paper_config
+    key 'disabled_strategies', csv). Default: the three strategies with
+    negative walk-forward returns in every regime (2026-06-13 audit)."""
+    try:
+        from paper_trade import get_config
+        raw = str(get_config().get('disabled_strategies', _DEFAULT_DISABLED))
+    except Exception:
+        raw = _DEFAULT_DISABLED
+    return {s.strip() for s in raw.split(',') if s.strip()}
+
+
+_macro_panic_cache = {}
+
+
+def _macro_panic_state() -> bool:
+    """Daniel-Moskowitz panic-state gate: IHSG below its 200-day MA AND 20-day
+    realized vol above the 75th percentile of the trailing year. Cached per day."""
+    import datetime as _dtm
+    today = str(_dtm.date.today())
+    if today in _macro_panic_cache:
+        return _macro_panic_cache[today]
+    panic = False
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        rows = conn.execute(
+            "SELECT close FROM ohlcv WHERE ticker='IHSG' "
+            "ORDER BY date DESC LIMIT 260"
+        ).fetchall()
+        conn.close()
+        closes = pd.Series([r[0] for r in reversed(rows)], dtype=float)
+        if len(closes) >= 210:
+            below_ma = closes.iloc[-1] < closes.rolling(200).mean().iloc[-1]
+            rets = closes.pct_change().dropna()
+            vol20 = rets.rolling(20).std().dropna()
+            high_vol = vol20.iloc[-1] > vol20.quantile(0.75)
+            panic = bool(below_ma and high_vol)
+    except Exception as e:
+        logging.warning(f"[panic_state] error: {e}")
+    _macro_panic_cache.clear()
+    _macro_panic_cache[today] = panic
+    return panic
+
+
+def _event_guard_active():
+    """Binary event-risk window (default: MSCI accessibility review Jun 18 +
+    classification decision Jun 23, 2026, with buffer). During the window all
+    new momentum-family entries are blocked and position size is multiplied
+    by event_guard_size_mult. Configurable via paper_config."""
+    import datetime as _dtm
+    try:
+        from paper_trade import get_config
+        cfg = get_config()
+    except Exception:
+        cfg = {}
+    start = str(cfg.get('event_guard_start', '2026-06-15'))
+    end = str(cfg.get('event_guard_end', '2026-06-24'))
+    try:
+        mult = float(cfg.get('event_guard_size_mult', 0.5))
+    except Exception:
+        mult = 0.5
+    today = str(_dtm.date.today())
+    return (start <= today <= end), mult
 
 
 def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
@@ -615,10 +714,13 @@ def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
     1. Detect regime (BULL/BEAR/SIDEWAYS) via detect_regime(df).
     2. For BULL, compute ADX to pick MODERATE vs STRONG sub-band.
     3. Look up preferred strategies for the sub-band.
-    4. Keep only those present in wf_scores with consistency >= min_consistency.
-    5. Sort by weighted_score DESC.
-    6. Fall back to get_ticker_best_strategies() if result is empty.
-    7. BEAR always returns [] — no fallback.
+    4. Counter-trend book (Crash Recovery, Panic Rebound) passes straight
+       through — event-driven, own signal checkers gate hard, and too few
+       wf windows exist to demand consistency history.
+    5. Other candidates must exist in wf_scores with consistency >=
+       min_consistency AND positive walk-forward return.
+    6. Macro panic state / event guard strip the momentum family.
+    7. Disabled strategies (paper_config) are always stripped.
     """
     from engine.regime_filter import detect_regime
     from engine.indicators import calc_adx
@@ -628,42 +730,61 @@ def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
     except Exception:
         regime = 'SIDEWAYS'
 
-    if regime == 'BEAR':
-        return []
-
     if regime == 'BULL':
         try:
             adx_val = float(calc_adx(df, 14).iloc[-1])
         except Exception:
             adx_val = 0.0
         sub_band = 'BULL_STRONG' if adx_val >= _BULL_STRONG_ADX else 'BULL_MODERATE'
+    elif regime == 'BEAR':
+        sub_band = 'BEAR'
     else:
         sub_band = 'SIDEWAYS'
 
-    candidates = _REGIME_STRATEGY_MAP.get(sub_band, [])
-    if not candidates:
-        return get_ticker_best_strategies(ticker, min_consistency)
+    candidates = list(_REGIME_STRATEGY_MAP.get(sub_band, []))
 
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        placeholders = ','.join('?' * len(candidates))
-        rows = conn.execute(f"""
-            SELECT strategy, weighted_score
-            FROM wf_scores
-            WHERE ticker = ?
-              AND strategy IN ({placeholders})
-              AND consistency_pct >= ?
-            ORDER BY weighted_score DESC
-        """, [ticker, *candidates, min_consistency]).fetchall()
-        conn.close()
-        selected = [r[0] for r in rows]
-    except Exception:
-        selected = []
+    counter_trend = [c for c in candidates if c in _COUNTER_TREND_BOOK]
+    wf_candidates = [c for c in candidates if c not in _COUNTER_TREND_BOOK]
 
-    if selected:
-        return selected
+    selected = []
+    if wf_candidates:
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            placeholders = ','.join('?' * len(wf_candidates))
+            rows = conn.execute(f"""
+                SELECT strategy, weighted_score
+                FROM wf_scores
+                WHERE ticker = ?
+                  AND strategy IN ({placeholders})
+                  AND consistency_pct >= ?
+                  AND avg_return_pct > 0 AND weighted_score > 0
+                ORDER BY weighted_score DESC
+            """, [ticker, *wf_candidates, min_consistency]).fetchall()
+            conn.close()
+            selected = [r[0] for r in rows]
+        except Exception:
+            selected = []
 
-    return get_ticker_best_strategies(ticker, min_consistency)
+    if not selected and not counter_trend:
+        selected = get_ticker_best_strategies(ticker, min_consistency)
+
+    result = selected + [c for c in counter_trend if c not in selected]
+
+    disabled = _get_disabled_strategies()
+    result = [s for s in result if s not in disabled]
+
+    # Daniel-Moskowitz panic gate + binary event-risk guard: no new
+    # momentum-family entries. In macro panic, Panic Rebound is also
+    # stripped — providing liquidity to single-stock crashes only pays
+    # when the market itself is calm; Crash Recovery alone stays live.
+    guard_on, _ = _event_guard_active()
+    panic_on = _macro_panic_state()
+    if panic_on or guard_on:
+        result = [s for s in result if s not in _MOMENTUM_FAMILY]
+    if panic_on:
+        result = [s for s in result if s != 'Panic Rebound']
+
+    return result
 
 
 def _safe_regime(df: pd.DataFrame) -> str:
@@ -1241,23 +1362,43 @@ def scheduled_multi_strategy_scan():
                     print(f"[{time_str}] {ticker}: No price found, skipping")
                     continue
 
-                # Check trend filter
-                from paper_trade import check_trend
-                trend = check_trend(ticker)
+                # Check trend filter — counter-trend strategies (Crash
+                # Recovery, Panic Rebound) buy INTO downtrends by design.
+                _is_counter_trend = any(s in _COUNTER_TREND_BOOK for s in r['strategies'])
+                if not _is_counter_trend:
+                    from paper_trade import check_trend
+                    trend = check_trend(ticker)
 
-                if trend != 'UPTREND':
-                    print(f"[{time_str}] {ticker}: Trend={trend}, skipping (not UPTREND)")
-                    auto_trade_results.append({
-                        'ticker': ticker,
-                        'success': False,
-                        'reason': f'Trend: {trend}'
-                    })
-                    continue
+                    if trend != 'UPTREND':
+                        print(f"[{time_str}] {ticker}: Trend={trend}, skipping (not UPTREND)")
+                        auto_trade_results.append({
+                            'ticker': ticker,
+                            'success': False,
+                            'reason': f'Trend: {trend}'
+                        })
+                        continue
 
-                # Open paper trade — apply agent size hint if present
+                # Open paper trade — apply agent size hint if present,
+                # halved during the event-risk guard window.
                 _size_mult = r.get("agent_size_hint", 1.0)
+                _eg_on, _eg_mult = _event_guard_active()
+                if _eg_on:
+                    _size_mult *= _eg_mult
+                # Record the strategy whose signal triggered this trade —
+                # accurate per-strategy P&L attribution depends on it.
+                _ot_kwargs = {'strategy': first_strategy}
+                if _is_counter_trend:
+                    # Use the strategy's own levels: SL = signal/resume low,
+                    # TP = retracement target. Generic ATR levels misprice
+                    # counter-trend setups (ATR is inflated by the crash bars).
+                    _d = signal_details.get(first_strategy, {})
+                    if _d.get('sl'):
+                        _ot_kwargs['sl_price'] = float(_d['sl'])
+                    if _d.get('tp'):
+                        _ot_kwargs['tp_price'] = float(_d['tp'])
+                    _ot_kwargs['min_rr'] = 1.2
                 trade_result = open_trade(ticker, float(entry_price), notify=False,
-                                          lots_multiplier=_size_mult)
+                                          lots_multiplier=_size_mult, **_ot_kwargs)
 
                 if 'error' in trade_result:
                     print(f"[{time_str}] {ticker}: {trade_result['error']}")

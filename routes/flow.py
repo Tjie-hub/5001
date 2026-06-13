@@ -350,6 +350,20 @@ def api_dashboard_signals():
                         'signals_today': {'total': 0, 'by_verdict': {}, 'by_direction': {}}}), 500
 
 
+@flow_bp.route('/api/dashboard/strategy_pnl', methods=['GET'])
+def api_dashboard_strategy_pnl():
+    """Per-strategy live P&L attribution from closed paper trades.
+
+    Returns: strategies (closed_trades, win_rate, total_pnl_rp, avg_pnl_pct,
+             last10_avg_pct), open_trades.
+    """
+    from engine.dashboard import get_strategy_pnl
+    try:
+        return jsonify(get_strategy_pnl(DB_PATH))
+    except Exception as e:
+        return jsonify({'error': str(e), 'strategies': [], 'open_trades': []}), 500
+
+
 @flow_bp.route('/api/dashboard/watchlist', methods=['GET'])
 def api_dashboard_watchlist():
     """Watchlist dashboard — BUY WATCH / AVOID / WAIT ticker lists.

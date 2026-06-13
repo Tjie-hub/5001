@@ -71,6 +71,13 @@ def health():
     except Exception as e:
         result["status"] = "error"
         result["db"] = str(e)
+    try:
+        from scheduler.scanner import _event_guard_active, _macro_panic_state
+        _eg_on, _eg_mult = _event_guard_active()
+        result["event_guard"] = {"active": _eg_on, "size_mult": _eg_mult}
+        result["macro_panic_state"] = _macro_panic_state()
+    except Exception as e:
+        result["event_guard"] = {"active": False, "error": str(e)}
     return jsonify(result)
 
 

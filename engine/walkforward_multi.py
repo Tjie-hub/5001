@@ -18,6 +18,7 @@ from .strategies import (
     strategy_swing_trend,
     strategy_trend_following_breakout,
     strategy_crash_recovery,
+    strategy_panic_rebound,
     Trade
 )
 from engine.regime_filter import strategy_regime_adaptive, RegimeClassifier
@@ -64,12 +65,24 @@ def compute_metrics(result: dict) -> dict:
     dd   = (eq - peak) / peak
     max_dd = dd.min() * 100   # negative %
 
-    # Sharpe (daily returns dari equity)
-    eq_series = pd.Series(equity)
-    daily_ret = eq_series.pct_change().dropna()
+    # Sharpe on per-trade returns, annualized by realized trade frequency.
+    # The equity list has one point per closed trade, so pct_change() yields
+    # per-trade (not daily) returns — annualizing those with sqrt(252)
+    # produced the +-1000s garbage that polluted wf_scores.avg_sharpe.
     sharpe = 0.0
-    if daily_ret.std() > 0:
-        sharpe = (daily_ret.mean() / daily_ret.std()) * np.sqrt(252)
+    if len(pnls_pct) >= 3:
+        rets = np.array(pnls_pct) / 100.0
+        ret_std = rets.std(ddof=1)
+        if ret_std > 0:
+            try:
+                span_days = max(
+                    (pd.to_datetime(trades[-1].exit_date)
+                     - pd.to_datetime(trades[0].entry_date)).days, 1)
+            except Exception:
+                span_days = 365
+            trades_per_year = len(rets) * 365.0 / span_days
+            sharpe = float(np.clip(
+                rets.mean() / ret_std * np.sqrt(trades_per_year), -10.0, 10.0))
 
     # Profit Factor
     gross_profit = sum(winners)
@@ -166,6 +179,7 @@ STRATEGY_FUNCS = {
     'Swing Trend':               strategy_swing_trend,
     'Trend Following Breakout':  strategy_trend_following_breakout,
     'Crash Recovery':            strategy_crash_recovery,
+    'Panic Rebound':             strategy_panic_rebound,
 }
 
 
@@ -329,5 +343,11 @@ def _rank_strategies(summary: dict) -> List[dict]:
             cons[i] * 0.15 +
             dd[i]   * 0.15, 3
         )
+        # Hard profitability gate: normalization is relative within ticker,
+        # so the "best of a losing bunch" could still score near 1.0 and get
+        # routed live by adaptive_strategy_selector. A strategy that loses
+        # money on average is never selectable, period.
+        if r['avg_return_pct'] <= 0:
+            r['score'] = 0.0
 
     return sorted(rows, key=lambda x: x['score'], reverse=True)

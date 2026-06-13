@@ -31,10 +31,14 @@ def _make_regime_df(adx_val: float, ma_slope_val: float, n: int = 40) -> pd.Data
 
 @pytest.fixture()
 def wf_db(tmp_path, monkeypatch):
-    """Temporary DB with wf_scores table, patched into scanner.DB_PATH."""
+    """Temporary DB with wf_scores table, patched into scanner.DB_PATH.
+    Event guard and macro panic gate are pinned OFF so tests stay
+    deterministic regardless of the calendar or live IHSG data."""
     import scheduler.scanner as sc
     db = str(tmp_path / "sc.db")
     monkeypatch.setattr(sc, "DB_PATH", db)
+    monkeypatch.setattr(sc, "_event_guard_active", lambda: (False, 0.5))
+    monkeypatch.setattr(sc, "_macro_panic_state", lambda: False)
     conn = sqlite3.connect(db)
     conn.execute("""
         CREATE TABLE wf_scores (
@@ -71,38 +75,42 @@ def test_bull_prefers_tfb(wf_db):
     assert "vwap_reversion" not in result
 
 
-def test_bear_always_returns_empty(wf_db):
-    """BEAR regime → empty list regardless of wf_scores."""
+def test_bear_returns_counter_trend_book(wf_db):
+    """BEAR regime → counter-trend book only (Crash Recovery, Panic Rebound);
+    momentum-family strategies never appear, regardless of wf_scores."""
     from scheduler.scanner import adaptive_strategy_selector
     _insert_wf(wf_db, "BEAR_T", "Trend Following Breakout", 80.0, 0.9)
     _insert_wf(wf_db, "BEAR_T", "momentum", 75.0, 0.85)
 
     df = _make_regime_df(adx_val=30, ma_slope_val=-2.5)
     result = adaptive_strategy_selector("BEAR_T", df)
-    assert result == [], f"expected [] for BEAR, got {result}"
+    assert set(result) == {"Crash Recovery", "Panic Rebound"}, result
 
 
-def test_sideways_prefers_vwap(wf_db):
-    """SIDEWAYS regime → vwap_reversion returned; TFB excluded."""
+def test_sideways_routes_panic_rebound_not_vwap(wf_db):
+    """SIDEWAYS regime → Panic Rebound; vwap_reversion (negative walk-forward
+    returns in every regime, 2026-06-13 audit) must never come back."""
     from scheduler.scanner import adaptive_strategy_selector
     _insert_wf(wf_db, "FLAT_T", "vwap_reversion", 60.0, 0.6)
     _insert_wf(wf_db, "FLAT_T", "Trend Following Breakout", 65.0, 0.7)
 
     df = _make_regime_df(adx_val=15, ma_slope_val=0.2)
     result = adaptive_strategy_selector("FLAT_T", df)
-    assert "vwap_reversion" in result
+    assert "Panic Rebound" in result
+    assert "vwap_reversion" not in result
     assert "Trend Following Breakout" not in result
 
 
-def test_falls_back_when_no_wf_match(wf_db):
-    """BULL regime but no BULL-appropriate strategy in wf_scores → fallback returns something."""
+def test_no_fallback_to_losing_defaults(wf_db):
+    """BULL regime but no BULL-appropriate strategy in wf_scores → empty.
+    The old fallback re-routed vol_weighted/vwap_reversion (money losers);
+    no profitable strategy now means no BUY signal for the ticker."""
     from scheduler.scanner import adaptive_strategy_selector
     _insert_wf(wf_db, "BULL_NOWF", "vwap_reversion", 60.0, 0.6)
 
     df = _make_regime_df(adx_val=30, ma_slope_val=2.0)
     result = adaptive_strategy_selector("BULL_NOWF", df)
-    assert isinstance(result, list)
-    assert len(result) >= 1
+    assert result == [], result
 
 
 def test_bull_conservative_in_wf_returns_conservative(wf_db):

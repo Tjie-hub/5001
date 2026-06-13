@@ -12,10 +12,23 @@ import sqlite3
 from config import DB_PATH
 
 # ── R16: Session-level indicator cache ───────────────────────────────────────
-# Keyed by (func_name, id(df), *params). Safe within a scan session because
-# ohlcv_map holds strong references to each df — id() stability guaranteed.
+# Keyed by (func_name, _df_key(df), *params). id(df) alone is NOT a safe key:
+# walkforward creates temporary concat frames that are GC'd, and CPython reuses
+# freed ids — a fresh frame could hit a stale entry from another ticker/window
+# and return a wrong-length series (observed 2026-06-13: iloc out-of-bounds in
+# 2026-04 windows). len + last-row fingerprint makes collisions harmless.
 # Call clear_indicator_cache() at the start of each scan to prevent stale hits.
 _INDICATOR_CACHE: dict = {}
+
+
+def _df_key(df) -> tuple:
+    try:
+        n = len(df)
+        last_close = float(df['close'].iloc[-1]) if n else 0.0
+        last_vol = float(df['volume'].iloc[-1]) if n and 'volume' in df else 0.0
+        return (id(df), n, last_close, last_vol)
+    except Exception:
+        return (id(df), -1, 0.0, 0.0)
 
 
 def clear_indicator_cache() -> int:
@@ -28,7 +41,7 @@ def clear_indicator_cache() -> int:
 def calc_atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
     # SMA-ATR intentional: less lag than Wilder's EWM, appropriate for position sizing.
     # Wilder's EWM is reserved for calc_adx where the formula requires it.
-    _key = ('atr', id(df), period)
+    _key = ('atr', _df_key(df), period)
     if _key in _INDICATOR_CACHE:
         return _INDICATOR_CACHE[_key]
     h, l, c = df['high'], df['low'], df['close']
@@ -41,7 +54,7 @@ calc_atr.warmup_bars = lambda period=14: period
 
 
 def calc_vwap(df: pd.DataFrame, window: int = 60) -> pd.Series:
-    _key = ('vwap', id(df), window)
+    _key = ('vwap', _df_key(df), window)
     if _key in _INDICATOR_CACHE:
         return _INDICATOR_CACHE[_key]
     tp = (df['high'] + df['low'] + df['close']) / 3
@@ -57,7 +70,7 @@ calc_vwap.warmup_bars = lambda window=60: window
 
 def calc_vol_ratio(df: pd.DataFrame, period: int = 20) -> pd.Series:
     # Rolling mean includes current bar, dampening VR spikes ~10%. Intentional conservatism.
-    _key = ('vol_ratio', id(df), period)
+    _key = ('vol_ratio', _df_key(df), period)
     if _key in _INDICATOR_CACHE:
         return _INDICATOR_CACHE[_key]
     avg = df['volume'].rolling(period, min_periods=1).mean()
@@ -159,7 +172,7 @@ calc_close_vs_ma.warmup_bars = lambda period=20: period
 
 def calc_weekly_trend(df: pd.DataFrame) -> tuple:
     """Returns (passes: bool, reason: str). Soft-pass if < 100 bars."""
-    _key = ('weekly_trend', id(df))
+    _key = ('weekly_trend', _df_key(df))
     if _key in _INDICATOR_CACHE:
         return _INDICATOR_CACHE[_key]
     if len(df) < 100:

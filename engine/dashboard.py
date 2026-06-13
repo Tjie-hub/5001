@@ -177,6 +177,54 @@ def get_signals_dashboard(db_path: str, date: str) -> dict[str, Any]:
         conn.close()
 
 
+# ── Strategy P&L attribution ──────────────────────────────────────────────────
+
+def get_strategy_pnl(db_path: str) -> dict[str, Any]:
+    """Per-strategy live paper-trading P&L attribution.
+
+    Catches regime breaks in days instead of months: each strategy's closed
+    trades, win rate, total/average P&L, plus a rolling last-10-trade window.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        strategies: list[dict] = []
+        for row in conn.execute(
+            "SELECT strategy, COUNT(*) n,"
+            "       SUM(CASE WHEN pnl_pct > 0 THEN 1 ELSE 0 END) wins,"
+            "       ROUND(SUM(pnl_rp), 0) total_rp,"
+            "       ROUND(AVG(pnl_pct), 2) avg_pct "
+            "FROM paper_trades WHERE status='CLOSED' "
+            "GROUP BY strategy ORDER BY total_rp ASC"
+        ):
+            strategy, n, wins, total_rp, avg_pct = row
+            recent = [r[0] for r in conn.execute(
+                "SELECT pnl_pct FROM paper_trades "
+                "WHERE status='CLOSED' AND strategy=? "
+                "ORDER BY exit_date DESC, id DESC LIMIT 10",
+                (strategy,),
+            )]
+            recent = [r for r in recent if r is not None]
+            strategies.append({
+                'strategy': strategy,
+                'closed_trades': n,
+                'win_rate': round(100.0 * (wins or 0) / n, 1) if n else 0.0,
+                'total_pnl_rp': total_rp,
+                'avg_pnl_pct': avg_pct,
+                'last10_avg_pct': round(sum(recent) / len(recent), 2) if recent else None,
+                'last10_n': len(recent),
+            })
+        open_rows = [
+            {'ticker': r[0], 'strategy': r[1], 'entry_date': r[2]}
+            for r in conn.execute(
+                "SELECT ticker, strategy, entry_date FROM paper_trades "
+                "WHERE status='OPEN' ORDER BY entry_date"
+            )
+        ]
+        return {'strategies': strategies, 'open_trades': open_rows}
+    finally:
+        conn.close()
+
+
 # ── Watchlist ─────────────────────────────────────────────────────────────────
 
 def get_watchlist(db_path: str, date: str) -> dict[str, Any]:
