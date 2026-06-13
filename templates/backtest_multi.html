@@ -60,6 +60,10 @@ input, select { font-family:inherit; color:inherit; }
 ::-webkit-scrollbar-thumb { background:var(--surface-3); border-radius:10px; border:2px solid var(--bg); }
 ::-webkit-scrollbar-thumb:hover { background:#2d3858; }
 .mono { font-family:var(--mono); font-feature-settings:"tnum" 1,"zero" 1; }
+.ico { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; vertical-align:middle; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
+}
 
 /* Topbar */
 .topbar {
@@ -603,7 +607,7 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
   </div>
   <div class="top-right">
     <div class="search-wrap">
-      <span class="search-icon">🔍</span>
+      <span class="search-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg></span>
       <input type="text" id="global-search" placeholder="Search ticker…" autocomplete="off">
       <button class="search-clear" id="search-clear" onclick="clearSearch()">×</button>
       <span class="search-shortcut">⌘K</span>
@@ -748,9 +752,9 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
 
   <div class="scanner-section" style="padding-bottom:18px;">
     <div class="action-row">
-      <button class="btn btn-primary btn-lg" id="btn-quick" onclick="runScan('quick')">⚡ Quick Scan</button>
-      <button class="btn btn-outline btn-lg" id="btn-full" onclick="runScan('full')">🔍 Full Scan + Backtest</button>
-      <button class="btn btn-outline btn-lg" id="btn-swing" onclick="runSwingOnset()" title="Find stocks entering a new uptrend">🌱 Swing Onset</button>
+      <button class="btn btn-primary btn-lg" id="btn-quick" onclick="runScan('quick')"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>Quick Scan</button>
+      <button class="btn btn-outline btn-lg" id="btn-full" onclick="runScan('full')"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>Full Scan + Backtest</button>
+      <button class="btn btn-outline btn-lg" id="btn-swing" onclick="runSwingOnset()" title="Find stocks entering a new uptrend"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>Swing Onset</button>
     </div>
     <div class="progress" id="scan-wrap"><div class="pbar" id="scan-bar"></div></div>
     <div class="progress-label"><span id="scan-label"></span><span></span></div>
@@ -853,7 +857,7 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
 
   <div class="screener-bar">
     <button class="btn btn-primary btn-lg" onclick="runScreener('intraday')">▶ Intraday</button>
-    <button class="btn btn-outline btn-lg" onclick="runScreener('eod')">📊 EOD</button>
+    <button class="btn btn-outline btn-lg" onclick="runScreener('eod')"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>EOD</button>
     <div class="sc-progress-wrap">
       <div class="sc-progress-lbl" id="sc-label"></div>
       <div class="sc-progress-bg"><div class="sc-progress-bar" id="sc-bar"></div></div>
@@ -889,7 +893,7 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
   <div class="panel-head">
     <div><h2>Paper Trading</h2><div class="sub">Simulated book with realistic fills.</div></div>
     <div class="right">
-      <button class="btn btn-sm" onclick="precomputeBacktest()">⚡ Pre-compute Cache</button>
+      <button class="btn btn-sm" onclick="precomputeBacktest()"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width:13px;height:13px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>Pre-compute Cache</button>
       <button class="btn btn-danger btn-sm" onclick="clearHistory()">Clear History</button>
     </div>
   </div>

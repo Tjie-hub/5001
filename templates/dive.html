@@ -26,6 +26,7 @@
       --ease:        cubic-bezier(0.16, 1, 0.3, 1);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; } }
     body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; }
     a { color: var(--accent); text-decoration: none; }
 
