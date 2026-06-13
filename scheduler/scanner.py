@@ -844,7 +844,11 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
             r["agent_size_hint"] = _size_map.get(r["ticker"], 1.0)
 
         if _firm_cfg.get_enforce():
-            return [r for r in intersection_results if r["ticker"] in _size_map]
+            # Pass-set is the evaluated candidates that were not explicitly vetoed.
+            # Fail-open: degraded/bypassed (LLM failed or spend-capped) proceed per
+            # the decision contract; only an explicit veto blocks a signal.
+            _pass = {d.ticker for d in _decisions if d.decision != "veto"}
+            return [r for r in intersection_results if r["ticker"] in _pass]
 
         return flow_confirmed
     except Exception as _err:

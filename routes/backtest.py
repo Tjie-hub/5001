@@ -812,7 +812,7 @@ def agent_status():
     except Exception:
         pass
     return jsonify({
-        "enabled": _agent_config.FIRM_ENABLED,
+        "enabled": _agent_config.get_enabled(),
         "enforce": _agent_config.get_enforce(),
         "active": _agent_config.is_active(),
         "model": _agent_config.MODEL_ID,
@@ -831,7 +831,7 @@ def agent_config():
     else:
         _agent_config.set_mode(enabled=False, enforce=False)
     return jsonify({
-        "enabled": _agent_config.is_active() or mode != "off",
+        "enabled": _agent_config.get_enabled(),
         "enforce": _agent_config.get_enforce(),
         "active": _agent_config.is_active(),
         "mode": mode,

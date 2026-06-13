@@ -23,10 +23,16 @@ def _mock_cfg(is_active=True):
 
 
 def _call_confirms(trade, result, mock_firm, mock_cfg):
-    with __import__("unittest.mock", fromlist=["patch"]).patch.dict(sys.modules, {
-        "engine.agent_firm.firm":   mock_firm,
-        "engine.agent_firm.config": mock_cfg,
-    }):
+    # monitor does ``from engine.agent_firm import firm`` lazily, which resolves to
+    # package attributes; patch those (not just sys.modules) so the mock holds even
+    # after an earlier test imports the real submodules.
+    import engine.agent_firm as _pkg
+    with patch.object(_pkg, "firm", mock_firm), \
+         patch.object(_pkg, "config", mock_cfg), \
+         patch.dict(sys.modules, {
+             "engine.agent_firm.firm":   mock_firm,
+             "engine.agent_firm.config": mock_cfg,
+         }):
         from monitor import _agent_confirms_exit
         return _agent_confirms_exit(trade, result)
 
@@ -103,10 +109,13 @@ def test_check_all_open_trades_r4_agent_veto_skips_close(monkeypatch):
     fake_firm = _mock_firm([veto_decision])
     fake_cfg  = _mock_cfg(is_active=True)
 
-    with patch.dict(sys.modules, {
-        "engine.agent_firm.firm":   fake_firm,
-        "engine.agent_firm.config": fake_cfg,
-    }), patch("monitor.send_telegram"):
+    import engine.agent_firm as _pkg
+    with patch.object(_pkg, "firm", fake_firm), \
+         patch.object(_pkg, "config", fake_cfg), \
+         patch.dict(sys.modules, {
+             "engine.agent_firm.firm":   fake_firm,
+             "engine.agent_firm.config": fake_cfg,
+         }), patch("monitor.send_telegram"):
         monitor.check_all_open_trades()
 
     assert close_calls == [], "close_trade must NOT be called when agent vetoes R4"

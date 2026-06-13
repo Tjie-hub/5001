@@ -37,11 +37,21 @@ def _mock_config_module(is_active=True, get_enforce=False):
 
 def _call_gate(intersection_results, flow_confirmed, mock_firm, mock_cfg,
                date_str="2026-06-05", time_str="08:00"):
-    """Call run_agent_firm_gate() with mocked engine.agent_firm dependencies."""
-    with __import__("unittest.mock", fromlist=["patch"]).patch.dict(sys.modules, {
-        "engine.agent_firm.firm": mock_firm,
-        "engine.agent_firm.config": mock_cfg,
-    }):
+    """Call run_agent_firm_gate() with mocked engine.agent_firm dependencies.
+
+    The gate does ``from engine.agent_firm import firm`` / ``import config`` lazily,
+    which resolves to attributes on the already-imported package. Patch both the
+    package attributes and sys.modules so mocking is robust regardless of whether
+    the real submodules were imported by an earlier test in the same session.
+    """
+    import engine.agent_firm as _pkg
+    from unittest.mock import patch
+    with patch.object(_pkg, "firm", mock_firm), \
+         patch.object(_pkg, "config", mock_cfg), \
+         patch.dict(sys.modules, {
+             "engine.agent_firm.firm": mock_firm,
+             "engine.agent_firm.config": mock_cfg,
+         }):
         return run_agent_firm_gate(
             intersection_results, flow_confirmed, date_str, time_str
         )
@@ -131,3 +141,24 @@ def test_gate_enforce_mode_filters_from_intersection_results():
 
     assert len(result) == 1
     assert result[0]["ticker"] == "AMMN"
+
+
+def test_gate_enforce_mode_lets_degraded_pass_through():
+    """Fail-open: a degraded decision (LLM failed) must not be filtered out in
+    enforce mode — only an explicit veto blocks a signal."""
+    approved = MagicMock(ticker="AMMN", decision="approve")
+    degraded = MagicMock(ticker="MDKA", decision="degraded")
+    vetoed = MagicMock(ticker="ANTM", decision="veto")
+
+    intersection_results = [
+        _make_result("AMMN", flow_score=1, confirmed=False),
+        _make_result("MDKA", flow_score=1, confirmed=False),
+        _make_result("ANTM", flow_score=-1, confirmed=False),
+    ]
+
+    result = _call_gate(intersection_results, [],
+                        _mock_firm_module(lambda c: [approved, degraded, vetoed]),
+                        _mock_config_module(is_active=True, get_enforce=True))
+
+    tickers = {r["ticker"] for r in result}
+    assert tickers == {"AMMN", "MDKA"}, "degraded must pass, only veto blocks"

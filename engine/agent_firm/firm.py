@@ -34,6 +34,46 @@ def reset_market_ctx() -> None:
     _market_ctx = None
 
 
+# ── Daily spend cap ───────────────────────────────────────────────────────────
+
+def _spend_today() -> float:
+    """Sum today's persisted agent cost (local date). Returns 0.0 on any error."""
+    import datetime
+    import data.db as _db
+    try:
+        rows = query(
+            str(_db.DB_PATH),
+            "SELECT COALESCE(SUM(cost_usd), 0.0) AS c FROM agent_decisions "
+            "WHERE DATE(created_at) = ?",
+            (datetime.date.today().isoformat(),),
+        )
+        return float(rows[0]["c"]) if rows else 0.0
+    except Exception:
+        return 0.0
+
+
+def _over_daily_cap() -> bool:
+    """True once today's spend has reached the configured daily cap."""
+    cap = config.DAILY_SPEND_CAP_USD
+    if cap <= 0:
+        return False
+    return _spend_today() >= cap
+
+
+def _capped_decisions(candidates: list[SignalCandidate]) -> list[AgentDecision]:
+    return [
+        AgentDecision(
+            ticker=c.ticker,
+            strategy=c.strategy,
+            scan_time=c.scan_time,
+            quant_score=c.score,
+            decision="bypassed",
+            rationale=f"Daily spend cap reached (${config.DAILY_SPEND_CAP_USD:.2f})",
+        )
+        for c in candidates
+    ]
+
+
 # ── Context pre-fetch ────────────────────────────────────────────────────────
 
 def _build_context(state: AgentState) -> dict:
@@ -271,6 +311,8 @@ def evaluate(
             )
             for c in candidates
         ]
+    if _over_daily_cap():
+        return _capped_decisions(candidates)
     return asyncio.run(evaluate_async(candidates, client))
 
 
@@ -371,6 +413,8 @@ def evaluate_staged(
             )
             for c in candidates
         ]
+    if _over_daily_cap():
+        return _capped_decisions(candidates)
     return asyncio.run(evaluate_staged_async(candidates, client))
 
 

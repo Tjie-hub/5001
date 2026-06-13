@@ -25,10 +25,16 @@ def _mock_config_module(is_active=True):
 
 def _call_ranking(tickers, mock_firm, mock_cfg):
     sent_messages = []
-    with __import__("unittest.mock", fromlist=["patch"]).patch.dict(sys.modules, {
-        "engine.agent_firm.firm":   mock_firm,
-        "engine.agent_firm.config": mock_cfg,
-    }), patch("scheduler.scanner.send_telegram", side_effect=sent_messages.append):
+    # Patch the package attributes too (the lazy ``from engine.agent_firm import
+    # firm`` reads those), so the mock holds even after the real submodules are
+    # imported by an earlier test in the same session.
+    import engine.agent_firm as _pkg
+    with patch.object(_pkg, "firm", mock_firm), \
+         patch.object(_pkg, "config", mock_cfg), \
+         patch.dict(sys.modules, {
+             "engine.agent_firm.firm":   mock_firm,
+             "engine.agent_firm.config": mock_cfg,
+         }), patch("scheduler.scanner.send_telegram", side_effect=sent_messages.append):
         from scheduler.scanner import rank_bear_watchlist_and_notify
         rank_bear_watchlist_and_notify(tickers, "2026-06-05", "10:00")
     return sent_messages

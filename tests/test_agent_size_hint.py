@@ -60,10 +60,17 @@ def _mock_config_module(is_active=True, get_enforce=False):
 
 
 def _call_gate(intersection_results, flow_confirmed, mock_firm, mock_cfg):
-    with __import__("unittest.mock", fromlist=["patch"]).patch.dict(sys.modules, {
-        "engine.agent_firm.firm":   mock_firm,
-        "engine.agent_firm.config": mock_cfg,
-    }):
+    # Patch the package attributes (what ``from engine.agent_firm import firm``
+    # reads) as well as sys.modules, so mocking holds even if the real submodules
+    # were already imported earlier in the session.
+    import engine.agent_firm as _pkg
+    from unittest.mock import patch
+    with patch.object(_pkg, "firm", mock_firm), \
+         patch.object(_pkg, "config", mock_cfg), \
+         patch.dict(sys.modules, {
+             "engine.agent_firm.firm":   mock_firm,
+             "engine.agent_firm.config": mock_cfg,
+         }):
         from scheduler.scanner import run_agent_firm_gate
         return run_agent_firm_gate(
             intersection_results, flow_confirmed, "2026-06-05", "10:00"

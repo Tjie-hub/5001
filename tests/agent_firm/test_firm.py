@@ -146,3 +146,46 @@ async def test_evaluate_async_marks_degraded_when_risk_fails(monkeypatch, tmp_pa
 
     assert decisions[0].decision == "degraded"
     assert "degraded" in (decisions[0].rationale or "").lower()
+
+
+def test_evaluate_bypasses_when_daily_spend_cap_reached(monkeypatch, tmp_path):
+    """Once today's persisted cost >= the cap, evaluate() short-circuits to bypassed
+    without making any LLM calls."""
+    db_file = tmp_path / "t.db"
+    monkeypatch.setenv("AGENT_FIRM_ENABLED", "true")
+    monkeypatch.setenv("AGENT_FIRM_DAILY_CAP", "1.0")
+    monkeypatch.setenv("DB_PATH", str(db_file))
+    import importlib
+    from data import db as data_db
+    importlib.reload(data_db)
+    from engine.agent_firm import config, firm
+    importlib.reload(config); importlib.reload(firm)
+
+    _seed(db_file)
+
+    # Seed a prior decision today whose cost already exceeds the $1.00 cap.
+    import datetime
+    today = datetime.date.today().isoformat()
+    conn = sqlite3.connect(db_file)
+    conn.execute(
+        "INSERT INTO agent_decisions (scan_time, ticker, strategy, decision, cost_usd, created_at) "
+        "VALUES (?,?,?,?,?,?)",
+        ("2026-05-19 09:00", "AAAA", "x", "approve", 2.5, f"{today} 09:00:00"),
+    )
+    conn.commit()
+    conn.close()
+
+    candidate = SignalCandidate(
+        ticker="BBRI", strategy="momentum_following",
+        score=4.2, scan_time="2026-05-19T16:00:00+07:00",
+    )
+
+    # If the cap were ignored the firm would try a real LLM call and raise; the
+    # cap must short-circuit before any agent runs.
+    out = firm.evaluate([candidate])
+    assert len(out) == 1
+    assert out[0].decision == "bypassed"
+    assert "cap" in (out[0].rationale or "").lower()
+
+    out_staged = firm.evaluate_staged([candidate])
+    assert out_staged[0].decision == "bypassed"

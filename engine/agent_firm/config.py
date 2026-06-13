@@ -43,6 +43,11 @@ def get_enforce() -> bool:
     return _runtime["enforce"] if _runtime is not None else FIRM_ENFORCE
 
 
+def get_enabled() -> bool:
+    """Runtime-aware enabled flag (mirrors get_enforce); ignores the kill switch."""
+    return _runtime["enabled"] if _runtime is not None else FIRM_ENABLED
+
+
 def is_active() -> bool:
     enabled = _runtime["enabled"] if _runtime is not None else FIRM_ENABLED
     if not enabled:
