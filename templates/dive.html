@@ -466,13 +466,13 @@
         <div id="vpin-signal-badge" class="vpin-signal-badge">—</div>
         <div id="vpin-desc" class="vpin-desc">—</div>
         <div class="vpin-grid">
-          <span class="vpin-grid-label">VPIN Today</span>
+          <span class="vpin-grid-label">VPIN (absolute)</span>
           <span class="vpin-grid-value" id="vpin-today">—</span>
           <span class="vpin-grid-label">Label</span>
           <span class="vpin-grid-value" id="vpin-label">—</span>
           <span class="vpin-grid-label">Regime</span>
           <span class="vpin-grid-value" id="vpin-regime">—</span>
-          <span class="vpin-grid-label">Z-score</span>
+          <span class="vpin-grid-label">Z-score (relative)</span>
           <span class="vpin-grid-value" id="vpin-z">—</span>
           <span class="vpin-grid-label">Pressure</span>
           <span class="vpin-grid-value" id="vpin-pressure">—</span>
@@ -500,7 +500,7 @@
           </div>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:11px;color:var(--mute);">
-          <span>Net Vol (20d): <b id="flow-net-total" style="color:var(--text);">—</b></span>
+          <span>Net Value (20d, IDR): <b id="flow-net-total" style="color:var(--text);">—</b></span>
           <span>Latest: <b id="flow-latest" style="color:var(--text);">—</b></span>
         </div>
         <div class="delta-bars" id="delta-bars">
@@ -855,10 +855,10 @@
     regEl.innerHTML = '<span class="vpin-regime-badge vpin-reg-' + vpin.vpin_regime + '">' + vpin.vpin_regime + '</span>';
 
     document.getElementById('vpin-today').textContent =
-      vpin.vpin_today != null ? vpin.vpin_today.toFixed(4) : '—';
+      vpin.vpin_today != null ? vpin.vpin_today.toFixed(3) + ' abs' : '—';
     document.getElementById('vpin-label').textContent = vpin.vpin_label || '—';
     document.getElementById('vpin-z').textContent =
-      vpin.vpin_z != null ? vpin.vpin_z.toFixed(1) + 'σ' : '—';
+      vpin.vpin_z != null ? vpin.vpin_z.toFixed(1) + 'σ vs ' + (vpin.lookback_days || '?') + 'd' : '—';
 
     const pressEl = document.getElementById('vpin-pressure');
     pressEl.innerHTML = vpin.pressure
@@ -1045,12 +1045,13 @@
     const hist = flow.cum_delta_20d || [];
     let totalNet = 0;
     hist.forEach(h => totalNet += (h.net_value || 0));
+    const sgn = v => (window.IDXFormat ? IDXFormat.fmtSigned(v) : (v >= 0 ? '+' : '') + fmtM(v));
     const nt = document.getElementById('flow-net-total');
-    nt.textContent = (totalNet >= 0 ? '+' : '') + fmtM(totalNet);
+    nt.textContent = sgn(totalNet);
     nt.style.color = totalNet >= 0 ? 'var(--green)' : 'var(--red)';
     const latestVal = hist.length > 0 ? hist[hist.length - 1].net_value : 0;
     const lv = document.getElementById('flow-latest');
-    lv.textContent = (latestVal >= 0 ? '+' : '') + fmtM(latestVal);
+    lv.textContent = sgn(latestVal);
     lv.style.color = latestVal >= 0 ? 'var(--green)' : 'var(--red)';
 
     const bars = document.getElementById('delta-bars');

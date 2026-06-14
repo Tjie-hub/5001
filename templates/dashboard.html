@@ -265,11 +265,11 @@ tr.row-conf { background:rgba(40,200,120,0.08); }
       <div class="pb" id="ihsgBody"><div class="empty">Loading…</div></div>
     </div>
     <div class="panel">
-      <div class="ph"><span class="pt">Market Breadth</span></div>
+      <div class="ph"><span class="pt">Market Breadth</span><span id="breadthDate" style="font-size:10px;color:var(--text-mute);margin-left:auto"></span></div>
       <div class="pb" id="breadthBody"><div class="empty">Loading…</div></div>
     </div>
     <div class="panel">
-      <div class="ph"><span class="pt">Foreign Flow &amp; VPIN</span></div>
+      <div class="ph"><span class="pt">Foreign Flow &amp; VPIN</span><span id="flowDate" style="font-size:10px;color:var(--text-mute);margin-left:auto"></span></div>
       <div class="pb" id="flowBody"><div class="empty">Loading…</div></div>
     </div>
   </div>
@@ -572,6 +572,7 @@ function renderIHSG(d) {
 // ── D6a: Render Breadth ───────────────────────────────────────────────────────
 function renderBreadth(d) {
   const b = d.breadth || {}, body = document.getElementById('breadthBody');
+  document.getElementById('breadthDate').textContent = d.date ? 'as of ' + d.date : '';
   const adv = b.advancers||0, dec = b.decliners||0, unch = b.unchanged||0;
   const tot = adv + dec + unch;
   const advPct = tot > 0 ? adv/tot*100 : 50;
@@ -600,6 +601,7 @@ function renderBreadth(d) {
 function renderFlow(d) {
   const flow = d.foreign_flow || {}, vpin = d.vpin || {};
   const body = document.getElementById('flowBody');
+  document.getElementById('flowDate').textContent = d.date ? 'as of ' + d.date : '';
   const maxF = Math.max(Math.abs(flow.today||0), Math.abs(flow.net_5d||0), Math.abs(flow.net_20d||0), 1);
   const tc = flow.trend==='INFLOW' ? 'var(--green)' : flow.trend==='OUTFLOW' ? 'var(--red)' : 'var(--text-dim)';
 
