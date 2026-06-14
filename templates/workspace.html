@@ -536,16 +536,14 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
 <!-- Tabs -->
 <div class="tabs-wrap">
   <nav class="tabs" id="tabs-nav">
-    <button class="tab active" data-tab="monitor">Monitor <span class="tab-count" id="count-monitor">0</span><span class="tab-kbd">1</span></button>
+    <button class="tab active" data-tab="trades">Trades<span class="tab-kbd">1</span></button>
     <button class="tab" data-tab="signals">Signals <span class="tab-count" id="count-signals">0</span><span class="tab-kbd">2</span></button>
-    <button class="tab" data-tab="closed">Closed Today <span class="tab-count" id="count-closed">0</span><span class="tab-kbd">3</span></button>
-    <button class="tab" data-tab="scanner">Scanner<span class="tab-kbd">4</span></button>
-    <button class="tab" data-tab="backtest">Backtest<span class="tab-kbd">5</span></button>
-    <button class="tab" data-tab="intraday">Intraday<span class="tab-kbd">6</span></button>
-    <button class="tab" data-tab="paper">Paper Trades<span class="tab-kbd">7</span></button>
-    <button class="tab" data-tab="brokerflow">Broker Flow<span class="tab-kbd">8</span></button>
-    <button class="tab" data-tab="sector">Sector Rotation<span class="tab-kbd">9</span></button>
-    <button class="tab" data-tab="calendar">Calendar<span class="tab-kbd">0</span></button>
+    <button class="tab" data-tab="scanner">Scanner<span class="tab-kbd">3</span></button>
+    <button class="tab" data-tab="backtest">Backtest<span class="tab-kbd">4</span></button>
+    <button class="tab" data-tab="intraday">Intraday<span class="tab-kbd">5</span></button>
+    <button class="tab" data-tab="brokerflow">Broker Flow<span class="tab-kbd">6</span></button>
+    <button class="tab" data-tab="sector">Sector Rotation<span class="tab-kbd">7</span></button>
+    <button class="tab" data-tab="calendar">Calendar<span class="tab-kbd">8</span></button>
     <button class="tab" data-tab="audit">Agent Audit</button>
     <div class="tab-indicator" id="tab-ind"></div>
   </nav>
@@ -555,7 +553,13 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
 
 <!-- ===== SCANNER ===== -->
 <!-- ===== MONITOR ===== -->
-<section class="tab-panel active" id="panel-monitor">
+<section class="tab-panel active" id="panel-trades">
+  <div class="seg trades-subtabs" id="trades-subtabs" style="margin-bottom:14px;">
+    <button class="on" data-sub="active">Active</button>
+    <button data-sub="closed">Closed Today</button>
+    <button data-sub="history">History</button>
+  </div>
+  <div class="trades-sub" id="sub-active">
   <div class="panel-head">
     <div>
       <h2 style="margin:0;">Active Monitor</h2>
@@ -571,6 +575,69 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
   </div>
   <div class="grid-cards" id="monitor-grid"></div>
   <div id="monitor-empty" style="display:none; text-align:center; padding:40px 20px; color:var(--text-mute); font-size:13px;">No active positions. Open a trade from Scanner or Swing Onset.</div>
+</div>
+  <div class="trades-sub" id="sub-closed" style="display:none;">
+  <div class="panel-head">
+    <div>
+      <h2 style="margin:0;">Closed Today</h2>
+      <div class="sub" style="color:var(--text-mute); font-size:12px; margin-top:2px;">Realized outcomes for the session. Read-only.</div>
+    </div>
+    <div class="right">
+      <span class="muted mono" id="closed-pnl">Net P&amp;L: —</span>
+    </div>
+  </div>
+  <div class="grid-cards" id="closed-grid"></div>
+  <div id="closed-empty" style="display:none; text-align:center; padding:40px 20px; color:var(--text-mute); font-size:13px;">No trades closed today.</div>
+</div>
+  <div class="trades-sub" id="sub-history" style="display:none;">
+  <div class="panel-head">
+    <div><h2>Paper Trading</h2><div class="sub">Simulated book with realistic fills.</div></div>
+    <div class="right">
+      <button class="btn btn-sm" onclick="precomputeBacktest()"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width:13px;height:13px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>Pre-compute Cache</button>
+      <button class="btn btn-danger btn-sm" onclick="clearHistory()">Clear History</button>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpk">Capital</div><div class="kpv" id="p-capital">—</div><div class="kps">Initial balance</div></div>
+    <div class="kpi"><div class="kpk">Open Positions</div><div class="kpv" id="p-open">—</div><div class="kps">Max <span id="p-maxopen">—</span> concurrent</div></div>
+    <div class="kpi accent"><div class="kpk">Win Rate</div><div class="kpv" id="p-winrate">—</div><div class="kps">Closed trades</div></div>
+    <div class="kpi green" id="pnl-kpi"><div class="kpk">Total P&amp;L</div><div class="kpv" id="p-pnl">—</div><div class="kps">Risk/Trade: <span id="p-risk">—</span>%</div></div>
+    <div class="kpi" id="ret-kpi"><div class="kpk">Return %</div><div class="kpv" id="p-return">—</div></div>
+  </div>
+
+  <!-- Scan Filter Toggles -->
+  <div style="margin:12px 0 6px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-weight:600;font-size:13px;">Scan Filters</span>
+      <span style="font-size:11px;color:var(--text-mute);">Toggle ON/OFF untuk scan momentum signal</span>
+    </div>
+    <div id="filter-toggles" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+  </div>
+
+  <div class="panel-head" style="margin-top:6px;"><h2 style="font-size:14px;">Open Positions</h2></div>
+  <div class="table-wrap" style="margin-bottom:14px;">
+    <table class="data">
+      <thead><tr>
+        <th>Ticker</th><th>Strategy</th>
+        <th class="right-num">Entry</th><th class="right-num">TP</th><th class="right-num">SL</th>
+        <th class="right-num">Est R/R</th><th>Monitor</th><th></th>
+      </tr></thead>
+      <tbody id="paper-open-body"></tbody>
+    </table>
+  </div>
+
+  <div class="panel-head"><h2 style="font-size:14px;">Closed Trades</h2></div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr>
+        <th>Ticker</th><th>Entry Date</th><th>Exit Date</th>
+        <th class="right-num">P&amp;L Rp</th><th class="right-num">P&amp;L %</th><th>Reason</th>
+      </tr></thead>
+      <tbody id="paper-closed-body"></tbody>
+    </table>
+  </div>
+</div>
 </section>
 
 <!-- ===== SIGNALS ===== -->
@@ -589,19 +656,7 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
 </section>
 
 <!-- ===== CLOSED TODAY ===== -->
-<section class="tab-panel" id="panel-closed">
-  <div class="panel-head">
-    <div>
-      <h2 style="margin:0;">Closed Today</h2>
-      <div class="sub" style="color:var(--text-mute); font-size:12px; margin-top:2px;">Realized outcomes for the session. Read-only.</div>
-    </div>
-    <div class="right">
-      <span class="muted mono" id="closed-pnl">Net P&amp;L: —</span>
-    </div>
-  </div>
-  <div class="grid-cards" id="closed-grid"></div>
-  <div id="closed-empty" style="display:none; text-align:center; padding:40px 20px; color:var(--text-mute); font-size:13px;">No trades closed today.</div>
-</section>
+
 
 <section class="tab-panel" id="panel-scanner">
   <div class="panel-head">
@@ -789,55 +844,7 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
 </section>
 
 <!-- ===== PAPER TRADES ===== -->
-<section class="tab-panel" id="panel-paper">
-  <div class="panel-head">
-    <div><h2>Paper Trading</h2><div class="sub">Simulated book with realistic fills.</div></div>
-    <div class="right">
-      <button class="btn btn-sm" onclick="precomputeBacktest()"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width:13px;height:13px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>Pre-compute Cache</button>
-      <button class="btn btn-danger btn-sm" onclick="clearHistory()">Clear History</button>
-    </div>
-  </div>
 
-  <div class="kpi-row">
-    <div class="kpi"><div class="kpk">Capital</div><div class="kpv" id="p-capital">—</div><div class="kps">Initial balance</div></div>
-    <div class="kpi"><div class="kpk">Open Positions</div><div class="kpv" id="p-open">—</div><div class="kps">Max <span id="p-maxopen">—</span> concurrent</div></div>
-    <div class="kpi accent"><div class="kpk">Win Rate</div><div class="kpv" id="p-winrate">—</div><div class="kps">Closed trades</div></div>
-    <div class="kpi green" id="pnl-kpi"><div class="kpk">Total P&amp;L</div><div class="kpv" id="p-pnl">—</div><div class="kps">Risk/Trade: <span id="p-risk">—</span>%</div></div>
-    <div class="kpi" id="ret-kpi"><div class="kpk">Return %</div><div class="kpv" id="p-return">—</div></div>
-  </div>
-
-  <!-- Scan Filter Toggles -->
-  <div style="margin:12px 0 6px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <span style="font-weight:600;font-size:13px;">Scan Filters</span>
-      <span style="font-size:11px;color:var(--text-mute);">Toggle ON/OFF untuk scan momentum signal</span>
-    </div>
-    <div id="filter-toggles" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
-  </div>
-
-  <div class="panel-head" style="margin-top:6px;"><h2 style="font-size:14px;">Open Positions</h2></div>
-  <div class="table-wrap" style="margin-bottom:14px;">
-    <table class="data">
-      <thead><tr>
-        <th>Ticker</th><th>Strategy</th>
-        <th class="right-num">Entry</th><th class="right-num">TP</th><th class="right-num">SL</th>
-        <th class="right-num">Est R/R</th><th>Monitor</th><th></th>
-      </tr></thead>
-      <tbody id="paper-open-body"></tbody>
-    </table>
-  </div>
-
-  <div class="panel-head"><h2 style="font-size:14px;">Closed Trades</h2></div>
-  <div class="table-wrap">
-    <table class="data">
-      <thead><tr>
-        <th>Ticker</th><th>Entry Date</th><th>Exit Date</th>
-        <th class="right-num">P&amp;L Rp</th><th class="right-num">P&amp;L %</th><th>Reason</th>
-      </tr></thead>
-      <tbody id="paper-closed-body"></tbody>
-    </table>
-  </div>
-</section>
 
 <!-- ===== BROKER FLOW ===== -->
 <section class="tab-panel" id="panel-brokerflow">
@@ -1376,12 +1383,31 @@ function setActiveTab(name) {
   tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   tabPanels.forEach(p  => p.classList.toggle('active',  p.id === 'panel-' + name));
   requestAnimationFrame(updateIndicator);
-  if (name === 'monitor' || name === 'closed') loadMonitorData();
+  if (name === 'trades')   loadTrades();
   if (name === 'signals')  loadSignals();
-  if (name === 'paper')    loadPaperTrades();
   if (name === 'audit')    loadAuditData();
   if (name === 'intraday') loadScreenerResults();
 }
+
+/* ── Trades workspace sub-tabs (Active / Closed Today / History) ── */
+let _tradesSub = 'active';
+function showTradesSub(sub) {
+  _tradesSub = sub;
+  document.querySelectorAll('#trades-subtabs button').forEach(b => b.classList.toggle('on', b.dataset.sub === sub));
+  const a = document.getElementById('sub-active'), c = document.getElementById('sub-closed'), h = document.getElementById('sub-history');
+  if (a) a.style.display = sub === 'active'  ? '' : 'none';
+  if (c) c.style.display = sub === 'closed'  ? '' : 'none';
+  if (h) h.style.display = sub === 'history' ? '' : 'none';
+  if (sub === 'active' || sub === 'closed') loadMonitorData();
+  if (sub === 'history') loadPaperTrades();
+}
+function loadTrades() { showTradesSub(_tradesSub); }
+(function(){
+  const strip = document.getElementById('trades-subtabs');
+  if (strip) strip.addEventListener('click', e => {
+    const b = e.target.closest('[data-sub]'); if (b) showTradesSub(b.dataset.sub);
+  });
+})();
 function updateIndicator() {
   const active = document.querySelector('.tab.active');
   if (!active || !indicator) return;
@@ -2012,7 +2038,7 @@ async function openTrade(ticker, price, sl, tp, strategy) {
     }).then(r=>r.json());
     if (data.error) { toast(data.error,'error'); return; }
     toast(`Opened ${ticker} @ ${price.toLocaleString()}${strategy?' ('+strategy+')':''}`, 'success');
-    setActiveTab('paper');
+    setActiveTab('trades'); showTradesSub('history');
   } catch(e) { toast('Open trade failed','error'); }
 }
 function openClosePopover(id, ticker, entry) {
@@ -2273,7 +2299,7 @@ const searchInput = document.getElementById('global-search');
 function clearSearch() { if (searchInput) searchInput.value = ''; }
 
 /* ── Keyboard shortcuts ── */
-const TAB_KEYS = ['monitor','signals','closed','scanner','backtest','intraday','paper','brokerflow','sector','calendar'];
+const TAB_KEYS = ['trades','signals','scanner','backtest','intraday','brokerflow','sector','calendar'];
 document.addEventListener('keydown', e => {
   const tag = document.activeElement?.tagName?.toLowerCase();
   const isInput = tag === 'input' || tag === 'textarea' || tag === 'select' || document.activeElement?.isContentEditable;
