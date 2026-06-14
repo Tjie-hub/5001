@@ -84,7 +84,7 @@ def health():
 @app.route("/")
 @app.route("/backtest/multi")
 def backtest_multi_page():
-    return render_template("backtest_multi.html")
+    return render_template("workspace.html")
 
 @app.route("/screener")
 def screener_page():
@@ -93,7 +93,7 @@ def screener_page():
 
 @app.route("/signal-scanner")
 def signal_scanner_page():
-    return render_template("backtest_multi.html")
+    return render_template("workspace.html")
 
 
 @app.route("/portfolio")

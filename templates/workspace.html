@@ -1,18 +1,6 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>IDX Strategy Suite</title>
-<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-<meta property="og:title" content="IDX Strategy Suite">
-<meta property="og:description" content="Walk-forward backtesting & signal dashboard">
-<meta property="og:image" content="/static/og-banner.png">
-<meta property="og:type" content="website">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}IDX Strategy Suite{% endblock %}
+{% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 <style>
@@ -66,15 +54,9 @@ input, select { font-family:inherit; color:inherit; }
 }
 
 /* Topbar */
-.topbar {
-  position:sticky; top:0; z-index:50;
-  height:52px;
-  background:rgba(10,14,26,0.88);
-  backdrop-filter:blur(14px);
-  -webkit-backdrop-filter:blur(14px);
-  border-bottom:1px solid var(--border);
-  display:grid; grid-template-columns:1fr auto 1fr;
-  align-items:center; padding:0 20px;
+.ws-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:14px; padding:8px 20px 0;
 }
 .brand { display:flex; align-items:center; gap:10px; }
 .pulse {
@@ -508,9 +490,9 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
 /* ── Mobile improvements ── */
 @media(max-width:700px){
   body { overflow-x:hidden; }
-  .topbar { grid-template-columns:1fr auto; padding:0 12px; gap:6px; }
-  .topbar .top-center { display:none; }
-  .topbar .brand-sub { display:none; }
+  .ws-bar { grid-template-columns:1fr auto; padding:0 12px; gap:6px; }
+  .ws-bar .top-center { display:none; }
+  .ws-bar .brand-sub { display:none; }
   .tabs { padding:0 8px; gap:0; overflow-x:auto; -webkit-overflow-scrolling:touch; }
   .tabs::-webkit-scrollbar { display:none; }
   .tabs-wrap { overflow:hidden; }
@@ -530,88 +512,15 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
   .summary-bar { grid-template-columns:1fr; }
 }
 </style>
-</head>
-<body>
-<div id="enforce-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;">
-  <div style="background:#1a1a1a;border:1px solid #16a34a;border-radius:8px;padding:24px 28px;max-width:340px;width:90%;font:14px/1.5 system-ui,sans-serif;color:#e5e5e5;">
-    <div style="font-weight:700;font-size:15px;margin-bottom:10px;color:#4ade80;">Switch to ENFORCE?</div>
-    <div style="color:#aaa;margin-bottom:20px;">Vetoed tickers will be dropped from paper trade signals.</div>
-    <div style="display:flex;gap:10px;justify-content:flex-end;">
-      <button id="enforce-cancel" style="padding:6px 16px;border:1px solid #444;border-radius:5px;background:#111;color:#aaa;cursor:pointer;font-size:13px;">Cancel</button>
-      <button id="enforce-ok"     style="padding:6px 16px;border:none;border-radius:5px;background:#16a34a;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Confirm</button>
-    </div>
-  </div>
-</div>
-<script>
-function updateFirmPill(active, enforce) {
-  const off = document.getElementById('firm-off');
-  const shadow = document.getElementById('firm-shadow');
-  const enf = document.getElementById('firm-enforce');
-  const pill = document.getElementById('firm-pill');
-  if (!off) return;
-  [off, shadow, enf].forEach(b => { b.style.background='#111'; b.style.color='#555'; b.style.fontWeight=''; });
-  if (!active) {
-    off.style.background='#1f1f1f'; off.style.color='#fff'; off.style.fontWeight='700';
-    pill.style.borderColor='#333';
-  } else if (enforce) {
-    enf.style.background='#052e16'; enf.style.color='#4ade80'; enf.style.fontWeight='700';
-    pill.style.borderColor='#16a34a';
-  } else {
-    shadow.style.background='#2d2200'; shadow.style.color='#fbbf24'; shadow.style.fontWeight='700';
-    pill.style.borderColor='#92400e';
-  }
-}
+{% endblock %}
+{% block content %}
 
-function setFirmMode(mode) {
-  if (mode === 'enforce') {
-    document.getElementById('enforce-modal').style.display = 'flex';
-    document.getElementById('enforce-ok').onclick = () => {
-      document.getElementById('enforce-modal').style.display = 'none';
-      _applyFirmMode('enforce');
-    };
-    document.getElementById('enforce-cancel').onclick = () => {
-      document.getElementById('enforce-modal').style.display = 'none';
-    };
-    return;
-  }
-  _applyFirmMode(mode);
-}
-
-function _applyFirmMode(mode) {
-  fetch('/api/agent/config', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({mode})
-  })
-  .then(r => r.ok ? r.json() : Promise.reject())
-  .then(s => {
-    updateFirmPill(s.active, s.enforce);
-  })
-  .catch(() => { if (typeof showToast === 'function') showToast('Agent firm update failed', 'error'); });
-}
-
-fetch('/api/agent/status').then(r => r.json()).then(s => {
-  updateFirmPill(s.active, s.enforce);
-}).catch(() => {});
-</script>
-
-<!-- Topbar -->
-<header class="topbar">
-  <div class="brand">
-    <div class="pulse"></div>
-    <div class="brand-name"><span class="brand-mark">◆</span> IDX <span class="brand-mark">Suite</span><span class="brand-sub">v2.6</span></div>
-  </div>
+<!-- Workspace action bar -->
+<div class="ws-bar">
   <div class="top-center">
     <div id="mkt-badge" class="mkt-badge"><span class="mkt-dot"></span><span id="mkt-status">MARKET OPEN</span></div>
-    <div class="wib-clock"><span id="wib-time">--:--:--</span><span class="wib-label">WIB</span></div>
   </div>
   <div class="top-right">
-    <div class="search-wrap">
-      <span class="search-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg></span>
-      <input type="text" id="global-search" placeholder="Search ticker…" autocomplete="off">
-      <button class="search-clear" id="search-clear" onclick="clearSearch()">×</button>
-      <span class="search-shortcut">⌘K</span>
-    </div>
     <span class="muted">Last update</span>
     <span class="mono" id="last-upd">—</span>
     <span class="mono" id="top-date"></span>
@@ -621,13 +530,8 @@ fetch('/api/agent/status').then(r => r.json()).then(s => {
     <button class="icon-btn" title="Tweaks" id="tweaks-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
     </button>
-    <div id="firm-pill" style="display:flex;border:1px solid #333;border-radius:5px;overflow:hidden;font-size:10px;margin-right:2px;">
-      <button id="firm-off"     onclick="setFirmMode('off')"     style="padding:3px 9px;border:none;cursor:pointer;background:#1f1f1f;color:#fff;font-weight:700;">OFF</button>
-      <button id="firm-shadow"  onclick="setFirmMode('shadow')"  style="padding:3px 9px;border:none;cursor:pointer;border-left:1px solid #333;background:#111;color:#555;">SHADOW</button>
-      <button id="firm-enforce" onclick="setFirmMode('enforce')" style="padding:3px 9px;border:none;cursor:pointer;border-left:1px solid #333;background:#111;color:#555;">ENFORCE</button>
-    </div>
   </div>
-</header>
+</div>
 
 <!-- Tabs -->
 <div class="tabs-wrap">
@@ -2407,18 +2311,9 @@ document.getElementById('tabs-nav').addEventListener('click', e => {
   } catch(_) {}
 })();
 
-/* ── Global search ── */
+/* ── Global ticker search is handled by shell.js (Enter → /dive/<t>) ── */
 const searchInput = document.getElementById('global-search');
-const searchClear = document.getElementById('search-clear');
-searchInput.addEventListener('input', () => {
-  const q = searchInput.value.trim().toUpperCase();
-  searchClear.classList.toggle('visible', q.length > 0);
-  document.querySelectorAll('#monitor-grid .card, #closed-grid .card, #signals-list .card').forEach(card => {
-    card.style.display = (!q || (card.dataset.t||'').toUpperCase().includes(q)) ? '' : 'none';
-  });
-  if (q) { const m = document.querySelector('.tab-panel.active .card:not([style*="none"])'); if(m) m.scrollIntoView({behavior:'smooth',block:'center'}); }
-});
-function clearSearch() { searchInput.value=''; searchClear.classList.remove('visible'); searchInput.dispatchEvent(new Event('input')); }
+function clearSearch() { if (searchInput) searchInput.value = ''; }
 
 /* ── Keyboard shortcuts ── */
 const TAB_KEYS = ['monitor','signals','closed','scanner','fundamental','backtest','intraday','paper','brokerflow','sector','calendar'];
@@ -2435,6 +2330,11 @@ document.addEventListener('keydown', e => {
 const _setActiveTab = setActiveTab;
 setActiveTab = function(name) { _setActiveTab(name); window.location.hash = name; };
 (function(){ const h = window.location.hash.replace('#',''); if (h && document.querySelector('.tab[data-tab="'+h+'"]')) setActiveTab(h); })();
+// React to the shared shell nav (hash links like /#scanner) switching tabs.
+window.addEventListener('hashchange', () => {
+  const h = window.location.hash.replace('#','');
+  if (h && document.querySelector('.tab[data-tab="'+h+'"]')) _setActiveTab(h);
+});
 
 /* ── Preload sector + calendar ── */
 setTimeout(() => { if (typeof loadSectorRotation==='function') loadSectorRotation(); if (typeof loadCalendar==='function') loadCalendar(); }, 2000);
@@ -2550,5 +2450,4 @@ function closeDiveModal() {
   if (_diveChart) { _diveChart.remove(); _diveChart = null; _diveSeries = null; _diveVolumeSeries = null; }
 }
 </script>
-</body>
-</html>
+{% endblock %}

@@ -1,12 +1,6 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Deep Dive — {{ ticker }}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Deep Dive — {{ ticker }}{% endblock %}
+{% block head %}
   <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     :root {
@@ -31,14 +25,14 @@
     a { color: var(--accent); text-decoration: none; }
 
     /* ── TOPBAR ──────────────────────────────────────── */
-    .topbar {
+    .dive-bar {
       display: flex; align-items: center; gap: 12px;
       padding: 0 20px; height: 48px;
       background: var(--card); border-bottom: 1px solid var(--border);
       position: sticky; top: 0; z-index: 100;
     }
-    .topbar > a { color: var(--mute); font-size: 13px; transition: color .1s; }
-    .topbar > a:hover { color: var(--text); }
+    .dive-bar > a { color: var(--mute); font-size: 13px; transition: color .1s; }
+    .dive-bar > a:hover { color: var(--text); }
     .sep { color: var(--border); user-select: none; }
     .ticker-label { font-family: var(--mono); font-size: 22px; font-weight: 800; letter-spacing: .02em; }
 
@@ -382,8 +376,8 @@
     .strat-table tbody tr:nth-child(7) { animation-delay: .34s; }
     .strat-table tbody tr:nth-child(8) { animation-delay: .39s; }
   </style>
-</head>
-<body>
+{% endblock %}
+{% block content %}
 
 <!-- Drawer backdrop + drawer -->
 <div id="drawer-backdrop" class="drawer-backdrop" onclick="toggleDrawer()"></div>
@@ -401,8 +395,8 @@
   <div class="drawer-mute">Coming soon</div>
 </div>
 
-<!-- Topbar -->
-<div class="topbar">
+<!-- Breadcrumb bar -->
+<div class="dive-bar">
   <button class="hamburger" onclick="toggleDrawer()" aria-label="Menu">
     <span></span><span></span><span></span>
   </button>
@@ -1162,5 +1156,4 @@
 
   loadFull();
 </script>
-</body>
-</html>
+{% endblock %}
