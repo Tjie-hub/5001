@@ -103,7 +103,7 @@ def portfolio_page():
 
 @app.route("/dashboard")
 def dashboard_page():
-    return render_template("watchlist.html")
+    return render_template("dashboard.html")
 
 
 @app.route("/metrics")

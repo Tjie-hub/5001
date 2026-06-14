@@ -1,13 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Market Dashboard — IDX Strategy Suite</title>
-<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Market Dashboard — IDX Suite{% endblock %}
+{% block head %}
 <style>
 :root {
   --bg: #060b18; --bg-elev: #0b1024; --surface: #0f162e; --surface-2: #151d3a;
@@ -239,24 +232,16 @@ tr.row-conf { background:rgba(40,200,120,0.08); }
   .risk-layout  { gap: 10px; }
 }
 </style>
-</head>
-<body>
+{% endblock %}
+{% block content %}
 
-<div class="topbar">
-  <div class="brand"><span class="brand-mark">◆</span> IDX <span style="color:var(--text-dim);font-weight:400">Suite</span></div>
-  <nav>
-    <a href="/">Signals</a>
-    <a href="/screener">Screener</a>
-    <a href="/portfolio">Portfolio</a>
-    <a href="/dashboard" class="active">Dashboard</a>
-  </nav>
-  <div class="spacer"></div>
+<div class="dash-actions" style="display:flex;align-items:center;gap:10px;padding:8px 16px 0;justify-content:flex-end;">
   <div class="topbar-risk" id="topbarRisk" style="display:none">
     <span style="font-size:10px;color:var(--text-mute)">RISK</span>
     <span class="topbar-risk-score" id="topbarScore">—</span>
     <span id="topbarTier" class="gauge-tier" style="font-size:9px;padding:1px 7px">—</span>
   </div>
-  <span class="clock" id="clock"></span>
+  <span class="clock" id="clock" style="display:none"></span>
   <button class="refresh-btn" onclick="loadAll()">
     <div class="rdot" id="rdot"></div>
     <span id="rlbl">Loading…</span>
@@ -391,7 +376,9 @@ tr.row-conf { background:rgba(40,200,120,0.08); }
   </div>
 
 </div><!-- /dashboard -->
+{% endblock %}
 
+{% block view_init %}
 <script>
 // ── Tier config ───────────────────────────────────────────────────────────────
 const TIER_COLOR = { SAFE:'#10b981', CAUTION:'#3b82f6', WARNING:'#f59e0b', DANGER:'#f97316', CRITICAL:'#ef4444' };
@@ -919,5 +906,4 @@ function tick() {
 tick(); setInterval(tick, 1000);
 loadAll();
 </script>
-</body>
-</html>
+{% endblock %}

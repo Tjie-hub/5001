@@ -1,13 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fundamental Screener — IDX Strategy Suite</title>
-<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "base.html" %}
+{% block title %}Fundamental Screener — IDX Suite{% endblock %}
+{% block head %}
 <style>
 :root {
   --bg: #060b18;
@@ -174,22 +167,8 @@ td.neutral { color: var(--text-dim); }
   .toolbar { flex-direction: column; align-items: stretch; }
 }
 </style>
-</head>
-<body>
-
-<div class="topbar" id="screener-topbar">
-  <div class="brand"><span class="dot"></span> Fundamental Screener</div>
-  <div class="spacer"></div>
-  <span style="font-size:11px;color:var(--text-mute)" id="clock"></span>
-</div>
-<script>
-// Hide topbar when embedded in iframe
-if (window.self !== window.top) {
-  document.getElementById('screener-topbar').style.display = 'none';
-  document.querySelector('.main').style.height = '100vh';
-}
-</script>
-
+{% endblock %}
+{% block content %}
 <div class="main">
   <!-- Sidebar: Column Selection + Presets -->
   <aside class="sidebar">
@@ -711,16 +690,7 @@ async function exportCSV() {
   }
 }
 
-// ── Clock ──
-function updateClock() {
-  const now = new Date();
-  document.getElementById('clock').textContent = now.toLocaleString('id-ID', {timeZone:'Asia/Jakarta'});
-}
-setInterval(updateClock, 30000);
-updateClock();
-
 // Start
 init();
 </script>
-</body>
-</html>
+{% endblock %}

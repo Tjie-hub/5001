@@ -1,4 +1,7 @@
-// static/shell.js — unified shell: global state + History-API router
+// static/shell.js — unified shell: global state (clock, nav, search, firm-mode)
+// Cross-page navigation is full-page (every page extends base.html, so chrome is
+// identical and shell.css/shell.js are cached). Workspace hash-tabs ('/#scanner')
+// stay client-side and are handled by the workspace itself.
 (function () {
   'use strict';
 
@@ -6,8 +9,9 @@
   function tickClock() {
     const el = document.getElementById('wib-time');
     if (!el) return;
-    const now = new Date(Date.now() + (7 * 60 + new Date().getTimezoneOffset()) * 60000);
-    el.textContent = now.toTimeString().slice(0, 8);
+    const wib = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    const p = n => String(n).padStart(2, '0');
+    el.textContent = `${p(wib.getHours())}:${p(wib.getMinutes())}:${p(wib.getSeconds())}`;
   }
   setInterval(tickClock, 1000); tickClock();
 
@@ -26,50 +30,15 @@
       a.classList.toggle('active', active);
     });
   }
-
-  // ── History-API router: progressive enhancement ─────────────
-  const MOUNT = 'app-content';
-  async function navigate(url, push) {
-    const main = document.getElementById(MOUNT);
-    if (!main) { location.href = url; return; }
-    main.setAttribute('aria-busy', 'true');
-    try {
-      const res = await fetch(url, { headers: { 'X-Shell-Nav': '1' } });
-      if (!res.ok) throw new Error(res.status);
-      const html = await res.text();
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      const next = doc.getElementById(MOUNT);
-      if (!next) throw new Error('no mount in response');
-      main.replaceWith(next);
-      if (push) history.pushState({ url }, '', url);
-      window.scrollTo(0, 0);
-      syncActiveNav();
-      document.dispatchEvent(new CustomEvent('shell:mounted', { detail: { url } }));
-    } catch (e) {
-      location.href = url; // graceful fallback to full navigation
-    }
-  }
-
-  document.addEventListener('click', e => {
-    const a = e.target.closest('a[data-nav]');
-    if (!a || e.metaKey || e.ctrlKey || e.shiftKey || a.target === '_blank') return;
-    const url = a.getAttribute('href');
-    if (!url || url.startsWith('http')) return;
-    // In-workspace hash tabs (/#scanner) are handled by the workspace itself
-    // when already on '/'; only route them when navigating from another page.
-    if (url.startsWith('/#') && location.pathname === '/') { syncActiveNav(); return; }
-    e.preventDefault();
-    navigate(url, true);
-  });
-  window.addEventListener('popstate', () => navigate(location.pathname + location.hash, false));
   window.addEventListener('hashchange', syncActiveNav);
+  syncActiveNav();
 
   // ── Global ticker search → /dive/<t> ────────────────────────
   const search = document.getElementById('global-search');
   if (search) {
     search.addEventListener('keydown', e => {
       if (e.key === 'Enter' && search.value.trim()) {
-        navigate('/dive/' + search.value.trim().toUpperCase(), true);
+        location.href = '/dive/' + search.value.trim().toUpperCase();
       }
     });
     document.addEventListener('keydown', e => {
@@ -77,6 +46,50 @@
     });
   }
 
-  syncActiveNav();
-  window.__shellNavigate = navigate; // expose for view scripts
+  // ── Global agent firm-mode pill (off / shadow / enforce) ────
+  function updateFirmPill(active, enforce) {
+    const off = document.getElementById('firm-off');
+    const shadow = document.getElementById('firm-shadow');
+    const enf = document.getElementById('firm-enforce');
+    const pill = document.getElementById('firm-pill');
+    if (!off || !pill) return;
+    [off, shadow, enf].forEach(b => { b.style.background = '#111'; b.style.color = '#555'; b.style.fontWeight = ''; });
+    if (!active) {
+      off.style.background = '#1f1f1f'; off.style.color = '#fff'; off.style.fontWeight = '700';
+      pill.style.borderColor = '#333';
+    } else if (enforce) {
+      enf.style.background = '#052e16'; enf.style.color = '#4ade80'; enf.style.fontWeight = '700';
+      pill.style.borderColor = '#16a34a';
+    } else {
+      shadow.style.background = '#2d2200'; shadow.style.color = '#fbbf24'; shadow.style.fontWeight = '700';
+      pill.style.borderColor = '#92400e';
+    }
+  }
+
+  function applyFirmMode(mode) {
+    fetch('/api/agent/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode })
+    })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(s => updateFirmPill(s.active, s.enforce))
+      .catch(() => { if (typeof showToast === 'function') showToast('Agent firm update failed', 'error'); });
+  }
+
+  function setFirmMode(mode) {
+    const modal = document.getElementById('enforce-modal');
+    if (mode === 'enforce' && modal) {
+      modal.style.display = 'flex';
+      document.getElementById('enforce-ok').onclick = () => { modal.style.display = 'none'; applyFirmMode('enforce'); };
+      document.getElementById('enforce-cancel').onclick = () => { modal.style.display = 'none'; };
+      return;
+    }
+    applyFirmMode(mode);
+  }
+  window.setFirmMode = setFirmMode;
+
+  if (document.getElementById('firm-pill')) {
+    fetch('/api/agent/status').then(r => r.json()).then(s => updateFirmPill(s.active, s.enforce)).catch(() => {});
+  }
 })();
