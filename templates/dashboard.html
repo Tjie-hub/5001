@@ -303,11 +303,7 @@ tr.row-conf { background:rgba(40,200,120,0.08); }
     </div>
   </div>
 
-  <!-- D10: Sector Heatmap -->
-  <div class="panel">
-    <div class="ph"><span class="pt">Sector Heatmap</span></div>
-    <div class="pb0"><div class="twrap hm" id="sectorGrid"><div class="empty">Loading…</div></div></div>
-  </div>
+  <!-- D10: Sector Heatmap moved to standalone /sector page -->
 
   <!-- D13: VPIN Toxicity Panel -->
   <div class="panel">
@@ -694,54 +690,7 @@ function renderWatchlist(d) {
   document.getElementById('waitTable').innerHTML     = mkTable(wt, 'row-wt',  wtCols);
 }
 
-// ── D10: Sector Heatmap ───────────────────────────────────────────────────────
-function renderSectors(sectors) {
-  const el = document.getElementById('sectorGrid');
-  if (!sectors || sectors.length === 0) {
-    el.innerHTML = `<div class="empty">No sector data available</div>`; return;
-  }
-
-  function hcls(v) {
-    if (v===null||v===undefined) return 'hne';
-    if (v >= 1.5) return 'hsp'; if (v >= 0.2) return 'hmp';
-    if (v >= -0.2) return 'hne'; if (v >= -1.5) return 'hmn';
-    return 'hsn';
-  }
-  function wbadge(w) {
-    if (w==='OVERWEIGHT')  return `<span class="wow">▲ OW</span>`;
-    if (w==='UNDERWEIGHT') return `<span class="wuw">▼ UW</span>`;
-    return `<span class="wne">– NE</span>`;
-  }
-  function hcell(v) {
-    return `<div class="hcell ${hcls(v)}">${v!==null&&v!==undefined ? fmtPct(v) : '—'}</div>`;
-  }
-
-  const rows = sectors.map(s => `
-    <tr>
-      <td style="font-weight:600;white-space:nowrap;padding:7px 11px">${s.sector}</td>
-      <td>${wbadge(s.weight)}</td>
-      <td>${hcell(s.ret_5d)}</td>
-      <td>${hcell(s.ret_10d)}</td>
-      <td>${hcell(s.ret_20d)}</td>
-      <td style="font-size:11px;font-family:var(--mono);color:var(--text-mute);text-align:center">${fmt(s.score,3)}</td>
-      <td style="font-size:11px;color:var(--text-mute);text-align:center">${s.n_tickers||0}</td>
-    </tr>
-  `).join('');
-
-  el.innerHTML = `
-    <table>
-      <thead><tr>
-        <th>Sector</th><th>Weight</th>
-        <th style="text-align:center">Ret 5d</th>
-        <th style="text-align:center">Ret 10d</th>
-        <th style="text-align:center">Ret 20d</th>
-        <th style="text-align:center">Score</th>
-        <th style="text-align:center">N</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-}
+// ── D10: Sector Heatmap moved to standalone /sector page (see sector.html) ──
 
 // ── D13: VPIN Sparkline ───────────────────────────────────────────────────────
 function renderVPINPanel(summary, series) {
@@ -851,10 +800,9 @@ async function loadAll() {
   if (countdown) clearInterval(countdown);
 
   try {
-    const [risk, wl, sec, uwl, chk, vpinRes] = await Promise.all([
+    const [risk, wl, uwl, chk, vpinRes] = await Promise.all([
       fetch('/api/dashboard/risk').then(r=>r.json()),
       fetch('/api/dashboard/watchlist').then(r=>r.json()),
-      fetch('/api/sector/rotation').then(r=>r.json()),
       fetch('/api/dashboard/unified-watchlist').then(r=>r.json()),
       fetch('/api/dashboard/checklist').then(r=>r.json()),
       fetch('/api/market/vpin?series=1').then(r=>r.json()),
@@ -864,7 +812,6 @@ async function loadAll() {
     renderBreadth(risk);
     renderFlow(risk);
     renderWatchlist(wl);
-    renderSectors(sec.sectors || sec);
     renderUnifiedWatchlist(uwl);
     renderChecklist(chk);
     renderVPINPanel(vpinRes.summary || {}, vpinRes.series || []);

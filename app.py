@@ -106,6 +106,11 @@ def dashboard_page():
     return render_template("dashboard.html")
 
 
+@app.route("/sector")
+def sector_page():
+    return render_template("sector.html")
+
+
 @app.route("/metrics")
 def prometheus_metrics():
     """R14 — Prometheus-format metrics endpoint.

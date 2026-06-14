@@ -542,8 +542,7 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
     <button class="tab" data-tab="backtest">Backtest<span class="tab-kbd">4</span></button>
     <button class="tab" data-tab="intraday">Intraday<span class="tab-kbd">5</span></button>
     <button class="tab" data-tab="brokerflow">Broker Flow<span class="tab-kbd">6</span></button>
-    <button class="tab" data-tab="sector">Sector Rotation<span class="tab-kbd">7</span></button>
-    <button class="tab" data-tab="calendar">Calendar<span class="tab-kbd">8</span></button>
+    <button class="tab" data-tab="calendar">Calendar<span class="tab-kbd">7</span></button>
     <button class="tab" data-tab="audit">Agent Audit</button>
     <div class="tab-indicator" id="tab-ind"></div>
   </nav>
@@ -905,34 +904,6 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
     <div style="font-size:32px;margin-bottom:12px;opacity:.3;">📊</div>
     Enter a ticker and click Load
   </div>
-</section>
-
-<!-- ===== SECTOR ROTATION ===== -->
-<section class="tab-panel" id="panel-sector">
-  <div class="panel-head">
-    <div><h2>Sector Rotation</h2><div class="sub">IDX sector momentum scores. OVERWEIGHT = trade freely. UNDERWEIGHT = avoid new entries.</div></div>
-    <div class="right">
-      <button class="btn btn-secondary" onclick="loadSectorRotation()">↻ Refresh</button>
-    </div>
-  </div>
-  <div id="sector-loading" style="text-align:center;padding:40px;color:var(--text-mute);display:none;">Loading sector data…</div>
-  <div id="sector-skeleton" class="skel-table" style="display:none"><div class="skel-row"><div class="skel-cell skeleton" style="width:20px"></div><div class="skel-cell skeleton" style="flex:1"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div></div><div class="skel-row"><div class="skel-cell skeleton" style="width:20px"></div><div class="skel-cell skeleton" style="flex:1"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div></div><div class="skel-row"><div class="skel-cell skeleton" style="width:20px"></div><div class="skel-cell skeleton" style="flex:1"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div><div class="skel-cell skeleton" style="width:50px"></div></div></div>
-  <div class="table-wrap" id="sector-table-wrap">
-    <table class="data" id="sector-table">
-      <thead><tr>
-        <th style="text-align:left">#</th>
-        <th style="text-align:left">Sector</th>
-        <th style="text-align:left">Weight</th>
-        <th class="right-num">Score</th>
-        <th class="right-num">5D %</th>
-        <th class="right-num">10D %</th>
-        <th class="right-num">20D %</th>
-        <th class="right-num">Tickers</th>
-      </tr></thead>
-      <tbody id="sector-tbody"></tbody>
-    </table>
-  </div>
-  <div id="sector-empty" style="display:none;text-align:center;padding:60px;color:var(--text-mute);">No sector data. Click Refresh.</div>
 </section>
 
 <!-- ===== CALENDAR ===== -->
@@ -2169,48 +2140,6 @@ document.querySelectorAll('.reason').forEach(b => {
 /* ════════════════════════════════════════════════════
    SECTOR ROTATION
 ═══════════════════════════════════════════════════════ */
-async function loadSectorRotation() {
-  document.getElementById('sector-loading').style.display = 'block';
-  document.getElementById('sector-table-wrap').style.opacity = '0.4';
-  document.getElementById('sector-empty').style.display = 'none';
-  try {
-    const r = await fetch('/api/sector/rotation');
-    const d = await r.json();
-    if (!d.success || !d.sectors.length) {
-      document.getElementById('sector-empty').style.display = 'block';
-      return;
-    }
-    const WEIGHT_COLOR = {
-      'OVERWEIGHT':  'var(--green)',
-      'NEUTRAL':     'var(--text-dim)',
-      'UNDERWEIGHT': 'var(--red)',
-    };
-    const tbody = document.getElementById('sector-tbody');
-    tbody.innerHTML = d.sectors.map((s, i) => {
-      const wc = WEIGHT_COLOR[s.weight] || 'var(--text)';
-      const bg = s.weight === 'OVERWEIGHT' ? 'rgba(16,185,129,.04)'
-               : s.weight === 'UNDERWEIGHT' ? 'rgba(239,68,68,.04)' : '';
-      const fmt = v => v >= 0 ? `<span style="color:var(--green)">+${v.toFixed(2)}%</span>`
-                               : `<span style="color:var(--red)">${v.toFixed(2)}%</span>`;
-      return `<tr style="background:${bg}">
-        <td style="color:var(--text-mute);font-family:var(--mono)">${i+1}</td>
-        <td><strong>${s.sector}</strong></td>
-        <td><span style="color:${wc};font-weight:600;font-size:11px">${s.weight}</span></td>
-        <td class="right-num">${fmt(s.score)}</td>
-        <td class="right-num">${fmt(s.ret_5d)}</td>
-        <td class="right-num">${fmt(s.ret_10d)}</td>
-        <td class="right-num">${fmt(s.ret_20d)}</td>
-        <td class="right-num" style="color:var(--text-mute)">${s.n_tickers}</td>
-      </tr>`;
-    }).join('');
-  } catch(e) {
-    document.getElementById('sector-empty').style.display = 'block';
-    document.getElementById('sector-empty').textContent = 'Error: ' + e.message;
-  } finally {
-    document.getElementById('sector-loading').style.display = 'none';
-    document.getElementById('sector-table-wrap').style.opacity = '1';
-  }
-}
 
 /* ════════════════════════════════════════════════════
    ECONOMIC CALENDAR
@@ -2272,7 +2201,6 @@ document.getElementById('tabs-nav').addEventListener('click', e => {
   const tab = e.target.closest('[data-tab]');
   if (!tab) return;
   const name = tab.dataset.tab;
-  if (name === 'sector')   loadSectorRotation();
   if (name === 'calendar') loadCalendar();
 });
 
@@ -2299,7 +2227,7 @@ const searchInput = document.getElementById('global-search');
 function clearSearch() { if (searchInput) searchInput.value = ''; }
 
 /* ── Keyboard shortcuts ── */
-const TAB_KEYS = ['trades','signals','scanner','backtest','intraday','brokerflow','sector','calendar'];
+const TAB_KEYS = ['trades','signals','scanner','backtest','intraday','brokerflow','calendar'];
 document.addEventListener('keydown', e => {
   const tag = document.activeElement?.tagName?.toLowerCase();
   const isInput = tag === 'input' || tag === 'textarea' || tag === 'select' || document.activeElement?.isContentEditable;
@@ -2319,8 +2247,8 @@ window.addEventListener('hashchange', () => {
   if (h && document.querySelector('.tab[data-tab="'+h+'"]')) _setActiveTab(h);
 });
 
-/* ── Preload sector + calendar ── */
-setTimeout(() => { if (typeof loadSectorRotation==='function') loadSectorRotation(); if (typeof loadCalendar==='function') loadCalendar(); }, 2000);
+/* ── Preload calendar ── */
+setTimeout(() => { if (typeof loadCalendar==='function') loadCalendar(); }, 2000);
 
 /* ── Auto-refresh signals ── */
 setInterval(() => { if (typeof loadSignals==='function') loadSignals(); }, 60000);
