@@ -229,7 +229,6 @@ def scan_momentum_signals():
     _blackout, _bl_reason = is_blackout_day()
     if _blackout:
         logging.warning(f"[scan_momentum] BLACKOUT aktif: {_bl_reason} — scan dilewati.")
-        send_telegram(f"⛔ <b>Scan Paused — Blackout</b>\n\n{_bl_reason}\n\nNo new entries today.")
         return []
 
     # Pre-compute sector scores once for entire scan (1-hour TTL cache)
@@ -917,8 +916,7 @@ def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
             rationale = d.rationale or "N/A"
             msg += f"{i}. {d.ticker} (conviction {conf_str}): {rationale}\n"
 
-        send_telegram(msg)
-        print(f"[{time_str}] Bear watchlist ranking sent: {[d.ticker for d in _approved]}")
+        logging.info(f"[{time_str}] Bear watchlist ranking (no alert): {[d.ticker for d in _approved]}")
     except Exception as _err:
         print(f"[{time_str}] Bear watchlist ranking error (fail-silent): {_err}")
 
@@ -1034,7 +1032,6 @@ def scheduled_multi_strategy_scan():
     _blackout, _bl_reason = is_blackout_day()
     if _blackout:
         print(f"[{time_str}] BLACKOUT: {_bl_reason} — scan skipped.")
-        send_telegram(f"⛔ <b>Multi-Scan Paused — Blackout</b>\n\n{_bl_reason}")
         return
 
     print(f"[{time_str}] Starting multi-strategy scan...")
@@ -1468,12 +1465,5 @@ def scheduled_multi_strategy_scan():
 
         send_telegram(msg)
     else:
-        print(f"[{time_str}] No flow-confirmed signals (strategy pass: {len(intersection_results)}). Sending heartbeat.")
-        send_telegram(
-            f"📡 <b>Scan @ {time_str}</b> — tidak ada sinyal\n\n"
-            f"🔍 Scanned: {len(tickers)} tickers\n"
-            f"📊 Lolos strategi: {len(intersection_results)}\n"
-            f"❌ Lolos flow (≥+2): 0\n\n"
-            f"<i>Market sedang BEAR, scanner tetap jalan.</i>"
-        )
+        print(f"[{time_str}] No flow-confirmed signals (strategy pass: {len(intersection_results)}) — silent.")
     print(f"[{time_str}] Multi-strategy scan complete.\n")

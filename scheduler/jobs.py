@@ -15,6 +15,19 @@ from utils.telegram import send_telegram  # noqa: E402
 from scheduler.utils import get_all_tickers, _load_ohlcv_bulk  # noqa: E402
 
 
+def _holiday_skip(fn_name: str) -> bool:
+    """Return True when IDX is closed today (holiday or weekend) — caller should return."""
+    try:
+        from engine.calendar_filter import is_trading_day
+        ok, reason = is_trading_day()
+        if not ok:
+            logging.info(f"[{fn_name}] Non-trading day ({reason}) — skipped")
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def refresh_wf_scores():
     """Run walk-forward semua ticker & simpan ke wf_scores table."""
     from engine.walkforward_multi import run_walk_forward
@@ -82,6 +95,8 @@ def refresh_wf_scores():
 
 def run_flow_fetch():
     """Fetch flow data dari Stockbit dan simpan ke DB."""
+    if _holiday_skip("run_flow_fetch"):
+        return
     from datetime import datetime as dt, date
     import sqlite3
     now_str = dt.now(WIB).strftime('%H:%M')
@@ -122,6 +137,8 @@ def run_flow_fetch():
 
 def run_broker_flow_fetch():
     """Fetch broker flow data setelah 20:00 WIB saat Stockbit publish summary harian."""
+    if _holiday_skip("run_broker_flow_fetch"):
+        return
     from datetime import datetime as dt, date
     import sqlite3
     now_str = dt.now(WIB).strftime('%H:%M')
@@ -162,6 +179,8 @@ def run_foreign_snapshot():
     Uses the most recently available broker_flow (Asing) data (fetched nightly at 20:15).
     Sends top 5 buy + top 5 sell tickers ranked by 5-day score_pct.
     """
+    if _holiday_skip("run_foreign_snapshot"):
+        return
     from datetime import datetime as dt
     now_str = dt.now(WIB).strftime('%H:%M')
     print(f"[{now_str}] Foreign snapshot dimulai...")
@@ -190,11 +209,9 @@ def run_foreign_snapshot():
         else:
             msg += "\n<b>🔴 No significant foreign selling</b>\n"
 
-        send_telegram(msg)
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] Foreign snapshot sent ({len(top_buy)} buy, {len(top_sell)} sell)")
+        print(f"[{dt.now(WIB).strftime('%H:%M')}] Foreign snapshot computed ({len(top_buy)} buy, {len(top_sell)} sell) — no alert")
     except Exception as e:
         logging.error(f"run_foreign_snapshot error: {e}")
-        send_telegram(f"🔴 <b>Foreign Snapshot Error</b>\n<code>{str(e)[:200]}</code>")
 
 
 def run_news_fetch():
@@ -202,6 +219,8 @@ def run_news_fetch():
 
     Spike detection (today_count >= 3× 30d avg) is consumed by flow_broker_report.
     """
+    if _holiday_skip("run_news_fetch"):
+        return
     from datetime import datetime as dt
     now_str = dt.now(WIB).strftime('%H:%M')
     print(f"[{now_str}] News fetch dimulai...")
@@ -342,6 +361,8 @@ def get_market_risk_for_circuit_breaker() -> dict:
 
 def run_premover_eod():
     """EOD pre-breakout scan — runs at 16:30 after data fetch."""
+    if _holiday_skip("run_premover_eod"):
+        return
     from engine.premover_detector import run_scan
     from engine.circuit_breaker import check_circuit_breaker, CircuitBreakerState
     from paper_trade import (get_premover_mode, evaluate_premover_trade,
@@ -393,7 +414,8 @@ def run_premover_eod():
                                   'would_trade': False,
                                   'skip_reason': f'error:{str(exc)[:80]}'})
 
-    _send_premover_auto_summary(summary_rows, mode, send_telegram)
+    if mode == 'enforce':
+        _send_premover_auto_summary(summary_rows, mode, send_telegram)
 
 
 def run_backtest_roller():
@@ -413,16 +435,18 @@ def run_backtest_roller():
         )
         if summary['errors']:
             msg += f"\n⚠️ Errors: {len(summary['errors'])}"
-        send_telegram(msg)
+        logging.info(msg)
         print(f"[{datetime.now(WIB).strftime('%H:%M')}] Backtest roller selesai. "
               f"{summary['new_complete']} complete, {summary['new_partial']} partial")
     except Exception as e:
-        send_telegram(f"🔴 <b>Backtest Roller Error</b>\n<code>{str(e)[:200]}</code>")
+        logging.error(f"[backtest_roller] {e}")
         print(f"[{now_str}] Backtest roller error: {e}")
 
 
 def run_hourly_risk_bundle():
     """Send bundled RED market risk alerts for the past hour."""
+    if _holiday_skip("run_hourly_risk_bundle"):
+        return
     from engine.risk_alert import send_hourly_risk_bundle
     now = datetime.now(WIB)
     send_hourly_risk_bundle(now.strftime('%Y-%m-%d'), now.strftime('%H:%M'))
@@ -430,6 +454,8 @@ def run_hourly_risk_bundle():
 
 def run_eod_risk_summary():
     """Send ORANGE/YELLOW market risk EOD summary."""
+    if _holiday_skip("run_eod_risk_summary"):
+        return
     from engine.risk_alert import send_eod_risk_summary
     now = datetime.now(WIB)
     send_eod_risk_summary(now.strftime('%Y-%m-%d'))
@@ -437,6 +463,8 @@ def run_eod_risk_summary():
 
 def run_market_health_report():
     """Daily pre-market health report at 08:45 WIB."""
+    if _holiday_skip("run_market_health_report"):
+        return
     import sqlite3 as _sql
     from engine.health_report import build_market_health_report
     from flow_filter import get_market_accdist_summary
@@ -464,7 +492,7 @@ def run_market_health_report():
         send_telegram(msg)
         print(f"[{now.strftime('%H:%M')}] Market health report sent (tier={risk['tier']})")
     except Exception as e:
-        send_telegram(f"⚠️ <b>Health Report Error</b>\n<code>{str(e)[:200]}</code>")
+        logging.error(f"[market_health_report] {e}")
         print(f"[{now.strftime('%H:%M')}] Health report error: {e}")
     finally:
         conn.close()

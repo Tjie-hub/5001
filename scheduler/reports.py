@@ -15,8 +15,24 @@ DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/d
 from utils.telegram import send_telegram  # noqa: E402
 
 
+def _holiday_skip(fn_name: str) -> bool:
+    """Return True when IDX is closed today (holiday or weekend) — caller should return."""
+    try:
+        from engine.calendar_filter import is_trading_day
+        ok, reason = is_trading_day()
+        if not ok:
+            import logging as _log
+            _log.getLogger(__name__).info(f"[{fn_name}] Non-trading day ({reason}) — skipped")
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def daily_fetch_report():
     """Generate daily OHLCV fetch report and send to Telegram."""
+    if _holiday_skip("daily_fetch_report"):
+        return
     try:
         from datetime import datetime as dt, timedelta
         import sqlite3
@@ -114,6 +130,8 @@ def daily_fetch_report():
 
 def open_trades_status_report():
     """Send open trades status only when PnL changes ≥1% or trade count/status changes."""
+    if _holiday_skip("open_trades_status_report"):
+        return
     import scheduler.state as _state
     try:
         from datetime import datetime as dt
@@ -283,6 +301,8 @@ def open_trades_status_report():
 
 def flow_broker_report():
     """Report at 17:15 — Flow sentiment summary with actionable trades."""
+    if _holiday_skip("flow_broker_report"):
+        return
     now = datetime.now(WIB).strftime("%d/%m/%Y %H:%M")
     try:
         from flow_filter import get_flow_batch
@@ -444,6 +464,8 @@ def flow_broker_report():
 
 def auto_trade_status_report():
     """Report at 09:00 — Auto-trading status (success/failed) from previous day."""
+    if _holiday_skip("auto_trade_status_report"):
+        return
     now = datetime.now(WIB).strftime("%d/%m/%Y %H:%M")
     try:
         conn = sqlite3.connect(DB_PATH)

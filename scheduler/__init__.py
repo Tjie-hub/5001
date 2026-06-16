@@ -126,56 +126,28 @@ def start_scheduler():
         day_of_week="mon-fri", hour=16, minute=15, timezone=WIB),
         id="screener_eod", name="Screener EOD 16:15")
 
-    # Daily fetch report — 17:30 WIB
-    scheduler.add_job(daily_fetch_report, CronTrigger(
-        day_of_week="mon-fri", hour=17, minute=30, timezone=WIB),
-        id="daily_fetch_report", name="Daily Fetch Report 17:30")
-
-    # Open trades status report — 4x per day: 10:30, 12:30, 14:30, 16:30
-    for hour, minute in [(10, 30), (12, 30), (14, 30), (16, 30)]:
-        scheduler.add_job(open_trades_status_report, CronTrigger(
-            day_of_week="mon-fri", hour=hour, minute=minute, timezone=WIB),
-            id=f"open_trades_report_{hour:02d}{minute:02d}", name=f"Open Trades Report {hour:02d}:{minute:02d}")
-
-    # Foreign accumulation snapshot — 14:30 WIB (pre-close watchlist)
-    scheduler.add_job(run_foreign_snapshot, CronTrigger(
-        day_of_week="mon-fri", hour=14, minute=30, timezone=WIB),
-        id="foreign_snapshot", name="Foreign Snapshot 14:30")
-
     # Open trade monitor — hourly at :05 during market hours (09:05–15:05) = 7×/day
     for hour in range(9, 16):
         scheduler.add_job(_run_open_trade_monitor, CronTrigger(
             day_of_week="mon-fri", hour=hour, minute=5, timezone=WIB),
             id=f"trade_monitor_{hour:02d}05")
 
-    # Auto-trading status — 09:00 WIB (morning check)
-    scheduler.add_job(auto_trade_status_report, CronTrigger(
-        day_of_week="mon-fri", hour=9, minute=0, timezone=WIB),
-        id="auto_trade_status", name="Auto-Trade Status 09:00")
-
-    # News mentions fetch — pre-market 08:00 WIB so the 09:05 open scan (agent-firm
-    # news agent) sees overnight + pre-market headlines (US close ~04:00 WIB, global
-    # commodities, pre-open IDX disclosures) instead of yesterday's 17:00 data.
+    # News mentions fetch — pre-market 08:00 WIB
     scheduler.add_job(run_news_fetch, CronTrigger(
         day_of_week="mon-fri", hour=8, minute=0, timezone=WIB),
         id="news_fetch_premarket", name="News Mentions Fetch 08:00 (pre-market)")
 
-    # News mentions fetch — 17:00 WIB (before flow report at 17:15)
+    # News mentions fetch — 17:00 WIB
     scheduler.add_job(run_news_fetch, CronTrigger(
         day_of_week="mon-fri", hour=17, minute=0, timezone=WIB),
         id="news_fetch", name="News Mentions Fetch 17:00")
 
-    # Flow & Broker report — 17:15 WIB (after 17:00 fetch)
-    scheduler.add_job(flow_broker_report, CronTrigger(
-        day_of_week="mon-fri", hour=17, minute=15, timezone=WIB),
-        id="flow_broker_report", name="Flow & Broker Report 17:15")
-
-    # Broker flow fetch — 20:15 WIB (Stockbit publish summary setelah ~20:00 WIB)
+    # Broker flow fetch — 20:15 WIB
     scheduler.add_job(run_broker_flow_fetch, CronTrigger(
         day_of_week="mon-fri", hour=20, minute=15, timezone=WIB),
         id="broker_flow_fetch", name="Broker Flow Fetch 20:15")
 
-    # Pre-mover EOD scan — 16:30 WIB (after data fetch + signal scan at 16:00)
+    # Pre-mover EOD scan — 16:30 WIB
     scheduler.add_job(run_premover_eod, CronTrigger(
         day_of_week="mon-fri", hour=16, minute=30, timezone=WIB),
         id="premover_eod", name="Pre-mover EOD Scan 16:30")
@@ -185,36 +157,24 @@ def start_scheduler():
         day="1-7", day_of_week="sun", hour=10, minute=0, timezone=WIB),
         id="backtest_roller", name="Backtest Roller Sun 10:00")
 
-    # VPIN daily batch — 18:00 WIB (after EOD data is available)
+    # VPIN daily batch — 18:00 WIB
     scheduler.add_job(run_vpin_daily_batch, CronTrigger(
         day_of_week="mon-fri", hour=18, minute=0, timezone=WIB),
         id="vpin_daily_batch", name="VPIN Daily Batch 18:00")
 
-    # Daily market health report — 08:45 WIB (pre-market)
+    # Pre-market health report — 08:45 WIB
     scheduler.add_job(run_market_health_report, CronTrigger(
         day_of_week="mon-fri", hour=8, minute=45, timezone=WIB),
         id="market_health_report", name="Market Health Report 08:45")
 
-    # Market risk alert routing — hourly RED bundle at :30, EOD summary at 16:00
-    scheduler.add_job(run_hourly_risk_bundle, CronTrigger(
-        day_of_week="mon-fri", minute=30, timezone=WIB),
-        id="risk_bundle_hourly", name="Risk Bundle Hourly :30")
-    scheduler.add_job(run_eod_risk_summary, CronTrigger(
-        day_of_week="mon-fri", hour=16, minute=0, timezone=WIB),
-        id="risk_eod_summary", name="Risk EOD Summary 16:00")
-
     scheduler.start()
     print("Scheduler started:")
-    print("  🤖 AUTO-TRADING STATUS: 09:00 (success/failed check)")
-    print("  📊 SIGNAL REPORT: 16:00 (even if no signals)")
-    print("  📰 NEWS FETCH: 17:00 (Google News RSS, all tickers)")
-    print("  📈 FLOW & BROKER: 17:15 (after 17:00 fetch, with news-spike tags)")
-    print("  🏦 OPEN TRADES: 10:30, 12:30, 14:30, 16:30")
-    print("  🏛️ FOREIGN SNAPSHOT: 14:30 (pre-close foreign accumulation watchlist)")
-    print("  🔄 DAILY FETCH: 17:30")
+    print("  📊 SIGNAL REPORT: 16:00")
+    print("  📰 NEWS FETCH: 08:00 pre-market, 17:00 EOD")
     print("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
     print("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
-    print("  🔄 BACKTEST ROLLER: 1st Sun/month 10:00 (rolling WF windows)")
+    print("  🔄 BACKTEST ROLLER: 1st Sun/month 10:00")
+    print("  🏥 MARKET HEALTH: 08:45 pre-market")
     return scheduler
 
 
