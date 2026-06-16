@@ -93,33 +93,8 @@ input, select { font-family:inherit; color:inherit; }
 }
 .icon-btn:hover { color:var(--text); border-color:var(--surface-3); }
 
-/* Tabs */
-.tabs-wrap {
-  position:sticky; top:52px; z-index:40;
-  background:rgba(10,14,26,0.88);
-  backdrop-filter:blur(14px);
-  border-bottom:1px solid var(--border);
-}
-.tabs {
-  position:relative; display:flex; gap:4px;
-  padding:0 20px; max-width:1480px; margin:0 auto;
-}
-.tab {
-  position:relative; padding:14px 16px 13px;
-  font-size:13px; font-weight:500; color:var(--text-mute);
-  letter-spacing:0.01em; transition:color .18s ease;
-  display:inline-flex; align-items:center; gap:8px;
-}
-.tab.active { color:var(--text); }
-.tab:hover  { color:var(--text-dim); }
-.tab.active:hover { color:var(--text); }
-.tab-indicator {
-  position:absolute; bottom:-1px; height:2px;
-  background:var(--indigo); border-radius:2px 2px 0 0;
-  transition:transform .35s cubic-bezier(.4,.8,.3,1), width .35s cubic-bezier(.4,.8,.3,1);
-  box-shadow:0 0 12px rgba(99,102,241,0.6);
-  left:0; width:0;
-}
+/* Tabs — in-page strip removed; the global nav drives tab switching.
+   .tab-panel visibility rules live further down and are still used. */
 
 /* Layout */
 .page { max-width:1480px; margin:0 auto; padding:20px 20px 80px; }
@@ -311,9 +286,6 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
 .icon-btn { width:32px; height:32px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border); color:var(--text-dim); background:var(--surface); transition:all .15s; }
 .icon-btn:hover { color:var(--text); border-color:var(--surface-3); }
 
-/* Tab count pill */
-.tab-count { margin-left:6px; font-size:10px; font-family:var(--mono); background:var(--surface-3); color:var(--text-dim); padding:1px 6px; border-radius:999px; }
-.tab.active .tab-count { background:var(--indigo-dim); color:var(--indigo-2); }
 
 /* Tweaks panel */
 #tweaks-panel { position:fixed; bottom:20px; left:20px; z-index:150; width:280px; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 16px 40px rgba(0,0,0,.5); padding:14px 16px 12px; display:none; }
@@ -484,20 +456,12 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
 .search-wrap .search-shortcut { position:absolute; right:6px; top:50%; transform:translateY(-50%); font-size:9px; color:var(--text-mute); background:var(--surface-2); padding:1px 5px; border-radius:3px; pointer-events:none; font-family:var(--mono); }
 .search-wrap input:focus ~ .search-shortcut, .search-wrap input:not(:placeholder-shown) ~ .search-shortcut { display:none; }
 
-/* ── Tab keyboard hints ── */
-.tab-kbd { font-size:9px; opacity:.4; margin-left:2px; font-family:var(--mono); }
-
 /* ── Mobile improvements ── */
 @media(max-width:700px){
   body { overflow-x:hidden; }
   .ws-bar { grid-template-columns:1fr auto; padding:0 12px; gap:6px; }
   .ws-bar .top-center { display:none; }
   .ws-bar .brand-sub { display:none; }
-  .tabs { padding:0 8px; gap:0; overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  .tabs::-webkit-scrollbar { display:none; }
-  .tabs-wrap { overflow:hidden; }
-  .tab { padding:11px 10px 10px; font-size:11px; white-space:nowrap; flex-shrink:0; }
-  .tab-kbd { display:none; }
   .page { padding:14px 10px 60px; max-width:100vw; overflow-x:hidden; }
   .grid-cards { grid-template-columns:1fr; }
   .grid-cards .card { min-width:0; }
@@ -507,11 +471,11 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
   .top-right .muted { display:none; }
 }
 @media(max-width:400px){
-  .tab-count { display:none; }
   .kpi-row { grid-template-columns:1fr; }
   .summary-bar { grid-template-columns:1fr; }
 }
 </style>
+<link rel="stylesheet" href="{{ url_for('static', filename='charts.css') }}">
 {% endblock %}
 {% block content %}
 
@@ -534,19 +498,8 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
 </div>
 
 <!-- Tabs -->
-<div class="tabs-wrap">
-  <nav class="tabs" id="tabs-nav">
-    <button class="tab active" data-tab="trades">Trades<span class="tab-kbd">1</span></button>
-    <button class="tab" data-tab="signals">Signals <span class="tab-count" id="count-signals">0</span><span class="tab-kbd">2</span></button>
-    <button class="tab" data-tab="scanner">Scanner<span class="tab-kbd">3</span></button>
-    <button class="tab" data-tab="backtest">Backtest<span class="tab-kbd">4</span></button>
-    <button class="tab" data-tab="intraday">Intraday<span class="tab-kbd">5</span></button>
-    <button class="tab" data-tab="brokerflow">Broker Flow<span class="tab-kbd">6</span></button>
-    <button class="tab" data-tab="calendar">Calendar<span class="tab-kbd">7</span></button>
-    <button class="tab" data-tab="audit">Agent Audit</button>
-    <div class="tab-indicator" id="tab-ind"></div>
-  </nav>
-</div>
+<!-- Tabs are driven by the shared global nav (base.html) via the URL hash.
+     The old in-page tab strip was removed to avoid a duplicate nav row. -->
 
 <main class="page">
 
@@ -652,6 +605,18 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
   </div>
   <div id="signals-list" style="display:flex; flex-direction:column; gap:8px;"></div>
   <div id="signals-empty" style="display:none; text-align:center; padding:40px 20px; color:var(--text-mute); font-size:13px;">No signals recorded today.</div>
+
+  <!-- ===== MULTI-PANE CHART VIEWER ===== -->
+  <div class="panel-head" style="margin-top:18px;">
+    <div>
+      <h2 style="margin:0; font-size:14px;">Chart Viewer</h2>
+      <div class="sub" style="color:var(--text-mute); font-size:12px; margin-top:2px;">Multi-pane charts with custom overlays + order-flow delta. Click a signal to load it here.</div>
+    </div>
+  </div>
+  <section class="cv-wrap" id="chart-viewer" style="min-height:540px;">
+    <div class="cv-toolbar" id="cv-toolbar"></div>
+    <div class="cv-grid" id="cv-grid" data-panes="4"></div>
+  </section>
 </section>
 
 <!-- ===== CLOSED TODAY ===== -->
@@ -1177,7 +1142,8 @@ function renderMonitor() {
   const empty = document.getElementById('monitor-empty');
   grid.innerHTML = list.map(monitorCard).join('');
   empty.style.display = list.length ? 'none' : 'block';
-  document.getElementById('count-monitor').textContent = list.length;
+  const cm = document.getElementById('count-monitor');
+  if (cm) cm.textContent = list.length;
   grid.querySelectorAll('.close-pos').forEach(b => b.addEventListener('click', (e) => {
     e.stopPropagation();
     openClosePopover(+b.dataset.id, b.dataset.ticker, +b.dataset.entry);
@@ -1193,7 +1159,8 @@ function renderClosed() {
   const list = monState.closedTrades;
   grid.innerHTML = list.map(closedCard).join('');
   empty.style.display = list.length ? 'none' : 'block';
-  document.getElementById('count-closed').textContent = list.length;
+  const cc = document.getElementById('count-closed');
+  if (cc) cc.textContent = list.length;
   const net = list.reduce((s,c) => s + (c.pnl_rp||0), 0);
   const pnlEl = document.getElementById('closed-pnl');
   if (pnlEl) pnlEl.innerHTML = `Net P&amp;L: <span style="color:${net>=0?'var(--green)':'var(--red)'}">${fmtRp(net)}</span>`;
@@ -1231,7 +1198,8 @@ async function loadSignals() {
     const empty = document.getElementById('signals-empty');
     el.innerHTML = list.map(signalCard).join('');
     empty.style.display = list.length ? 'none' : 'block';
-    document.getElementById('count-signals').textContent = list.length;
+    const cs = document.getElementById('count-signals');
+    if (cs) { cs.textContent = list.length || ''; cs.style.display = list.length ? '' : 'none'; }
   } catch(e) { console.error('loadSignals', e); }
 }
 async function loadMonitorData() {
@@ -1346,18 +1314,16 @@ STRATEGIES.forEach(s => {
 });
 
 /* ── Tabs ── */
-const tabButtons = document.querySelectorAll('.tab');
-const tabPanels  = document.querySelectorAll('.tab-panel');
-const indicator  = document.getElementById('tab-ind');
+const tabPanels = document.querySelectorAll('.tab-panel');
 
 function setActiveTab(name) {
-  tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-  tabPanels.forEach(p  => p.classList.toggle('active',  p.id === 'panel-' + name));
-  requestAnimationFrame(updateIndicator);
+  tabPanels.forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+  // Global nav active-highlight is handled by shell.js syncActiveNav (hashchange).
   if (name === 'trades')   loadTrades();
-  if (name === 'signals')  loadSignals();
+  if (name === 'signals') { loadSignals(); initChartViewer(); }
   if (name === 'audit')    loadAuditData();
   if (name === 'intraday') loadScreenerResults();
+  if (name === 'calendar') loadCalendar();
 }
 
 /* ── Trades workspace sub-tabs (Active / Closed Today / History) ── */
@@ -1379,12 +1345,6 @@ function loadTrades() { showTradesSub(_tradesSub); }
     const b = e.target.closest('[data-sub]'); if (b) showTradesSub(b.dataset.sub);
   });
 })();
-function updateIndicator() {
-  const active = document.querySelector('.tab.active');
-  if (!active || !indicator) return;
-  indicator.style.width     = active.offsetWidth + 'px';
-  indicator.style.transform = `translateX(${active.offsetLeft}px)`;
-}
 let _auditLoaded = false;
 function loadAuditData() {
   if (_auditLoaded) return;
@@ -1457,9 +1417,6 @@ function toggleRationale(i) {
   const el = document.getElementById('rationale-' + i);
   if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
 }
-tabButtons.forEach(b => b.addEventListener('click', () => setActiveTab(b.dataset.tab)));
-window.addEventListener('resize', updateIndicator);
-setTimeout(updateIndicator, 60);
 
 /* ── Sliders ── */
 document.getElementById('wf-min').addEventListener('input', e =>
@@ -2195,14 +2152,7 @@ async function loadCalendar() {
   }
 }
 
-/* Auto-load when switching to sector/calendar tabs */
-const _origSwitchTab = window._switchTabHook;
-document.getElementById('tabs-nav').addEventListener('click', e => {
-  const tab = e.target.closest('[data-tab]');
-  if (!tab) return;
-  const name = tab.dataset.tab;
-  if (name === 'calendar') loadCalendar();
-});
+/* Calendar auto-loads via setActiveTab('calendar'); no strip listener needed. */
 
 /* Show blackout warning in topbar if active */
 (async () => {
@@ -2239,12 +2189,14 @@ document.addEventListener('keydown', e => {
 
 /* ── URL hash sync ── */
 const _setActiveTab = setActiveTab;
-setActiveTab = function(name) { _setActiveTab(name); window.location.hash = name; };
-(function(){ const h = window.location.hash.replace('#',''); if (h && document.querySelector('.tab[data-tab="'+h+'"]')) setActiveTab(h); })();
+const _hasPanel = h => !!(h && document.getElementById('panel-' + h));
+setActiveTab = function(name) { _setActiveTab(name); if (window.location.hash !== '#' + name) window.location.hash = name; };
+// Initial tab from hash, else default to Trades (keeps nav highlight in sync).
+(function(){ const h = window.location.hash.replace('#',''); setActiveTab(_hasPanel(h) ? h : 'trades'); })();
 // React to the shared shell nav (hash links like /#scanner) switching tabs.
 window.addEventListener('hashchange', () => {
   const h = window.location.hash.replace('#','');
-  if (h && document.querySelector('.tab[data-tab="'+h+'"]')) _setActiveTab(h);
+  if (_hasPanel(h)) _setActiveTab(h);
 });
 
 /* ── Preload calendar ── */
@@ -2253,5 +2205,20 @@ setTimeout(() => { if (typeof loadCalendar==='function') loadCalendar(); }, 2000
 /* ── Auto-refresh signals ── */
 setInterval(() => { if (typeof loadSignals==='function') loadSignals(); }, 60000);
 
+/* ── Chart viewer: lazy init once the signals panel is first shown ── */
+let _chartViewerReady = false;
+function initChartViewer() {
+  if (_chartViewerReady || !window.ChartViewer) return;
+  _chartViewerReady = true;
+  window.ChartViewer.init();
+}
+// Clicking any signal/trade card (data-t="TICKER") loads it into the focused pane.
+document.addEventListener('click', function (e) {
+  const card = e.target.closest('[data-t]');
+  if (card && card.dataset.t && window.ChartViewer && _chartViewerReady) {
+    window.ChartViewer.loadTicker(card.dataset.t);
+  }
+});
 </script>
+<script src="{{ url_for('static', filename='charts.js') }}"></script>
 {% endblock %}
