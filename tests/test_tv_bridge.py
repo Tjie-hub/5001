@@ -14,7 +14,8 @@ def test_set_symbol_builds_expression_and_calls_cdp():
          mock.patch.object(tv_bridge, '_cdp_evaluate', side_effect=fake_eval):
         res = tv_bridge.set_symbol('BBCA')
     assert res['ok'] is True
-    assert 'setSymbol("BBCA"' in captured['expr']
+    # bare ticker gets the default IDX: exchange prefix
+    assert 'setSymbol("IDX:BBCA"' in captured['expr']
     assert '_activeChartWidgetWV' in captured['expr']
 
 
