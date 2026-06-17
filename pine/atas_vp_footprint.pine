@@ -1,0 +1,135 @@
+//@version=6
+// ATAS VP + Footprint — overlay volume profile (POC/VAH/VAL) with delta coloring
+// plus an optional bounded footprint on the last N bars.
+//
+// HONESTY: delta here is ESTIMATED from TradingView OHLCV (close-vs-open sign),
+// NOT the real Stockbit broker footprint. For genuine per-broker flow use the
+// chart.py viewer (stockbit_flow_bars).
+indicator("ATAS VP + Footprint", overlay=true, max_boxes_count=500, max_labels_count=500, max_lines_count=500)
+
+// ── Volume Profile inputs ───────────────────────────────────────────────
+grpVP      = "Volume Profile"
+lookback   = input.int(100, "Lookback bars", minval=10, maxval=5000, group=grpVP)
+rows       = input.int(24, "Rows", minval=5, maxval=100, group=grpVP)
+vaPct      = input.float(70, "Value area %", minval=10, maxval=100, group=grpVP) / 100.0
+profWidth  = input.int(40, "Max profile width (bars)", minval=5, maxval=200, group=grpVP)
+colorByDelta = input.bool(true, "Color rows by delta", group=grpVP)
+volColor   = input.color(color.new(color.blue, 75), "Volume color", group=grpVP)
+buyColor   = input.color(color.new(color.teal, 65), "Buy (delta +)", group=grpVP)
+sellColor  = input.color(color.new(color.red, 65), "Sell (delta -)", group=grpVP)
+pocColor   = input.color(color.orange, "POC color", group=grpVP)
+vaColor    = input.color(color.new(color.gray, 20), "Value area color", group=grpVP)
+
+// ── Footprint inputs ────────────────────────────────────────────────────
+grpFP   = "Footprint (estimated)"
+showFP  = input.bool(false, "Show footprint (last N bars)", group=grpFP)
+fpBars  = input.int(10, "Footprint bars", minval=1, maxval=10, group=grpFP)
+fpRows  = input.int(8, "Price levels per bar", minval=3, maxval=20, group=grpFP)
+
+// ── Persistent drawing handles (cleared each recompute) ─────────────────
+var box[]   vpBoxes  = array.new_box()
+var line[]  vpLines  = array.new_line()
+var label[] fpLabels = array.new_label()
+
+clearDrawings() =>
+    for b in vpBoxes
+        box.delete(b)
+    array.clear(vpBoxes)
+    for l in vpLines
+        line.delete(l)
+    array.clear(vpLines)
+    for lb in fpLabels
+        label.delete(lb)
+    array.clear(fpLabels)
+
+if barstate.islast
+    clearDrawings()
+
+    int L = math.min(lookback, bar_index + 1)
+
+    // range high/low over the lookback window
+    float hi = high
+    float lo = low
+    for i = 0 to L - 1
+        hi := math.max(hi, high[i])
+        lo := math.min(lo, low[i])
+
+    float rh = (hi - lo) / rows
+    if rh > 0
+        volArr = array.new_float(rows, 0.0)
+        delArr = array.new_float(rows, 0.0)
+
+        // distribute each bar's volume across the rows it spans
+        for i = 0 to L - 1
+            float bvol  = nz(volume[i])
+            float bdlt  = (close[i] >= open[i] ? bvol : -bvol)
+            int r0 = int(math.floor((low[i]  - lo) / rh))
+            int r1 = int(math.floor((high[i] - lo) / rh))
+            r0 := math.max(0, math.min(rows - 1, r0))
+            r1 := math.max(0, math.min(rows - 1, r1))
+            int span = r1 - r0 + 1
+            float vEach = bvol / span
+            float dEach = bdlt / span
+            for r = r0 to r1
+                array.set(volArr, r, array.get(volArr, r) + vEach)
+                array.set(delArr, r, array.get(delArr, r) + dEach)
+
+        // POC + totals
+        float maxVol = 0.0
+        int   pocIdx = 0
+        float totVol = 0.0
+        for r = 0 to rows - 1
+            float v = array.get(volArr, r)
+            totVol += v
+            if v > maxVol
+                maxVol := v
+                pocIdx := r
+
+        // value area: grow out from POC until vaPct of volume captured
+        float vaTarget = totVol * vaPct
+        float acc = maxVol
+        int   loIdx = pocIdx
+        int   hiIdx = pocIdx
+        while acc < vaTarget and (loIdx > 0 or hiIdx < rows - 1)
+            float below = loIdx > 0 ? array.get(volArr, loIdx - 1) : -1.0
+            float above = hiIdx < rows - 1 ? array.get(volArr, hiIdx + 1) : -1.0
+            if above >= below
+                hiIdx += 1
+                acc += math.max(above, 0.0)
+            else
+                loIdx -= 1
+                acc += math.max(below, 0.0)
+
+        // draw profile rows
+        int rightX = bar_index
+        for r = 0 to rows - 1
+            float v = array.get(volArr, r)
+            if v > 0
+                int w = math.max(1, int(math.round(profWidth * v / maxVol)))
+                color col = colorByDelta ? (array.get(delArr, r) >= 0 ? buyColor : sellColor) : volColor
+                float rowBot = lo + r * rh
+                float rowTop = rowBot + rh
+                array.push(vpBoxes, box.new(rightX - w, rowTop, rightX, rowBot, border_color=col, bgcolor=col, border_width=0))
+
+        // POC / VAH / VAL lines
+        float pocPrice = lo + (pocIdx + 0.5) * rh
+        float vahPrice = lo + (hiIdx + 1) * rh
+        float valPrice = lo + loIdx * rh
+        array.push(vpLines, line.new(rightX - profWidth, pocPrice, rightX, pocPrice, color=pocColor, width=2))
+        array.push(vpLines, line.new(rightX - profWidth, vahPrice, rightX, vahPrice, color=vaColor, width=1, style=line.style_dashed))
+        array.push(vpLines, line.new(rightX - profWidth, valPrice, rightX, valPrice, color=vaColor, width=1, style=line.style_dashed))
+
+        // ── Footprint (bounded, estimated) ──────────────────────────────
+        if showFP
+            for i = 0 to math.min(fpBars, L) - 1
+                float bh = high[i]
+                float bl = low[i]
+                float frh = (bh - bl) / fpRows
+                if frh > 0
+                    float bvol = nz(volume[i])
+                    bool  up   = close[i] >= open[i]
+                    for fr = 0 to fpRows - 1
+                        float lvlPrice = bl + (fr + 0.5) * frh
+                        float lvlVol   = bvol / fpRows
+                        color fcol = up ? buyColor : sellColor
+                        array.push(fpLabels, label.new(bar_index - i, lvlPrice, str.tostring(lvlVol, format.volume), xloc=xloc.bar_index, style=label.style_none, textcolor=fcol, size=size.tiny))

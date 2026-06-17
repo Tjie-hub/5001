@@ -1,0 +1,56 @@
+//@version=6
+// ATAS Delta / CVD — per-bar estimated delta histogram + cumulative delta (CVD)
+// in a separate pane.
+//
+// HONESTY: delta is ESTIMATED. Each chart bar is broken into lower-timeframe
+// intrabars via request.security_lower_tf(); each intrabar's volume is signed
+// by close-vs-open (up = buy, down = sell) and summed. This approximates order
+// flow from price data — it is NOT the real Stockbit broker footprint
+// (stockbit_flow_bars). Falls back to whole-bar close-vs-prevclose if no
+// lower-timeframe data is available.
+indicator("ATAS Delta / CVD", overlay=false)
+
+// ── Inputs ──────────────────────────────────────────────────────────────
+grp      = "Delta / CVD"
+ltfRes   = input.timeframe("1", "Intrabar resolution", group=grp)
+showCVD  = input.bool(true, "Show cumulative delta (CVD)", group=grp)
+showDiv  = input.bool(true, "Mark price/delta divergence", group=grp)
+upCol    = input.color(color.new(color.teal, 0), "Delta + (buy)", group=grp)
+dnCol    = input.color(color.new(color.red, 0), "Delta - (sell)", group=grp)
+cvdCol   = input.color(color.new(color.orange, 0), "CVD line", group=grp)
+divCol   = input.color(color.yellow, "Divergence marker", group=grp)
+
+// ── Estimate per-bar delta from lower-timeframe intrabars ───────────────
+// Signs each intrabar's volume by its own close-vs-open, then sums.
+estDelta() =>
+    float d = 0.0
+    [oArr, cArr, vArr] = request.security_lower_tf(syminfo.tickerid, ltfRes, [open, close, volume])
+    int n = array.size(cArr)
+    if n > 0
+        for i = 0 to n - 1
+            float v = nz(array.get(vArr, i))
+            d += array.get(cArr, i) >= array.get(oArr, i) ? v : -v
+    else
+        // fallback: whole-bar sign
+        d := close >= nz(close[1], open) ? nz(volume) : -nz(volume)
+    d
+
+float delta = estDelta()
+
+// ── Cumulative delta ────────────────────────────────────────────────────
+var float cvd = 0.0
+cvd := nz(cvd[1]) + delta
+
+// ── Plots ───────────────────────────────────────────────────────────────
+color dCol = delta >= 0 ? upCol : dnCol
+plot(delta, "Delta", color=dCol, style=plot.style_columns)
+hline(0, "Zero", color=color.new(color.gray, 60))
+plot(showCVD ? cvd : na, "CVD", color=cvdCol, linewidth=2)
+
+// ── Divergence: price up while delta down, or price down while delta up ──
+bool priceUp = close > close[1]
+bool priceDn = close < close[1]
+bool bearDiv = showDiv and priceUp and delta < 0
+bool bullDiv = showDiv and priceDn and delta > 0
+plotshape(bearDiv, "Bearish divergence", style=shape.triangledown, location=location.top, color=divCol, size=size.tiny)
+plotshape(bullDiv, "Bullish divergence", style=shape.triangleup, location=location.bottom, color=divCol, size=size.tiny)
