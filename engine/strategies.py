@@ -48,7 +48,10 @@ def lot_size(capital: float, price: float, risk_pct: float, sl_pct: float) -> in
     """Hitung lot (1 lot = 100 lembar) berdasarkan risk per trade."""
     risk_rp      = capital * risk_pct
     risk_per_lot = price * 100 * sl_pct
-    if risk_per_lot <= 0:
+    # NaN/inf (e.g. a NaN price or sl_pct from a degenerate bar) defeats the
+    # `<= 0` guard — every comparison with NaN is False — and would crash
+    # int() below. Treat non-finite as a degenerate input and size minimally.
+    if not np.isfinite(risk_per_lot) or risk_per_lot <= 0 or not np.isfinite(risk_rp):
         return 1
     lots = int(risk_rp / risk_per_lot)
     # Cap: maksimum 30% capital per trade
@@ -525,12 +528,14 @@ def _get_poc_hvn(df_window: pd.DataFrame, resolution: float = 0.005):
 
     price_min = df_window['low'].min()
     price_max = df_window['high'].max()
-    if price_max <= price_min:
+    # A fully-NaN window yields NaN min/max, which slips past `<=` (NaN
+    # comparisons are False) and crashes int() below — reject explicitly.
+    if not np.isfinite(price_min) or not np.isfinite(price_max) or price_max <= price_min:
         return None, []
 
     # Buat price buckets
     bucket_size = price_min * resolution
-    if bucket_size <= 0:
+    if not np.isfinite(bucket_size) or bucket_size <= 0:
         return None, []
 
     n_buckets = max(1, int((price_max - price_min) / bucket_size) + 1)
@@ -538,6 +543,11 @@ def _get_poc_hvn(df_window: pd.DataFrame, resolution: float = 0.005):
     prices    = np.array([price_min + i * bucket_size for i in range(n_buckets)])
 
     for _, row in df_window.iterrows():
+        # Skip degenerate bars (e.g. a mid-session partial or suspended day
+        # with NaN OHLCV); a single NaN cell here would crash int() below.
+        if not (np.isfinite(row['low']) and np.isfinite(row['high'])
+                and np.isfinite(row['close']) and np.isfinite(row['volume'])):
+            continue
         rng = row['high'] - row['low']
         if rng <= 0:
             # Semua volume di satu level
