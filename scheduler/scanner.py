@@ -856,10 +856,12 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
 
 
 def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
-    """Rank active BEAR watchlist tickers via agent firm; send Telegram digest.
+    """Rank active BEAR watchlist tickers via agent firm; log the ranking.
 
     Called after the bear watchlist scout so the agent can surface which
     oversold bear names have the strongest bull case when regime flips.
+    Log-only by design (no Telegram) since the 2026-06-16 lean-notification
+    audit (commit 89baa33) — this ranking is reference signal, not an alert.
     Fail-silent: any error is logged and swallowed.
     """
     if not watchlist_tickers:
