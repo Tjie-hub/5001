@@ -31,11 +31,13 @@ def _holiday_skip(fn_name: str) -> bool:
 def refresh_wf_scores():
     """Run walk-forward semua ticker & simpan ke wf_scores table."""
     from engine.walkforward_multi import run_walk_forward
+    from engine.wf_edge import aggregate_wf_windows, save_wf_edge, ensure_wf_edge_table
     from datetime import datetime as dt
 
     tickers = get_all_tickers()
     ohlcv_map = _load_ohlcv_bulk()
     conn = sqlite3.connect(DB_PATH)
+    ensure_wf_edge_table(conn)
     now_str = dt.now().strftime("%Y-%m-%d %H:%M")
     updated = 0
     for ticker in tickers:
@@ -62,10 +64,16 @@ def refresh_wf_scores():
                      float(metrics.get("score", 0)),
                      metrics.get("windows_tested", 0),
                      now_str))
+            # NEW: persist wf_edge (cross-window OOS per-trade expectancy)
+            save_wf_edge(conn, ticker, aggregate_wf_windows(ranked), now_str)
             updated += 1
         except Exception as e:
             print(f"[WF] {ticker} error: {e}")
     conn.commit()
+    edge_count = conn.execute(
+        "SELECT COUNT(*) FROM wf_edge WHERE last_computed=?", (now_str,)
+    ).fetchone()[0]
+    print(f"[WF] wf_edge updated: {edge_count} rows")
 
     # Strategy health re-validation: alert when a live-selectable strategy's
     # cross-ticker average walk-forward return is negative. This is how the
@@ -474,9 +482,15 @@ def run_market_health_report():
     from engine.risk_score import compute_market_risk_score
 
     now = datetime.now(WIB)
-    date_str = now.strftime('%Y-%m-%d')
+    today_str = now.strftime('%Y-%m-%d')
     conn = _sql.connect(DB_PATH)
     try:
+        # Use the latest settled date with actual OHLCV data rather than today,
+        # since pre-market runs before today's EOD flow/VPIN data is available.
+        settled = conn.execute(
+            "SELECT MAX(date) FROM ohlcv WHERE ticker='IHSG' AND date<=?", (today_str,)
+        ).fetchone()[0]
+        date_str = settled or today_str
         vpin_s = get_market_vpin_summary(conn, date_str)
         accdist_s = get_market_accdist_summary(date_str)
         breadth_s = get_market_breadth(conn, date_str)
@@ -496,6 +510,156 @@ def run_market_health_report():
         print(f"[{now.strftime('%H:%M')}] Health report error: {e}")
     finally:
         conn.close()
+
+
+def _build_premarket_firm_message(decisions: list, rows: list, header: str) -> str:
+    """Pure Telegram-message builder for the premarket firm shortlist.
+
+    decisions: list[AgentDecision] from firm.evaluate_staged.
+    rows: the unified-watchlist long rows (dicts) used for source/strength lookup.
+    header: pre-formatted "dd/mm HH:MM" string.
+    Kept import-free (no langgraph) so it's unit-testable on the Windows venv.
+    """
+    by_ticker = {r["ticker"]: r for r in rows}
+    approved = sorted(
+        [d for d in decisions if d.decision == "approve"],
+        key=lambda d: d.confidence or 0.0, reverse=True,
+    )
+    vetoed   = [d for d in decisions if d.decision == "veto"]
+    passthru = [d for d in decisions if d.decision in ("degraded", "bypassed")]
+
+    msg = f"🌅 <b>Premarket Shortlist — {header}</b>\n"
+    msg += f"<i>Unified EOD watchlist → agent firm ({len(decisions)} setups)</i>\n\n"
+
+    if approved:
+        msg += "<b>✅ Firm-approved (long):</b>\n"
+        for d in approved:
+            conf = f"{d.confidence:.2f}" if d.confidence is not None else "N/A"
+            size = f" ×{d.size_hint:.2f}" if d.size_hint else ""
+            srcs = by_ticker.get(d.ticker, {}).get("sources") or []
+            tag = "+".join(s[0] for s in srcs)
+            tag = f" [{tag}]" if tag else ""
+            msg += f"  <b>{d.ticker}</b> conv {conf}{size}{tag}\n"
+            if d.rationale:
+                msg += f"     <i>{d.rationale[:140]}</i>\n"
+    else:
+        msg += "<b>✅ No firm-approved longs this morning</b>\n"
+
+    if passthru:
+        msg += "\n<b>➡️ Passed through (firm degraded/off):</b>\n"
+        msg += "  " + ", ".join(d.ticker for d in passthru) + "\n"
+
+    if vetoed:
+        msg += f"\n<b>⛔ Vetoed ({len(vetoed)}):</b> " + ", ".join(d.ticker for d in vetoed) + "\n"
+
+    return msg
+
+
+def run_premarket_firm_scan():
+    """08:35 WIB — premarket agent-firm vetting of last night's unified watchlist.
+
+    Picks the top-15 long-direction setups from build_unified_watchlist (reversal +
+    premover + bear-dip, all settled overnight), runs them through the 2-stage agent
+    firm, and sends a premarket shortlist heads-up. Informational only — auto-entry
+    stays owned by the 16:30 premover EOD path.
+    """
+    if _holiday_skip("run_premarket_firm_scan"):
+        return
+    from engine.unified_watchlist import build_unified_watchlist
+    from engine.liquidity import select_top_liquid_longs
+    from engine.agent_firm import firm as _firm
+    from engine.agent_firm.schemas import SignalCandidate as _SC
+
+    now = datetime.now(WIB)
+    now_str = now.strftime('%H:%M')
+    date_str = now.strftime('%Y-%m-%d')
+    print(f"[{now_str}] Premarket agent-firm scan dimulai...")
+
+    try:
+        rows = build_unified_watchlist(DB_PATH)
+    except Exception as e:
+        logging.error(f"[premarket_firm] watchlist build error: {e}")
+        print(f"[{now_str}] Premarket firm: watchlist build error: {e}")
+        return
+
+    # Value-base liquidity: keep the 3 best long-only setups whose 30d avg daily
+    # traded value (close*volume, Rp) clears the turnover floor — drops thin names
+    # that a volume/lot count would let through at low price levels.
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        longs = select_top_liquid_longs(rows, conn, date_str, top_n=3)
+    finally:
+        conn.close()
+    if not longs:
+        print(f"[{now_str}] Premarket firm: no liquid long setups from unified watchlist — skipped")
+        return
+
+    # ── Pre-LLM edge veto (Phase 3, gated by EDGE_SCORE_MODE) ─────────────────
+    from config import edge_mode
+    if edge_mode() != 'off':
+        try:
+            from engine.edge_enrich import enrich_candidate, market_regime
+            from engine.veto import apply_vetoes
+            _c = sqlite3.connect(DB_PATH)
+            try:
+                _mreg = market_regime(_c)
+                _open = _c.execute(
+                    "SELECT COUNT(*) FROM paper_trades WHERE status='OPEN'"
+                ).fetchone()[0]
+                _enr = []
+                for r in longs:
+                    _rows = _c.execute(
+                        "SELECT close FROM ohlcv WHERE ticker=? ORDER BY date DESC LIMIT 60",
+                        (r["ticker"],)).fetchall()
+                    _closes = [x[0] for x in _rows][::-1]
+                    _enr.append(enrich_candidate(
+                        _c, r["ticker"], date_str, closes=_closes,
+                        regime=None, sources=r.get("sources", [])))
+                _surv = apply_vetoes(_enr, _mreg, _open)
+            finally:
+                _c.close()
+            _keep = {s["ticker"] for s in _surv}
+            print(f"[{now_str}] Premarket edge veto ({edge_mode()}, market={_mreg}): "
+                  f"{len(_surv)}/{len(longs)} survive")
+            if edge_mode() == 'enforce':
+                longs = [r for r in longs if r["ticker"] in _keep]
+                if not longs:
+                    print(f"[{now_str}] Premarket: all candidates failed edge/veto — skipped")
+                    return
+        except Exception as _ev:
+            print(f"[{now_str}] Premarket edge veto error (fail-open): {_ev}")
+
+    candidates = [
+        _SC(
+            ticker=r["ticker"],
+            strategy="premarket",
+            score=float(r.get("strength") or 0.0),
+            scan_time=f"{date_str} {now_str}",
+            flow_verdict=(r.get("detail", {}).get("reversal") or {}).get("verdict"),
+            foreign_score=None,
+            indicators={"sources": r.get("sources", []),
+                        "confluence": r.get("confluence", False)},
+        )
+        for r in longs
+    ]
+
+    try:
+        _firm.reset_market_ctx()
+        decisions = _firm.evaluate_staged(candidates)
+    except Exception as e:
+        logging.error(f"[premarket_firm] firm eval error: {e}")
+        print(f"[{now_str}] Premarket firm eval error: {e}")
+        return
+
+    try:
+        send_telegram(_build_premarket_firm_message(decisions, longs, now.strftime('%d/%m %H:%M')))
+    except Exception as e:
+        print(f"[premarket firm] Telegram error: {e}")
+
+    n_app = sum(1 for d in decisions if d.decision == "approve")
+    n_veto = sum(1 for d in decisions if d.decision == "veto")
+    print(f"[{now_str}] Premarket firm: {len(decisions)} evaluated "
+          f"({n_app} approve, {n_veto} veto)")
 
 
 def ensure_vpin_scores_table(conn):

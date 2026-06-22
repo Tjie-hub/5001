@@ -37,7 +37,7 @@ def compute_metrics(result: dict) -> dict:
     if not trades:
         return {
             'strategy': result['strategy'],
-            'total_trades': 0,
+            'total_trades': 0, 'total_winners': 0,
             'win_rate': 0, 'avg_pnl_pct': 0, 'avg_pnl_rp': 0,
             'total_pnl_rp': 0, 'total_return_pct': 0,
             'max_drawdown_pct': 0, 'sharpe': 0, 'profit_factor': 0,
@@ -95,6 +95,7 @@ def compute_metrics(result: dict) -> dict:
     return {
         'strategy':        result['strategy'],
         'total_trades':    len(trades),
+        'total_winners':   len(winners),
         'win_rate':        round(len(winners) / len(trades) * 100, 1),
         'avg_pnl_pct':     round(np.mean(pnls_pct), 2),
         'avg_pnl_rp':      round(np.mean(pnls)),

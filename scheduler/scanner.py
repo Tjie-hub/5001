@@ -794,6 +794,68 @@ def _safe_regime(df: pd.DataFrame) -> str:
         return 'UNKNOWN'
 
 
+def run_edge_veto_stage(intersection_results, flow_confirmed, ohlcv_map,
+                        date_str, time_str):
+    """Phase 3 — deterministic pre-LLM edge vetoes. Gated by EDGE_SCORE_MODE.
+
+    off     → no-op (returns inputs unchanged).
+    shadow  → enrich + veto + log survivors; inputs returned unchanged.
+    enforce → restrict BOTH intersection_results and flow_confirmed to the
+              survivors and attach edge-based size_mult (agent_size_hint).
+
+    Fail-open: any error logs and returns inputs unchanged.
+    Returns (intersection_results, flow_confirmed).
+    """
+    from config import edge_mode
+    mode = edge_mode()
+    if mode == 'off':
+        return intersection_results, flow_confirmed
+    try:
+        from engine.edge_enrich import enrich_candidate, market_regime
+        from engine.veto import apply_vetoes
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            mreg = market_regime(conn)
+            open_n = conn.execute(
+                "SELECT COUNT(*) FROM paper_trades WHERE status='OPEN'"
+            ).fetchone()[0]
+            enriched = []
+            for r in intersection_results:
+                df = ohlcv_map.get(r['ticker'])
+                closes = df['close'].tolist() if df is not None else []
+                votes = None
+                try:
+                    if df is not None:
+                        votes, _ = calc_votes(df)
+                except Exception:
+                    votes = None
+                strats = r.get('strategies', [])
+                enriched.append(enrich_candidate(
+                    conn, r['ticker'], date_str, closes=closes,
+                    regime=r.get('adaptive_regime'),
+                    sources=strats, strategies=strats, technical_votes=votes))
+            survivors = apply_vetoes(enriched, mreg, open_n)
+        finally:
+            conn.close()
+    except Exception as e:
+        print(f"[{time_str}] Edge veto error (fail-open): {e}")
+        return intersection_results, flow_confirmed
+
+    keep = {s['ticker']: s for s in survivors}
+    detail = ', '.join(f"{s['ticker']}({s['edge_score']:.2f})" for s in survivors) or 'none'
+    print(f"[{time_str}] Edge veto ({mode}, market={mreg}, open={open_n}): "
+          f"{len(survivors)}/{len(intersection_results)} survive → {detail}")
+    if mode != 'enforce':
+        return intersection_results, flow_confirmed
+
+    kept_ir = [r for r in intersection_results if r['ticker'] in keep]
+    kept_fc = [r for r in flow_confirmed if r['ticker'] in keep]
+    for r in kept_ir + kept_fc:
+        r['edge_score'] = keep[r['ticker']]['edge_score']
+        r['agent_size_hint'] = keep[r['ticker']]['size_mult']
+    return kept_ir, kept_fc
+
+
 def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str):
     """Evaluate intersection_results through the agent firm gate.
 
@@ -1341,6 +1403,11 @@ def scheduled_multi_strategy_scan():
     except Exception as _wl_err:
         print(f"[{time_str}] Bear watchlist error (fail-open): {_wl_err}")
     # ── End bear watchlist ────────────────────────────────────────────────────
+
+    # ── Pre-LLM edge veto (Phase 3, gated by EDGE_SCORE_MODE) ─────────────────
+    intersection_results, flow_confirmed = run_edge_veto_stage(
+        intersection_results, flow_confirmed, ohlcv_map, date_str, time_str
+    )
 
     # ── Agent Firm evaluation ─────────────────────────────────────────────────
     flow_confirmed = run_agent_firm_gate(

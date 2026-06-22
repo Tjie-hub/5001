@@ -19,6 +19,7 @@ from typing import Optional
 ADV_MIN_LOTS     = 500_000          # 500K lots/day avg — below this = illiquid
 MARKET_CAP_MIN   = 500_000_000_000  # Rp 500 billion minimum market cap
 VALUE_SCORE_MIN  = 25.0             # bottom quartile cut-off (0–100 scale)
+VALUE_LIQ_MIN_IDR = 5_000_000_000   # Rp 5 bn/day avg traded value — value-base liquidity floor
 
 
 # ── L1: Liquidity helpers ─────────────────────────────────────────────────────
@@ -34,6 +35,60 @@ def get_adv_30d(conn: sqlite3.Connection, ticker: str, date: str) -> Optional[fl
         (ticker, date),
     ).fetchone()
     return float(row[0]) if row and row[0] is not None else None
+
+
+def get_adv_value_30d(conn: sqlite3.Connection, ticker: str, date: str) -> Optional[float]:
+    """Avg daily traded value in Rupiah (close*volume) over last 30 OHLCV rows
+    on or before date. This is value-base liquidity — turnover, not share count —
+    so it is comparable across price levels. None when no priced rows exist."""
+    row = conn.execute(
+        "SELECT AVG(close*volume) FROM ("
+        "  SELECT close, volume FROM ohlcv"
+        "  WHERE ticker=? AND date<=? AND volume>0 AND close>0"
+        "  ORDER BY date DESC LIMIT 30"
+        ")",
+        (ticker, date),
+    ).fetchone()
+    return float(row[0]) if row and row[0] is not None else None
+
+
+def passes_value_liquidity_gate(
+    conn: sqlite3.Connection,
+    ticker: str,
+    date: str,
+    min_idr: float = VALUE_LIQ_MIN_IDR,
+) -> tuple[bool, str]:
+    """Value-base liquidity gate: 30d avg daily turnover (Rp) must be >= min_idr.
+
+    Fails open (passes) when there is no OHLCV data — don't block a ticker we
+    simply can't price, consistent with passes_liquidity_gate's philosophy."""
+    adv_val = get_adv_value_30d(conn, ticker, date)
+    if adv_val is None:
+        return True, "no ohlcv — fail-open"
+    if adv_val < min_idr:
+        return False, f"turnover Rp{adv_val/1e9:.2f}bn < Rp{min_idr/1e9:.1f}bn"
+    return True, f"turnover Rp{adv_val/1e9:.2f}bn"
+
+
+def select_top_liquid_longs(
+    rows: list,
+    conn: sqlite3.Connection,
+    date: str,
+    top_n: int = 3,
+    min_idr: float = VALUE_LIQ_MIN_IDR,
+) -> list:
+    """From already-ranked watchlist rows, return up to top_n long-direction
+    entries that clear the value-base liquidity gate, preserving input order."""
+    picked = []
+    for r in rows:
+        if r.get("direction") != "long":
+            continue
+        ok, _ = passes_value_liquidity_gate(conn, r["ticker"], date, min_idr)
+        if ok:
+            picked.append(r)
+        if len(picked) >= top_n:
+            break
+    return picked
 
 
 def get_keystats(conn: sqlite3.Connection, ticker: str) -> dict:
