@@ -633,15 +633,15 @@ def run_premarket_firm_scan():
             finally:
                 _c.close()
             _keep = {s["ticker"] for s in _surv}
-            print(f"[{now_str}] Premarket edge veto ({edge_mode()}, market={_mreg}): "
-                  f"{len(_surv)}/{len(longs)} survive")
+            logging.info(f"[{now_str}] Premarket edge veto ({edge_mode()}, market={_mreg}): "
+                         f"{len(_surv)}/{len(longs)} survive")
             if edge_mode() == 'enforce':
                 longs = [r for r in longs if r["ticker"] in _keep]
                 if not longs:
-                    print(f"[{now_str}] Premarket: all candidates failed edge/veto — skipped")
+                    logging.info(f"[{now_str}] Premarket: all candidates failed edge/veto — skipped")
                     return
         except Exception as _ev:
-            print(f"[{now_str}] Premarket edge veto error (fail-open): {_ev}")
+            logging.warning(f"[{now_str}] Premarket edge veto error (fail-open): {_ev}")
 
     candidates = [
         _SC(

@@ -5,7 +5,7 @@ Runs BEFORE the LLM agent firm. Two tiers, in order:
 
   Tier A — directional safety (HARD skip, catalyst-overridable):
     d1 distributing flow · d2 bearish technical (no mean-reversion thesis)
-    d3 technical vs flow disagree · d4 market regime RISK_OFF
+    d3 technical vs flow disagree (no mean-reversion thesis) · d4 market RISK_OFF
   Tier B — statistical edge gates (HARD skip):
     s1 n_trades<N_MIN · s2 consistency<MIN · s3 win_rate<MIN
     s4 edge < EDGE_FLOOR[market_regime]
@@ -68,7 +68,7 @@ def diagnose(c: dict, market_regime: str):
         return None, 'd1:distributing_flow'
     if _tech_bearish(c) and not c.get('is_mean_reversion') and not cat:
         return None, 'd2:bearish_tech'
-    if _directions_disagree(c) and not cat:
+    if _directions_disagree(c) and not c.get('is_mean_reversion') and not cat:
         return None, 'd3:tech_flow_disagree'
     if market_regime == 'BEAR' and not cat:
         return None, 'd4:market_risk_off'

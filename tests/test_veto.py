@@ -54,6 +54,21 @@ class TestTierADirectional:
     def test_d4_market_risk_off_no_catalyst_skipped(self):
         assert apply_vetoes([_cand()], market_regime='BEAR') == []
 
+    def test_d3_waived_for_mean_reversion(self):
+        # dip-buy: bearish price + bullish flow IS the thesis (accumulation on
+        # weakness) → d3 must NOT fire for a mean-reversion candidate.
+        c = _cand(tech_direction='BEARISH', flow_direction='BULLISH',
+                  flow_score=2, is_mean_reversion=True)
+        _, reason = diagnose(c, 'BULL')
+        assert reason is None
+        assert len(apply_vetoes([c], market_regime='BULL')) == 1
+
+    def test_d3_still_fires_for_non_mean_reversion(self):
+        c = _cand(tech_direction='BULLISH', flow_direction='BEARISH',
+                  flow_score=-2, is_mean_reversion=False)
+        _, reason = diagnose(c, 'BULL')
+        assert reason == 'd3:tech_flow_disagree'
+
 
 class TestTierBStatistical:
     def test_s1_insufficient_trades(self):

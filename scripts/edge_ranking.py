@@ -46,13 +46,23 @@ def _ticker_regime(conn, ticker: str) -> str | None:
         return None
 
 
+def _watchlist_sources() -> dict:
+    """ticker → sources from the unified watchlist (so is_mean_reversion is
+    correct regardless of how the candidate list was chosen)."""
+    from engine.unified_watchlist import build_unified_watchlist
+    return {r['ticker']: r.get('sources', []) for r in build_unified_watchlist(DB_PATH)}
+
+
 def _candidate_tickers(conn, args) -> list[tuple[str, list]]:
     """Return [(ticker, sources)] for the chosen source."""
     if args.tickers:
-        return [(t.strip().upper(), []) for t in args.tickers.split(',') if t.strip()]
+        src_map = _watchlist_sources()
+        return [(t.strip().upper(), src_map.get(t.strip().upper(), []))
+                for t in args.tickers.split(',') if t.strip()]
     if args.universe:
+        src_map = _watchlist_sources()
         rows = conn.execute("SELECT DISTINCT ticker FROM wf_edge ORDER BY ticker").fetchall()
-        return [(r[0], []) for r in rows]
+        return [(r[0], src_map.get(r[0], [])) for r in rows]
     from engine.unified_watchlist import build_unified_watchlist
     rows = build_unified_watchlist(DB_PATH)
     return [(r['ticker'], r.get('sources', []))

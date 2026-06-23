@@ -852,13 +852,13 @@ def run_edge_veto_stage(intersection_results, flow_confirmed, ohlcv_map,
         finally:
             conn.close()
     except Exception as e:
-        print(f"[{time_str}] Edge veto error (fail-open): {e}")
+        logging.warning(f"[{time_str}] Edge veto error (fail-open): {e}")
         return intersection_results, flow_confirmed
 
     keep = {s['ticker']: s for s in survivors}
     detail = ', '.join(f"{s['ticker']}({s['edge_score']:.2f})" for s in survivors) or 'none'
-    print(f"[{time_str}] Edge veto ({mode}, market={mreg}, open={open_n}): "
-          f"{len(survivors)}/{len(intersection_results)} survive → {detail}")
+    logging.info(f"[{time_str}] Edge veto ({mode}, market={mreg}, open={open_n}): "
+                 f"{len(survivors)}/{len(intersection_results)} survive → {detail}")
     if mode != 'enforce':
         return intersection_results, flow_confirmed
 
