@@ -1,4 +1,4 @@
-# Agent Firm Debug — EOD Trade Plan (2026-06-23)
+# Agent Firm Debug — EOD Trade Plan
 
 ## Pipeline
 
@@ -26,7 +26,7 @@
 7-agent LangGraph DAG using DeepSeek (`deepseek-v4-pro`):
 
 ```
-build_context → analysts (technical|flow|regime|news) → bull → bear → risk → persist
+build_context → analysts (technical|flow|regime|news) → bull → bear → risk[+guardrails] → persist
 ```
 
 ### Stage 1 (cheap pre-scan)
@@ -36,7 +36,10 @@ build_context → analysts (technical|flow|regime|news) → bull → bear → ri
 
 ### Stage 2 (full 7-agent)
 - Risk Manager is the final judge; receives all 6 upstream outputs
-- **Fail-open rule**: if uncertain (confidence < 0.5), prefer approve at size_hint 0.5
+- **Post-LLM guardrails** (`_run_risk` in firm.py) override the LLM decision deterministically:
+  - Bearish flow not offset by bullish technical → veto
+  - Confidence < 0.55 in SIDEWAYS/BEAR regime → veto
+  - Guardrails **never** upgrade (veto stays veto)
 - If Risk Manager call fails → `degraded` (pass-through)
 
 ### Star ratings (visual encoding of confidence)
@@ -44,9 +47,9 @@ build_context → analysts (technical|flow|regime|news) → bull → bear → ri
 - ⭐⭐ ≥ 0.55
 - ⭐ < 0.55
 
-## Today's Output (2026-06-23)
+## 2026-06-23 — YELLOW Regime (pre-fix)
 
-Regime: **YELLOW** (39/100). All picks have **TOXIC** VPIN.
+Regime: **YELLOW** (39/100). All picks have **TOXIC** VPIN. Old fail-open logic active.
 
 | # | Ticker | Price | Stars | Conf | Tags | Verdict |
 |---|--------|-------|-------|------|------|---------|
@@ -58,27 +61,60 @@ Regime: **YELLOW** (39/100). All picks have **TOXIC** VPIN.
 | 6 | ASII | 4,680 | ⭐ | 0.50 | [R] | Mixed — bearish tech + regime, strong flow |
 | 7 | AKRA | 1,275 | ⭐ | 0.45 | [SP] | **Noise** — quant score 0.0, bearish news, long-term downtrend |
 
-## Key Issues Found
+## 2026-06-24 — ORANGE Regime (post-fix) ✅
 
-### 1. OASA is a firm hallucination
-Underlying flow is **BEARISH** (`MORNING_TRAP`, composite -3). The rationale admits "heavy foreign selling and low quant score" yet the firm approved at 0.55. The bull agent's narrative overrode hard flow data.
+Regime: **ORANGE** (risk-off). Guardrails active. **All 8 candidates vetoed.**
 
-### 2. AKRA should not be in the long book
-Quant score 0.0, bearish news, TOXIC VPIN, long-term downtrend. The rationale itself says "long-term downtrend limits upside." This is below any reasonable confidence floor.
+| # | Ticker | Verdict | Guardrail Hit |
+|---|--------|---------|---------------|
+| 1 | TLKM | Stage 1 pre-screen | technical BEARISH + regime BEAR |
+| 2 | ISAT | Stage 1 pre-screen | technical BEARISH + regime BEAR |
+| 3 | NCKL | Veto | SIDEWAYS regime, high macro risk |
+| 4 | INTP | Veto | SIDEWAYS regime, toxic VPIN, low quant |
+| 5 | AKRA | Veto | SIDEWAYS regime, quant_score=0.0, bearish news |
+| 6 | CPIN | Veto | High-conviction bearish tech (0.9) + BEAR regime |
+| 7 | ASII | Veto | SIDEWAYS regime, high macro risk, downtrend |
+| 8 | OASA | Veto | **guardrail: flow DISTRIBUTING not offset by bullish tech** |
 
-### 3. Confidence band is suspiciously compressed
-0.45–0.70 across 7 picks. In YELLOW/TOXIC with conflicting signals, the fail-open rule means the risk judge defaults to approve-with-warning rather than veto. Result: everything passes in a narrow band.
+**Key**: OASA would have been approved under the old fail-open logic (same as 23/06). The guardrail caught the bearish-flow-not-offset condition precisely. Old system would have shipped 6-7 junk approvals in a risk-off tape.
 
-### 4. Edge score vetoes don't apply here
-The Tier A (directional) + Tier B (statistical) vetoes from `engine/veto.py` run in the multi-strategy scanner and premarket firm scan, **not** in the EOD trade plan. The trade plan uses only `candidate_score()`, which is more permissive. AKRA would likely not survive `EDGE_SCORE_MODE=enforce`.
+## Resolution
 
-## Possible Fixes
+**Root cause:** `quant_score` was passed to the Risk prompt on inconsistent scales
+(flow composite −5..+5, premarket strength 0-100, EOD conviction 0-100/0.0), so the
+prompt veto gate `quant score < 3.0` was dead code for premarket/EOD callers. With
+the veto gate dead, only the fail-open bias remained → approve-with-warning band.
 
-1. **Raise confidence floor in sideways regimes** — reject < 0.55 when regime is YELLOW or BEAR
-2. **Wire flow veto into trade plan** — if flow is BEARISH/DISTRIBUTING and confidence < 0.55, auto-veto even if the firm approved
-3. **Apply edge score gate to EOD trade plan** — run `Tier A` directional vetoes before the firm to catch OASA-type contradictions
-4. **Tighten the fail-open rule** — change from "prefer approve at 0.5" to "veto at 0.5 size_hint" when flow direction contradicts the approval
-5. **Add a VPIN gate** — if VPIN is TOXIC across all picks (today), flag the entire report as degraded/high-risk
+**Fixed:** (committed on `feat/edge-score-system`, not yet merged)
+1. `engine/agent_firm/guardrails.py` — deterministic post-LLM guardrail in `_run_risk`,
+   keyed on analyst VERDICTS (consistent), only downgrades approve→veto:
+   - bearish flow (BEARISH/DISTRIBUTING/MORNING_TRAP) not offset by a bullish technical → veto
+   - confidence < 0.55 in SIDEWAYS/BEAR regime → veto (kills fail-open band)
+2. `normalize_quant()` rescales every caller's score to 0-1; `risk.py` sends the
+   normalized `quant_score`; `risk_v2.md` thresholds rewritten to the 0-1 scale + a
+   "don't approve <0.55 in SIDEWAYS/BEAR" rule.
+3. `edge_enrich.py` — stale wf_edge detection (>7d) logs warning + market_regime
+   fallback now logs the exception (was silent).
+4. `scheduler/scanner.py` — fixed `sources=()` → `sources=()` in enrich_candidate
+   (was passing strategies as both sources and strategies, duplicating MR detection).
+
+**Verified:** 15 guardrail tests + 85 agent_firm tests green. Real-data replay
+vetoed MPIX (0.35) and VISI (0.50) fail-open approvals while keeping flow-NEUTRAL
+approvals. Live since 21:xx restart 2026-06-23; 24/06 ORANGE regime = all 8 vetoed
+(0 false positives).
+
+**Optimizations applied (2026-06-23):**
+- `firm.py`: guardrails import moved from inside `_run_risk()` hot path to module level
+- `risk.py`: `normalize_quant` import moved to module level
+- `guardrails.py`: type annotations tightened (`list` → `Sequence[Any]`), docstrings added
+
+## Still Open
+
+### Apply edge score gate to EOD trade plan
+Run `Tier A` directional vetoes before the firm to catch OASA-type contradictions earlier (saves LLM cost on dead candidates). Not urgent — guardrails catch it at the Risk stage now, but pre-screening would skip the $0.015 full pipeline.
+
+### Add a VPIN gate
+If VPIN is TOXIC across all picks, flag the entire report as degraded/high-risk. Today the report correctly shows "🟠 Regime ORANGE — risk-off" but a VPIN-based degradation would add another layer.
 
 ## Key Files
 

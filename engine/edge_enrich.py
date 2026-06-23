@@ -6,9 +6,15 @@ Joins, per ticker: best wf_edge row (validated OOS stats), latest stockbit_flow
 technical direction (MA stack), mean-reversion thesis (from source/strategy),
 and catalyst flag. The result is the dict shape engine/veto.apply_vetoes expects.
 """
+import logging
+from datetime import date
+
 from engine.technicals import tech_direction
 from engine.catalyst import has_catalyst
 from engine.wf_edge import ensure_wf_edge_table
+
+logger = logging.getLogger(__name__)
+_WF_STALE_DAYS = 7
 
 # Sources/strategies that legitimately enter against a bearish tape.
 MR_SOURCES    = {'REVERSAL', 'BEAR_DIP'}
@@ -40,15 +46,30 @@ def _latest_flow(conn, ticker):
 
 def _best_wf_edge(conn, ticker) -> dict:
     """Best (highest expectancy) validated strategy for the ticker, if any.
-    Self-heals when wf_edge hasn't been built yet → returns {} (s1 drops it)."""
+    Self-heals when wf_edge hasn't been built yet → returns {} (s1 drops it).
+    Warns (but does not drop) when the stats are stale — refresh_wf_scores()
+    may not have run since a fresh deploy / DB restore."""
     ensure_wf_edge_table(conn)
     row = conn.execute(
-        "SELECT expectancy_pct, win_rate, consistency_pct, sharpe, n_trades "
+        "SELECT expectancy_pct, win_rate, consistency_pct, sharpe, n_trades, "
+        "last_computed "
         "FROM wf_edge WHERE ticker=? ORDER BY expectancy_pct DESC LIMIT 1",
         (ticker,),
     ).fetchone()
     if not row:
         return {}
+    last_computed = row[5]
+    if last_computed:
+        try:
+            computed_date = date.fromisoformat(str(last_computed)[:10])
+            age_days = (date.today() - computed_date).days
+            if age_days > _WF_STALE_DAYS:
+                logger.warning(
+                    "wf_edge for %s is stale (last_computed=%s, %d days old) — "
+                    "run refresh_wf_scores()", ticker, last_computed, age_days)
+        except (ValueError, TypeError):
+            logger.warning("wf_edge for %s has unparseable last_computed=%r",
+                           ticker, last_computed)
     return {'expectancy_pct': row[0], 'win_rate': row[1],
             'consistency_pct': row[2], 'sharpe': row[3], 'n_trades': row[4]}
 
@@ -91,5 +112,6 @@ def market_regime(conn) -> str:
         df = pd.DataFrame(rows[::-1],
                           columns=['date', 'open', 'high', 'low', 'close', 'volume'])
         return detect_regime(df)
-    except Exception:
+    except Exception as e:
+        logger.warning("market_regime failed (%s) — falling back to SIDEWAYS", e)
         return 'SIDEWAYS'

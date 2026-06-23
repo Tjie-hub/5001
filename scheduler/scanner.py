@@ -847,7 +847,7 @@ def run_edge_veto_stage(intersection_results, flow_confirmed, ohlcv_map,
                 enriched.append(enrich_candidate(
                     conn, r['ticker'], date_str, closes=closes,
                     regime=r.get('adaptive_regime'),
-                    sources=strats, strategies=strats, technical_votes=votes))
+                    sources=(), strategies=strats, technical_votes=votes))
             survivors = apply_vetoes(enriched, mreg, open_n)
         finally:
             conn.close()

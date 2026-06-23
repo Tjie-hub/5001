@@ -69,3 +69,39 @@ class TestEnrichCandidate:
         c = enrich_candidate(conn, 'XYZ', '2026-06-22', closes=[], regime='BULL')
         assert c['n_trades'] is None
         assert c['expectancy_pct'] is None
+
+
+class TestWfEdgeStaleness:
+    def _db(self):
+        conn = sqlite3.connect(':memory:')
+        conn.execute("CREATE TABLE stockbit_flow (ticker TEXT, trade_date TEXT, "
+                     "composite_score INT, verdict TEXT)")
+        ensure_wf_edge_table(conn)
+        return conn
+
+    def _save(self, conn, ticker, last_computed):
+        save_wf_edge(conn, ticker, [{
+            'strategy': 'conservative', 'expectancy_pct': 2.5, 'expectancy_rp': 1.0,
+            'win_rate': 55.0, 'consistency_pct': 80.0, 'sharpe': 0.5,
+            'n_trades': 40, 'windows_tested': 5,
+        }], last_computed)
+
+    def test_stale_wf_edge_warns_but_keeps_stats(self, caplog):
+        import logging
+        from datetime import date, timedelta
+        conn = self._db()
+        old = (date.today() - timedelta(days=30)).isoformat()
+        self._save(conn, 'INCO', old)
+        with caplog.at_level(logging.WARNING, logger='engine.edge_enrich'):
+            c = enrich_candidate(conn, 'INCO', '2026-06-22', closes=[], regime='BULL')
+        assert c['expectancy_pct'] == 2.5            # stats still returned (not dropped)
+        assert any('stale' in r.message for r in caplog.records)
+
+    def test_fresh_wf_edge_no_warning(self, caplog):
+        import logging
+        from datetime import date
+        conn = self._db()
+        self._save(conn, 'INCO', date.today().isoformat())
+        with caplog.at_level(logging.WARNING, logger='engine.edge_enrich'):
+            enrich_candidate(conn, 'INCO', '2026-06-22', closes=[], regime='BULL')
+        assert not any('stale' in r.message for r in caplog.records)
