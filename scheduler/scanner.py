@@ -251,6 +251,7 @@ def scan_momentum_signals():
     _f_regime      = int(_cfg.get("filter_regime",      1))
     _f_vpin        = int(_cfg.get("filter_vpin",        0))
     _f_liquidity   = int(_cfg.get("filter_liquidity",   0))
+    _wf_score_gate = float(_cfg.get("wf_score_gate",   0.0))
 
     tickers = get_all_tickers()
     wf_map = {}
@@ -403,6 +404,8 @@ def scan_momentum_signals():
                 consistency = wf["consistency_pct"] if wf else None
                 weighted    = wf["weighted_score"]   if wf else 0
                 if wf and consistency < MIN_CONSIST:
+                    continue
+                if wf and _wf_score_gate > 0 and weighted < _wf_score_gate:
                     continue
                 votes, vote_labels = calc_votes(df)
                 try:
@@ -589,14 +592,19 @@ def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
     """
     import sqlite3
     try:
+        from paper_trade import get_config as _gc
+        _wf_gate = float(_gc().get("wf_score_gate", 0.0))
+    except Exception:
+        _wf_gate = 0.0
+    try:
         conn = sqlite3.connect(DB_PATH)
         rows = conn.execute("""
             SELECT strategy, consistency_pct, weighted_score
             FROM wf_scores
             WHERE ticker = ? AND consistency_pct >= ?
-              AND avg_return_pct > 0 AND weighted_score > 0
+              AND avg_return_pct > 0 AND weighted_score >= ?
             ORDER BY weighted_score DESC
-        """, (ticker, min_consistency)).fetchall()
+        """, (ticker, min_consistency, _wf_gate)).fetchall()
         conn.close()
         disabled = _get_disabled_strategies()
         return [r[0] for r in rows if r[0] not in disabled]
@@ -750,15 +758,21 @@ def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
         try:
             conn = sqlite3.connect(DB_PATH)
             placeholders = ','.join('?' * len(wf_candidates))
+            try:
+                from paper_trade import get_config as _gc
+                _wf_gate = float(_gc().get("wf_score_gate", 0.0))
+            except Exception:
+                _wf_gate = 0.0
             rows = conn.execute(f"""
                 SELECT strategy, weighted_score
                 FROM wf_scores
                 WHERE ticker = ?
                   AND strategy IN ({placeholders})
                   AND consistency_pct >= ?
-                  AND avg_return_pct > 0 AND weighted_score > 0
+                  AND avg_return_pct > 0
+                  AND weighted_score >= ?
                 ORDER BY weighted_score DESC
-            """, [ticker, *wf_candidates, min_consistency]).fetchall()
+            """, [ticker, *wf_candidates, min_consistency, _wf_gate]).fetchall()
             conn.close()
             selected = [r[0] for r in rows]
         except Exception:
