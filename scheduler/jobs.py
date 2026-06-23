@@ -387,7 +387,7 @@ def run_premover_eod():
 
     print(f"[{now_str}] Pre-mover EOD scan dimulai...")
     try:
-        new_setups = run_scan(DB_PATH, send_alert_fn=send_telegram)
+        new_setups = run_scan(DB_PATH, send_alert_fn=None)
         print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan selesai. "
               f"{len(new_setups)} new setups.")
     except Exception as e:
@@ -422,8 +422,7 @@ def run_premover_eod():
                                   'would_trade': False,
                                   'skip_reason': f'error:{str(exc)[:80]}'})
 
-    if mode == 'enforce':
-        _send_premover_auto_summary(summary_rows, mode, send_telegram)
+    # summary_rows available for analysis; Telegram suppressed per config
 
 
 def run_backtest_roller():
@@ -573,6 +572,21 @@ def run_premarket_firm_scan():
     now = datetime.now(WIB)
     now_str = now.strftime('%H:%M')
     date_str = now.strftime('%Y-%m-%d')
+
+    # Dedup guard — prevents duplicate sends when two instances briefly overlap
+    # (systemd Restart=always can start a new process before the old one fully exits).
+    # First instance to INSERT wins; second gets IntegrityError and skips silently.
+    with sqlite3.connect(DB_PATH, timeout=5) as _g:
+        _g.execute(
+            "CREATE TABLE IF NOT EXISTS _job_sentinel "
+            "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))"
+        )
+        try:
+            _g.execute("INSERT INTO _job_sentinel VALUES ('premarket_firm', ?)", (date_str,))
+        except sqlite3.IntegrityError:
+            print(f"[{now_str}] Premarket firm: already sent today — skipped (duplicate guard)")
+            return
+
     print(f"[{now_str}] Premarket agent-firm scan dimulai...")
 
     try:

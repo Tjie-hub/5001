@@ -1194,16 +1194,6 @@ def scheduled_multi_strategy_scan():
                   f"(avg={_vpin_summary['avg_vpin']:.4f} "
                   f">0.8={_vpin_summary['pct_above_08']}% "
                   f">0.95={_vpin_summary['pct_above_095']}%)")
-            if _vpin_summary['label'] in ('CRITICAL', 'RED'):
-                send_telegram(
-                    f"🚨 <b>VPIN Alert: {_vpin_summary['label']}</b>\n\n"
-                    f"avg VPIN = {_vpin_summary['avg_vpin']:.4f}\n"
-                    f"Tickers >0.80: {_vpin_summary['pct_above_08']}% "
-                    f"({_vpin_summary['count_above_08']})\n"
-                    f"Tickers >0.95: {_vpin_summary['pct_above_095']}% "
-                    f"({_vpin_summary['count_above_095']})\n\n"
-                    f"<i>High VPIN = informed trading / toxicity spike.</i>"
-                )
     except Exception as _ve:
         logging.warning(f"[scan] VPIN summary error: {_ve}")
 
