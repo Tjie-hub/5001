@@ -501,9 +501,30 @@ def run_market_health_report():
         except Exception:
             foreign_net = None
         risk = compute_market_risk_score(vpin_s, accdist_s, breadth_s, tech_s, foreign_net)
-        msg = build_market_health_report(date_str, risk, vpin_s, accdist_s, breadth_s, tech_s, foreign_net)
+        health = build_market_health_report(date_str, risk, vpin_s, accdist_s, breadth_s, tech_s, foreign_net)
+
+        # External macro (overnight global) — prepended. Fail-soft.
+        ext_block = ""
+        try:
+            from engine.external_macro import (
+                fetch_external_macro, build_external_macro_block, macro_bias)
+            ext = fetch_external_macro()
+            ext_block = build_external_macro_block(ext) + f"\n  Bias: {macro_bias(ext)}\n\n"
+        except Exception as _me:
+            logging.warning(f"[market_health_report] external macro skipped: {_me}")
+
+        # News catalysts (today's premarket fetch, real tickers only) — appended. Fail-soft.
+        news_block = ""
+        try:
+            from engine.news_digest import get_ticker_news_digest, build_news_block
+            news_block = "\n\n" + build_news_block(
+                get_ticker_news_digest(conn, today_str, top_n=5))
+        except Exception as _ne:
+            logging.warning(f"[market_health_report] news digest skipped: {_ne}")
+
+        msg = ext_block + health + news_block
         send_telegram(msg)
-        print(f"[{now.strftime('%H:%M')}] Market health report sent (tier={risk['tier']})")
+        print(f"[{now.strftime('%H:%M')}] Premarket briefing sent (tier={risk['tier']})")
     except Exception as e:
         logging.error(f"[market_health_report] {e}")
         print(f"[{now.strftime('%H:%M')}] Health report error: {e}")
@@ -674,6 +695,85 @@ def run_premarket_firm_scan():
     n_veto = sum(1 for d in decisions if d.decision == "veto")
     print(f"[{now_str}] Premarket firm: {len(decisions)} evaluated "
           f"({n_app} approve, {n_veto} veto)")
+
+
+def run_eod_trade_plan():
+    """16:40 WIB — single consolidated, agent-ranked trade plan for the next session.
+
+    Merges every long signal source (reversal watchlist + bullish/volume screen +
+    today's premarket approvals) into one pool, runs the top-8 by confluence through
+    the agent firm, and sends ONE Telegram message with firm-APPROVED longs only.
+    Shorts are intentionally excluded — they are exit/SL triggers, not entries.
+
+    Runs after the 16:15 screener EOD (reversal watchlist) and 16:30 premover scan so
+    all source tables are settled. Fail-open: if the firm is disabled or errors, falls
+    back to deterministic confluence ranking (report flagged ⚠️ Firm offline).
+    """
+    if _holiday_skip("run_eod_trade_plan"):
+        return
+    from engine import trade_plan as tp
+    from engine.agent_firm import firm as _firm
+    from engine.agent_firm.schemas import SignalCandidate as _SC
+
+    now = datetime.now(WIB)
+    now_str = now.strftime('%H:%M')
+    date_str = now.strftime('%Y-%m-%d')
+
+    # Dedup guard (mirrors premarket firm scan) — first INSERT wins. 30s busy_timeout
+    # waits out transient writers (the 16:40 slot can overlap a long EOD write on the
+    # 2.5GB WAL db, unlike the quiet 08:35 premarket slot).
+    with sqlite3.connect(DB_PATH, timeout=30) as _g:
+        _g.execute("PRAGMA busy_timeout=30000")
+        _g.execute("CREATE TABLE IF NOT EXISTS _job_sentinel "
+                   "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))")
+        try:
+            _g.execute("INSERT INTO _job_sentinel VALUES ('eod_trade_plan', ?)", (date_str,))
+        except sqlite3.IntegrityError:
+            print(f"[{now_str}] EOD trade plan: already sent today — skipped (dup guard)")
+            return
+
+    conn = sqlite3.connect(DB_PATH, timeout=30)
+    try:
+        conn.execute("PRAGMA busy_timeout=30000")
+        cands = tp.gather_long_candidates(conn, date_str)
+        regime = tp.get_regime(conn, date_str)
+    finally:
+        conn.close()
+
+    if not cands:
+        print(f"[{now_str}] EOD trade plan: no long candidates — skipped")
+        return
+
+    top = tp.select_top(cands, n=8)
+
+    candidates = [
+        _SC(ticker=c["ticker"], strategy="eod", score=float(c["conviction"] or 0.0),
+            scan_time=f"{date_str} {now_str}", flow_verdict=c.get("smart_money"),
+            indicators={"sources": c["sources"], "confluence": c["confluence"],
+                        "vol_ratio": c["vol_ratio"], "net_value": c["net_value"]})
+        for c in top
+    ]
+
+    degraded = False
+    try:
+        _firm.reset_market_ctx()
+        decisions = _firm.evaluate_staged(candidates)
+        firm_ran = any(d.decision in ("approve", "veto") for d in decisions)
+        if firm_ran:
+            ranked = tp.rank_approved(top, decisions)
+        else:
+            ranked, degraded = tp.fallback_rank(top), True   # firm disabled/bypassed
+    except Exception as e:
+        logging.error(f"[eod_trade_plan] firm eval error (fail-open): {e}")
+        ranked, degraded = tp.fallback_rank(top), True
+
+    try:
+        send_telegram(tp.build_message(ranked, regime, now.strftime('%d/%m'), degraded=degraded))
+    except Exception as e:
+        print(f"[eod_trade_plan] Telegram error: {e}")
+
+    print(f"[{now_str}] EOD trade plan: {len(cands)} candidates, top {len(top)} vetted, "
+          f"{len(ranked)} approved{' (degraded)' if degraded else ''}")
 
 
 def ensure_vpin_scores_table(conn):
