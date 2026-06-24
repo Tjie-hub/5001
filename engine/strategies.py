@@ -1216,6 +1216,9 @@ def check_current_entry_signal(ticker: str, strategy: str, df: pd.DataFrame = No
     elif strategy == 'Panic Rebound':
         # Counter-trend — bypass the weekly-trend gate (the signal IS a downtrend)
         return check_panic_rebound_signal(df)
+    elif strategy == 'Liquidity Sweep':
+        # Reversal/bottom-fishing — bypass the weekly-trend gate (the setup IS a dip)
+        return check_sweep_flow_signal(df, ticker)
     else:
         return {
             'has_signal': False,

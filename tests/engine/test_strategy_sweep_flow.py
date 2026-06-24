@@ -74,3 +74,22 @@ def test_live_check_blocked_by_negative_flow(monkeypatch):
     r = check_sweep_flow_signal(df, 'BBCA')
     assert r['has_signal'] is False
     assert 'flow' in r['reason'].lower()
+
+
+def test_registered_in_strategy_funcs():
+    from engine.walkforward_multi import STRATEGY_FUNCS
+    assert 'Liquidity Sweep' in STRATEGY_FUNCS
+
+
+def test_dispatcher_routes_liquidity_sweep(monkeypatch):
+    import engine.strategies as strat
+    captured = {}
+
+    def fake_check(df, ticker):
+        captured['called'] = True
+        return {'has_signal': False, 'reason': 'stub', 'details': {}}
+
+    monkeypatch.setattr(strat, 'check_sweep_flow_signal', fake_check)
+    df = _trending_df_with_sweep()
+    strat.check_current_entry_signal('BBCA', 'Liquidity Sweep', df)
+    assert captured.get('called') is True
