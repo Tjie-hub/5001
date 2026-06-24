@@ -545,8 +545,11 @@ def _get_poc_hvn(df_window: pd.DataFrame, resolution: float = 0.005):
     for _, row in df_window.iterrows():
         # Skip degenerate bars (e.g. a mid-session partial or suspended day
         # with NaN OHLCV); a single NaN cell here would crash int() below.
-        if not (np.isfinite(row['low']) and np.isfinite(row['high'])
-                and np.isfinite(row['close']) and np.isfinite(row['volume'])):
+        try:
+            _lo, _hi, _cl, _vo = float(row['low']), float(row['high']), float(row['close']), float(row['volume'])
+            if not (np.isfinite(_lo) and np.isfinite(_hi) and np.isfinite(_cl) and np.isfinite(_vo)):
+                continue
+        except (TypeError, ValueError):
             continue
         rng = row['high'] - row['low']
         if rng <= 0:
@@ -2419,3 +2422,30 @@ def check_panic_rebound_signal(df: pd.DataFrame) -> dict:
         'reason': f"Panic Rebound: conditions not met ({', '.join(missing)})",
         'details': details,
     }
+
+
+def strategy_liquidity_sweep_flow(df: pd.DataFrame, ticker: str = None,
+                                  capital: float = 50_000_000,
+                                  filters: list = None) -> dict:
+    """SMC liquidity-sweep entry (bullish PDL/PWL trap) confirmed by order flow.
+
+    Long-only. ATR SL×1.0 / TP×2.5 (RR 2.5). When ticker is None the flow gate
+    is skipped (price-only) so this can be walk-forward backtested on full OHLCV
+    history. When a ticker is given, each candidate sweep day must pass
+    confirm_sweep_flow (fail-open on missing data, fail-closed on negative flow).
+    """
+    from engine.smc import calc_sweep_signal
+    sig = calc_sweep_signal(df)
+
+    if ticker is not None and sig.any():
+        from engine.smc_flow import confirm_sweep_flow
+        dates = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d').values
+        vals = sig.values.copy()
+        for pos in range(len(vals)):
+            if vals[pos] and not confirm_sweep_flow(ticker, dates[pos])['confirmed']:
+                vals[pos] = False
+        sig = pd.Series(vals, index=df.index)
+
+    return run_strategy(df, sig, atr_sl_mult=1.0, atr_tp_mult=2.5, min_rr=2.5,
+                        strategy_name='Liquidity Sweep', initial_capital=capital,
+                        filters=filters)
