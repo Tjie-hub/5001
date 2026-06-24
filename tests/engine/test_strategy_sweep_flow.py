@@ -93,3 +93,11 @@ def test_dispatcher_routes_liquidity_sweep(monkeypatch):
     df = _trending_df_with_sweep()
     strat.check_current_entry_signal('BBCA', 'Liquidity Sweep', df)
     assert captured.get('called') is True
+
+
+def test_scanner_regime_wiring():
+    from scheduler.scanner import _REGIME_STRATEGY_MAP, _COUNTER_TREND_BOOK, _MOMENTUM_FAMILY
+    assert 'Liquidity Sweep' in _REGIME_STRATEGY_MAP['BEAR']
+    assert 'Liquidity Sweep' in _REGIME_STRATEGY_MAP['SIDEWAYS']
+    assert 'Liquidity Sweep' in _COUNTER_TREND_BOOK   # bypasses wf_scores gate
+    assert 'Liquidity Sweep' not in _MOMENTUM_FAMILY   # survives panic strip
