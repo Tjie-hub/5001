@@ -44,3 +44,41 @@ def test_calc_sweep_signal_marks_bullish_bar():
     sig = calc_sweep_signal(df)
     assert sig.iloc[2] == True
     assert sig.iloc[0] == False
+
+
+import sqlite3
+from engine.smc_flow import confirm_sweep_flow
+
+
+def _flow_db(tmp_path, rows):
+    """rows: list of (ticker, trade_date, composite_score). Returns db path str."""
+    db = str(tmp_path / 'flow.db')
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE stockbit_flow (ticker TEXT, trade_date TEXT, composite_score INTEGER)")
+    conn.execute("CREATE TABLE stockbit_flow_bars (ticker TEXT, trade_date TEXT, bar_time TEXT, "
+                 "buy_lot INT, sell_lot INT, buy_freq INT, sell_freq INT, net_value INT, "
+                 "price REAL, delta INT)")
+    conn.executemany("INSERT INTO stockbit_flow VALUES (?,?,?)", rows)
+    conn.commit(); conn.close()
+    return db
+
+
+def test_daily_positive_flow_confirms(tmp_path):
+    db = _flow_db(tmp_path, [('BBCA', '2026-05-03', 5)])
+    r = confirm_sweep_flow('BBCA', '2026-05-03', db_path=db)
+    assert r['confirmed'] is True
+    assert r['source'] == 'daily'
+    assert r['score'] == 5.0
+
+
+def test_daily_negative_flow_rejects(tmp_path):
+    db = _flow_db(tmp_path, [('BBCA', '2026-05-03', -3)])
+    r = confirm_sweep_flow('BBCA', '2026-05-03', db_path=db)
+    assert r['confirmed'] is False
+    assert r['source'] == 'daily'
+
+
+def test_daily_zero_flow_rejects(tmp_path):
+    db = _flow_db(tmp_path, [('BBCA', '2026-05-03', 0)])
+    r = confirm_sweep_flow('BBCA', '2026-05-03', db_path=db)
+    assert r['confirmed'] is False
