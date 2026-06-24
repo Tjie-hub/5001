@@ -283,6 +283,66 @@ class IndicatorCache:
             conn.close()
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# SMC / ICT Indicator Wrappers (delegate to engine/smc.py)
+# ═══════════════════════════════════════════════════════════════════════════════
+# These follow the same contract (DataFrame in, Series out) for use in filters
+# and backtests. The heavy logic lives in engine/smc.py; these are cached stubs.
+
+def calc_fvg_signal(df: pd.DataFrame, lookback_days: int = 5,
+                    require_hvi: bool = False) -> pd.Series:
+    """See engine/smc.py:calc_fvg_signal"""
+    _key = ('fvg_signal', _df_key(df), lookback_days, require_hvi)
+    if _key in _INDICATOR_CACHE:
+        return _INDICATOR_CACHE[_key]
+    from engine.smc import calc_fvg_signal as _impl
+    result = _impl(df, lookback_days=lookback_days, require_hvi=require_hvi)
+    _INDICATOR_CACHE[_key] = result
+    return result
+
+calc_fvg_signal.warmup_bars = lambda lookback_days=5: 3
+
+def calc_sweep_signal(df: pd.DataFrame) -> pd.Series:
+    """See engine/smc.py:calc_sweep_signal"""
+    _key = ('sweep_signal', _df_key(df))
+    if _key in _INDICATOR_CACHE:
+        return _INDICATOR_CACHE[_key]
+    from engine.smc import calc_sweep_signal as _impl
+    result = _impl(df)
+    _INDICATOR_CACHE[_key] = result
+    return result
+
+calc_sweep_signal.warmup_bars = lambda: 3
+
+def calc_smc_composite(df: pd.DataFrame,
+                       require_discount: bool = True,
+                       require_fvg: bool = False,
+                       require_sweep: bool = True) -> pd.Series:
+    """See engine/smc.py:calc_smc_composite"""
+    _key = ('smc_composite', _df_key(df), require_discount, require_fvg, require_sweep)
+    if _key in _INDICATOR_CACHE:
+        return _INDICATOR_CACHE[_key]
+    from engine.smc import calc_smc_composite as _impl
+    result = _impl(df, require_discount=require_discount,
+                   require_fvg=require_fvg, require_sweep=require_sweep)
+    _INDICATOR_CACHE[_key] = result
+    return result
+
+calc_smc_composite.warmup_bars = lambda: 3
+
+def calc_premium_discount(df: pd.DataFrame) -> pd.Series:
+    """See engine/smc.py:calc_premium_discount"""
+    _key = ('premium_discount', _df_key(df))
+    if _key in _INDICATOR_CACHE:
+        return _INDICATOR_CACHE[_key]
+    from engine.smc import calc_premium_discount as _impl
+    result = _impl(df)
+    _INDICATOR_CACHE[_key] = result
+    return result
+
+calc_premium_discount.warmup_bars = lambda: 0
+
+
 def classify_volume_context(df: pd.DataFrame) -> str:
     """
     Classify the volume spike context of the last bar.
