@@ -16,11 +16,14 @@ Integration:
   - Sends Telegram alerts on STRONG signals
 """
 
+import math
 import sqlite3
 import logging
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+_SQRT2 = math.sqrt(2.0)
 
 
 # ── Thresholds ───────────────────────────────────────────────────────────────
@@ -70,8 +73,15 @@ def calc_vpin(
     Algorithm:
       1. Get adaptive bucket_size from avg daily volume (last 30 days)
       2. Fetch ticks sorted chronologically
-      3. Fill fixed-volume buckets, classify each tick via tick_type
-      4. VPIN = mean(|V_buy - V_sell| / V) over last n_buckets
+      3. Fill fixed-volume buckets, recording each bucket's closing price
+      4. Bulk Volume Classification (BVC): split each bucket buy/sell via the
+         normalized price change V_buy = V·Φ(ΔP/σ); VPIN = mean(|2·Φ(ΔP/σ) - 1|)
+         over last n_buckets
+
+    BVC replaces the per-tick up/down "tick rule": on IDX data trades arrive in
+    long same-direction runs, so the tick rule made every bucket ~100% one-sided
+    and pinned VPIN near 1.0 for every name. BVC keys on the price move per bucket,
+    yielding graded imbalances that actually discriminate toxic from normal flow.
 
     Args:
         conn:               SQLite connection (row_factory=sqlite3.Row OK)
@@ -137,73 +147,60 @@ def calc_vpin(
         result_base['error'] = f'insufficient ticks ({len(ticks) if ticks else 0})'
         return result_base
 
-    # ── Step 3: Fill volume buckets ──────────────────────────────────────
-    buckets = []
-    cur_buy = 0
-    cur_sell = 0
+    # ── Step 3: Fill volume buckets, recording each bucket's closing price ──
+    # (tick_type is intentionally ignored — BVC classifies on price change, not
+    #  the per-tick up/down rule that saturated VPIN on IDX run-structured data.)
+    bucket_closes = []
+    start_price = None
     cur_vol = 0
     total_vol = 0
 
     for row in ticks:
         price = row[0]
         vol = row[1]
-        ttype = row[2]
-
         if vol is None or vol <= 0:
             continue
-
+        if start_price is None:
+            start_price = price
         total_vol += vol
-
-        # Classify volume
-        if ttype == 'up':
-            cur_buy += vol
-        elif ttype == 'down':
-            cur_sell += vol
-        else:
-            # 'unchanged' or None — split 50/50
-            half = vol // 2
-            cur_buy += half
-            cur_sell += vol - half
-
         cur_vol += vol
-
-        # Fill buckets (handle overflow for multi-bucket fills)
+        # a single large tick may complete several buckets, all at this price
         while cur_vol >= bucket_size:
-            # Proportionally allocate to this bucket
-            if cur_vol > 0:
-                fill_ratio = bucket_size / cur_vol
-                b_buy = int(cur_buy * fill_ratio)
-                b_sell = bucket_size - b_buy  # ensure exact bucket_size
-            else:
-                b_buy = b_sell = 0
-
-            imbalance = abs(b_buy - b_sell) / bucket_size
-
-            buckets.append({
-                'bucket_id': len(buckets) + 1,
-                'v_buy': b_buy,
-                'v_sell': b_sell,
-                'imbalance': round(imbalance, 4),
-                'direction': 'BUY' if b_buy > b_sell else 'SELL',
-            })
-
-            # Carry over remainder
-            overflow_buy = cur_buy - b_buy
-            overflow_sell = cur_sell - b_sell
-            overflow_vol = cur_vol - bucket_size
-
-            cur_buy = max(overflow_buy, 0)
-            cur_sell = max(overflow_sell, 0)
-            cur_vol = max(overflow_vol, 0)
+            bucket_closes.append(price)
+            cur_vol -= bucket_size
 
     result_base['total_volume'] = total_vol
-    result_base['bucket_count'] = len(buckets)
+    result_base['bucket_count'] = len(bucket_closes)
 
-    # ── Step 4: Calculate VPIN ───────────────────────────────────────────
-    if len(buckets) < min_buckets:
-        result_base['error'] = f'insufficient buckets ({len(buckets)}/{min_buckets})'
-        result_base['buckets'] = buckets
+    if len(bucket_closes) < min_buckets:
+        result_base['error'] = f'insufficient buckets ({len(bucket_closes)}/{min_buckets})'
         return result_base
+
+    # ── Step 4: Bulk Volume Classification + VPIN ────────────────────────
+    # ΔP per bucket = close − previous close (first bucket vs the day's start).
+    deltas = []
+    prev = start_price
+    for p in bucket_closes:
+        deltas.append(p - prev)
+        prev = p
+
+    mean_dp = sum(deltas) / len(deltas)
+    sigma = (sum((d - mean_dp) ** 2 for d in deltas) / len(deltas)) ** 0.5
+
+    buckets = []
+    for i, d in enumerate(deltas):
+        if sigma > 0:
+            buy_frac = 0.5 * (1.0 + math.erf((d / sigma) / _SQRT2))   # Φ(ΔP/σ)
+        else:
+            buy_frac = 0.5                                            # no price variation
+        imbalance = abs(2.0 * buy_frac - 1.0)
+        buckets.append({
+            'bucket_id': i + 1,
+            'v_buy': int(round(buy_frac * bucket_size)),
+            'v_sell': int(round((1.0 - buy_frac) * bucket_size)),
+            'imbalance': round(imbalance, 4),
+            'direction': 'BUY' if buy_frac >= 0.5 else 'SELL',
+        })
 
     # Take last n_buckets (or all if fewer)
     window = buckets[-n_buckets:]
@@ -307,12 +304,17 @@ def get_latest_vpin_date(conn, ticker, date):
 def get_market_vpin_summary(conn: sqlite3.Connection, date: str) -> dict:
     """Aggregate per-ticker VPIN from daily_screen into a market-wide toxicity score.
 
-    Thresholds from macro_idx.md crash analysis:
-      CRITICAL : pct_above_095 >= 75% OR avg_vpin >= 0.95
-      RED      : pct_above_08 >= 70%  OR avg_vpin >= 0.90
-      ORANGE   : pct_above_08 >= 50%  OR avg_vpin >= 0.80
-      YELLOW   : pct_above_08 >= 30%  OR avg_vpin >= 0.70
+    Thresholds recalibrated for Bulk Volume Classification (BVC) VPIN, which centers
+    ~0.30 on a normal day and tops out ~0.6-0.7 (the legacy tick-rule pinned ~1.0, so
+    the old 0.70-0.95 thresholds never fire under BVC). Keyed on the average plus the
+    share of names above 0.5 (HIGH+). PROVISIONAL — tune once a volatile/crash day is
+    observed under BVC:
+      CRITICAL : avg_vpin >= 0.50 OR pct_above_05 >= 60%
+      RED      : avg_vpin >= 0.45 OR pct_above_05 >= 45%
+      ORANGE   : avg_vpin >= 0.40 OR pct_above_05 >= 30%
+      YELLOW   : avg_vpin >= 0.35 OR pct_above_05 >= 15%
       GREEN    : below all thresholds
+    (pct_above_08/095 are retained for display/back-compat but are ~0 under BVC.)
     """
     rows = conn.execute(
         "SELECT vpin FROM daily_screen WHERE date=? AND vpin IS NOT NULL",
@@ -334,18 +336,22 @@ def get_market_vpin_summary(conn: sqlite3.Connection, date: str) -> dict:
     vpins = [r[0] for r in rows]
     n = len(vpins)
     avg = sum(vpins) / n
+    above_05 = sum(1 for v in vpins if v > 0.5)
+    above_06 = sum(1 for v in vpins if v > 0.6)
     above_08 = sum(1 for v in vpins if v > 0.8)
     above_095 = sum(1 for v in vpins if v > 0.95)
+    pct_05 = round(above_05 / n * 100, 1)
+    pct_06 = round(above_06 / n * 100, 1)
     pct_08 = round(above_08 / n * 100, 1)
     pct_095 = round(above_095 / n * 100, 1)
 
-    if pct_095 >= 75 or avg >= 0.95:
+    if avg >= 0.50 or pct_05 >= 60:
         label = 'CRITICAL'
-    elif pct_08 >= 70 or avg >= 0.90:
+    elif avg >= 0.45 or pct_05 >= 45:
         label = 'RED'
-    elif pct_08 >= 50 or avg >= 0.80:
+    elif avg >= 0.40 or pct_05 >= 30:
         label = 'ORANGE'
-    elif pct_08 >= 30 or avg >= 0.70:
+    elif avg >= 0.35 or pct_05 >= 15:
         label = 'YELLOW'
     else:
         label = 'GREEN'
@@ -354,8 +360,11 @@ def get_market_vpin_summary(conn: sqlite3.Connection, date: str) -> dict:
         'date': date,
         'tickers_with_vpin': n,
         'avg_vpin': round(avg, 4),
+        'pct_above_05': pct_05,
+        'pct_above_06': pct_06,
         'pct_above_08': pct_08,
         'pct_above_095': pct_095,
+        'count_above_05': above_05,
         'count_above_08': above_08,
         'count_above_095': above_095,
         'label': label,

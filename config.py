@@ -21,3 +21,14 @@ WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
 WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/telegram/updates")
 TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "")
+
+# Edge-score pipeline mode: off | shadow | enforce (env EDGE_SCORE_MODE).
+#   off     — system behaves exactly as before (default).
+#   shadow  — deterministic edge vetoes run and are logged; no trade impact.
+#   enforce — only survivors reach the firm; size_mult = round(edge, 2).
+EDGE_SCORE_MODE = os.getenv("EDGE_SCORE_MODE", "off").strip().lower()
+
+
+def edge_mode() -> str:
+    """Current edge-score mode (re-read from env each call)."""
+    return os.getenv("EDGE_SCORE_MODE", EDGE_SCORE_MODE).strip().lower()

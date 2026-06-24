@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 from ..client import DeepSeekClient
+from ..guardrails import normalize_quant
 from ..schemas import AgentResult, SignalCandidate
 
 _PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "risk_v2.md"
@@ -22,8 +23,12 @@ async def run(
 ) -> AgentResult:
     start = time.monotonic()
     try:
+        cand = candidate.model_dump()
+        # quant_score normalized to 0-1 so the prompt's gate is scale-consistent
+        # across callers (flow -5..+5, premarket/eod 0-100). Raw stays as `score`.
+        cand["quant_score"] = round(normalize_quant(cand.get("score"), candidate.strategy), 3)
         user_msg = json.dumps({
-            "candidate": candidate.model_dump(),
+            "candidate": cand,
             "analyst_reports": [
                 {"role": r.role, "status": r.status, "output": r.output, "error": r.error}
                 for r in analyst_results

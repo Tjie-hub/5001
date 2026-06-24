@@ -155,23 +155,13 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
 
         signals = vpin_multi.scan_vpin_signals(conn, tickers, trade_date)
         
-        # Blackout check for VPIN signals
+        # Blackout check for VPIN signals (Telegram suppressed — alerts disabled per config)
         _blackout, _bl_reason = is_blackout_day()
         if _blackout:
             logger.warning(f"[screener] VPIN BLACKOUT aktif: {_bl_reason} — VPIN alerts dilewati.")
-            if send_telegram:
-                try:
-                    send_telegram(f"⛔ <b>VPIN Scan Paused — Blackout</b>\n\n{_bl_reason}\n\nNo VPIN alerts today.")
-                except Exception:
-                    pass
         else:
             for sig in signals:
-                if send_telegram:
-                    try:
-                        msg = vpin_multi.format_vpin_alert(sig)
-                        send_telegram(msg)
-                    except Exception:
-                        pass
+                logger.info(f"[screener] VPIN signal (silent): {sig.get('ticker')} {sig.get('signal')}")
     logger.info(f"[screener] VPIN: {vpin_ok} done, {len(signals)} signals")
 
     # ── Coverage fallback: insert neutral entries for tickers without daily_screen data today

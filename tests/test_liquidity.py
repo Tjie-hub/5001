@@ -6,13 +6,17 @@ import pytest
 from engine.liquidity import (
     compute_value_score,
     get_adv_30d,
+    get_adv_value_30d,
     get_keystats,
     passes_liquidity_gate,
     passes_value_gate,
+    passes_value_liquidity_gate,
+    select_top_liquid_longs,
     get_liquidity_value,
     ADV_MIN_LOTS,
     MARKET_CAP_MIN,
     VALUE_SCORE_MIN,
+    VALUE_LIQ_MIN_IDR,
 )
 
 DATE = '2026-06-08'
@@ -213,3 +217,78 @@ class TestGetLiquidityValue:
         conn.close()
         result = get_liquidity_value(db_path, 'X', DATE)
         assert result['is_liquid'] is True
+
+
+# ── value-base liquidity (turnover in Rp = close*volume) ──────────────────────
+
+class TestValueLiquidityGate:
+    # _make_db hardcodes close=105, so daily turnover = 105 * volume.
+
+    def test_get_adv_value_computes_turnover(self):
+        rows = [{'ticker':'AAA','date':f'2026-05-{d:02d}','volume':1_000_000}
+                for d in range(1, 31)]
+        _, conn = _make_db(ohlcv_rows=rows)
+        adv_val = get_adv_value_30d(conn, 'AAA', DATE)
+        assert adv_val == 105 * 1_000_000   # Rp 105M/day
+
+    def test_high_turnover_passes(self):
+        # 105 * 100M = Rp 10.5bn/day avg > Rp 5bn floor
+        rows = [{'ticker':'AAA','date':f'2026-05-{d:02d}','volume':100_000_000}
+                for d in range(1, 31)]
+        _, conn = _make_db(ohlcv_rows=rows)
+        ok, _ = passes_value_liquidity_gate(conn, 'AAA', DATE)
+        assert ok is True
+
+    def test_low_turnover_blocked(self):
+        # 105 * 10K = Rp 1.05M/day avg < Rp 5bn floor
+        rows = [{'ticker':'BBB','date':f'2026-05-{d:02d}','volume':10_000}
+                for d in range(1, 31)]
+        _, conn = _make_db(ohlcv_rows=rows)
+        ok, reason = passes_value_liquidity_gate(conn, 'BBB', DATE)
+        assert ok is False
+        assert 'bn' in reason
+
+    def test_missing_data_fails_open(self):
+        _, conn = _make_db(ohlcv_rows=[])
+        ok, _ = passes_value_liquidity_gate(conn, 'ZZZ', DATE)
+        assert ok is True
+
+    def test_custom_threshold(self):
+        # Rp 10.5bn/day avg passes default but fails a Rp 50bn floor
+        rows = [{'ticker':'AAA','date':f'2026-05-{d:02d}','volume':100_000_000}
+                for d in range(1, 31)]
+        _, conn = _make_db(ohlcv_rows=rows)
+        ok, _ = passes_value_liquidity_gate(conn, 'AAA', DATE, min_idr=50_000_000_000)
+        assert ok is False
+
+
+class TestSelectTopLiquidLongs:
+    def _db_with(self, liquid, illiquid):
+        ohlcv = []
+        for t in liquid:
+            ohlcv += [{'ticker': t, 'date': f'2026-05-{d:02d}', 'volume': 100_000_000}
+                      for d in range(1, 31)]
+        for t in illiquid:
+            ohlcv += [{'ticker': t, 'date': f'2026-05-{d:02d}', 'volume': 1_000}
+                      for d in range(1, 31)]
+        _, conn = _make_db(ohlcv_rows=ohlcv)
+        return conn
+
+    def test_excludes_shorts_and_illiquid_and_caps_at_top_n(self):
+        rows = [
+            {'ticker': 'LIQ1', 'direction': 'long'},
+            {'ticker': 'SHT',  'direction': 'short'},   # dropped: not long
+            {'ticker': 'LIQ2', 'direction': 'long'},
+            {'ticker': 'ILQ',  'direction': 'long'},     # dropped: illiquid
+            {'ticker': 'LIQ3', 'direction': 'long'},
+            {'ticker': 'LIQ4', 'direction': 'long'},     # dropped: beyond top_n
+        ]
+        conn = self._db_with(liquid=['LIQ1', 'LIQ2', 'LIQ3', 'LIQ4'], illiquid=['ILQ'])
+        picked = select_top_liquid_longs(rows, conn, DATE, top_n=3)
+        assert [r['ticker'] for r in picked] == ['LIQ1', 'LIQ2', 'LIQ3']
+
+    def test_preserves_input_ranking_order(self):
+        rows = [{'ticker': t, 'direction': 'long'} for t in ('B', 'A', 'C')]
+        conn = self._db_with(liquid=['A', 'B', 'C'], illiquid=[])
+        picked = select_top_liquid_longs(rows, conn, DATE, top_n=3)
+        assert [r['ticker'] for r in picked] == ['B', 'A', 'C']

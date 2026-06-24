@@ -4,6 +4,29 @@ import sqlite3
 _SUPPORT_LEVELS = [6200, 6000, 5500]
 
 
+def tech_direction(closes, short: int = 20, long: int = 50) -> str:
+    """Deterministic technical direction from MA structure.
+
+    `closes` is a chronological list of closing prices (oldest first). Used by
+    the pre-LLM veto stage (d2/d3) — calc_votes is momentum-only and does not
+    express bearishness, so direction is read from the moving-average stack.
+
+      BULLISH: last close > MA(short) and MA(short) >= MA(long)
+      BEARISH: last close < MA(short) and MA(short) <= MA(long)
+      NEUTRAL: anything else (incl. insufficient data)
+    """
+    if not closes or len(closes) < short + 1:
+        return 'NEUTRAL'
+    c = closes[-1]
+    ma_s = sum(closes[-short:]) / short
+    ma_l = sum(closes[-long:]) / long if len(closes) >= long else ma_s
+    if c > ma_s and ma_s >= ma_l:
+        return 'BULLISH'
+    if c < ma_s and ma_s <= ma_l:
+        return 'BEARISH'
+    return 'NEUTRAL'
+
+
 def detect_ihsg_technicals(conn: sqlite3.Connection, date: str) -> dict:
     """Detect death cross, lower high sequence, and support breaks for IHSG.
 

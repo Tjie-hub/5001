@@ -115,6 +115,57 @@ def test_calc_vpin_multi_saturated_window_neutralizes_zscore():
     conn.close()
 
 
+def _seed_ticks(conn, ticker, prices, vol=1000, tick_type="down", date="2026-06-23"):
+    for i, p in enumerate(prices):
+        conn.execute(
+            "INSERT INTO ticks (date,ticker,time,price,volume,tick_type) "
+            "VALUES (?,?,?,?,?,?)",
+            (date, ticker, f"09:{i:02d}", p, vol, tick_type),
+        )
+    conn.commit()
+
+
+def test_bvc_flat_prices_zero_vpin():
+    # no price movement → no informed flow → VPIN 0 (not saturated)
+    conn = _make_conn()
+    _seed_ticks(conn, "AAAA", [100] * 12)
+    r = calc_vpin(conn, "AAAA", "2026-06-23", bucket_size=1000, min_buckets=5)
+    assert r["error"] is None
+    assert r["vpin"] == 0.0
+    conn.close()
+
+
+def test_bvc_ignores_tick_type_uses_price():
+    """Regression: data that saturated the old tick rule (all ticks 'down' →
+    100% sell → VPIN ~1.0) but with a flat price must now read ~0 under BVC."""
+    conn = _make_conn()
+    _seed_ticks(conn, "BBBB", [100] * 12, tick_type="down")
+    r = calc_vpin(conn, "BBBB", "2026-06-23", bucket_size=1000, min_buckets=5)
+    assert r["vpin"] < 0.1
+    conn.close()
+
+
+def test_bvc_mixed_moves_not_saturated_and_graded():
+    conn = _make_conn()
+    prices = [100, 100, 101, 100, 100, 101, 100, 99, 100, 100, 101, 100]
+    _seed_ticks(conn, "CCCC", prices, tick_type="down")
+    r = calc_vpin(conn, "CCCC", "2026-06-23", bucket_size=1000, min_buckets=5)
+    assert 0.0 < r["vpin"] < 0.9                              # de-saturated
+    assert max(b["imbalance"] for b in r["buckets"]) < 1.0    # graded, not pinned at 1.0
+    conn.close()
+
+
+def test_bvc_strong_uptrend_high_vpin():
+    conn = _make_conn()
+    prices = [100, 105, 113, 116, 126, 132, 141, 153, 160, 172]  # large varied up moves
+    _seed_ticks(conn, "DDDD", prices, tick_type="unchanged")
+    r = calc_vpin(conn, "DDDD", "2026-06-23", bucket_size=1000, min_buckets=5)
+    assert r["vpin"] > 0.6                                       # informed one-sided flow
+    buys = sum(1 for b in r["buckets"] if b["direction"] == "BUY")
+    assert buys > len(r["buckets"]) // 2
+    conn.close()
+
+
 def test_signal_map_keys_are_tuples():
     for key in SIGNAL_MAP:
         assert isinstance(key, tuple)

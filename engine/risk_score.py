@@ -37,9 +37,12 @@ _TECH_LABEL_SCORE = {
 
 def _vpin_risk(summary: dict) -> float:
     base = _VPIN_LABEL_SCORE.get(summary.get('label', ''), 40)
-    # Boost from pct_above_095
-    pct_095 = summary.get('pct_above_095') or 0.0
-    boost = min(pct_095 * 0.3, 15)  # up to +15 pts
+    # Boost from the extreme tail. Under BVC VPIN tops out ~0.6-0.7, so the toxic
+    # tail is "share of names above 0.6" (the legacy pct_above_095 is ~0 under BVC).
+    pct_06 = summary.get('pct_above_06')
+    if pct_06 is None:  # back-compat with old saturated summaries
+        pct_06 = summary.get('pct_above_095') or 0.0
+    boost = min(pct_06 * 0.5, 15)  # up to +15 pts
     return min(base + boost, 100)
 
 

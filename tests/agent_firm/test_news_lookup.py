@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from datetime import date, timedelta
 
 import pytest
 
@@ -16,18 +17,22 @@ def news_db(tmp_path):
             headlines_json TEXT, updated_at TEXT
         )
     """)
+    # Dates are anchored to "today" so the relative ``date('now', '-N days')``
+    # window in lookup() always covers them (avoids a time-bomb as real time passes).
+    d0 = date.today().isoformat()
+    d1 = (date.today() - timedelta(days=1)).isoformat()
     conn.executemany(
         "INSERT INTO news_mentions VALUES (?,?,?,?,?)",
         [
-            ("BBRI", "2026-05-19", 3,
+            ("BBRI", d0, 3,
              json.dumps(["Headline A", "Headline B", "Headline C"]),
-             "2026-05-19 20:00"),
-            ("BBRI", "2026-05-18", 2,
+             f"{d0} 20:00"),
+            ("BBRI", d1, 2,
              json.dumps(["Headline D", "Headline E"]),
-             "2026-05-18 20:00"),
-            ("BBCA", "2026-05-19", 1,
+             f"{d1} 20:00"),
+            ("BBCA", d0, 1,
              json.dumps(["Headline F"]),
-             "2026-05-19 20:00"),
+             f"{d0} 20:00"),
         ]
     )
     conn.commit()

@@ -50,6 +50,8 @@ from scheduler.jobs import (  # noqa: F401
     run_hourly_risk_bundle,
     run_eod_risk_summary,
     run_market_health_report,
+    run_premarket_firm_scan,
+    run_eod_trade_plan,
     run_vpin_daily_batch,
     run_vpin_backfill,
     _refresh_backtest_cache,
@@ -167,6 +169,17 @@ def start_scheduler():
         day_of_week="mon-fri", hour=8, minute=45, timezone=WIB),
         id="market_health_report", name="Market Health Report 08:45")
 
+    # Premarket agent-firm shortlist — 08:35 WIB (vets last night's unified watchlist)
+    scheduler.add_job(run_premarket_firm_scan, CronTrigger(
+        day_of_week="mon-fri", hour=8, minute=35, timezone=WIB),
+        id="premarket_firm_scan", name="Premarket Firm Scan 08:35")
+
+    # EOD consolidated trade plan — 16:40 WIB (after screener EOD 16:15 + premover 16:30)
+    # Merges all long sources → agent firm → single ranked Telegram message.
+    scheduler.add_job(run_eod_trade_plan, CronTrigger(
+        day_of_week="mon-fri", hour=16, minute=40, timezone=WIB),
+        id="eod_trade_plan", name="EOD Trade Plan 16:40")
+
     scheduler.start()
     print("Scheduler started:")
     print("  📊 SIGNAL REPORT: 16:00")
@@ -175,6 +188,8 @@ def start_scheduler():
     print("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
     print("  🔄 BACKTEST ROLLER: 1st Sun/month 10:00")
     print("  🏥 MARKET HEALTH: 08:45 pre-market")
+    print("  🌅 PREMARKET FIRM: 08:35 pre-market (unified watchlist → agent firm)")
+    print("  📋 EOD TRADE PLAN: 16:40 (all long sources → agent firm → 1 ranked msg)")
     return scheduler
 
 

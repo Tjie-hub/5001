@@ -251,6 +251,7 @@ def scan_momentum_signals():
     _f_regime      = int(_cfg.get("filter_regime",      1))
     _f_vpin        = int(_cfg.get("filter_vpin",        0))
     _f_liquidity   = int(_cfg.get("filter_liquidity",   0))
+    _wf_score_gate = float(_cfg.get("wf_score_gate",   0.0))
 
     tickers = get_all_tickers()
     wf_map = {}
@@ -403,6 +404,8 @@ def scan_momentum_signals():
                 consistency = wf["consistency_pct"] if wf else None
                 weighted    = wf["weighted_score"]   if wf else 0
                 if wf and consistency < MIN_CONSIST:
+                    continue
+                if wf and _wf_score_gate > 0 and weighted < _wf_score_gate:
                     continue
                 votes, vote_labels = calc_votes(df)
                 try:
@@ -589,14 +592,19 @@ def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
     """
     import sqlite3
     try:
+        from paper_trade import get_config as _gc
+        _wf_gate = float(_gc().get("wf_score_gate", 0.0))
+    except Exception:
+        _wf_gate = 0.0
+    try:
         conn = sqlite3.connect(DB_PATH)
         rows = conn.execute("""
             SELECT strategy, consistency_pct, weighted_score
             FROM wf_scores
             WHERE ticker = ? AND consistency_pct >= ?
-              AND avg_return_pct > 0 AND weighted_score > 0
+              AND avg_return_pct > 0 AND weighted_score >= ?
             ORDER BY weighted_score DESC
-        """, (ticker, min_consistency)).fetchall()
+        """, (ticker, min_consistency, _wf_gate)).fetchall()
         conn.close()
         disabled = _get_disabled_strategies()
         return [r[0] for r in rows if r[0] not in disabled]
@@ -750,15 +758,21 @@ def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
         try:
             conn = sqlite3.connect(DB_PATH)
             placeholders = ','.join('?' * len(wf_candidates))
+            try:
+                from paper_trade import get_config as _gc
+                _wf_gate = float(_gc().get("wf_score_gate", 0.0))
+            except Exception:
+                _wf_gate = 0.0
             rows = conn.execute(f"""
                 SELECT strategy, weighted_score
                 FROM wf_scores
                 WHERE ticker = ?
                   AND strategy IN ({placeholders})
                   AND consistency_pct >= ?
-                  AND avg_return_pct > 0 AND weighted_score > 0
+                  AND avg_return_pct > 0
+                  AND weighted_score >= ?
                 ORDER BY weighted_score DESC
-            """, [ticker, *wf_candidates, min_consistency]).fetchall()
+            """, [ticker, *wf_candidates, min_consistency, _wf_gate]).fetchall()
             conn.close()
             selected = [r[0] for r in rows]
         except Exception:
@@ -792,6 +806,68 @@ def _safe_regime(df: pd.DataFrame) -> str:
         return detect_regime(df)
     except Exception:
         return 'UNKNOWN'
+
+
+def run_edge_veto_stage(intersection_results, flow_confirmed, ohlcv_map,
+                        date_str, time_str):
+    """Phase 3 — deterministic pre-LLM edge vetoes. Gated by EDGE_SCORE_MODE.
+
+    off     → no-op (returns inputs unchanged).
+    shadow  → enrich + veto + log survivors; inputs returned unchanged.
+    enforce → restrict BOTH intersection_results and flow_confirmed to the
+              survivors and attach edge-based size_mult (agent_size_hint).
+
+    Fail-open: any error logs and returns inputs unchanged.
+    Returns (intersection_results, flow_confirmed).
+    """
+    from config import edge_mode
+    mode = edge_mode()
+    if mode == 'off':
+        return intersection_results, flow_confirmed
+    try:
+        from engine.edge_enrich import enrich_candidate, market_regime
+        from engine.veto import apply_vetoes
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            mreg = market_regime(conn)
+            open_n = conn.execute(
+                "SELECT COUNT(*) FROM paper_trades WHERE status='OPEN'"
+            ).fetchone()[0]
+            enriched = []
+            for r in intersection_results:
+                df = ohlcv_map.get(r['ticker'])
+                closes = df['close'].tolist() if df is not None else []
+                votes = None
+                try:
+                    if df is not None:
+                        votes, _ = calc_votes(df)
+                except Exception:
+                    votes = None
+                strats = r.get('strategies', [])
+                enriched.append(enrich_candidate(
+                    conn, r['ticker'], date_str, closes=closes,
+                    regime=r.get('adaptive_regime'),
+                    sources=(), strategies=strats, technical_votes=votes))
+            survivors = apply_vetoes(enriched, mreg, open_n)
+        finally:
+            conn.close()
+    except Exception as e:
+        logging.warning(f"[{time_str}] Edge veto error (fail-open): {e}")
+        return intersection_results, flow_confirmed
+
+    keep = {s['ticker']: s for s in survivors}
+    detail = ', '.join(f"{s['ticker']}({s['edge_score']:.2f})" for s in survivors) or 'none'
+    logging.info(f"[{time_str}] Edge veto ({mode}, market={mreg}, open={open_n}): "
+                 f"{len(survivors)}/{len(intersection_results)} survive → {detail}")
+    if mode != 'enforce':
+        return intersection_results, flow_confirmed
+
+    kept_ir = [r for r in intersection_results if r['ticker'] in keep]
+    kept_fc = [r for r in flow_confirmed if r['ticker'] in keep]
+    for r in kept_ir + kept_fc:
+        r['edge_score'] = keep[r['ticker']]['edge_score']
+        r['agent_size_hint'] = keep[r['ticker']]['size_mult']
+    return kept_ir, kept_fc
 
 
 def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str):
@@ -856,10 +932,12 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
 
 
 def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
-    """Rank active BEAR watchlist tickers via agent firm; send Telegram digest.
+    """Rank active BEAR watchlist tickers via agent firm; log the ranking.
 
     Called after the bear watchlist scout so the agent can surface which
     oversold bear names have the strongest bull case when regime flips.
+    Log-only by design (no Telegram) since the 2026-06-16 lean-notification
+    audit (commit 89baa33) — this ranking is reference signal, not an alert.
     Fail-silent: any error is logged and swallowed.
     """
     if not watchlist_tickers:
@@ -1130,16 +1208,6 @@ def scheduled_multi_strategy_scan():
                   f"(avg={_vpin_summary['avg_vpin']:.4f} "
                   f">0.8={_vpin_summary['pct_above_08']}% "
                   f">0.95={_vpin_summary['pct_above_095']}%)")
-            if _vpin_summary['label'] in ('CRITICAL', 'RED'):
-                send_telegram(
-                    f"🚨 <b>VPIN Alert: {_vpin_summary['label']}</b>\n\n"
-                    f"avg VPIN = {_vpin_summary['avg_vpin']:.4f}\n"
-                    f"Tickers >0.80: {_vpin_summary['pct_above_08']}% "
-                    f"({_vpin_summary['count_above_08']})\n"
-                    f"Tickers >0.95: {_vpin_summary['pct_above_095']}% "
-                    f"({_vpin_summary['count_above_095']})\n\n"
-                    f"<i>High VPIN = informed trading / toxicity spike.</i>"
-                )
     except Exception as _ve:
         logging.warning(f"[scan] VPIN summary error: {_ve}")
 
@@ -1339,6 +1407,11 @@ def scheduled_multi_strategy_scan():
     except Exception as _wl_err:
         print(f"[{time_str}] Bear watchlist error (fail-open): {_wl_err}")
     # ── End bear watchlist ────────────────────────────────────────────────────
+
+    # ── Pre-LLM edge veto (Phase 3, gated by EDGE_SCORE_MODE) ─────────────────
+    intersection_results, flow_confirmed = run_edge_veto_stage(
+        intersection_results, flow_confirmed, ohlcv_map, date_str, time_str
+    )
 
     # ── Agent Firm evaluation ─────────────────────────────────────────────────
     flow_confirmed = run_agent_firm_gate(

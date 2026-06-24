@@ -16,6 +16,7 @@ from langgraph.graph import END, StateGraph
 from . import config
 from .agents import bear, bull, flow, news, regime, risk, technical
 from .client import DeepSeekClient
+from .guardrails import apply_guardrails
 from .schemas import AgentDecision, AgentResult, AgentState, SignalCandidate
 from .tools import news_lookup
 from .tools.sqlite_query import query
@@ -207,6 +208,16 @@ async def _run_risk(state: AgentState) -> dict:
         confidence = out.get("confidence")
         size_hint = out.get("size_hint")
         rationale = out.get("rationale")
+        # Deterministic guardrails (post-LLM): override approve→veto on a hard
+        # flow contradiction or sub-floor confidence in a weak regime. Keyed on
+        # analyst verdicts, not the scale-inconsistent quant_score.
+        analysts = [state["technical_result"], state["flow_result"],
+                    state["regime_result"], state["news_result"]]
+        new_decision, override = apply_guardrails(decision_str, confidence, analysts)
+        if override:
+            decision_str = new_decision
+            size_hint = 0.0
+            rationale = f"[{override}] {rationale or ''}".strip()
 
     traces = [
         state["technical_result"], state["flow_result"],

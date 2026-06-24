@@ -254,3 +254,13 @@ _Source: user request (2026-05-27). Pre-entry signal gate: restrict trades to hi
 - [x] R14. Prometheus metrics endpoint (scan duration, signals generated, open trades)
 - [x] R15. Multi-timeframe support (hourly/daily/weekly bar aggregation — like QC TradeBarConsolidator)
 - [x] R16. Strategy warmup caching (avoid recomputing indicators every scan; cache per ticker per day)
+
+---
+
+## ✅ Sprint 14 — R12: GitHub Actions CI (SHIPPED 2026-06-22)
+
+- [x] **R12. GitHub Actions CI + pytest for core engine** — `.github/workflows/test.yml`: runs full pytest suite on every push to `master` + all PRs, Python 3.12, pip cache, concurrency-cancel. Made the suite CI-safe in the process:
+  - Restored orphaned `screener/brpt_filter.py` (committed import on `feat/chart-viewer` referenced a module that lived only on `fix/news-fetch-premarket-overnight`) — was blocking all test collection.
+  - Fixed time-bomb in `tests/agent_firm/test_news_lookup.py` (hardcoded May dates vs relative `-30 days` window → anchored fixture to `date.today()`).
+  - Fixed `tests/test_bear_watchlist_ranking.py`: `create=True` on `patch.object`, updated to log-only contract (Telegram send was intentionally removed in lean-notification audit `89baa33`), and isolated DB via temp `agent_decisions` table (was depending on ambient gitignored live DB). Updated stale docstring on `rank_bear_watchlist_and_notify`.
+  - Verified: **597 tests pass with `data/walkforward.db` removed** (true CI condition).

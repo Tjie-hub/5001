@@ -93,6 +93,46 @@ async def test_evaluate_async_v2_runs_all_7_agents_and_persists(monkeypatch, tmp
     assert trace_count == 7
 
 
+@pytest.mark.asyncio
+async def test_guardrail_overrides_llm_approve_to_veto(monkeypatch, tmp_path):
+    """Risk LLM says approve, but flow is BEARISH + technical not bullish → the
+    deterministic guardrail in _run_risk must downgrade the final decision to veto."""
+    monkeypatch.setenv("AGENT_FIRM_ENABLED", "true")
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "t.db"))
+    monkeypatch.setenv("TAVILY_API_KEY", "")
+    import importlib
+    from data import db as data_db
+    importlib.reload(data_db)
+    from engine.agent_firm import config, firm
+    importlib.reload(config)
+    importlib.reload(firm)
+    _seed_db(tmp_path / "t.db")
+
+    candidate = SignalCandidate(ticker="BBRI", strategy="vol_weighted",
+                                score=4.0, scan_time="2026-05-20T10:00:00+07:00")
+
+    def _verdict(role, out):
+        return AgentResult(role=role, status="ok", output=out,
+                           tokens_in=10, tokens_out=5, duration_s=0.1)
+
+    with patch("engine.agent_firm.agents.technical.run", return_value=_verdict("technical", {"verdict": "NEUTRAL"})), \
+         patch("engine.agent_firm.agents.flow.run",      return_value=_verdict("flow", {"flow_verdict": "BEARISH"})), \
+         patch("engine.agent_firm.agents.regime.run",    return_value=_verdict("regime", {"regime_call": "SIDEWAYS"})), \
+         patch("engine.agent_firm.agents.news.run",      return_value=_verdict("news", {"verdict": "NEUTRAL"})), \
+         patch("engine.agent_firm.agents.bull.run",      return_value=_verdict("bull", {})), \
+         patch("engine.agent_firm.agents.bear.run",      return_value=_verdict("bear", {})), \
+         patch("engine.agent_firm.agents.risk.run",
+               return_value=AgentResult(role="risk", status="ok",
+                   output={"decision": "approve", "confidence": 0.7,
+                           "size_hint": 1.0, "rationale": "bullish narrative"},
+                   tokens_in=50, tokens_out=10, duration_s=0.3)):
+        decisions = await firm.evaluate_async([candidate])
+
+    assert decisions[0].decision == "veto"
+    assert "guardrail" in (decisions[0].rationale or "")
+    assert decisions[0].size_hint == 0.0
+
+
 def test_evaluate_returns_bypassed_when_disabled(monkeypatch, tmp_path):
     monkeypatch.setenv("AGENT_FIRM_ENABLED", "false")
     monkeypatch.setenv("DB_PATH", str(tmp_path / "t.db"))
