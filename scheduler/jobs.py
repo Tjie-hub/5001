@@ -752,6 +752,13 @@ def run_eod_trade_plan():
                          f"{len(survivors)}/{len(top)} survive; vetoed={vetoed}")
             if edge_mode() == 'enforce':
                 top = survivors
+
+        # VPIN gate: fetch most recently settled market VPIN summary (VPIN batch runs
+        # at 18:00, after this job at 16:40, so today's data may not exist yet).
+        vpin_summary = tp.get_vpin_gate(conn, date_str)
+        if vpin_summary:
+            logging.info(f"[{now_str}] EOD VPIN gate: {vpin_summary['label']} "
+                         f"(avg={vpin_summary.get('avg_vpin')}, date={vpin_summary.get('date')})")
     finally:
         conn.close()
 
@@ -761,7 +768,8 @@ def run_eod_trade_plan():
 
     if not top:
         # every candidate failed the directional pre-screen — ship an empty plan
-        send_telegram(tp.build_message([], regime, now.strftime('%d/%m'), degraded=False))
+        send_telegram(tp.build_message([], regime, now.strftime('%d/%m'), degraded=False,
+                                       vpin_summary=vpin_summary))
         print(f"[{now_str}] EOD trade plan: all candidates vetoed by edge pre-screen — empty plan sent")
         return
 
@@ -787,7 +795,8 @@ def run_eod_trade_plan():
         ranked, degraded = tp.fallback_rank(top), True
 
     try:
-        send_telegram(tp.build_message(ranked, regime, now.strftime('%d/%m'), degraded=degraded))
+        send_telegram(tp.build_message(ranked, regime, now.strftime('%d/%m'),
+                                       degraded=degraded, vpin_summary=vpin_summary))
     except Exception as e:
         print(f"[eod_trade_plan] Telegram error: {e}")
 

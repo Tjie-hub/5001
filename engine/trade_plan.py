@@ -198,6 +198,23 @@ def fallback_rank(cands: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+def get_vpin_gate(conn: sqlite3.Connection, date_str: str) -> Optional[dict]:
+    """Return market VPIN summary for the most recently settled date (≤ date_str).
+
+    The VPIN batch runs at 18:00 — after the 16:40 EOD trade plan — so today's
+    data may not exist yet.  We use the most recently computed date instead, which
+    is always yesterday or earlier.  Returns None when no VPIN data is available.
+    """
+    from engine.vpin import get_market_vpin_summary
+    row = conn.execute(
+        "SELECT MAX(date) FROM daily_screen WHERE date <= ? AND vpin IS NOT NULL",
+        (date_str,),
+    ).fetchone()
+    if not row or not row[0]:
+        return None
+    return get_market_vpin_summary(conn, row[0])
+
+
 def get_regime(conn: sqlite3.Connection, date_str: str) -> tuple[str, Optional[float]]:
     """Latest market-risk tier/score for the day (for the report header)."""
     row = conn.execute(
@@ -227,12 +244,23 @@ def _stars(conf: float) -> str:
     return "⭐"
 
 
+_VPIN_GATE_LABELS = ('CRITICAL', 'RED')  # labels that trigger the VPIN warning banner
+
+_VPIN_LABEL_EMOJI = {'CRITICAL': '🔴', 'RED': '🟠', 'ORANGE': '🟡',
+                     'YELLOW': '🟡', 'GREEN': '🟢'}
+
+
 def build_message(ranked: list[dict[str, Any]],
                   regime: tuple[str, Optional[float]],
                   date_str: str,
-                  degraded: bool = False) -> str:
+                  degraded: bool = False,
+                  vpin_summary: Optional[dict] = None) -> str:
     """Single Telegram HTML message. No raw <,>,& in dynamic text (tickers/numbers
-    only), so HTML parse_mode is safe."""
+    only), so HTML parse_mode is safe.
+
+    vpin_summary: result of get_vpin_gate() — adds a VPIN warning banner when
+    market microstructure is RED or CRITICAL.
+    """
     tier, score = regime
     emoji = _REGIME_EMOJI.get(tier, "⚪")
     score_txt = f"{score:.0f}/100" if score is not None else "n/a"
@@ -241,7 +269,18 @@ def build_message(ranked: list[dict[str, Any]],
 
     L = [f"<b>📊 IDX TRADE PLAN — {date_str}</b>",
          f"{emoji} Regime <b>{tier}</b> ({score_txt}) — next-session longs",
-         f"<i>{subtitle}</i>", ""]
+         f"<i>{subtitle}</i>"]
+
+    vpin_lbl = (vpin_summary or {}).get('label')
+    if vpin_lbl in _VPIN_GATE_LABELS:
+        ve = _VPIN_LABEL_EMOJI.get(vpin_lbl, '⚠️')
+        avg = vpin_summary.get('avg_vpin')
+        avg_txt = f"{avg:.3f}" if avg is not None else "n/a"
+        vpin_date = vpin_summary.get('date', '')
+        L.append(f"<b>{ve} VPIN {vpin_lbl}</b> — market microstructure elevated "
+                 f"(avg {avg_txt}, settled {vpin_date}); execute with extra caution")
+
+    L.append("")
 
     if not ranked:
         L.append("No firm-approved long setups today.")

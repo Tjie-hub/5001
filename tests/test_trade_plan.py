@@ -14,6 +14,7 @@ from engine.trade_plan import (
     fallback_rank,
     gather_long_candidates,
     get_regime,
+    get_vpin_gate,
     rank_approved,
     select_top,
 )
@@ -30,7 +31,7 @@ def conn():
         CREATE TABLE reversal_watchlist (scan_date TEXT, ticker TEXT, direction TEXT,
             conviction REAL, close REAL, smart_money TEXT, net_value REAL, reasons TEXT);
         CREATE TABLE daily_screen (date TEXT, ticker TEXT, close REAL,
-            vol_ratio REAL, signal TEXT);
+            vol_ratio REAL, signal TEXT, vpin REAL);
         CREATE TABLE agent_decisions (created_at TEXT, ticker TEXT, strategy TEXT,
             decision TEXT, confidence REAL);
         CREATE TABLE market_risk_log (date TEXT, scan_time TEXT, tier TEXT, score REAL);
@@ -46,19 +47,19 @@ def conn():
     # AKRA: reversal long + screen bullish + premarket approve  → confluence 3
     c.execute("INSERT INTO reversal_watchlist VALUES (?,?,?,?,?,?,?,?)",
               (DATE, "AKRA", "long", 40.0, 1275, "ACCUMULATION", 5e8, "[]"))
-    c.execute("INSERT INTO daily_screen VALUES (?,?,?,?,?)",
-              (DATE, "AKRA", 1275, 1.8, "bullish"))
+    c.execute("INSERT INTO daily_screen VALUES (?,?,?,?,?,?)",
+              (DATE, "AKRA", 1275, 1.8, "bullish", None))
     c.execute("INSERT INTO agent_decisions VALUES (?,?,?,?,?)",
               (f"{DATE} 08:35", "AKRA", "premarket", "approve", 0.65))
     # SURE: pure volume mover (vol_ratio 138)
-    c.execute("INSERT INTO daily_screen VALUES (?,?,?,?,?)",
-              (DATE, "SURE", 2770, 138.2, "bullish"))
+    c.execute("INSERT INTO daily_screen VALUES (?,?,?,?,?,?)",
+              (DATE, "SURE", 2770, 138.2, "bullish", None))
     # JSMR: screen 'watch' low vol — should NOT be picked up
-    c.execute("INSERT INTO daily_screen VALUES (?,?,?,?,?)",
-              (DATE, "JSMR", 2850, 1.2, "watch"))
+    c.execute("INSERT INTO daily_screen VALUES (?,?,?,?,?,?)",
+              (DATE, "JSMR", 2850, 1.2, "watch", None))
     # BTON: bearish on a huge volume spike (distribution dump) — must NOT be a long
-    c.execute("INSERT INTO daily_screen VALUES (?,?,?,?,?)",
-              (DATE, "BTON", 342, 35.7, "bearish"))
+    c.execute("INSERT INTO daily_screen VALUES (?,?,?,?,?,?)",
+              (DATE, "BTON", 342, 35.7, "bearish", None))
     c.execute("INSERT INTO market_risk_log VALUES (?,?,?,?)",
               (DATE, "14:35", "YELLOW", 45.0))
     c.commit()
@@ -226,3 +227,54 @@ class TestEdgePrescreen:
         c = self._db(); self._ohlcv(c, "EEEE", "up")
         surv, veto = edge_prescreen(c, [self._cand("EEEE", ["R"])], "BEAR", "2026-06-23")
         assert surv == [] and veto[0][1].startswith("d4")   # d4 not MR-exempt
+
+
+class TestVpinGate:
+    """VPIN gate: market microstructure warning banner in EOD trade plan."""
+
+    def _db_with_vpin(self, label_date, vpin_val):
+        c = sqlite3.connect(":memory:")
+        c.execute("CREATE TABLE daily_screen (date TEXT, ticker TEXT, vpin REAL)")
+        for ticker in ["TLKM", "BBCA", "ASII", "BBRI"]:
+            c.execute("INSERT INTO daily_screen VALUES (?,?,?)", (label_date, ticker, vpin_val))
+        c.commit()
+        return c
+
+    def test_get_vpin_gate_returns_none_when_no_data(self):
+        c = sqlite3.connect(":memory:")
+        c.execute("CREATE TABLE daily_screen (date TEXT, ticker TEXT, vpin REAL)")
+        assert get_vpin_gate(c, DATE) is None
+
+    def test_get_vpin_gate_uses_most_recently_settled_date(self):
+        # today has no VPIN; yesterday does — should use yesterday
+        yesterday = "2026-06-22"
+        c = self._db_with_vpin(yesterday, 0.55)
+        summary = get_vpin_gate(c, DATE)          # DATE = 2026-06-23
+        assert summary is not None
+        assert summary['date'] == yesterday
+
+    def test_get_vpin_gate_excludes_future_dates(self):
+        c = self._db_with_vpin("2026-06-25", 0.55)   # future date
+        assert get_vpin_gate(c, DATE) is None
+
+    def test_build_message_shows_vpin_warning_when_critical(self):
+        vpin_s = {'label': 'CRITICAL', 'avg_vpin': 0.52, 'date': '2026-06-22'}
+        msg = build_message([], ("YELLOW", 45.0), DATE, vpin_summary=vpin_s)
+        assert "VPIN CRITICAL" in msg
+        assert "0.522" in msg or "0.52" in msg    # avg displayed
+
+    def test_build_message_shows_vpin_warning_when_red(self):
+        vpin_s = {'label': 'RED', 'avg_vpin': 0.47, 'date': '2026-06-22'}
+        msg = build_message([], ("YELLOW", 45.0), DATE, vpin_summary=vpin_s)
+        assert "VPIN RED" in msg
+
+    def test_build_message_no_banner_when_vpin_orange_or_below(self):
+        for lbl in ('ORANGE', 'YELLOW', 'GREEN'):
+            vpin_s = {'label': lbl, 'avg_vpin': 0.35, 'date': '2026-06-22'}
+            msg = build_message([], ("YELLOW", 45.0), DATE, vpin_summary=vpin_s)
+            assert "VPIN" not in msg or "VPIN settle" in msg  # only footer mention
+
+    def test_build_message_no_banner_when_vpin_summary_none(self):
+        msg = build_message([], ("YELLOW", 45.0), DATE, vpin_summary=None)
+        # only VPIN reference is the footer note
+        assert msg.count("VPIN") == 1 and "settle" in msg

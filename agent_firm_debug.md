@@ -118,10 +118,22 @@ names and stay the firm's job). Reversal longs (tag R) get the `is_mean_reversio
 exempting d2/d3. Real-data replay (23/06, BEAR market): all 8 top candidates Tier-A vetoed →
 enforce mode would save 8/8 LLM calls for the same "no setups" outcome. 6 new tests.
 
+## Done — VPIN gate for EOD trade plan ✅ (2026-06-24)
+
+`engine/trade_plan.get_vpin_gate()` fetches the most recently settled market VPIN summary
+(using `MAX(date) ≤ scan_date` because the VPIN batch at 18:00 runs after the 16:40 EOD plan).
+When the market VPIN label is **RED** or **CRITICAL**, `build_message` inserts a warning banner:
+
+```
+🟠 VPIN RED — market microstructure elevated (avg 0.472, settled 2026-06-22); execute with extra caution
+```
+
+ORANGE/YELLOW/GREEN produce no banner. `vpin_summary=None` (no data) is silently skipped.
+6 new tests. 760 total pass.
+
 ## Still Open
 
-### Add a VPIN gate
-If VPIN is TOXIC across all picks, flag the entire report as degraded/high-risk. Today the report correctly shows "🟠 Regime ORANGE — risk-off" but a VPIN-based degradation would add another layer.
+*(nothing)*
 
 ## Key Files
 
