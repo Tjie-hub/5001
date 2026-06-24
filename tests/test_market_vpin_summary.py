@@ -100,45 +100,61 @@ def test_avg_vpin_computed_correctly():
     assert abs(result['avg_vpin'] - 0.8) < 0.001
 
 
-# ── Label thresholds ──────────────────────────────────────────────────────────
+# ── Label thresholds (BVC scale) ──────────────────────────────────────────────
+# BVC VPIN centers ~0.30 on a normal day; labels key on avg + pct_above_05.
 
-def test_label_critical_when_pct_above_095_ge_75():
-    """75%+ of tickers above 0.95 → CRITICAL (matches macro_idx.md crash threshold)."""
-    rows = [('2026-05-08', f'T{i}', 0.97 if i < 75 else 0.60) for i in range(100)]
-    _, conn = _make_vpin_db(rows)
-    result = get_market_vpin_summary(conn, '2026-05-08')
-    conn.close()
-    assert result['label'] == 'CRITICAL', f"expected CRITICAL, got {result['label']}"
-
-
-def test_label_critical_when_avg_vpin_ge_095():
-    """avg_vpin >= 0.95 → CRITICAL."""
-    rows = [('2026-05-08', f'T{i}', 0.97) for i in range(10)]
-    _, conn = _make_vpin_db(rows)
-    result = get_market_vpin_summary(conn, '2026-05-08')
-    conn.close()
-    assert result['label'] == 'CRITICAL'
-
-
-def test_label_red_when_pct_above_08_ge_70():
-    """70-84% of tickers above 0.8 (but <75% above 0.95) → RED."""
-    rows = [(
-        '2026-06-01', f'T{i}',
-        0.85 if i < 70 else 0.70  # 70% above 0.8, none above 0.95
-    ) for i in range(100)]
-    _, conn = _make_vpin_db(rows)
-    result = get_market_vpin_summary(conn, '2026-06-01')
-    conn.close()
-    assert result['label'] in ('RED', 'CRITICAL'), f"got {result['label']}"
-
-
-def test_label_green_when_vpin_low():
-    """Low VPIN → GREEN."""
-    rows = [('2026-01-05', f'T{i}', 0.40) for i in range(50)]
+def test_label_green_normal_day():
+    """Normal BVC day (avg ~0.30, few names >0.5) → GREEN."""
+    rows = [('2026-01-05', f'T{i}', 0.30) for i in range(50)]
     _, conn = _make_vpin_db(rows)
     result = get_market_vpin_summary(conn, '2026-01-05')
     conn.close()
     assert result['label'] == 'GREEN'
+
+
+def test_label_yellow_by_avg():
+    rows = [('2026-01-05', f'T{i}', 0.36) for i in range(50)]   # avg 0.36 ≥ 0.35
+    _, conn = _make_vpin_db(rows)
+    result = get_market_vpin_summary(conn, '2026-01-05')
+    conn.close()
+    assert result['label'] == 'YELLOW'
+
+
+def test_label_yellow_by_pct_above_05():
+    # avg stays < 0.35 but ≥15% of names are above 0.5 → YELLOW via the tail
+    rows = [('2026-01-05', f'T{i}', 0.55 if i < 8 else 0.25) for i in range(50)]
+    _, conn = _make_vpin_db(rows)
+    result = get_market_vpin_summary(conn, '2026-01-05')
+    conn.close()
+    assert result['avg_vpin'] < 0.35 and result['pct_above_05'] >= 15
+    assert result['label'] == 'YELLOW'
+
+
+def test_label_orange_and_red_by_avg():
+    for avg_v, expected in [(0.41, 'ORANGE'), (0.46, 'RED')]:
+        rows = [('2026-01-05', f'T{i}', avg_v) for i in range(50)]
+        _, conn = _make_vpin_db(rows)
+        result = get_market_vpin_summary(conn, '2026-01-05')
+        conn.close()
+        assert result['label'] == expected, f"avg {avg_v} → {result['label']}, want {expected}"
+
+
+def test_label_critical_by_avg():
+    rows = [('2026-01-05', f'T{i}', 0.52) for i in range(50)]   # avg ≥ 0.50
+    _, conn = _make_vpin_db(rows)
+    result = get_market_vpin_summary(conn, '2026-01-05')
+    conn.close()
+    assert result['label'] == 'CRITICAL'
+
+
+def test_label_critical_by_pct_above_05():
+    # avg < 0.50 (would be ORANGE) but ≥60% of names above 0.5 → CRITICAL via tail
+    rows = [('2026-01-05', f'T{i}', 0.55 if i < 32 else 0.20) for i in range(50)]
+    _, conn = _make_vpin_db(rows)
+    result = get_market_vpin_summary(conn, '2026-01-05')
+    conn.close()
+    assert result['avg_vpin'] < 0.50 and result['pct_above_05'] >= 60
+    assert result['label'] == 'CRITICAL'
 
 
 def test_only_uses_specified_date():
@@ -151,16 +167,3 @@ def test_only_uses_specified_date():
     conn.close()
     assert result['tickers_with_vpin'] == 1
     assert result['avg_vpin'] == 0.40
-
-
-def test_real_crash_data_is_critical():
-    """Replicate Apr 28 crash data: avg=0.973, 39/46 above 0.95 = 84.8%."""
-    rows = (
-        [('2026-04-28', f'TOXIC{i}', 0.97) for i in range(39)] +
-        [('2026-04-28', f'NORM{i}', 0.70) for i in range(7)]
-    )
-    _, conn = _make_vpin_db(rows)
-    result = get_market_vpin_summary(conn, '2026-04-28')
-    conn.close()
-    assert result['label'] == 'CRITICAL'
-    assert result['pct_above_095'] > 75

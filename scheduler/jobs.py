@@ -732,11 +732,26 @@ def run_eod_trade_plan():
             print(f"[{now_str}] EOD trade plan: already sent today — skipped (dup guard)")
             return
 
+    from config import edge_mode
+
     conn = sqlite3.connect(DB_PATH, timeout=30)
     try:
         conn.execute("PRAGMA busy_timeout=30000")
         cands = tp.gather_long_candidates(conn, date_str)
         regime = tp.get_regime(conn, date_str)
+        top = tp.select_top(cands, n=8) if cands else []
+
+        # Tier A directional pre-screen BEFORE the firm (gated by EDGE_SCORE_MODE):
+        # drops directionally-dead candidates so they never cost an LLM call.
+        # shadow → log only; enforce → actually filter; off → skip.
+        if top and edge_mode() != 'off':
+            from engine.edge_enrich import market_regime as _market_regime
+            _mreg = _market_regime(conn)
+            survivors, vetoed = tp.edge_prescreen(conn, top, _mreg, date_str)
+            logging.info(f"[{now_str}] EOD edge pre-screen ({edge_mode()}, market={_mreg}): "
+                         f"{len(survivors)}/{len(top)} survive; vetoed={vetoed}")
+            if edge_mode() == 'enforce':
+                top = survivors
     finally:
         conn.close()
 
@@ -744,7 +759,11 @@ def run_eod_trade_plan():
         print(f"[{now_str}] EOD trade plan: no long candidates — skipped")
         return
 
-    top = tp.select_top(cands, n=8)
+    if not top:
+        # every candidate failed the directional pre-screen — ship an empty plan
+        send_telegram(tp.build_message([], regime, now.strftime('%d/%m'), degraded=False))
+        print(f"[{now_str}] EOD trade plan: all candidates vetoed by edge pre-screen — empty plan sent")
+        return
 
     candidates = [
         _SC(ticker=c["ticker"], strategy="eod", score=float(c["conviction"] or 0.0),

@@ -10,12 +10,14 @@ import pytest
 from engine.agent_firm.schemas import AgentDecision
 from engine.trade_plan import (
     build_message,
+    edge_prescreen,
     fallback_rank,
     gather_long_candidates,
     get_regime,
     rank_approved,
     select_top,
 )
+from engine.wf_edge import ensure_wf_edge_table, save_wf_edge
 
 DATE = "2026-06-23"
 
@@ -170,3 +172,57 @@ def test_degraded_message_is_flagged(conn):
     ranked = fallback_rank(gather_long_candidates(conn, DATE))
     msg = build_message(ranked, ("YELLOW", 45.0), DATE, degraded=True)
     assert "Firm offline" in msg
+
+
+class TestEdgePrescreen:
+    """Tier-A directional pre-screen before the LLM firm."""
+
+    def _db(self):
+        from datetime import date, timedelta
+        c = sqlite3.connect(":memory:")
+        c.execute("CREATE TABLE ohlcv (ticker TEXT, date TEXT, close REAL)")
+        c.execute("CREATE TABLE stockbit_flow (ticker TEXT, trade_date TEXT, "
+                  "composite_score INT, verdict TEXT)")
+        ensure_wf_edge_table(c)
+        self._base = date(2026, 1, 1)
+        return c
+
+    def _ohlcv(self, c, ticker, trend):
+        from datetime import timedelta
+        for i in range(60):
+            d = (self._base + timedelta(days=i)).isoformat()
+            close = (100 + i) if trend == "up" else (200 - i)
+            c.execute("INSERT INTO ohlcv VALUES (?,?,?)", (ticker, d, close))
+        c.commit()
+
+    def _cand(self, ticker, sources):
+        return {"ticker": ticker, "sources": sources}
+
+    def test_bearish_tech_non_reversal_is_vetoed(self):
+        c = self._db(); self._ohlcv(c, "AAAA", "down")
+        surv, veto = edge_prescreen(c, [self._cand("AAAA", ["S", "V"])], "SIDEWAYS", "2026-06-23")
+        assert surv == [] and veto[0][0] == "AAAA" and veto[0][1].startswith("d2")
+
+    def test_reversal_carveout_survives_bearish_tech(self):
+        c = self._db(); self._ohlcv(c, "BBBB", "down")
+        # tag R → mean-reversion carve-out exempts d2
+        surv, veto = edge_prescreen(c, [self._cand("BBBB", ["R"])], "SIDEWAYS", "2026-06-23")
+        assert [x["ticker"] for x in surv] == ["BBBB"] and veto == []
+
+    def test_distributing_flow_vetoed_even_for_reversal(self):
+        c = self._db(); self._ohlcv(c, "CCCC", "up")
+        c.execute("INSERT INTO stockbit_flow VALUES ('CCCC','2026-06-23',-5,'DISTRIBUTING')"); c.commit()
+        surv, veto = edge_prescreen(c, [self._cand("CCCC", ["R"])], "SIDEWAYS", "2026-06-23")
+        assert surv == [] and veto[0][1].startswith("d1")   # d1 is not MR-exempt
+
+    def test_tier_b_failure_is_not_prescreened_out(self):
+        # bullish tech, neutral flow, no wf_edge → passes Tier A, fails Tier B (s1).
+        # pre-screen must KEEP it (only Tier A applies here; firm decides the rest).
+        c = self._db(); self._ohlcv(c, "DDDD", "up")
+        surv, veto = edge_prescreen(c, [self._cand("DDDD", ["S"])], "SIDEWAYS", "2026-06-23")
+        assert [x["ticker"] for x in surv] == ["DDDD"] and veto == []
+
+    def test_market_bear_vetoes_non_catalyst(self):
+        c = self._db(); self._ohlcv(c, "EEEE", "up")
+        surv, veto = edge_prescreen(c, [self._cand("EEEE", ["R"])], "BEAR", "2026-06-23")
+        assert surv == [] and veto[0][1].startswith("d4")   # d4 not MR-exempt

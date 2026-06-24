@@ -98,6 +98,42 @@ def gather_long_candidates(conn: sqlite3.Connection, date_str: str) -> list[dict
     return list(cand.values())
 
 
+def edge_prescreen(conn: sqlite3.Connection, candidates: list[dict[str, Any]],
+                   market_regime: str, scan_date: str) -> tuple[list, list]:
+    """Tier-A directional pre-screen BEFORE the LLM firm — drops candidates that
+    fail directional safety so they never cost an LLM call:
+        d1 distributing flow · d2 bearish tech (no MR) · d3 tech/flow disagree (no MR)
+        d4 market risk-off (BEAR)
+    Tier B statistical gates and the session cap are intentionally NOT applied here
+    (those stay the firm's job; applying them would over-veto screen/volume names
+    that legitimately lack wf_edge stats).
+
+    Reversal-watchlist longs (tag 'R') are mean-reversion entries, so they get the
+    is_mean_reversion carve-out that exempts d2/d3.
+
+    Returns (survivors, vetoed) — survivors are kept candidate dicts; vetoed is a
+    list of (ticker, reason)."""
+    from engine.edge_enrich import enrich_candidate
+    from engine.veto import diagnose
+
+    survivors, vetoed = [], []
+    for c in candidates:
+        rows = conn.execute(
+            "SELECT close FROM ohlcv WHERE ticker=? ORDER BY date DESC LIMIT 60",
+            (c["ticker"],),
+        ).fetchall()
+        closes = [r[0] for r in rows][::-1]
+        mr_sources = ["REVERSAL"] if "R" in (c.get("sources") or []) else []
+        enr = enrich_candidate(conn, c["ticker"], scan_date,
+                               closes=closes, regime=None, sources=mr_sources)
+        reason = diagnose(enr, market_regime)[1]
+        if reason and reason.startswith("d"):     # Tier A directional veto only
+            vetoed.append((c["ticker"], reason))
+        else:
+            survivors.append(c)
+    return survivors, vetoed
+
+
 def candidate_score(c: dict[str, Any]) -> float:
     """Weighted strength score for ordering. Source quality matters more than raw
     count: broker-confirmed reversals and agent-approved premarket names dominate

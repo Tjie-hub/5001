@@ -24,7 +24,8 @@ def init_screener_tables():
                 time        TEXT,
                 price       INTEGER,
                 volume      INTEGER,
-                tick_type   TEXT
+                tick_type   TEXT,
+                UNIQUE(date, ticker, time)
             );
             CREATE INDEX IF NOT EXISTS idx_ticks ON ticks(date, ticker);
 
@@ -77,6 +78,27 @@ def init_screener_tables():
                 conn.execute(f"ALTER TABLE daily_screen ADD COLUMN {col} {defn}")
             except Exception:
                 pass
+
+        # Self-healing ticks dedup: older DBs whose ticks table predates the
+        # UNIQUE(date,ticker,time) constraint never deduped (INSERT OR IGNORE/REPLACE
+        # had no constraint to fire against → 3x+ row bloat). Enforce it once. Skipped
+        # on every normal boot when a unique index already covers the key (the
+        # table-level autoindex on fresh installs, or this one), so no per-boot cost.
+        already_unique = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='index' AND tbl_name='ticks' "
+            "AND (name='idx_ticks_unique' OR "
+            "     (sql IS NULL AND name LIKE 'sqlite_autoindex_ticks%'))"
+        ).fetchone()
+        if not already_unique:
+            conn.execute(
+                "DELETE FROM ticks WHERE id NOT IN "
+                "(SELECT MIN(id) FROM ticks GROUP BY date, ticker, time)"
+            )
+            conn.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_ticks_unique "
+                "ON ticks(date, ticker, time)"
+            )
+            print("[screener/db] ticks deduped + unique index created")
     print("[screener/db] Tables initialized.")
 
 
@@ -84,8 +106,11 @@ def insert_ticks(rows: list):
     if not rows:
         return 0
     with get_conn() as conn:
+        # OR REPLACE + UNIQUE(date,ticker,time): re-scraping the same minute updates
+        # in place instead of appending a duplicate (the old OR IGNORE never fired
+        # because idx_ticks was non-unique, which 3x-inflated the table).
         conn.executemany("""
-            INSERT OR IGNORE INTO ticks (date, ticker, time, price, volume, tick_type)
+            INSERT OR REPLACE INTO ticks (date, ticker, time, price, volume, tick_type)
             VALUES (:date, :ticker, :time, :price, :volume, :tick_type)
         """, rows)
     return len(rows)

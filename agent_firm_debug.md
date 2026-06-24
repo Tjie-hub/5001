@@ -108,10 +108,17 @@ approvals. Live since 21:xx restart 2026-06-23; 24/06 ORANGE regime = all 8 veto
 - `risk.py`: `normalize_quant` import moved to module level
 - `guardrails.py`: type annotations tightened (`list` → `Sequence[Any]`), docstrings added
 
-## Still Open
+## Done — Edge score pre-screen for EOD trade plan ✅ (2026-06-24)
 
-### Apply edge score gate to EOD trade plan
-Run `Tier A` directional vetoes before the firm to catch OASA-type contradictions earlier (saves LLM cost on dead candidates). Not urgent — guardrails catch it at the Risk stage now, but pre-screening would skip the $0.015 full pipeline.
+`engine/trade_plan.edge_prescreen()` runs **Tier A directional vetoes only** (d1 distributing
+flow · d2 bearish tech (no MR) · d3 tech/flow disagree (no MR) · d4 market risk-off) before the
+firm, wired into `run_eod_trade_plan` and gated by `EDGE_SCORE_MODE` (shadow=log, enforce=filter,
+off=skip). Tier B + the session cap are deliberately NOT applied (those over-veto screen/volume
+names and stay the firm's job). Reversal longs (tag R) get the `is_mean_reversion` carve-out
+exempting d2/d3. Real-data replay (23/06, BEAR market): all 8 top candidates Tier-A vetoed →
+enforce mode would save 8/8 LLM calls for the same "no setups" outcome. 6 new tests.
+
+## Still Open
 
 ### Add a VPIN gate
 If VPIN is TOXIC across all picks, flag the entire report as degraded/high-risk. Today the report correctly shows "🟠 Regime ORANGE — risk-off" but a VPIN-based degradation would add another layer.
