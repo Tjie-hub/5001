@@ -647,7 +647,13 @@ _BULL_STRONG_ADX = 45.0
 # Counter-trend strategies: event-driven, gated by their own signal checkers.
 # They bypass the wf_scores consistency gate (too few historical windows) and
 # survive the macro panic gate — they are the panic-state book.
-_COUNTER_TREND_BOOK = {'Crash Recovery', 'Panic Rebound', 'Liquidity Sweep'}
+_COUNTER_TREND_BOOK = {'Crash Recovery', 'Panic Rebound'}
+# NOTE: 'Liquidity Sweep' is intentionally NOT in the counter-trend book.
+# Its price-only structural backtest showed no edge (Sharpe -0.60, 3/15 LQ45
+# profitable — see data/reports/sweep_validation_2026-06-24.md), so it must
+# EARN live status through the normal wf_scores consistency gate (>=50%) rather
+# than bypassing it. It stays in the BEAR/SIDEWAYS regime maps above, so it is
+# WF-backtested and auto-activates in the scan only once it validates.
 
 # Momentum/trend family — blocked in macro panic state (Daniel-Moskowitz:
 # momentum crashes concentrate in post-decline high-vol rebounds) and during

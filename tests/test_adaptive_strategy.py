@@ -80,17 +80,23 @@ def test_bull_prefers_tfb(wf_db):
 
 
 def test_bear_returns_counter_trend_book(wf_db):
-    """BEAR regime → counter-trend book only (Crash Recovery, Panic Rebound,
-    Liquidity Sweep — the flow-confirmed sweep is a bear-bottom reversal added
-    to the book 2026-06-24); momentum-family strategies never appear, regardless
-    of wf_scores."""
+    """BEAR regime → counter-trend book (Crash Recovery, Panic Rebound) always
+    present; momentum-family strategies never appear regardless of wf_scores.
+    Liquidity Sweep is in the BEAR regime map but NOT the counter-trend book, so
+    it is WF-gated: absent without a passing wf_scores row, present with one."""
     from scheduler.scanner import adaptive_strategy_selector
     _insert_wf(wf_db, "BEAR_T", "Trend Following Breakout", 80.0, 0.9)
     _insert_wf(wf_db, "BEAR_T", "momentum", 75.0, 0.85)
 
     df = _make_regime_df(adx_val=30, ma_slope_val=-2.5)
     result = adaptive_strategy_selector("BEAR_T", df)
-    assert set(result) == {"Crash Recovery", "Panic Rebound", "Liquidity Sweep"}, result
+    assert set(result) == {"Crash Recovery", "Panic Rebound"}, result
+    assert "Liquidity Sweep" not in result  # no WF score yet → gated out
+
+    # Once it earns a passing WF score, it joins the BEAR candidates.
+    _insert_wf(wf_db, "BEAR_T", "Liquidity Sweep", 60.0, 0.7)
+    result2 = adaptive_strategy_selector("BEAR_T", df)
+    assert "Liquidity Sweep" in result2, result2
 
 
 def test_sideways_routes_panic_rebound(wf_db):
@@ -106,7 +112,9 @@ def test_sideways_routes_panic_rebound(wf_db):
     df = _make_regime_df(adx_val=15, ma_slope_val=0.2)
     result = adaptive_strategy_selector("FLAT_T", df)
     assert "Panic Rebound" in result
-    assert "Liquidity Sweep" in result
+    # Liquidity Sweep is in the SIDEWAYS map but WF-gated (not in the counter-
+    # trend book), so it stays out until it has a passing wf_scores row.
+    assert "Liquidity Sweep" not in result
     assert "Trend Following Breakout" not in result
 
 
