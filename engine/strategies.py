@@ -2449,3 +2449,41 @@ def strategy_liquidity_sweep_flow(df: pd.DataFrame, ticker: str = None,
     return run_strategy(df, sig, atr_sl_mult=1.0, atr_tp_mult=2.5, min_rr=2.5,
                         strategy_name='Liquidity Sweep', initial_capital=capital,
                         filters=filters)
+
+
+def check_sweep_flow_signal(df: pd.DataFrame, ticker: str) -> dict:
+    """Live last-bar check: bullish sweep on the current bar, confirmed by flow.
+
+    Returns {'has_signal': bool, 'reason': str, 'details': dict}.
+    """
+    from engine.smc import detect_liquidity_sweep
+    from engine.smc_flow import confirm_sweep_flow
+
+    sweeps = detect_liquidity_sweep(df)
+    if sweeps.empty:
+        return {'has_signal': False, 'reason': 'No sweeps detected', 'details': {}}
+
+    bullish = sweeps[sweeps['signal'] == 1]
+    if bullish.empty:
+        return {'has_signal': False, 'reason': 'No bullish sweep', 'details': {}}
+
+    last = bullish.iloc[-1]
+    last_bar_date = str(df.iloc[-1]['date'])[:10]
+    if str(last['date'])[:10] != last_bar_date:
+        return {'has_signal': False,
+                'reason': f"Last bullish sweep {last['date']} not on current bar",
+                'details': {}}
+
+    flow = confirm_sweep_flow(ticker, last_bar_date)
+    if not flow['confirmed']:
+        return {'has_signal': False,
+                'reason': f"{last['sweep_type'].upper()} sweep but flow rejected: {flow['reason']}",
+                'details': {'flow': flow}}
+
+    return {'has_signal': True,
+            'reason': (f"{last['sweep_type'].upper()} sweep @ {last['level_price']} "
+                       f"(wick {last['wick_pct']:.0%}), flow {flow['source']}: {flow['reason']}"),
+            'details': {'sweep_type': last['sweep_type'],
+                        'level_price': float(last['level_price']),
+                        'wick_pct': float(last['wick_pct']),
+                        'flow': flow}}

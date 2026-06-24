@@ -38,3 +38,39 @@ def test_negative_flow_blocks_the_entry(tmp_path, monkeypatch):
     gated_trades = len(strategy_liquidity_sweep_flow(df, ticker='BBCA')['trades'])
     assert gated_trades <= base_trades
     assert gated_trades == 0
+
+
+from engine.strategies import check_sweep_flow_signal
+
+
+def test_live_check_fires_on_current_bar_sweep(monkeypatch):
+    df = _trending_df_with_sweep()
+    # Move the sweep to the LAST bar so the live check considers it current.
+    n = len(df)
+    df.loc[n - 1, 'low'] = df.loc[n - 2, 'low'] - 40
+    df.loc[n - 1, 'close'] = df.loc[n - 2, 'low'] + 8
+    df.loc[n - 1, 'high'] = df.loc[n - 1, 'close'] + 5
+
+    import engine.smc_flow as smc_flow
+    monkeypatch.setattr(smc_flow, 'confirm_sweep_flow',
+                        lambda t, d, db_path=None: {'confirmed': True, 'source': 'daily',
+                                                    'reason': 'cs +5', 'score': 5})
+    r = check_sweep_flow_signal(df, 'BBCA')
+    assert r['has_signal'] is True
+    assert 'sweep' in r['reason'].lower()
+
+
+def test_live_check_blocked_by_negative_flow(monkeypatch):
+    df = _trending_df_with_sweep()
+    n = len(df)
+    df.loc[n - 1, 'low'] = df.loc[n - 2, 'low'] - 40
+    df.loc[n - 1, 'close'] = df.loc[n - 2, 'low'] + 8
+    df.loc[n - 1, 'high'] = df.loc[n - 1, 'close'] + 5
+
+    import engine.smc_flow as smc_flow
+    monkeypatch.setattr(smc_flow, 'confirm_sweep_flow',
+                        lambda t, d, db_path=None: {'confirmed': False, 'source': 'daily',
+                                                    'reason': 'cs -3', 'score': -3})
+    r = check_sweep_flow_signal(df, 'BBCA')
+    assert r['has_signal'] is False
+    assert 'flow' in r['reason'].lower()
