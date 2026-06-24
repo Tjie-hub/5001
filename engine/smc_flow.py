@@ -8,6 +8,7 @@ and fail-closed on negative flow (so live trades require real flow).
 """
 import sqlite3
 from config import DB_PATH
+from engine.delta_flow import session_delta_stats
 
 
 def _daily_flow_score(ticker: str, date: str, db_path: str):
@@ -38,6 +39,14 @@ def confirm_sweep_flow(ticker: str, date: str, db_path: str = DB_PATH) -> dict:
                     'reason': f'composite_score {cs:+.0f} > 0', 'score': cs}
         return {'confirmed': False, 'source': 'daily',
                 'reason': f'composite_score {cs:+.0f} <= 0', 'score': cs}
-    # intraday + passthrough handled in Task 3
+    stats = session_delta_stats(ticker, date, db_path)
+    if not stats.get('note'):  # rows present for this ticker/date
+        total = stats['total_delta']
+        if total >= 0:
+            return {'confirmed': True, 'source': 'intraday',
+                    'reason': f'session delta {total:+d} >= 0', 'score': float(total)}
+        return {'confirmed': False, 'source': 'intraday',
+                'reason': f'session delta {total:+d} < 0', 'score': float(total)}
+
     return {'confirmed': True, 'source': 'none',
             'reason': 'no flow data (passthrough)', 'score': None}

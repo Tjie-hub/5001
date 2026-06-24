@@ -82,3 +82,36 @@ def test_daily_zero_flow_rejects(tmp_path):
     db = _flow_db(tmp_path, [('BBCA', '2026-05-03', 0)])
     r = confirm_sweep_flow('BBCA', '2026-05-03', db_path=db)
     assert r['confirmed'] is False
+
+
+def test_intraday_positive_delta_confirms(tmp_path):
+    # No daily row -> falls through to intraday bars.
+    db = _flow_db(tmp_path, [])  # empty stockbit_flow
+    conn = sqlite3.connect(db)
+    conn.executemany(
+        "INSERT INTO stockbit_flow_bars VALUES (?,?,?,?,?,?,?,?,?,?)",
+        [('BBCA', '2026-05-03', '09:00', 500, 200, 5, 2, 100, 4000.0, 300),
+         ('BBCA', '2026-05-03', '09:01', 400, 300, 4, 3, 90, 4010.0, 100)])
+    conn.commit(); conn.close()
+    r = confirm_sweep_flow('BBCA', '2026-05-03', db_path=db)
+    assert r['confirmed'] is True
+    assert r['source'] == 'intraday'
+    assert r['score'] == 400.0  # 300 + 100
+
+
+def test_intraday_negative_delta_rejects(tmp_path):
+    db = _flow_db(tmp_path, [])
+    conn = sqlite3.connect(db)
+    conn.execute("INSERT INTO stockbit_flow_bars VALUES (?,?,?,?,?,?,?,?,?,?)",
+                 ('BBCA', '2026-05-03', '09:00', 100, 600, 1, 6, -50, 4000.0, -500))
+    conn.commit(); conn.close()
+    r = confirm_sweep_flow('BBCA', '2026-05-03', db_path=db)
+    assert r['confirmed'] is False
+    assert r['source'] == 'intraday'
+
+
+def test_no_flow_data_passthrough(tmp_path):
+    db = _flow_db(tmp_path, [])  # both tables empty
+    r = confirm_sweep_flow('BBCA', '2026-01-01', db_path=db)
+    assert r['confirmed'] is True
+    assert r['source'] == 'none'
