@@ -309,16 +309,27 @@ def scan_momentum_signals():
             flow_reason = "fundamental filter OFF"
 
         # Liquidity + value filter (L3) — blocks illiquid or bottom-quartile tickers
+        # Layer 3a: lot-count liquidity (ADV lots + market cap)
+        # Layer 3b: value-base liquidity (avg daily traded value Rp >= 5B)
+        # Layer 3c: fundamental value score (P/E, P/B, EV/EBITDA, etc.)
         if _f_liquidity:
-            from engine.liquidity import passes_liquidity_gate as _liq_gate, passes_value_gate as _val_gate
+            from engine.liquidity import (
+                passes_liquidity_gate as _liq_gate,
+                passes_value_liquidity_gate as _val_liq_gate,
+                passes_value_gate as _val_gate,
+            )
             _liq_conn = sqlite3.connect(DB_PATH)
             try:
                 _liq_ok, _liq_reason = _liq_gate(_liq_conn, ticker, _today_str)
+                _val_liq_ok, _val_liq_reason = _val_liq_gate(_liq_conn, ticker, _today_str)
                 _val_ok, _val_reason = _val_gate(_liq_conn, ticker)
             finally:
                 _liq_conn.close()
             if not _liq_ok:
                 logging.debug(f"[scan_momentum] {ticker} blocked by liquidity: {_liq_reason}")
+                continue
+            if not _val_liq_ok:
+                logging.debug(f"[scan_momentum] {ticker} blocked by value liquidity: {_val_liq_reason}")
                 continue
             if not _val_ok:
                 logging.debug(f"[scan_momentum] {ticker} blocked by value: {_val_reason}")
@@ -624,10 +635,12 @@ def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
 # panics — see the v1-v4 history above strategy_panic_rebound).
 _REGIME_STRATEGY_MAP = {
     'BULL_MODERATE': ['Trend Following Breakout', 'momentum',
-                      'Inside Bar Breakout', 'NR7 Breakout'],
-    'BULL_STRONG':   ['conservative', 'momentum', 'Trend Following Breakout'],
-    'BEAR':          ['Crash Recovery', 'Panic Rebound'],
-    'SIDEWAYS':      ['Panic Rebound'],
+                      'Inside Bar Breakout', 'NR7 Breakout',
+                      'vol_weighted', 'vwap_reversion'],
+    'BULL_STRONG':   ['conservative', 'momentum', 'Trend Following Breakout',
+                      'vol_weighted', 'vwap_reversion'],
+    'BEAR':          ['Crash Recovery', 'Panic Rebound', 'Liquidity Sweep'],
+    'SIDEWAYS':      ['Panic Rebound', 'vwap_reversion', 'Liquidity Sweep'],
 }
 _BULL_STRONG_ADX = 45.0
 
@@ -635,6 +648,12 @@ _BULL_STRONG_ADX = 45.0
 # They bypass the wf_scores consistency gate (too few historical windows) and
 # survive the macro panic gate — they are the panic-state book.
 _COUNTER_TREND_BOOK = {'Crash Recovery', 'Panic Rebound'}
+# NOTE: 'Liquidity Sweep' is intentionally NOT in the counter-trend book.
+# Its price-only structural backtest showed no edge (Sharpe -0.60, 3/15 LQ45
+# profitable — see data/reports/sweep_validation_2026-06-24.md), so it must
+# EARN live status through the normal wf_scores consistency gate (>=50%) rather
+# than bypassing it. It stays in the BEAR/SIDEWAYS regime maps above, so it is
+# WF-backtested and auto-activates in the scan only once it validates.
 
 # Momentum/trend family — blocked in macro panic state (Daniel-Moskowitz:
 # momentum crashes concentrate in post-decline high-vol rebounds) and during
@@ -1238,6 +1257,11 @@ def scheduled_multi_strategy_scan():
     # Step 1: Adaptive strategy selection per ticker
     intersection_results = []
 
+    # Value-base liquidity pre-filter connection — opened once, reused per ticker.
+    # Avg daily traded value (close*volume) must be >= Rp 5B to pass.
+    from engine.liquidity import passes_value_liquidity_gate as _vliq_gate
+    _liq_conn = sqlite3.connect(DB_PATH)
+
     for ticker in tickers:
         try:
             # Sector rotation filter — routed through _sector_verdict
@@ -1245,6 +1269,15 @@ def scheduled_multi_strategy_scan():
             _sec_ok, _sec_reason = _sector_verdict(ticker, _sector_scores)
             if not _sec_ok:
                 continue
+
+            # Value-base liquidity pre-filter — avg daily traded value >= Rp 5B
+            # Runs before strategy selection to cut thin/cheap tickers early.
+            try:
+                _vliq_ok, _vliq_reason = _vliq_gate(_liq_conn, ticker, date_str)
+                if not _vliq_ok:
+                    continue
+            except Exception:
+                pass  # fail-open: don't block a ticker because the gate threw
 
             df = ohlcv_map.get(ticker)
             if df is None or len(df) < 20:
@@ -1284,6 +1317,7 @@ def scheduled_multi_strategy_scan():
         except Exception as e:
             print(f"[Scan] {ticker} error: {e}")
             continue
+    _liq_conn.close()
     print(f"[{time_str}] Adaptive strategy signals: {len(intersection_results)} tickers")
 
     if len(intersection_results) > 0:

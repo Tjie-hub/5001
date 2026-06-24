@@ -19,6 +19,7 @@ from .strategies import (
     strategy_trend_following_breakout,
     strategy_crash_recovery,
     strategy_panic_rebound,
+    strategy_liquidity_sweep_flow,
     Trade
 )
 from engine.regime_filter import strategy_regime_adaptive, RegimeClassifier
@@ -181,6 +182,7 @@ STRATEGY_FUNCS = {
     'Trend Following Breakout':  strategy_trend_following_breakout,
     'Crash Recovery':            strategy_crash_recovery,
     'Panic Rebound':             strategy_panic_rebound,
+    'Liquidity Sweep':           strategy_liquidity_sweep_flow,
 }
 
 
