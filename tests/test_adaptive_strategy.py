@@ -33,12 +33,15 @@ def _make_regime_df(adx_val: float, ma_slope_val: float, n: int = 40) -> pd.Data
 def wf_db(tmp_path, monkeypatch):
     """Temporary DB with wf_scores table, patched into scanner.DB_PATH.
     Event guard and macro panic gate are pinned OFF so tests stay
-    deterministic regardless of the calendar or live IHSG data."""
+    deterministic regardless of the calendar or live IHSG data.
+    _get_disabled_strategies is pinned to an empty set so tests are
+    isolated from live paper_config changes."""
     import scheduler.scanner as sc
     db = str(tmp_path / "sc.db")
     monkeypatch.setattr(sc, "DB_PATH", db)
     monkeypatch.setattr(sc, "_event_guard_active", lambda: (False, 0.5))
     monkeypatch.setattr(sc, "_macro_panic_state", lambda: False)
+    monkeypatch.setattr(sc, "_get_disabled_strategies", lambda: set())
     conn = sqlite3.connect(db)
     conn.execute("""
         CREATE TABLE wf_scores (
@@ -58,6 +61,18 @@ def _insert_wf(db, ticker, strategy, consistency, score):
     conn.execute(
         "INSERT OR REPLACE INTO wf_scores VALUES (?,?,?,?,?,?,?,?)",
         (ticker, strategy, consistency, 5.0, 0.5, score, 4, "2026-06-05")
+    )
+    conn.commit()
+    conn.close()
+
+
+def _insert_wf_full(db, ticker, strategy, consistency, weighted_score,
+                    avg_return_pct):
+    """Insert with explicit avg_return_pct (for testing negative-return paths)."""
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "INSERT OR REPLACE INTO wf_scores VALUES (?,?,?,?,?,?,?,?)",
+        (ticker, strategy, consistency, avg_return_pct, 0.5, weighted_score, 4, "2026-06-05")
     )
     conn.commit()
     conn.close()
@@ -119,11 +134,16 @@ def test_sideways_routes_panic_rebound(wf_db):
 
 
 def test_no_fallback_to_losing_defaults(wf_db):
-    """BULL regime but no BULL-appropriate strategy in wf_scores → empty.
-    The old fallback re-routed vol_weighted/vwap_reversion (money losers);
-    no profitable strategy now means no BUY signal for the ticker."""
+    """BULL regime with only a non-BULL strategy that also has negative
+    walkforward return → empty. The regime path doesn't find it (not in
+    BULL_MODERATE/BULL_STRONG maps), and the get_ticker_best_strategies
+    fallback filters it out via avg_return_pct > 0. No profitable strategy
+    means no BUY signal for the ticker."""
     from scheduler.scanner import adaptive_strategy_selector
-    _insert_wf(wf_db, "BULL_NOWF", "vwap_reversion", 60.0, 0.6)
+    # "Liquidity Sweep" is only in BEAR / SIDEWAYS regime maps, NOT in BULL.
+    # It also has a NEGATIVE avg_return_pct so the fallback discards it.
+    _insert_wf_full(wf_db, "BULL_NOWF", "Liquidity Sweep",
+                    consistency=60.0, weighted_score=0.6, avg_return_pct=-1.0)
 
     df = _make_regime_df(adx_val=30, ma_slope_val=2.0)
     result = adaptive_strategy_selector("BULL_NOWF", df)
