@@ -473,20 +473,41 @@ def main():
 
 
 
-def fetch_flow(token, ticker):
-    """Fetch tradebook chart, return net flow summary."""
-    r = requests.get(
-        f"{STOCKBIT_BASE}/order-trade/trade-book/chart",
-        params={"symbol": ticker, "time_interval": "1m"},
-        headers={
-            "Authorization": f"Bearer {token}",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Origin": "https://stockbit.com",
-            "Referer": "https://stockbit.com/",
-        },
-        timeout=15,
-    )
-    if r.status_code != 200:
+def fetch_flow(token, ticker, date=None):
+    """Fetch tradebook chart, return net flow summary.
+
+    If `date` (YYYY-MM-DD) is given, fetch that historical session instead of the
+    current one. The trade-book/chart endpoint accepts a `date` param, so a
+    missed session (e.g. a fetch outage) can be backfilled with identical schema.
+    """
+    params = {"symbol": ticker, "time_interval": "1m"}
+    if date:
+        params["date"] = date
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Origin": "https://stockbit.com",
+        "Referer": "https://stockbit.com/",
+    }
+    # The endpoint throttles after a burst of requests (HTTP 429). Back off and
+    # retry so a full backfill/fetch survives the rate-limit wall instead of
+    # silently dropping every ticker past the cap.
+    r = None
+    for attempt in range(4):
+        r = requests.get(
+            f"{STOCKBIT_BASE}/order-trade/trade-book/chart",
+            params=params, headers=headers, timeout=15,
+        )
+        if r.status_code == 200:
+            break
+        if r.status_code == 429:
+            wait = int(r.headers.get("Retry-After", 0)) or 20 * (attempt + 1)
+            log(f"  [429] rate-limited on {ticker}, backoff {wait}s "
+                f"(attempt {attempt + 1}/4)")
+            time.sleep(wait)
+            continue
+        return None
+    if r is None or r.status_code != 200:
         return None
     d = r.json().get("data", {})
     buys = d.get("buy", [])
@@ -500,7 +521,9 @@ def fetch_flow(token, ticker):
     total_sell_freq = sum(int(s["frequency"]["raw"]) for s in sells if s.get("frequency") and s["frequency"].get("raw"))
     total_net_value = sum(int(nv["value"]["raw"]) for nv in net_vals if nv.get("value") and nv["value"].get("raw"))
     last_price = int(prices[-1]["value"]["raw"]) if prices and prices[-1].get("value") else None
-    trade_date = d.get("date", datetime.now().strftime("%Y-%m-%d"))
+    # Use `or` (not dict-default): the live endpoint returns an EMPTY date
+    # pre-/post-session, which previously wrote rows with a blank trade_date.
+    trade_date = d.get("date") or date or datetime.now().strftime("%Y-%m-%d")
 
     return {
         "ticker": ticker,
@@ -677,9 +700,9 @@ def fetch_broker_flow(token, ticker):
     return {"broker_rows": rows, "bandar": bandar, "trade_date": trade_date}
 
 
-def run_flow(token, tickers):
+def run_flow(token, tickers, date=None):
     log("=" * 50)
-    log("STOCKBIT FLOW FETCHER")
+    log("STOCKBIT FLOW FETCHER" + (f" — BACKFILL {date}" if date else ""))
     log("=" * 50)
     conn = init_flow_db()
     log(f"Fetching flow for {len(tickers)} tickers...\n")
@@ -687,7 +710,7 @@ def run_flow(token, tickers):
     for i, ticker in enumerate(tickers, 1):
         log(f"[{i}/{len(tickers)}] {ticker}...")
         try:
-            flow = fetch_flow(token, ticker)
+            flow = fetch_flow(token, ticker, date)
             if flow:
                 now = datetime.now().isoformat()
                 comp_score, verdict, smart_money = None, None, None
@@ -736,9 +759,12 @@ def run_flow(token, tickers):
                 log(f"  ✓ NetLot={nl:+,} NetVal={sign}{nv:,}")
                 success += 1
 
-                # Broker flow
+                # Broker flow — only for live (current-session) fetches.
+                # marketdetectors has no historical date param, so in backfill
+                # mode it would tag today's broker data to a past date. bf=None
+                # makes the block below a no-op (it already guards on falsy bf).
                 try:
-                    bf = fetch_broker_flow(token, ticker)
+                    bf = fetch_broker_flow(token, ticker) if not date else None
                     # Skip only if data for this trade_date already exists in DB.
                     # This allows saving prior trading days that were missed.
                     _bf_existing = 0
@@ -813,6 +839,12 @@ def _run_flow_cmd(args):
         category = args[i + 1].upper()
         args = args[:i] + args[i + 2:]
 
+    date = None
+    if "--date" in args:
+        i = args.index("--date")
+        date = args[i + 1]
+        args = args[:i] + args[i + 2:]
+
     if args:
         tickers = [t.upper() for t in args]
     else:
@@ -826,8 +858,8 @@ def _run_flow_cmd(args):
         sys.exit(1)
 
     label = category or ("custom" if args else "ALL")
-    log(f"Flow category: {label} — {len(tickers)} tickers")
-    run_flow(token, tickers)
+    log(f"Flow category: {label} — {len(tickers)} tickers" + (f" — BACKFILL {date}" if date else ""))
+    run_flow(token, tickers, date)
 
 
 if __name__ == "__main__":
