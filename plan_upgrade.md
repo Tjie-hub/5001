@@ -237,8 +237,9 @@ Week 2-3: Phase 2 (Refactor)
   - Week 3:  2.2 Flow data verification ✅ COMPLETED 2026-06-26
 
 Week 4: Phase 3-4 (Polish)
-  - 3.1 ORB naming update (PENDING)
-  - 4.1-4.3 Additional optimizations (PENDING)
+  - 3.1 ORB naming update ✅ COMPLETED 2026-06-26 (already documented in code)
+  - 4.1 Strategy Registry Auto-Discovery ✅ COMPLETED 2026-06-26
+  - 4.2-4.3 Additional optimizations (PENDING)
 ```
 
 ---
@@ -266,18 +267,32 @@ Week 4: Phase 3-4 (Polish)
 
 ## Progress Log
 
-### 2026-06-26
+### 2026-06-26 (Part 1 - Phase 1-2)
 - ✅ Added `strategy_vwma_breakout_pullback` to STRATEGY_FUNCS (14→15 strategies)
 - ✅ Added `strategy_regime_adaptive` to STRATEGY_FUNCS (now 15 total)
 - ✅ Created `engine/verify_flow_coverage.py` for flow data verification
 - ✅ Verified LQ45 flow coverage: 77-79% for Jan-Apr 2026 (below 95% target)
 - 📝 Documented strategies.py split as deferred (requires careful migration of 2515 lines)
 
+### 2026-06-26 (Part 2 - Phase 3-4)
+- ✅ ORB naming clarity: Already documented in strategies.py lines 902-913
+- ✅ Strategy Registry Auto-Discovery: Created `engine/strategies/` module
+  - `registry.py`: Decorator-based `@register_strategy` system
+  - `backtest.py`: Core backtest utilities (Trade, lot_size, run_strategy)
+  - `filters.py`: Filter library (filter_vwma_above, etc.)
+  - `__init__.py`: Exports for new modular structure
+- 📝 Deferred: Signal checker test coverage (Task 7)
+
 ### Files Modified
 - `engine/walkforward_multi.py`: Added VWMA BP and Regime Adaptive to registry
 - `engine/verify_flow_coverage.py`: NEW - Flow data coverage verification tool
+- `engine/strategies/registry.py`: NEW - Decorator-based strategy registration
+- `engine/strategies/backtest.py`: NEW - Core backtest utilities
+- `engine/strategies/filters.py`: NEW - Filter library
+- `engine/strategies/__init__.py`: NEW - Module exports
 - `plan_upgrade.md`: This file
 
 ### Next Steps
-1. Schedule flow data backfill for Jan-Apr 2026 gap
-2. Complete Phase 3 (ORB naming) and Phase 4 (additional optimizations)
+1. Migrate existing strategies to use @register_strategy decorator (incremental)
+2. Add signal checker test coverage (tests/test_signal_checkers.py)
+3. Schedule flow data backfill for Jan-Apr 2026 gap
