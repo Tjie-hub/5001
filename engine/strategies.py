@@ -482,7 +482,7 @@ def _run_vwma_bp(df: pd.DataFrame, signals: pd.Series,
                 continue
             # Min TP distance 1.5% untuk layak risk/reward
             if (tp_level - entry_price) / entry_price < 0.015:
-                equity.append(capital_cur)
+                equity.append(capital)
                 continue
 
             lots = lot_size(capital, entry_price, risk_per_trade, sl_pct_eff)
@@ -1806,7 +1806,8 @@ def strategy_swing_trend(df: pd.DataFrame,
 
 def strategy_trend_following_breakout(df: pd.DataFrame,
                                       capital: float = 50_000_000,
-                                      filters: list = None) -> dict:
+                                      filters: list = None,
+                                      atr_mult: float = 3.0) -> dict:
     """
     Trend-Following Breakout — catch high-momentum breakouts, let runners run.
 
@@ -1818,9 +1819,12 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
       5. MA20 slope > 0.5%                    (trend actually rising — market context)
       6. volume < 4.0× MA20(volume)           (reject climax blow-off)
     Exit:
-      - ATR trailing stop: max(prev_stop, close − 2.5×ATR)  [ratchets up only]
+      - ATR trailing stop: max(prev_stop, close − atr_mult×ATR)  [ratchets up only]
       - OR close < MA20
-    Sizing: risk 0.5% of capital; SL = 2.5×ATR; max 30% capital per trade.
+    Sizing: risk 0.5% of capital; SL = atr_mult×ATR; max 30% capital per trade.
+    atr_mult defaults to 3.0 (full-history WF validated 2026-06-27: pooled PF
+    1.82->1.98, avg P&L/trade +4.63->+6.03% vs the prior 2.5; see scripts/tfb_trail_wf.py).
+    Was 2.5 through 2026-06-26. Tunable for walk-forward exit validation.
 
     Conditions 5–6 (market-context gate) were validated out-of-sample: rolling
     12mo/3mo walk-forward across 852 tickers lifted consistency 31.7%→40.7%,
@@ -1873,7 +1877,7 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
 
         if in_trade:
             low_i = row['low']
-            new_stop = row['close'] - 2.5 * cur_atr
+            new_stop = row['close'] - atr_mult * cur_atr
             trail_stop = max(trail_stop, new_stop)
 
             exit_reason = None
@@ -1906,7 +1910,7 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
                 equity.append(capital)
                 continue
             entry_price = apply_costs(row['open'], 'BUY')   # next-bar open
-            sl_dist     = 2.5 * sig_atr
+            sl_dist     = atr_mult * sig_atr
             sl_pct      = sl_dist / entry_price
             if sl_pct <= 0.001:
                 equity.append(capital)
