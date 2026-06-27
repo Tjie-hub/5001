@@ -63,14 +63,18 @@ class FTRepo:
             c.commit()
 
     def write_transition(self, signal_id, from_state, to_state, run_date,
-                         actor=None, reason=None, violation=None):
-        """Append a transition row AND advance ft_signal_state. One transaction."""
+                         actor=None, reason=None):
+        """Append a transition row AND advance ft_signal_state. One transaction.
+
+        Use only for LEGAL transitions that actually change state. For rejected
+        attempts, use log_violation() (which does not advance state).
+        """
         with ft_get_db(self.db_path) as c:
             c.execute(
                 """INSERT INTO ft_transition_log
                    (signal_id, from_state, to_state, actor, reason, run_date, violation)
-                   VALUES (?,?,?,?,?,?,?)""",
-                (signal_id, from_state, to_state, actor, reason, run_date, violation),
+                   VALUES (?,?,?,?,?,?, NULL)""",
+                (signal_id, from_state, to_state, actor, reason, run_date),
             )
             c.execute(
                 """UPDATE ft_signal_state
@@ -78,6 +82,18 @@ class FTRepo:
                        updated_at=datetime('now','localtime')
                    WHERE signal_id=?""",
                 (to_state, signal_id),
+            )
+            c.commit()
+
+    def log_violation(self, signal_id, from_state, attempted_to, run_date,
+                      actor=None, reason=None):
+        """Log an illegal transition ATTEMPT. Does NOT change ft_signal_state."""
+        with ft_get_db(self.db_path) as c:
+            c.execute(
+                """INSERT INTO ft_transition_log
+                   (signal_id, from_state, to_state, actor, reason, run_date, violation)
+                   VALUES (?,?,?,?,?,?, 'ILLEGAL')""",
+                (signal_id, from_state, attempted_to, actor, reason, run_date),
             )
             c.commit()
 
