@@ -82,3 +82,20 @@ def test_ft_signal_unique_constraint(tmp_path):
     conn.commit()
     conn.close()
     assert collided
+
+
+def test_init_db_creates_ft_tables(tmp_path, monkeypatch):
+    # Point data.db at a temp DB so init_db() bootstraps in isolation.
+    db_path = str(tmp_path / "init.db")
+    import data.db as data_db
+    monkeypatch.setattr(data_db, "DB_PATH", db_path)
+
+    # init_db() also calls init_agent_firm_tables(); that is fine on a fresh DB.
+    data_db.init_db()
+
+    conn = sqlite3.connect(db_path)
+    names = {r[0] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'")}
+    conn.close()
+    assert "ft_signal" in names
+    assert "ft_transition_log" in names
