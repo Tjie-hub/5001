@@ -99,3 +99,41 @@ def test_init_db_creates_ft_tables(tmp_path, monkeypatch):
     conn.close()
     assert "ft_signal" in names
     assert "ft_transition_log" in names
+
+
+# ── Phase 2: shadow position/trade tables ──────────────────────────────────────
+
+PHASE2_TABLES = {"ft_shadow_position", "ft_shadow_trade"}
+
+
+def test_init_ft_tables_creates_phase2_tables(tmp_path):
+    db_path = str(tmp_path / "ft.db")
+    init_ft_tables(db_path)
+    conn = sqlite3.connect(db_path)
+    names = {r[0] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'")}
+    conn.close()
+    assert PHASE2_TABLES.issubset(names)
+
+
+def test_init_ft_tables_phase2_idempotent(tmp_path):
+    db_path = str(tmp_path / "ft.db")
+    init_ft_tables(db_path)
+    init_ft_tables(db_path)  # re-run must not error
+    conn = sqlite3.connect(db_path)
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(ft_shadow_position)")}
+    conn.close()
+    assert {"signal_id", "direction", "entry_price", "status"}.issubset(cols)
+
+
+def test_init_db_creates_phase2_tables(tmp_path, monkeypatch):
+    db_path = str(tmp_path / "init.db")
+    import data.db as data_db
+    monkeypatch.setattr(data_db, "DB_PATH", db_path)
+    data_db.init_db()
+    conn = sqlite3.connect(db_path)
+    names = {r[0] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'")}
+    conn.close()
+    assert "ft_shadow_position" in names
+    assert "ft_shadow_trade" in names

@@ -40,12 +40,12 @@ def init_ft_tables(db_path=None):
 
     Later phases extend this with positions/trades/performance/scoreboard tables.
     """
-    from forward_testing.storage.schema import FT_PHASE1_SCHEMA
+    from forward_testing.storage.schema import FT_PHASE1_SCHEMA, FT_PHASE2_SCHEMA
     db_path = db_path or _default_db_path()
     _ensure_wal(db_path)
     conn = ft_get_db(db_path)
     try:
-        conn.executescript(FT_PHASE1_SCHEMA)
+        conn.executescript(FT_PHASE1_SCHEMA + "\n" + FT_PHASE2_SCHEMA)
         conn.commit()
     finally:
         conn.close()

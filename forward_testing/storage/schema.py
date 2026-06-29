@@ -84,3 +84,51 @@ CREATE TABLE IF NOT EXISTS ft_run_log (
     error       TEXT
 );
 """
+
+FT_PHASE2_SCHEMA = """
+CREATE TABLE IF NOT EXISTS ft_shadow_position (
+    signal_id      INTEGER PRIMARY KEY REFERENCES ft_signal(id),
+    ticker         TEXT NOT NULL,
+    strategy       TEXT NOT NULL,
+    direction      TEXT NOT NULL,
+    entry_date     TEXT NOT NULL,
+    entry_price    REAL NOT NULL,
+    atr14          REAL NOT NULL,
+    sl_price       REAL,
+    tp_price       REAL,
+    trail_atr_mult REAL,
+    trail_anchor   REAL,
+    highest_seen   REAL NOT NULL,
+    lowest_seen    REAL NOT NULL,
+    hold_days      INTEGER NOT NULL DEFAULT 0,
+    status         TEXT NOT NULL DEFAULT 'OPEN',
+    exit_date      TEXT,
+    exit_price     REAL,
+    exit_reason    TEXT,
+    created_at     TEXT DEFAULT (datetime('now','localtime')),
+    updated_at     TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_ft_shadow_pos_status ON ft_shadow_position(status);
+CREATE INDEX IF NOT EXISTS idx_ft_shadow_pos_ticker ON ft_shadow_position(ticker);
+
+CREATE TABLE IF NOT EXISTS ft_shadow_trade (
+    signal_id    INTEGER PRIMARY KEY REFERENCES ft_signal(id),
+    ticker       TEXT NOT NULL,
+    strategy     TEXT NOT NULL,
+    direction    TEXT NOT NULL,
+    signal_date  TEXT NOT NULL,
+    entry_date   TEXT NOT NULL,
+    entry_price  REAL NOT NULL,
+    exit_date    TEXT NOT NULL,
+    exit_price   REAL NOT NULL,
+    exit_reason  TEXT NOT NULL,
+    pnl_pct      REAL NOT NULL,
+    r_multiple   REAL NOT NULL,
+    hold_days    INTEGER NOT NULL,
+    mae_pct      REAL,
+    mfe_pct      REAL,
+    closed_at    TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_ft_shadow_trade_strat ON ft_shadow_trade(strategy, exit_date);
+CREATE INDEX IF NOT EXISTS idx_ft_shadow_trade_ticker ON ft_shadow_trade(ticker);
+"""
