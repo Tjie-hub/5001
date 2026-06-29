@@ -21,7 +21,7 @@ class SignalState(str, Enum):
 # Forward-only legal transitions: from_state -> {allowed to_states}.
 # Matches the blueprint §3.1 state machine.
 LEGAL_TRANSITIONS = {
-    SignalState.GENERATED: {SignalState.CANDIDATE, SignalState.ARCHIVED},
+    SignalState.GENERATED: {SignalState.CANDIDATE, SignalState.OPENED, SignalState.ARCHIVED},
     SignalState.CANDIDATE: {SignalState.CONFIRMED, SignalState.ARCHIVED},
     SignalState.CONFIRMED: {SignalState.OPENED, SignalState.ARCHIVED},
     SignalState.OPENED:    {SignalState.HOLDING, SignalState.EXITED},

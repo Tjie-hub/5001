@@ -38,3 +38,13 @@ def test_reviewed_is_terminal():
 
 def test_enum_is_string():
     assert SignalState.GENERATED == "GENERATED"
+
+
+def test_generated_to_opened_is_legal_shadow_bypass():
+    # §3.4 dual-track: SHADOW signals go GENERATED -> OPENED directly (no CONFIRMED).
+    assert is_legal(SignalState.GENERATED, SignalState.OPENED)
+
+
+def test_generated_to_holding_still_illegal():
+    # OPENED is allowed; HOLDING is still not (must pass through OPENED).
+    assert not is_legal(SignalState.GENERATED, SignalState.HOLDING)
