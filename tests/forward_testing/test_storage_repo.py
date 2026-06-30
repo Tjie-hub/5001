@@ -74,57 +74,62 @@ def test_get_signals_by_state_filters_track_and_state(repo, ft_db):
 
 
 def test_open_shadow_position_and_get(repo):
+    sid = repo.insert_signal("2026-06-26", "BBCA", "vol_weighted", "SHADOW")  # FK parent
     repo.open_shadow_position(
-        signal_id=1, ticker="BBCA", strategy="vol_weighted", direction="LONG",
+        signal_id=sid, ticker="BBCA", strategy="vol_weighted", direction="LONG",
         entry_date="2026-06-27", entry_price=100.0, atr14=1.0,
         sl_price=99.0, tp_price=102.0, trail_atr_mult=None, trail_anchor=100.0,
         highest_seen=100.0, lowest_seen=100.0,
     )
-    pos = repo.get_shadow_position(1)
+    pos = repo.get_shadow_position(sid)
     assert pos["status"] == "OPEN"
     assert pos["entry_price"] == 100.0
 
 
 def test_open_shadow_position_is_idempotent(repo):
-    kwargs = dict(signal_id=1, ticker="BBCA", strategy="vol_weighted", direction="LONG",
+    sid = repo.insert_signal("2026-06-26", "BBCA", "vol_weighted", "SHADOW")  # FK parent
+    kwargs = dict(signal_id=sid, ticker="BBCA", strategy="vol_weighted", direction="LONG",
                   entry_date="2026-06-27", entry_price=100.0, atr14=1.0,
                   sl_price=99.0, tp_price=102.0, trail_atr_mult=None, trail_anchor=100.0,
                   highest_seen=100.0, lowest_seen=100.0)
     repo.open_shadow_position(**kwargs)
     repo.open_shadow_position(**kwargs)   # duplicate PK -> ignored, no error
-    assert repo.get_shadow_position(1)["entry_price"] == 100.0
+    assert repo.get_shadow_position(sid)["entry_price"] == 100.0
 
 
 def test_get_open_positions_update_and_close(repo):
-    for sid in (1, 2):
+    s1 = repo.insert_signal("2026-06-26", "T1", "vol_weighted", "SHADOW")  # FK parents
+    s2 = repo.insert_signal("2026-06-26", "T2", "vol_weighted", "SHADOW")
+    for sid in (s1, s2):
         repo.open_shadow_position(
             signal_id=sid, ticker=f"T{sid}", strategy="vol_weighted", direction="LONG",
             entry_date="2026-06-27", entry_price=100.0, atr14=1.0,
             sl_price=99.0, tp_price=102.0, trail_atr_mult=None, trail_anchor=100.0,
             highest_seen=100.0, lowest_seen=100.0,
         )
-    assert {r["signal_id"] for r in repo.get_open_shadow_positions()} == {1, 2}
+    assert {r["signal_id"] for r in repo.get_open_shadow_positions()} == {s1, s2}
 
-    repo.update_shadow_position(1, highest_seen=101.0, lowest_seen=99.5, hold_days=2,
+    repo.update_shadow_position(s1, highest_seen=101.0, lowest_seen=99.5, hold_days=2,
                                 last_eval_date="2026-06-28")
-    assert repo.get_shadow_position(1)["highest_seen"] == 101.0
-    assert repo.get_shadow_position(1)["last_eval_date"] == "2026-06-28"
+    assert repo.get_shadow_position(s1)["highest_seen"] == 101.0
+    assert repo.get_shadow_position(s1)["last_eval_date"] == "2026-06-28"
 
-    repo.close_shadow_position(1, exit_date="2026-06-29", exit_price=102.0, exit_reason="TP")
-    assert repo.get_shadow_position(1)["status"] == "CLOSED"
-    assert repo.get_shadow_position(1)["exit_reason"] == "TP"
-    assert repo.get_shadow_position(1)["last_eval_date"] == "2026-06-29"   # watermark = exit bar
-    assert {r["signal_id"] for r in repo.get_open_shadow_positions()} == {2}
+    repo.close_shadow_position(s1, exit_date="2026-06-29", exit_price=102.0, exit_reason="TP")
+    assert repo.get_shadow_position(s1)["status"] == "CLOSED"
+    assert repo.get_shadow_position(s1)["exit_reason"] == "TP"
+    assert repo.get_shadow_position(s1)["last_eval_date"] == "2026-06-29"   # watermark = exit bar
+    assert {r["signal_id"] for r in repo.get_open_shadow_positions()} == {s2}
 
 
 def test_insert_shadow_trade_is_idempotent(repo):
-    kwargs = dict(signal_id=1, ticker="BBCA", strategy="vol_weighted", direction="LONG",
+    sid = repo.insert_signal("2026-06-26", "BBCA", "vol_weighted", "SHADOW")  # FK parent
+    kwargs = dict(signal_id=sid, ticker="BBCA", strategy="vol_weighted", direction="LONG",
                   signal_date="2026-06-26", entry_date="2026-06-27", entry_price=100.0,
                   exit_date="2026-06-28", exit_price=102.0, exit_reason="TP",
                   pnl_pct=0.02, r_multiple=2.0, hold_days=2, mae_pct=-0.005, mfe_pct=0.02)
     repo.insert_shadow_trade(**kwargs)
     repo.insert_shadow_trade(**kwargs)     # duplicate -> ignored
-    assert repo.get_shadow_trade(1)["r_multiple"] == 2.0
+    assert repo.get_shadow_trade(sid)["r_multiple"] == 2.0
     conn = sqlite3.connect(repo.db_path)
     n = conn.execute("SELECT COUNT(*) FROM ft_shadow_trade").fetchone()[0]
     conn.close()

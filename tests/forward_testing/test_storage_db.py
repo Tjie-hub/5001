@@ -5,6 +5,8 @@ Task 2: init_ft_tables (table creation, idempotency, unique constraint, WAL).
 """
 import sqlite3
 
+import pytest
+
 from forward_testing.storage.db import ft_get_db, init_ft_tables
 
 
@@ -17,6 +19,22 @@ def test_ft_get_db_sets_row_factory_and_busy_timeout(tmp_path):
         assert conn.row_factory is sqlite3.Row
         bt = conn.execute("PRAGMA busy_timeout").fetchone()[0]
         assert bt == 30000
+    finally:
+        conn.close()
+
+
+def test_ft_get_db_enforces_foreign_keys(tmp_path):
+    # The schema declares REFERENCES but SQLite ignores them unless foreign_keys
+    # is ON per-connection. An orphan child (no parent ft_signal) must be rejected.
+    db_path = str(tmp_path / "ft.db")
+    init_ft_tables(db_path)
+    conn = ft_get_db(db_path)
+    try:
+        assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO ft_signal_state (signal_id, state) VALUES (424242, 'GENERATED')"
+            )
     finally:
         conn.close()
 

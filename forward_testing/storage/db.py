@@ -23,6 +23,7 @@ def ft_get_db(db_path=None):
     conn = sqlite3.connect(db_path or _default_db_path(), timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout=30000")
+    conn.execute("PRAGMA foreign_keys=ON")  # enforce REFERENCES (off by default in sqlite)
     return conn
 
 
