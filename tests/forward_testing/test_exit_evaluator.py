@@ -62,11 +62,17 @@ def test_long_mae_mfe_signed():
 
 def test_long_trail_ratchets_then_hits():
     pol = ExitPolicy(sl_mult=1.2, tp_mult=2.4, min_rr=2.0, trail_enable=True)
-    # highest 100 -> stop 98.8. New high 103 -> stop ratchets to 103-1.2=101.8;
-    # bar low 100.7 <= 101.8 -> trail hit at 101.8 (open 102 > stop -> level fill).
-    d = evaluate_exit(view(pol, "LONG", highest=100, lowest=99), bar(102, 103, 100.7, 102.5))
+    # The ratchet from a new high applies on the NEXT bar, not the bar that made
+    # the high (no intrabar look-ahead -- see C3 tests below).
+    # Bar 1: highest_seen 100 -> stop 98.8; high 102.3 stays under the 102.4 TP and
+    # low 101.5 stays above 98.8 -> hold. The manager would advance highest_seen to 102.3.
+    d = evaluate_exit(view(pol, "LONG", highest=100, lowest=99), bar(101, 102.3, 101.5, 102))
+    assert d is None
+    # Bar 2: highest_seen now 102.3 -> stop 102.3-1.2=101.1; bar low 101.0 <= 101.1
+    # -> TRAIL at 101.1 (open 102 > stop -> level fill; high 102.2 < TP).
+    d = evaluate_exit(view(pol, "LONG", highest=102.3, lowest=99), bar(102, 102.2, 101.0, 101.5))
     assert d.reason == "TRAIL"
-    assert d.fill_price == 101.8
+    assert round(d.fill_price, 4) == 101.1
 
 
 def test_long_trail_holds_when_low_above_ratcheted_stop():
@@ -103,6 +109,41 @@ def test_short_fixed_stop_gap_fills_at_open():
     d = evaluate_exit(view(pol, "SHORT"), bar(103, 104, 102.5, 103))  # opens above SL 101
     assert d.reason == "SL"
     assert d.fill_price == 103.0                 # gap fill at open
+
+
+# ---- C3: intrabar trailing-stop look-ahead bias ----
+# A trailing stop must be set from the extreme established BEFORE this bar opened.
+# It must never ratchet to THIS bar's high and then be triggered by THIS bar's low,
+# because there is no guarantee the high printed before the low. Doing so fabricates
+# exits at inflated levels and biases trailing-stop P&L upward.
+
+def test_long_trail_does_not_use_current_bar_high_to_trigger_same_bar_low():
+    # entry 100, atr 10, trail 3x -> stop entering the bar = highest_seen(100) - 30 = 70.
+    pol = ExitPolicy(trail_enable=True, trail_atr_mult=3.0, hold_days=10)
+    v = view(pol, "LONG", entry=100.0, atr=10.0, highest=100.0, lowest=100.0)
+    # Bar rallies to 160 then dips to 125. Low 125 never reaches the 70 stop that
+    # existed at bar open, so the position must HOLD. The buggy code ratchets the
+    # stop to 160-30=130 using this bar's high, then triggers it on this bar's low
+    # (125 <= 130) and reports a fabricated TRAIL exit at 130 (+30%).
+    d = evaluate_exit(v, bar(140, 160, 125, 130))
+    assert d is None, (
+        f"intrabar look-ahead: stop trailed to this bar's high and fired on the "
+        f"same bar's low -> {d}"
+    )
+
+
+def test_short_trail_does_not_use_current_bar_low_to_trigger_same_bar_high():
+    # Mirror image for SHORT. entry 100, atr 10, trail 3x -> stop entering bar = 130.
+    pol = ExitPolicy(trail_enable=True, trail_atr_mult=3.0, hold_days=10)
+    v = view(pol, "SHORT", entry=100.0, atr=10.0, highest=100.0, lowest=100.0)
+    # Drops to 40 then rebounds to 75. High 75 never reaches the 130 stop at bar open
+    # -> must HOLD. Buggy code ratchets stop to 40+30=70 on this bar's low, then fires
+    # on this bar's high (75 >= 70).
+    d = evaluate_exit(v, bar(60, 75, 40, 70))
+    assert d is None, (
+        f"intrabar look-ahead (short): stop trailed to this bar's low and fired on "
+        f"the same bar's high -> {d}"
+    )
 
 
 # ---- TIME stop ----

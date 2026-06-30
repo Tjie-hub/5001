@@ -38,14 +38,22 @@ class ExitDecision:
     mfe_pct: float            # most favourable excursion (signed, >=0 typically)
 
 
-def _stop_for(view, new_high, new_low):
-    """Recompute the stop level for this bar and whether it is trailing."""
+def _stop_for(view):
+    """Stop level active DURING this bar + whether it is trailing.
+
+    The trailing stop is anchored to the extreme established BEFORE this bar
+    (view.highest_seen / view.lowest_seen), never to the current bar's own
+    high/low. Trailing to this bar's high and then triggering on this bar's low
+    is intrabar look-ahead (no guarantee the high preceded the low) and inflates
+    trailing-stop exits. The extreme advances only after a no-exit bar (the
+    manager updates highest_seen/lowest_seen), so the ratchet applies next bar.
+    """
     lv = view.policy.initial_levels(view.direction, view.entry, view.atr)
     if lv.trailing:
         mult = lv.trail_mult
         if view.direction == "LONG":
-            return new_high - mult * view.atr, True
-        return new_low + mult * view.atr, True
+            return view.highest_seen - mult * view.atr, True
+        return view.lowest_seen + mult * view.atr, True
     return lv.initial_stop, False
 
 
@@ -60,7 +68,7 @@ def evaluate_exit(view, bar):
     mae = ((new_low - view.entry) / view.entry) if long else ((new_high - view.entry) / view.entry)
     mfe = ((new_high - view.entry) / view.entry) if long else ((new_low - view.entry) / view.entry)
 
-    stop, trailing = _stop_for(view, new_high, new_low)
+    stop, trailing = _stop_for(view)
 
     def realised(fill):
         return sign * (fill - view.entry)

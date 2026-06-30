@@ -1877,9 +1877,11 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
 
         if in_trade:
             low_i = row['low']
-            new_stop = row['close'] - atr_mult * cur_atr
-            trail_stop = max(trail_stop, new_stop)
-
+            # The stop governing THIS bar is the one ratcheted from PRIOR bars'
+            # closes (set at entry, advanced at each prior bar's end). Ratcheting
+            # it from today's close BEFORE testing today's low is intrabar
+            # look-ahead — there is no guarantee the close printed before the low —
+            # and it inflates trailing-stop exits. So: test first, ratchet after.
             exit_reason = None
             exit_price  = None
             if low_i <= trail_stop:
@@ -1904,6 +1906,9 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
                     strategy=strategy_name
                 ))
                 in_trade = False
+            else:
+                # No exit -> ratchet the stop for the NEXT bar using today's close.
+                trail_stop = max(trail_stop, row['close'] - atr_mult * cur_atr)
         elif signal.iloc[i - 1]:
             sig_atr = atr.iloc[i - 1]
             if pd.isna(sig_atr) or sig_atr <= 0:
