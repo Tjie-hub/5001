@@ -90,9 +90,59 @@ class ShadowPositionManager:
         # Evaluate the entry bar itself (a gap can exit on day one).
         self._check_one(signal_id, entry_date)
 
-    # ---- EXIT pass (replaces the stubs below in Task 8) ----
+    # ---- EXIT pass ----
     def _exit_pass(self, run_date):
-        return  # TEMPORARY STUB — replaced in Task 8 Step 3
+        for pos in self.repo.get_open_shadow_positions():
+            # <= : a position opened on THIS run already had its entry bar evaluated by
+            # _maybe_open; re-checking the same bar here would double-count hold_days.
+            # Positions opened on a prior run (entry_date < run_date) still evaluate today.
+            if run_date <= pos["entry_date"]:
+                continue
+            self._check_one(pos["signal_id"], run_date)
 
     def _check_one(self, signal_id, on_date):
-        return  # TEMPORARY STUB — replaced in Task 8 Step 3
+        pos = self.repo.get_shadow_position(signal_id)
+        if pos is None or pos["status"] != "OPEN":
+            return  # idempotent: already closed
+
+        if self._suspended(pos["ticker"], on_date):
+            return  # suspension-hold (§9); full CA handling is Phase 3
+
+        bar_tuple = self.resolver.bar(pos["ticker"], on_date)
+        if bar_tuple is None:
+            return  # missing ohlcv -> hold + flag, never force-exit (§5.4)
+
+        from forward_testing.positions.exit_evaluator import Bar
+        bar = Bar(date=bar_tuple[0], open=bar_tuple[1], high=bar_tuple[2],
+                  low=bar_tuple[3], close=bar_tuple[4])
+
+        policy = self.registry.get(pos["strategy"])
+        new_hold = pos["hold_days"] + 1
+        view = PositionView(
+            policy=policy, direction=pos["direction"], entry=pos["entry_price"],
+            atr=pos["atr14"], highest_seen=pos["highest_seen"], lowest_seen=pos["lowest_seen"],
+            hold_days=new_hold,
+        )
+        decision = evaluate_exit(view, bar)
+        if decision is None:
+            new_high = max(pos["highest_seen"], bar.high)
+            new_low = min(pos["lowest_seen"], bar.low)
+            self.repo.update_shadow_position(signal_id, new_high, new_low, new_hold)
+            return
+
+        # Close: persist cost-adjusted entry/exit + raw r/mae/mfe.
+        close_side = "SELL" if pos["direction"] == "LONG" else "BUY"
+        exit_price = apply_costs(decision.fill_price, close_side, self.costs)
+        entry = pos["entry_price"]
+        pnl_pct = ((exit_price - entry) / entry) if pos["direction"] == "LONG" \
+                  else ((entry - exit_price) / entry)
+        self.repo.close_shadow_position(signal_id, on_date, exit_price, decision.reason)
+        self.repo.insert_shadow_trade(
+            signal_id=signal_id, ticker=pos["ticker"], strategy=pos["strategy"],
+            direction=pos["direction"], signal_date=pos["entry_date"], entry_date=pos["entry_date"],
+            entry_price=entry, exit_date=on_date, exit_price=exit_price, exit_reason=decision.reason,
+            pnl_pct=pnl_pct, r_multiple=decision.r_multiple, hold_days=new_hold,
+            mae_pct=decision.mae_pct, mfe_pct=decision.mfe_pct,
+        )
+        self.lifecycle.transition(signal_id, SignalState.EXITED, on_date, actor="shadow_mgr",
+                                  reason=decision.reason)
