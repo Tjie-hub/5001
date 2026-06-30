@@ -12,6 +12,22 @@
 
 ---
 
+## ⚠️ Coordination update — C2/C3 audit fixes landed (2026-06-30, commits `b07c74c`, `2560984`)
+
+Two correctness fixes shipped to the SHADOW engine *after* this plan + spec were written. They do not change the job's shape, but they invalidate three assumptions in the spec — read these before implementing:
+
+1. **The exit pass now BACKFILLS, not just "today's bar."** `_exit_pass` evaluates every trading bar in `(last_eval_date, run_date]` per position (new `ft_shadow_position.last_eval_date` watermark + `MarketDataResolver.bars_between`), stopping at the first exit. So the spec's "evaluates positions with entry_date < today against today's daily bar" (Data flow) is superseded.
+
+2. **Idempotency mechanism changed — but job-layer idempotency still holds.** The old `entry_date >= run_date` skip guard was *removed*; same-day re-run is now a no-op because `bars_between` returns an empty range (watermark already at run_date), and `hold_days` no longer double-counts on a duplicate run. The spec's idempotency rationale (§Idempotency) is stale; the *guarantee* your `test_cycle_is_idempotent` asserts is intact. **Do not** reintroduce an entry_date guard in the job.
+
+3. **"Data availability at 18:30" risk is DOWNGRADED, not a correctness gate.** If today's bar is absent at 18:30, the exit is no longer *lost* — the next cycle backfills it via `bars_between`. Step 2's verification is still worth recording, but a late bar now means "exit recognized one cycle later," not "exit silently deferred forever." Timing is now a latency preference; the next-morning variant (`run_date` = previous trading day) is also fully correct.
+
+4. **PURGE-BEFORE-FIRST-CYCLE IS NOW MANDATORY (was hygiene).** Because the exit pass backfills from each position's `entry_date`, running the first scheduled cycle on the 204 un-purged smoke positions (stale entry dates 2026-06-26/27) would replay *weeks* of bars each → a flood of fabricated backfilled exits, far worse than the old single-bar behavior. Enforce Rollout ordering: run `scripts/ft_purge_smoke_cohort.py` **before** the first cycle. (Purge script verified compatible — it only DELETEs rows.)
+
+C3 (intrabar trailing-stop look-ahead, commit `b07c74c`) also landed: it changes the *outcomes* the cycle produces (trade P&L) but requires no wiring change.
+
+---
+
 ## File Structure
 
 - **Create:** `scripts/ft_purge_smoke_cohort.py` — one-time purge of smoke cohort (own responsibility: maintenance cleanup).
