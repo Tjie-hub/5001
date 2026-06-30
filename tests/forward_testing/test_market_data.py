@@ -51,3 +51,17 @@ def test_resolver_bar_returns_ohlc(ft_db):
 def test_resolver_atr14_none_with_too_few_bars(ft_db):
     r = _resolver(ft_db)   # only 5 bars seeded
     assert r.atr14("BBCA", "2026-06-27") is None
+
+
+def test_resolver_skips_null_ohlc_bars(ft_db):
+    # Prod ohlcv carries all-NULL rows for non-trading/suspended days; they must not
+    # crash ATR math and must read as 'no bar' (missing -> manager holds).
+    conn = sqlite3.connect(ft_db)
+    bars = [("2026-05-%02d" % d, 100, 100.5, 99.5, 100, 1000) for d in range(1, 15)]  # 14 valid
+    bars.append(("2026-05-20", None, None, None, None, 0))                            # non-trading day
+    seed_ohlcv(conn, "NULLY", bars)
+    conn.commit(); conn.close()
+    r = MarketDataResolver(ft_db)
+    assert r.atr14("NULLY", "2026-05-20") == 1.0     # computed from the 14 valid bars only
+    assert r.bar("NULLY", "2026-05-20") is None      # NULL-OHLC date treated as missing
+    assert r.next_open("NULLY", "2026-05-14") is None  # no valid bar after the last good day

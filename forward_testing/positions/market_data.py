@@ -36,10 +36,13 @@ class MarketDataResolver:
     def _rows(self, ticker):
         if ticker not in self._cache:
             with ft_get_db(self.db_path) as c:
+                # Exclude all-NULL/incomplete bars: prod ohlcv carries empty rows for
+                # non-trading/suspended days. A complete bar needs open/high/low/close.
                 self._cache[ticker] = [
                     dict(r) for r in c.execute(
                         "SELECT date, open, high, low, close FROM ohlcv "
-                        "WHERE ticker=? ORDER BY date", (ticker,)
+                        "WHERE ticker=? AND open IS NOT NULL AND high IS NOT NULL "
+                        "AND low IS NOT NULL AND close IS NOT NULL ORDER BY date", (ticker,)
                     ).fetchall()
                 ]
         return self._cache[ticker]
