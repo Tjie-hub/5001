@@ -17,6 +17,26 @@ def _days_between(date_a, date_b):
     return (date(yb, mb, db) - date(ya, ma, da)).days
 
 
+def _excursions(direction, raw_entry, high_extreme, low_extreme):
+    """Gross MAE/MFE as fractions of the RAW (pre-cost) entry, one-sided and
+    direction-aware: MAE (most adverse) <= 0, MFE (most favourable) >= 0.
+
+    These are price-excursion analytics, deliberately independent of fees (so they
+    don't move when costs change) -- distinct from the net pnl_pct/r_multiple. For a
+    SHORT, "favourable" is price falling (low below entry) and "adverse" is price
+    rising. Note the running extremes are seeded at the cost-adjusted entry (shared
+    with the trail anchor), so a position that barely moves can carry a residual
+    excursion on the order of the entry cost; immaterial once price actually travels.
+    """
+    if direction == "LONG":
+        mfe = max(0.0, (high_extreme - raw_entry) / raw_entry)
+        mae = min(0.0, (low_extreme - raw_entry) / raw_entry)
+    else:  # SHORT: favourable = price down, adverse = price up
+        mfe = max(0.0, (raw_entry - low_extreme) / raw_entry)
+        mae = min(0.0, (raw_entry - high_extreme) / raw_entry)
+    return mae, mfe
+
+
 def _default_suspension_checker(db_path):
     """Returns (ticker, on_date) -> bool using suspension_events if the table exists.
 
@@ -107,7 +127,7 @@ class ShadowPositionManager:
         self.repo.open_shadow_position(
             signal_id=signal_id, ticker=sig["ticker"], strategy=sig["strategy"],
             direction=sig["direction"], signal_date=sig["signal_date"], entry_date=entry_date,
-            entry_price=entry_price,
+            entry_price=entry_price, raw_entry_price=raw_entry,
             atr14=atr, sl_price=lv.sl_price, tp_price=lv.tp_price,
             trail_atr_mult=policy.trail_atr_mult, trail_anchor=entry_price,
             highest_seen=entry_price, lowest_seen=entry_price,
@@ -148,14 +168,12 @@ class ShadowPositionManager:
             return  # still trading recently (or normal holiday gap) -> hold
         if self._suspended(pos["ticker"], run_date):
             return  # active suspension may resume -> hold, do not force-close
-        # Realise at the last known close. r/mae/mfe from the position's stored
-        # extremes (same convention as ExitEvaluator); pnl is layered with costs by _close.
-        entry, long = pos["entry_price"], pos["direction"] == "LONG"
-        lv = self.registry.get(pos["strategy"]).initial_levels(pos["direction"], entry, pos["atr14"])
-        r_multiple = (1 if long else -1) * (latest_close - entry) / lv.one_r
-        mae = ((pos["lowest_seen"] - entry) / entry) if long else ((pos["highest_seen"] - entry) / entry)
-        mfe = ((pos["highest_seen"] - entry) / entry) if long else ((pos["lowest_seen"] - entry) / entry)
-        self._close(pos, latest_date, latest_close, "STALE", r_multiple, mae, mfe, pos["hold_days"])
+        # Realise at the last known close. MAE/MFE from the position's stored extremes
+        # (no exit bar to fold in); net r_multiple + pnl layered with costs by _close.
+        raw_entry = pos["raw_entry_price"] if pos["raw_entry_price"] is not None else pos["entry_price"]
+        mae, mfe = _excursions(pos["direction"], raw_entry,
+                               pos["highest_seen"], pos["lowest_seen"])
+        self._close(pos, latest_date, latest_close, "STALE", mae, mfe, pos["hold_days"])
 
     def _check_one(self, signal_id, on_date):
         """Evaluate one bar for an open position. Returns True if it remains open
@@ -182,26 +200,39 @@ class ShadowPositionManager:
             atr=pos["atr14"], highest_seen=pos["highest_seen"], lowest_seen=pos["lowest_seen"],
             hold_days=new_hold,
         )
+        new_high = max(pos["highest_seen"], bar.high)
+        new_low = min(pos["lowest_seen"], bar.low)
+
         decision = evaluate_exit(view, bar)
         if decision is None:
-            new_high = max(pos["highest_seen"], bar.high)
-            new_low = min(pos["lowest_seen"], bar.low)
             self.repo.update_shadow_position(signal_id, new_high, new_low, new_hold, on_date)
             return True
 
-        self._close(pos, on_date, decision.fill_price, decision.reason,
-                    decision.r_multiple, decision.mae_pct, decision.mfe_pct, new_hold)
+        # Fold THIS (exit) bar's extreme into MAE/MFE -- it is never persisted as a
+        # running extreme because the position closes on it. Fall back to the
+        # cost-adjusted entry for any legacy row opened before raw_entry_price existed.
+        raw_entry = pos["raw_entry_price"] if pos["raw_entry_price"] is not None else pos["entry_price"]
+        mae, mfe = _excursions(pos["direction"], raw_entry, new_high, new_low)
+        self._close(pos, on_date, decision.fill_price, decision.reason, mae, mfe, new_hold)
         return False  # closed -> caller stops backfilling
 
-    def _close(self, pos, exit_date, raw_fill, reason, r_multiple, mae_pct, mfe_pct, hold_days):
-        """Persist a closed round-trip: cost-adjusted entry/exit + raw r/mae/mfe.
-        Shared by bar-driven exits (_check_one) and stale force-closes."""
+    def _close(self, pos, exit_date, raw_fill, reason, mae_pct, mfe_pct, hold_days):
+        """Persist a closed round-trip. Single authority on the cost convention:
+        pnl_pct AND r_multiple are NET (cost-adjusted entry & exit) so their signs
+        always agree; MAE/MFE are passed in already gross (raw entry). Shared by
+        bar-driven exits (_check_one) and stale force-closes."""
         signal_id = pos["signal_id"]
-        close_side = "SELL" if pos["direction"] == "LONG" else "BUY"
+        long = pos["direction"] == "LONG"
+        close_side = "SELL" if long else "BUY"
         exit_price = apply_costs(raw_fill, close_side, self.costs)
         entry = pos["entry_price"]
-        pnl_pct = ((exit_price - entry) / entry) if pos["direction"] == "LONG" \
-                  else ((entry - exit_price) / entry)
+        pnl_pct = ((exit_price - entry) / entry) if long else ((entry - exit_price) / entry)
+        # r_multiple shares pnl_pct's cost basis: net realised price move / one_r.
+        # one_r is the risk unit fixed at entry (anchored to the cost-adjusted entry,
+        # exactly as the live exit levels are), so the metric stays self-consistent.
+        one_r = self.registry.get(pos["strategy"]).initial_levels(
+            pos["direction"], entry, pos["atr14"]).one_r
+        r_multiple = (1 if long else -1) * (exit_price - entry) / one_r
         self.repo.close_shadow_position(signal_id, exit_date, exit_price, reason)
         self.repo.insert_shadow_trade(
             signal_id=signal_id, ticker=pos["ticker"], strategy=pos["strategy"],

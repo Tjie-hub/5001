@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS ft_shadow_position (
     signal_date    TEXT,
     entry_date     TEXT NOT NULL,
     entry_price    REAL NOT NULL,
+    raw_entry_price REAL,
     atr14          REAL NOT NULL,
     sl_price       REAL,
     tp_price       REAL,

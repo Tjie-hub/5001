@@ -2,7 +2,13 @@
 
 No I/O. Direction-aware (LONG/SHORT). Deterministic ordering on a conflict bar:
 STOP (SL if fixed, TRAIL if trailing) -> TP -> TIME. Gap-aware fills.
-Metrics are raw (pre-cost); the manager layers Costs on entry/exit for stored pnl_pct.
+
+Returns only WHICH exit fires and the raw fill price. Cost-basis-dependent metrics
+(pnl_pct, r_multiple, MAE/MFE) are NOT computed here — they belong to the manager,
+which is the single authority on the cost convention: net P&L uses the cost-adjusted
+entry/exit, while MAE/MFE are gross excursions from the raw entry. Keeping them out of
+this pure layer prevents the two-bases-in-two-places drift this module used to have
+(its `entry` is the cost-adjusted fill, so any metric computed here was a hybrid).
 """
 from dataclasses import dataclass
 from forward_testing.positions.exit_policy import ExitPolicy
@@ -21,7 +27,7 @@ class Bar:
 class PositionView:
     policy: ExitPolicy
     direction: str            # "LONG" / "SHORT"
-    entry: float              # raw fill price (costs applied by manager at persist)
+    entry: float              # cost-adjusted fill; drives the stop/TP/one_r levels
     atr: float                # atr14 at entry (fixed for the position's life)
     highest_seen: float
     lowest_seen: float
@@ -32,10 +38,6 @@ class PositionView:
 class ExitDecision:
     reason: str               # SL / TP / TRAIL / TIME
     fill_price: float         # raw, gap-aware
-    pnl_pct: float            # raw, direction-signed
-    r_multiple: float         # realised / one_r
-    mae_pct: float            # most adverse excursion (signed, <=0 typically)
-    mfe_pct: float            # most favourable excursion (signed, >=0 typically)
 
 
 def _stop_for(view):
@@ -58,29 +60,18 @@ def _stop_for(view):
 
 
 def evaluate_exit(view, bar):
-    """Return an ExitDecision if the bar triggers an exit, else None."""
+    """Return an ExitDecision (reason + raw fill) if the bar triggers an exit, else None."""
     long = view.direction == "LONG"
-    sign = 1 if long else -1
     lv = view.policy.initial_levels(view.direction, view.entry, view.atr)
 
-    new_high = max(view.highest_seen, bar.high)
-    new_low = min(view.lowest_seen, bar.low)
-    mae = ((new_low - view.entry) / view.entry) if long else ((new_high - view.entry) / view.entry)
-    mfe = ((new_high - view.entry) / view.entry) if long else ((new_low - view.entry) / view.entry)
-
     stop, trailing = _stop_for(view)
-
-    def realised(fill):
-        return sign * (fill - view.entry)
 
     # 1) STOP (SL/TRAIL)
     stop_hit = (bar.low <= stop) if long else (bar.high >= stop)
     if stop_hit:
         gap = (bar.open <= stop) if long else (bar.open >= stop)
         fill = bar.open if gap else stop
-        reason = "TRAIL" if trailing else "SL"
-        return ExitDecision(reason, fill, realised(fill) / view.entry,
-                            realised(fill) / lv.one_r, mae, mfe)
+        return ExitDecision("TRAIL" if trailing else "SL", fill)
 
     # 2) TP (fixed policies only)
     if lv.tp_price is not None:
@@ -88,13 +79,10 @@ def evaluate_exit(view, bar):
         if tp_hit:
             gap = (bar.open >= lv.tp_price) if long else (bar.open <= lv.tp_price)
             fill = bar.open if gap else lv.tp_price
-            return ExitDecision("TP", fill, realised(fill) / view.entry,
-                                realised(fill) / lv.one_r, mae, mfe)
+            return ExitDecision("TP", fill)
 
     # 3) TIME
     if view.policy.hold_days is not None and view.hold_days >= view.policy.hold_days:
-        fill = bar.close
-        return ExitDecision("TIME", fill, realised(fill) / view.entry,
-                            realised(fill) / lv.one_r, mae, mfe)
+        return ExitDecision("TIME", bar.close)
 
     return None

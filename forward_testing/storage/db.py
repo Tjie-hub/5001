@@ -64,3 +64,5 @@ def _migrate(conn):
         conn.execute("ALTER TABLE ft_shadow_position ADD COLUMN last_eval_date TEXT")
     if "signal_date" not in cols:
         conn.execute("ALTER TABLE ft_shadow_position ADD COLUMN signal_date TEXT")
+    if "raw_entry_price" not in cols:
+        conn.execute("ALTER TABLE ft_shadow_position ADD COLUMN raw_entry_price REAL")

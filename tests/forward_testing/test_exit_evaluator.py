@@ -1,4 +1,7 @@
-"""ExitEvaluator: direction-aware SL/TP/trail/time, deterministic order, gap fills, metrics."""
+"""ExitEvaluator: direction-aware SL/TP/trail/time, deterministic order, gap fills.
+
+The evaluator decides only WHICH exit fires and the raw fill price; cost-basis metrics
+(pnl_pct/r_multiple/MAE/MFE) are the manager's job (see test_shadow_manager)."""
 from forward_testing.positions.exit_evaluator import PositionView, Bar, evaluate_exit
 from forward_testing.positions.exit_policy import ExitPolicy
 
@@ -21,16 +24,12 @@ def test_long_stop_hit_level_fill():
     d = evaluate_exit(view(LONG_FIXED, "LONG"), bar(100, 100.5, 98.5, 99))
     assert d.reason == "SL"
     assert d.fill_price == 99.0                  # low breached 99, open 100 > 99 -> level fill
-    assert d.r_multiple == -1.0                  # (99-100)/1
-    assert d.pnl_pct == -0.01
 
 
 def test_long_tp_hit_level_fill():
     d = evaluate_exit(view(LONG_FIXED, "LONG"), bar(100, 102.5, 99.9, 102))
     assert d.reason == "TP"
     assert d.fill_price == 102.0
-    assert d.r_multiple == 2.0
-    assert d.pnl_pct == 0.02
 
 
 def test_long_stop_beats_tp_on_conflict_bar():
@@ -50,12 +49,6 @@ def test_long_no_exit_returns_none():
     d = evaluate_exit(view(LONG_FIXED, "LONG", highest=100, lowest=100),
                       bar(100, 101, 99.5, 100.5))
     assert d is None                             # low 99.5 > sl 99; high 101 < tp 102
-
-
-def test_long_mae_mfe_signed():
-    d = evaluate_exit(view(LONG_FIXED, "LONG"), bar(100, 103, 98, 102))   # SL also hit
-    assert d.mae_pct == -0.02                    # (98-100)/100
-    assert d.mfe_pct == 0.03                     # (103-100)/100
 
 
 # ---- LONG trailing (momentum-style: sl_mult + trail_enable) ----
@@ -94,7 +87,6 @@ def test_short_trail_ratchets_down_then_hits():
                       bar(99, 100.5, 99, 100))
     assert d.reason == "TRAIL"
     assert d.fill_price == 100.0
-    assert d.r_multiple == 0.0                   # (100-100)/3
 
 
 def test_short_pure_trail_favourable_move_holds():

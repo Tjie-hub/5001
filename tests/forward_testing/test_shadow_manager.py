@@ -5,12 +5,15 @@ from forward_testing.lifecycle.manager import LifecycleManager
 from forward_testing.positions.market_data import MarketDataResolver
 from forward_testing.positions.exit_policy import ExitPolicyRegistry
 from forward_testing.positions.costs import Costs
-from forward_testing.positions.shadow_manager import ShadowPositionManager
+from forward_testing.positions.shadow_manager import ShadowPositionManager, _excursions
 from forward_testing.adapters.signal_adapter import SignalAdapter
 from tests.forward_testing.conftest import seed_ohlcv, seed_signal
 
 # Flat bars (100, 100.5, 99.5, 100): TR = 1 -> ATR14 = 1. vol_weighted LONG -> sl 99, tp 102.
 FLAT = [("2026-06-%02d" % d, 100, 100.5, 99.5, 100, 1000) for d in range(1, 27)]
+
+# 1% each-side costs make the cost basis of every metric visible (defaults are tiny).
+COSTS_1PCT = Costs(commission_buy=0.01, commission_sell=0.01, slippage=0.0)
 
 
 def _mgr(ft_db, costs=None):
@@ -282,6 +285,83 @@ def test_rerun_same_open_day_does_not_double_count_hold_days(ft_db, repo):
     assert pos["status"] == "OPEN"
     assert pos["hold_days"] == 2          # entry bar (1) + 06-28 (2); NOT 3
     assert pos["highest_seen"] == 101.0
+
+
+# ---- cost-metric consistency: pnl_pct (net) vs r_multiple (net) vs MAE/MFE (gross) ----
+# A SHORT distribution trail (DEFAULT 3xATR, hold 10) on flat ATR=1 history.
+SHORT_HIST = [("2026-06-%02d" % d, 100, 100.5, 99.5, 100, 1000) for d in range(1, 27)]
+# entry fill 100 on 06-27 (lowest 95.5 -> trail ratchets to 98.5); 06-28 rebounds to
+# high 98.6 >= 98.5 -> TRAIL fill at 98.5. raw fill 98.5 is a small GROSS short win,
+# but a NET loss once round-trip costs apply.
+SHORT_TRAIL_WIN = SHORT_HIST + [
+    ("2026-06-27", 100, 100.5, 95.5, 96, 1000),
+    ("2026-06-28", 97, 98.6, 96, 98, 1000)]
+
+
+def test_excursions_are_one_sided_and_direction_aware():
+    # MAE <= 0 (adverse), MFE >= 0 (favourable), measured from the raw entry.
+    # LONG: high above entry is favourable, low below is adverse.
+    mae, mfe = _excursions("LONG", 100.0, high_extreme=103.0, low_extreme=98.0)
+    assert mfe == 0.03 and mae == -0.02
+    # SHORT: low below entry is favourable, high above is adverse (signs NOT inverted).
+    mae, mfe = _excursions("SHORT", 100.0, high_extreme=100.5, low_extreme=95.5)
+    assert mfe == 0.045 and mae == -0.005
+    # No travel beyond entry on one side -> that excursion clamps to 0, never wrong-signed.
+    mae, mfe = _excursions("LONG", 100.0, high_extreme=100.0, low_extreme=97.0)
+    assert mfe == 0.0 and mae == -0.03
+
+
+def test_position_stores_raw_pre_cost_entry(ft_db, repo):
+    # The pre-cost fill must be persisted so gross (cost-independent) metrics can be
+    # measured against it, distinct from the cost-adjusted entry used for P&L.
+    conn = sqlite3.connect(ft_db)
+    seed_ohlcv(conn, "UNVR", SHORT_HIST + [("2026-06-27", 100, 100.5, 99.5, 100, 1000)])
+    conn.commit(); conn.close()
+    sid = _ingest_one(ft_db, repo, "UNVR", "distribution", "SELL")
+    _mgr(ft_db, costs=COSTS_1PCT).run("2026-06-27")
+    pos = repo.get_shadow_position(sid)
+    assert round(pos["entry_price"], 6) == 99.0        # SELL open, cost-adjusted: 100*(1-0.01)
+    assert round(pos["raw_entry_price"], 6) == 100.0   # the pre-cost fill
+
+
+def test_r_multiple_is_net_of_costs_and_agrees_with_pnl_sign(ft_db, repo):
+    # The headline bug: a trade was able to show negative pnl_pct (net loss) yet a
+    # positive r_multiple, because r_multiple used the RAW exit fill. r_multiple must
+    # be NET -- same cost basis as pnl_pct -- so their signs always agree.
+    conn = sqlite3.connect(ft_db)
+    seed_ohlcv(conn, "UNVR", SHORT_TRAIL_WIN)
+    conn.commit(); conn.close()
+    sid = _ingest_one(ft_db, repo, "UNVR", "distribution", "SELL")
+    mgr = _mgr(ft_db, costs=COSTS_1PCT)
+    mgr.run("2026-06-27")
+    mgr.run("2026-06-28")
+
+    trade = repo.get_shadow_trade(sid)
+    assert trade["exit_reason"] == "TRAIL"
+    assert round(trade["entry_price"], 6) == 99.0       # SELL open: 100*(1-0.01)
+    assert round(trade["exit_price"], 6) == 99.485      # BUY cover: 98.5*(1+0.01)
+    assert trade["pnl_pct"] < 0                         # net loss
+    # one_r = 3*ATR(1) = 3; net realised = (entry 99 - exit 99.485) = -0.485
+    assert trade["r_multiple"] < 0                      # NOT the pre-cost phantom +0.1667
+    assert round(trade["r_multiple"], 6) == round((99.0 - 99.485) / 3.0, 6)
+
+
+def test_mae_mfe_measured_gross_from_raw_entry(ft_db, repo):
+    # MAE/MFE are price-excursion analytics: measured from the RAW (pre-cost) entry,
+    # one-sided & direction-aware (MAE<=0 adverse, MFE>=0 favorable), independent of
+    # fees -- so they do not move when costs change.
+    conn = sqlite3.connect(ft_db)
+    seed_ohlcv(conn, "UNVR", SHORT_TRAIL_WIN)
+    conn.commit(); conn.close()
+    sid = _ingest_one(ft_db, repo, "UNVR", "distribution", "SELL")
+    mgr = _mgr(ft_db, costs=COSTS_1PCT)
+    mgr.run("2026-06-27")
+    mgr.run("2026-06-28")
+
+    trade = repo.get_shadow_trade(sid)
+    # raw entry 100; favourable low 95.5 -> MFE +4.5%; adverse high 100.5 -> MAE -0.5%.
+    assert round(trade["mfe_pct"], 6) == round((100.0 - 95.5) / 100.0, 6)    # +0.045
+    assert round(trade["mae_pct"], 6) == round((100.0 - 100.5) / 100.0, 6)   # -0.005
 
 
 def test_rerun_is_idempotent(ft_db, repo):
