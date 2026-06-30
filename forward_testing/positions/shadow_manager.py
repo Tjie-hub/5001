@@ -106,7 +106,8 @@ class ShadowPositionManager:
 
         self.repo.open_shadow_position(
             signal_id=signal_id, ticker=sig["ticker"], strategy=sig["strategy"],
-            direction=sig["direction"], entry_date=entry_date, entry_price=entry_price,
+            direction=sig["direction"], signal_date=sig["signal_date"], entry_date=entry_date,
+            entry_price=entry_price,
             atr14=atr, sl_price=lv.sl_price, tp_price=lv.tp_price,
             trail_atr_mult=policy.trail_atr_mult, trail_anchor=entry_price,
             highest_seen=entry_price, lowest_seen=entry_price,
@@ -204,7 +205,8 @@ class ShadowPositionManager:
         self.repo.close_shadow_position(signal_id, exit_date, exit_price, reason)
         self.repo.insert_shadow_trade(
             signal_id=signal_id, ticker=pos["ticker"], strategy=pos["strategy"],
-            direction=pos["direction"], signal_date=pos["entry_date"], entry_date=pos["entry_date"],
+            direction=pos["direction"],
+            signal_date=pos["signal_date"] or pos["entry_date"], entry_date=pos["entry_date"],
             entry_price=entry, exit_date=exit_date, exit_price=exit_price, exit_reason=reason,
             pnl_pct=pnl_pct, r_multiple=r_multiple, hold_days=hold_days,
             mae_pct=mae_pct, mfe_pct=mfe_pct,

@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS ft_shadow_position (
     ticker         TEXT NOT NULL,
     strategy       TEXT NOT NULL,
     direction      TEXT NOT NULL,
+    signal_date    TEXT,
     entry_date     TEXT NOT NULL,
     entry_price    REAL NOT NULL,
     atr14          REAL NOT NULL,

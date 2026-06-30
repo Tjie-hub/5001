@@ -97,6 +97,23 @@ def test_exit_pass_closes_on_tp_and_writes_trade(ft_db, repo):
     assert repo.get_shadow_position(sid)["status"] == "CLOSED"
 
 
+def test_shadow_trade_records_original_signal_date_not_entry_date(ft_db, repo):
+    # The trade ledger must keep the ORIGINAL signal date distinct from the fill
+    # date, or the signal->entry latency is lost.
+    conn = sqlite3.connect(ft_db)
+    seed_ohlcv(conn, "BBCA", FLAT + [
+        ("2026-06-27", 100, 100.5, 99.5, 100, 1000),     # entry/fill bar
+        ("2026-06-28", 100, 102.5, 99.5, 102, 1000)])    # TP
+    conn.commit(); conn.close()
+    sid = _ingest_one(ft_db, repo, "BBCA", "vol_weighted", "BUY")   # signal_date 2026-06-26
+    mgr = _mgr(ft_db)
+    mgr.run("2026-06-27")   # fills at 06-27
+    mgr.run("2026-06-28")   # TP
+    trade = repo.get_shadow_trade(sid)
+    assert trade["signal_date"] == "2026-06-26"   # the signal, not the fill
+    assert trade["entry_date"] == "2026-06-27"    # fill date is distinct
+
+
 def test_exit_pass_holds_then_updates_extremes_when_no_exit(ft_db, repo):
     conn = sqlite3.connect(ft_db)
     seed_ohlcv(conn, "BBCA", FLAT + [

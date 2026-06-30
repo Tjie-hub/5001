@@ -144,18 +144,23 @@ class FTRepo:
     # ---- shadow positions ----
     def open_shadow_position(self, signal_id, ticker, strategy, direction,
                              entry_date, entry_price, atr14, sl_price, tp_price,
-                             trail_atr_mult, trail_anchor, highest_seen, lowest_seen):
-        """Idempotent open (PK = signal_id). No-op if a row already exists."""
+                             trail_atr_mult, trail_anchor, highest_seen, lowest_seen,
+                             signal_date=None):
+        """Idempotent open (PK = signal_id). No-op if a row already exists.
+
+        signal_date is the ORIGINAL signal date (distinct from entry_date, the
+        fill date) — carried so the closed trade preserves signal->entry latency.
+        """
         with ft_get_db(self.db_path) as c:
             c.execute(
                 """INSERT INTO ft_shadow_position
-                   (signal_id, ticker, strategy, direction, entry_date, entry_price,
-                    atr14, sl_price, tp_price, trail_atr_mult, trail_anchor,
+                   (signal_id, ticker, strategy, direction, signal_date, entry_date,
+                    entry_price, atr14, sl_price, tp_price, trail_atr_mult, trail_anchor,
                     highest_seen, lowest_seen, hold_days, status)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,'OPEN')
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,'OPEN')
                    ON CONFLICT(signal_id) DO NOTHING""",
-                (signal_id, ticker, strategy, direction, entry_date, entry_price,
-                 atr14, sl_price, tp_price, trail_atr_mult, trail_anchor,
+                (signal_id, ticker, strategy, direction, signal_date, entry_date,
+                 entry_price, atr14, sl_price, tp_price, trail_atr_mult, trail_anchor,
                  highest_seen, lowest_seen),
             )
             c.commit()

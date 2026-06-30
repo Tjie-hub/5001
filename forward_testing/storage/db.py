@@ -61,3 +61,5 @@ def _migrate(conn):
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(ft_shadow_position)")}
     if "last_eval_date" not in cols:
         conn.execute("ALTER TABLE ft_shadow_position ADD COLUMN last_eval_date TEXT")
+    if "signal_date" not in cols:
+        conn.execute("ALTER TABLE ft_shadow_position ADD COLUMN signal_date TEXT")
