@@ -46,6 +46,18 @@ def init_ft_tables(db_path=None):
     conn = ft_get_db(db_path)
     try:
         conn.executescript(FT_PHASE1_SCHEMA + "\n" + FT_PHASE2_SCHEMA)
+        _migrate(conn)
         conn.commit()
     finally:
         conn.close()
+
+
+def _migrate(conn):
+    """Idempotent column adds for tables created by an earlier schema version.
+
+    CREATE TABLE IF NOT EXISTS never alters an existing table, so a new column
+    needs an explicit ALTER guarded against re-running on an already-migrated db.
+    """
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(ft_shadow_position)")}
+    if "last_eval_date" not in cols:
+        conn.execute("ALTER TABLE ft_shadow_position ADD COLUMN last_eval_date TEXT")

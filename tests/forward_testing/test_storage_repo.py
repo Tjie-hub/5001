@@ -105,12 +105,15 @@ def test_get_open_positions_update_and_close(repo):
         )
     assert {r["signal_id"] for r in repo.get_open_shadow_positions()} == {1, 2}
 
-    repo.update_shadow_position(1, highest_seen=101.0, lowest_seen=99.5, hold_days=2)
+    repo.update_shadow_position(1, highest_seen=101.0, lowest_seen=99.5, hold_days=2,
+                                last_eval_date="2026-06-28")
     assert repo.get_shadow_position(1)["highest_seen"] == 101.0
+    assert repo.get_shadow_position(1)["last_eval_date"] == "2026-06-28"
 
     repo.close_shadow_position(1, exit_date="2026-06-29", exit_price=102.0, exit_reason="TP")
     assert repo.get_shadow_position(1)["status"] == "CLOSED"
     assert repo.get_shadow_position(1)["exit_reason"] == "TP"
+    assert repo.get_shadow_position(1)["last_eval_date"] == "2026-06-29"   # watermark = exit bar
     assert {r["signal_id"] for r in repo.get_open_shadow_positions()} == {2}
 
 

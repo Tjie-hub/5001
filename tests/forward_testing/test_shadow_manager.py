@@ -141,6 +141,49 @@ def test_suspended_ticker_holds(ft_db, repo):
     assert repo.get_shadow_trade(sid) is None
 
 
+def test_exit_pass_backfills_skipped_trading_days(ft_db, repo):
+    # C2: the engine is run on 06-27 (open) then NOT again until 06-29, skipping
+    # the 06-28 bar entirely. The TP on 06-28 must still be detected and booked on
+    # 06-28 -- a missed scheduler day must not silently swallow an exit.
+    conn = sqlite3.connect(ft_db)
+    seed_ohlcv(conn, "BBCA", FLAT + [
+        ("2026-06-27", 100, 100.5, 99.5, 100, 1000),     # entry bar; no exit
+        ("2026-06-28", 100, 102.5, 99.5, 102, 1000),     # high 102.5 >= tp 102 -> TP (SKIPPED run)
+        ("2026-06-29", 100, 100.5, 99.5, 100, 1000)])    # flat; would NOT trigger anything
+    conn.commit(); conn.close()
+    sid = _ingest_one(ft_db, repo, "BBCA", "vol_weighted", "BUY")
+
+    mgr = _mgr(ft_db)
+    mgr.run("2026-06-27")   # opens at 100
+    mgr.run("2026-06-29")   # 06-28 never had its own run -> must be backfilled here
+
+    trade = repo.get_shadow_trade(sid)
+    assert trade is not None, "skipped 06-28 bar was never evaluated -> TP lost"
+    assert trade["exit_reason"] == "TP"
+    assert trade["exit_date"] == "2026-06-28"     # booked on the bar that triggered, not 06-29
+    assert trade["exit_price"] == 102.0
+    assert repo.get_signal_state(sid) == "EXITED"
+
+
+def test_rerun_same_open_day_does_not_double_count_hold_days(ft_db, repo):
+    # H1/C2 watermark: re-running the SAME date on an open position must be a no-op,
+    # not a second hold-day increment (duplicate scheduler execution).
+    conn = sqlite3.connect(ft_db)
+    seed_ohlcv(conn, "BBCA", FLAT + [
+        ("2026-06-27", 100, 100.5, 99.5, 100, 1000),
+        ("2026-06-28", 100, 101, 99.8, 100.5, 1000)])     # no SL/TP -> hold
+    conn.commit(); conn.close()
+    sid = _ingest_one(ft_db, repo, "BBCA", "vol_weighted", "BUY")
+    mgr = _mgr(ft_db)
+    mgr.run("2026-06-27")
+    mgr.run("2026-06-28")
+    mgr.run("2026-06-28")   # duplicate run of the same date
+    pos = repo.get_shadow_position(sid)
+    assert pos["status"] == "OPEN"
+    assert pos["hold_days"] == 2          # entry bar (1) + 06-28 (2); NOT 3
+    assert pos["highest_seen"] == 101.0
+
+
 def test_rerun_is_idempotent(ft_db, repo):
     conn = sqlite3.connect(ft_db)
     seed_ohlcv(conn, "BBCA", FLAT + [

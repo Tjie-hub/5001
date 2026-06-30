@@ -93,24 +93,29 @@ class ShadowPositionManager:
     # ---- EXIT pass ----
     def _exit_pass(self, run_date):
         for pos in self.repo.get_open_shadow_positions():
-            # <= : a position opened on THIS run already had its entry bar evaluated by
-            # _maybe_open; re-checking the same bar here would double-count hold_days.
-            # Positions opened on a prior run (entry_date < run_date) still evaluate today.
-            if run_date <= pos["entry_date"]:
-                continue
-            self._check_one(pos["signal_id"], run_date)
+            # Backfill EVERY trading bar since this position was last evaluated, not
+            # just run_date — a missed scheduler day (crash/holiday/deploy gap) must
+            # not silently swallow a stop/TP. last_eval_date is the exclusive
+            # watermark (entry bar already evaluated by _maybe_open); empty range
+            # makes a same-day re-run a no-op (no double-counted hold_days).
+            last = pos["last_eval_date"] or pos["entry_date"]
+            for on_date in self.resolver.bars_between(pos["ticker"], last, run_date):
+                if not self._check_one(pos["signal_id"], on_date):
+                    break  # position closed -> stop backfilling later bars
 
     def _check_one(self, signal_id, on_date):
+        """Evaluate one bar for an open position. Returns True if it remains open
+        (held/suspended/missing), False once it closes (or was already closed)."""
         pos = self.repo.get_shadow_position(signal_id)
         if pos is None or pos["status"] != "OPEN":
-            return  # idempotent: already closed
+            return False  # idempotent: already closed
 
         if self._suspended(pos["ticker"], on_date):
-            return  # suspension-hold (§9); full CA handling is Phase 3
+            return True  # suspension-hold (§9); watermark NOT advanced -> retried on resume
 
         bar_tuple = self.resolver.bar(pos["ticker"], on_date)
         if bar_tuple is None:
-            return  # missing ohlcv -> hold + flag, never force-exit (§5.4)
+            return True  # missing ohlcv -> hold + flag, never force-exit (§5.4)
 
         from forward_testing.positions.exit_evaluator import Bar
         bar = Bar(date=bar_tuple[0], open=bar_tuple[1], high=bar_tuple[2],
@@ -127,8 +132,8 @@ class ShadowPositionManager:
         if decision is None:
             new_high = max(pos["highest_seen"], bar.high)
             new_low = min(pos["lowest_seen"], bar.low)
-            self.repo.update_shadow_position(signal_id, new_high, new_low, new_hold)
-            return
+            self.repo.update_shadow_position(signal_id, new_high, new_low, new_hold, on_date)
+            return True
 
         # Close: persist cost-adjusted entry/exit + raw r/mae/mfe.
         close_side = "SELL" if pos["direction"] == "LONG" else "BUY"
@@ -146,3 +151,4 @@ class ShadowPositionManager:
         )
         self.lifecycle.transition(signal_id, SignalState.EXITED, on_date, actor="shadow_mgr",
                                   reason=decision.reason)
+        return False  # closed -> caller stops backfilling

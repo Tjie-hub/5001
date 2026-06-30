@@ -173,15 +173,16 @@ class FTRepo:
                 "SELECT * FROM ft_shadow_position WHERE status='OPEN' ORDER BY signal_id"
             ).fetchall()]
 
-    def update_shadow_position(self, signal_id, highest_seen, lowest_seen, hold_days):
-        """Update running extremes + hold-days for an open position. One transaction."""
+    def update_shadow_position(self, signal_id, highest_seen, lowest_seen, hold_days,
+                               last_eval_date):
+        """Update running extremes + hold-days + eval watermark. One transaction."""
         with ft_get_db(self.db_path) as c:
             c.execute(
                 """UPDATE ft_shadow_position
-                   SET highest_seen=?, lowest_seen=?, hold_days=?,
+                   SET highest_seen=?, lowest_seen=?, hold_days=?, last_eval_date=?,
                        updated_at=datetime('now','localtime')
                    WHERE signal_id=?""",
-                (highest_seen, lowest_seen, hold_days, signal_id),
+                (highest_seen, lowest_seen, hold_days, last_eval_date, signal_id),
             )
             c.commit()
 
@@ -190,9 +191,9 @@ class FTRepo:
             c.execute(
                 """UPDATE ft_shadow_position
                    SET status='CLOSED', exit_date=?, exit_price=?, exit_reason=?,
-                       updated_at=datetime('now','localtime')
+                       last_eval_date=?, updated_at=datetime('now','localtime')
                    WHERE signal_id=?""",
-                (exit_date, exit_price, exit_reason, signal_id),
+                (exit_date, exit_price, exit_reason, exit_date, signal_id),
             )
             c.commit()
 

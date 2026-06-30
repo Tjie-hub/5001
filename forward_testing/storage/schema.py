@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS ft_shadow_position (
     highest_seen   REAL NOT NULL,
     lowest_seen    REAL NOT NULL,
     hold_days      INTEGER NOT NULL DEFAULT 0,
+    last_eval_date TEXT,
     status         TEXT NOT NULL DEFAULT 'OPEN',
     exit_date      TEXT,
     exit_price     REAL,

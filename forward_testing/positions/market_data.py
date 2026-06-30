@@ -62,3 +62,13 @@ class MarketDataResolver:
             if r["date"] == on_date:
                 return (r["date"], r["open"], r["high"], r["low"], r["close"])
         return None
+
+    def bars_between(self, ticker, after_date, on_date):
+        """Trading bar dates with after_date < date <= on_date, ascending.
+
+        Used by the exit pass to backfill every bar since a position was last
+        evaluated (a missed scheduler day must not swallow an exit). after_date
+        is exclusive (already evaluated); on_date is inclusive.
+        """
+        return [r["date"] for r in self._rows(ticker)
+                if after_date < r["date"] <= on_date]
