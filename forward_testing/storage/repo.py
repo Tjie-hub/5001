@@ -123,3 +123,101 @@ class FTRepo:
                 (status, run_id),
             )
             c.commit()
+
+    # ---- shadow signals lookup ----
+    def get_signals_by_state(self, state, track=None):
+        """Return ft_signal rows currently in `state` (optionally filtered by track).
+
+        Each row exposes: id, signal_date, ticker, strategy, direction, track.
+        """
+        with ft_get_db(self.db_path) as c:
+            sql = ("SELECT s.id, s.signal_date, s.ticker, s.strategy, s.direction, s.track "
+                   "FROM ft_signal s JOIN ft_signal_state st ON st.signal_id = s.id "
+                   "WHERE st.state = ?")
+            params = [state]
+            if track is not None:
+                sql += " AND s.track = ?"
+                params.append(track)
+            sql += " ORDER BY s.id"
+            return [dict(r) for r in c.execute(sql, params).fetchall()]
+
+    # ---- shadow positions ----
+    def open_shadow_position(self, signal_id, ticker, strategy, direction,
+                             entry_date, entry_price, atr14, sl_price, tp_price,
+                             trail_atr_mult, trail_anchor, highest_seen, lowest_seen):
+        """Idempotent open (PK = signal_id). No-op if a row already exists."""
+        with ft_get_db(self.db_path) as c:
+            c.execute(
+                """INSERT INTO ft_shadow_position
+                   (signal_id, ticker, strategy, direction, entry_date, entry_price,
+                    atr14, sl_price, tp_price, trail_atr_mult, trail_anchor,
+                    highest_seen, lowest_seen, hold_days, status)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,'OPEN')
+                   ON CONFLICT(signal_id) DO NOTHING""",
+                (signal_id, ticker, strategy, direction, entry_date, entry_price,
+                 atr14, sl_price, tp_price, trail_atr_mult, trail_anchor,
+                 highest_seen, lowest_seen),
+            )
+            c.commit()
+
+    def get_shadow_position(self, signal_id):
+        with ft_get_db(self.db_path) as c:
+            row = c.execute(
+                "SELECT * FROM ft_shadow_position WHERE signal_id=?", (signal_id,)
+            ).fetchone()
+            return dict(row) if row else None
+
+    def get_open_shadow_positions(self):
+        with ft_get_db(self.db_path) as c:
+            return [dict(r) for r in c.execute(
+                "SELECT * FROM ft_shadow_position WHERE status='OPEN' ORDER BY signal_id"
+            ).fetchall()]
+
+    def update_shadow_position(self, signal_id, highest_seen, lowest_seen, hold_days):
+        """Update running extremes + hold-days for an open position. One transaction."""
+        with ft_get_db(self.db_path) as c:
+            c.execute(
+                """UPDATE ft_shadow_position
+                   SET highest_seen=?, lowest_seen=?, hold_days=?,
+                       updated_at=datetime('now','localtime')
+                   WHERE signal_id=?""",
+                (highest_seen, lowest_seen, hold_days, signal_id),
+            )
+            c.commit()
+
+    def close_shadow_position(self, signal_id, exit_date, exit_price, exit_reason):
+        with ft_get_db(self.db_path) as c:
+            c.execute(
+                """UPDATE ft_shadow_position
+                   SET status='CLOSED', exit_date=?, exit_price=?, exit_reason=?,
+                       updated_at=datetime('now','localtime')
+                   WHERE signal_id=?""",
+                (exit_date, exit_price, exit_reason, signal_id),
+            )
+            c.commit()
+
+    # ---- shadow trades ----
+    def insert_shadow_trade(self, signal_id, ticker, strategy, direction, signal_date,
+                            entry_date, entry_price, exit_date, exit_price, exit_reason,
+                            pnl_pct, r_multiple, hold_days, mae_pct, mfe_pct):
+        """Idempotent closed round-trip (PK = signal_id)."""
+        with ft_get_db(self.db_path) as c:
+            c.execute(
+                """INSERT INTO ft_shadow_trade
+                   (signal_id, ticker, strategy, direction, signal_date, entry_date,
+                    entry_price, exit_date, exit_price, exit_reason, pnl_pct, r_multiple,
+                    hold_days, mae_pct, mfe_pct)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                   ON CONFLICT(signal_id) DO NOTHING""",
+                (signal_id, ticker, strategy, direction, signal_date, entry_date,
+                 entry_price, exit_date, exit_price, exit_reason, pnl_pct, r_multiple,
+                 hold_days, mae_pct, mfe_pct),
+            )
+            c.commit()
+
+    def get_shadow_trade(self, signal_id):
+        with ft_get_db(self.db_path) as c:
+            row = c.execute(
+                "SELECT * FROM ft_shadow_trade WHERE signal_id=?", (signal_id,)
+            ).fetchone()
+            return dict(row) if row else None
