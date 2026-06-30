@@ -9,6 +9,14 @@ from forward_testing.positions.exit_evaluator import PositionView, evaluate_exit
 from forward_testing.lifecycle.states import SignalState
 
 
+def _days_between(date_a, date_b):
+    """Calendar days from date_a to date_b ('YYYY-MM-DD' strings)."""
+    from datetime import date
+    ya, ma, da = (int(x) for x in date_a.split("-"))
+    yb, mb, db = (int(x) for x in date_b.split("-"))
+    return (date(yb, mb, db) - date(ya, ma, da)).days
+
+
 def _default_suspension_checker(db_path):
     """Returns (ticker, on_date) -> bool using suspension_events if the table exists.
 
@@ -34,8 +42,14 @@ def _default_suspension_checker(db_path):
 
 
 class ShadowPositionManager:
+    # A position whose ticker has produced no bar for this many calendar days is
+    # treated as delisted and force-closed at its last known close (unless an
+    # active suspension covers run_date). Generous enough to clear the longest IDX
+    # holiday clusters (e.g. Eid) without prematurely closing a quiet-but-live name.
+    MAX_STALE_DAYS = 15
+
     def __init__(self, repo, resolver, registry, lifecycle, db_path,
-                 costs=None, suspension_checker=None):
+                 costs=None, suspension_checker=None, max_stale_days=None):
         self.repo = repo
         self.resolver = resolver
         self.registry = registry
@@ -43,6 +57,7 @@ class ShadowPositionManager:
         self.db_path = db_path
         self.costs = costs if costs is not None else Costs()
         self._suspended = suspension_checker or _default_suspension_checker(db_path)
+        self.max_stale_days = max_stale_days if max_stale_days is not None else self.MAX_STALE_DAYS
 
     # ---- public API ----
     def run(self, run_date):
@@ -111,9 +126,35 @@ class ShadowPositionManager:
             # watermark (entry bar already evaluated by _maybe_open); empty range
             # makes a same-day re-run a no-op (no double-counted hold_days).
             last = pos["last_eval_date"] or pos["entry_date"]
+            still_open = True
             for on_date in self.resolver.bars_between(pos["ticker"], last, run_date):
-                if not self._check_one(pos["signal_id"], on_date):
+                still_open = self._check_one(pos["signal_id"], on_date)
+                if not still_open:
                     break  # position closed -> stop backfilling later bars
+            if still_open:
+                self._maybe_force_close_stale(pos, run_date)
+
+    def _maybe_force_close_stale(self, pos, run_date):
+        """Force-close a position whose ticker has gone dark (delisted): no bar for
+        more than max_stale_days, and not under an active suspension. Books the exit
+        at the last known close so the loss is realised instead of lingering OPEN
+        forever (survivorship leak). Suspensions are held (they may resume)."""
+        latest = self.resolver.latest_bar(pos["ticker"])
+        if latest is None:
+            return
+        latest_date, latest_close = latest
+        if _days_between(latest_date, run_date) <= self.max_stale_days:
+            return  # still trading recently (or normal holiday gap) -> hold
+        if self._suspended(pos["ticker"], run_date):
+            return  # active suspension may resume -> hold, do not force-close
+        # Realise at the last known close. r/mae/mfe from the position's stored
+        # extremes (same convention as ExitEvaluator); pnl is layered with costs by _close.
+        entry, long = pos["entry_price"], pos["direction"] == "LONG"
+        lv = self.registry.get(pos["strategy"]).initial_levels(pos["direction"], entry, pos["atr14"])
+        r_multiple = (1 if long else -1) * (latest_close - entry) / lv.one_r
+        mae = ((pos["lowest_seen"] - entry) / entry) if long else ((pos["highest_seen"] - entry) / entry)
+        mfe = ((pos["highest_seen"] - entry) / entry) if long else ((pos["lowest_seen"] - entry) / entry)
+        self._close(pos, latest_date, latest_close, "STALE", r_multiple, mae, mfe, pos["hold_days"])
 
     def _check_one(self, signal_id, on_date):
         """Evaluate one bar for an open position. Returns True if it remains open
@@ -147,20 +188,26 @@ class ShadowPositionManager:
             self.repo.update_shadow_position(signal_id, new_high, new_low, new_hold, on_date)
             return True
 
-        # Close: persist cost-adjusted entry/exit + raw r/mae/mfe.
+        self._close(pos, on_date, decision.fill_price, decision.reason,
+                    decision.r_multiple, decision.mae_pct, decision.mfe_pct, new_hold)
+        return False  # closed -> caller stops backfilling
+
+    def _close(self, pos, exit_date, raw_fill, reason, r_multiple, mae_pct, mfe_pct, hold_days):
+        """Persist a closed round-trip: cost-adjusted entry/exit + raw r/mae/mfe.
+        Shared by bar-driven exits (_check_one) and stale force-closes."""
+        signal_id = pos["signal_id"]
         close_side = "SELL" if pos["direction"] == "LONG" else "BUY"
-        exit_price = apply_costs(decision.fill_price, close_side, self.costs)
+        exit_price = apply_costs(raw_fill, close_side, self.costs)
         entry = pos["entry_price"]
         pnl_pct = ((exit_price - entry) / entry) if pos["direction"] == "LONG" \
                   else ((entry - exit_price) / entry)
-        self.repo.close_shadow_position(signal_id, on_date, exit_price, decision.reason)
+        self.repo.close_shadow_position(signal_id, exit_date, exit_price, reason)
         self.repo.insert_shadow_trade(
             signal_id=signal_id, ticker=pos["ticker"], strategy=pos["strategy"],
             direction=pos["direction"], signal_date=pos["entry_date"], entry_date=pos["entry_date"],
-            entry_price=entry, exit_date=on_date, exit_price=exit_price, exit_reason=decision.reason,
-            pnl_pct=pnl_pct, r_multiple=decision.r_multiple, hold_days=new_hold,
-            mae_pct=decision.mae_pct, mfe_pct=decision.mfe_pct,
+            entry_price=entry, exit_date=exit_date, exit_price=exit_price, exit_reason=reason,
+            pnl_pct=pnl_pct, r_multiple=r_multiple, hold_days=hold_days,
+            mae_pct=mae_pct, mfe_pct=mfe_pct,
         )
-        self.lifecycle.transition(signal_id, SignalState.EXITED, on_date, actor="shadow_mgr",
-                                  reason=decision.reason)
-        return False  # closed -> caller stops backfilling
+        self.lifecycle.transition(signal_id, SignalState.EXITED, exit_date, actor="shadow_mgr",
+                                  reason=reason)

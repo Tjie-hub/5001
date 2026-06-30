@@ -63,6 +63,15 @@ class MarketDataResolver:
                 return (r["date"], r["open"], r["high"], r["low"], r["close"])
         return None
 
+    def latest_bar(self, ticker):
+        """Most recent complete bar (date, close), or None. Used to detect a ticker
+        whose data has stopped (delisting) so a stuck position can be force-closed."""
+        rows = self._rows(ticker)
+        if not rows:
+            return None
+        r = rows[-1]
+        return (r["date"], r["close"])
+
     def bars_between(self, ticker, after_date, on_date):
         """Trading bar dates with after_date < date <= on_date, ascending.
 

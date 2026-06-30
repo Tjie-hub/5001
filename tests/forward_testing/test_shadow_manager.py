@@ -141,6 +141,57 @@ def test_suspended_ticker_holds(ft_db, repo):
     assert repo.get_shadow_trade(sid) is None
 
 
+def test_delisted_position_force_closed_after_staleness_window(ft_db, repo):
+    # H2: a ticker that stops producing bars (delisted) must not leave its position
+    # OPEN forever -- that never books the loss (survivorship leak). After the
+    # staleness window with no new bar, force-close at the last known close.
+    conn = sqlite3.connect(ft_db)
+    seed_ohlcv(conn, "DEAD", FLAT + [("2026-06-27", 100, 100.5, 99.5, 100, 1000)])  # last bar 06-27
+    conn.commit(); conn.close()
+    sid = _ingest_one(ft_db, repo, "DEAD", "vol_weighted", "BUY")
+    mgr = _mgr(ft_db)
+    mgr.run("2026-06-27")                     # opens; ticker then goes dark
+    assert repo.get_shadow_position(sid)["status"] == "OPEN"
+
+    mgr.run("2026-07-20")                     # 23 days, no new bars -> delisted -> force-close
+    pos = repo.get_shadow_position(sid)
+    assert pos["status"] == "CLOSED"
+    trade = repo.get_shadow_trade(sid)
+    assert trade["exit_reason"] == "STALE"
+    assert trade["exit_date"] == "2026-06-27"   # last day it actually traded
+    assert trade["exit_price"] == 100.0         # last known close (zero costs in test)
+    assert repo.get_signal_state(sid) == "EXITED"
+
+
+def test_stale_window_not_exceeded_holds(ft_db, repo):
+    # Within the staleness window (e.g. a long weekend / holiday cluster), a quiet
+    # ticker must NOT be force-closed.
+    conn = sqlite3.connect(ft_db)
+    seed_ohlcv(conn, "QUIET", FLAT + [("2026-06-27", 100, 100.5, 99.5, 100, 1000)])
+    conn.commit(); conn.close()
+    sid = _ingest_one(ft_db, repo, "QUIET", "vol_weighted", "BUY")
+    mgr = _mgr(ft_db)
+    mgr.run("2026-06-27")
+    mgr.run("2026-07-04")                     # 7 days, under the window -> hold
+    assert repo.get_shadow_position(sid)["status"] == "OPEN"
+    assert repo.get_shadow_trade(sid) is None
+
+
+def test_suspended_ticker_not_force_closed_even_when_stale(ft_db, repo):
+    # A long but ACTIVE suspension must hold (it may resume), not force-close.
+    conn = sqlite3.connect(ft_db)
+    seed_ohlcv(conn, "SUSP", FLAT + [("2026-06-27", 100, 100.5, 99.5, 100, 1000)])
+    conn.execute("INSERT INTO suspension_events (ticker,last_normal_date,resume_date,classification) "
+                 "VALUES ('SUSP','2026-06-27','2026-08-30','suspension')")
+    conn.commit(); conn.close()
+    sid = _ingest_one(ft_db, repo, "SUSP", "vol_weighted", "BUY")
+    mgr = _mgr(ft_db)
+    mgr.run("2026-06-27")
+    mgr.run("2026-07-20")                     # stale by days, but suspension still active -> hold
+    assert repo.get_shadow_position(sid)["status"] == "OPEN"
+    assert repo.get_shadow_trade(sid) is None
+
+
 def test_open_pass_expires_stale_signal_instead_of_backdating_entry(ft_db, repo):
     # A signal whose fill bar (next_open) falls BEFORE run_date means the engine
     # was not running when the entry should have filled. Opening now at that
