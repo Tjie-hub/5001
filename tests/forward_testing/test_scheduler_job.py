@@ -17,7 +17,12 @@ def test_cycle_ingests_and_opens(ft_db, repo):
     from scheduler.jobs import run_forward_test_cycle
     _seed(ft_db)
 
-    run_forward_test_cycle(db_path=ft_db, run_date="2026-06-26")
+    # Real two-day flow: a 06-26 signal is ingested on the 06-26 cycle (open deferred
+    # -- its fill bar 06-27 is in the future), then fills at 06-27's open on the
+    # 06-27 cycle (next_open == run_date). Opening at 06-27 during the 06-26 run
+    # would be look-ahead, which the entry-timeliness guard now blocks.
+    run_forward_test_cycle(db_path=ft_db, run_date="2026-06-26")   # ingest; defer
+    run_forward_test_cycle(db_path=ft_db, run_date="2026-06-27")   # timely open
 
     positions = repo.get_open_shadow_positions()
     assert len(positions) == 1
@@ -28,8 +33,9 @@ def test_cycle_is_idempotent(ft_db, repo):
     from scheduler.jobs import run_forward_test_cycle
     _seed(ft_db)
 
-    run_forward_test_cycle(db_path=ft_db, run_date="2026-06-26")
-    run_forward_test_cycle(db_path=ft_db, run_date="2026-06-26")  # second run = no-op
+    run_forward_test_cycle(db_path=ft_db, run_date="2026-06-26")   # ingest
+    run_forward_test_cycle(db_path=ft_db, run_date="2026-06-27")   # opens
+    run_forward_test_cycle(db_path=ft_db, run_date="2026-06-27")   # second 06-27 run = no-op
 
     assert len(repo.get_open_shadow_positions()) == 1
 

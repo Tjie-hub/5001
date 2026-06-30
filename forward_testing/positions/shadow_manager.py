@@ -66,6 +66,18 @@ class ShadowPositionManager:
             return  # D+1 bar not yet available -> defer
         entry_date, raw_entry = nxt
 
+        # Entry-timeliness guard (entries must be timely; only exits backfill).
+        # The fill bar is next_open. If it is in the future relative to this run,
+        # the data has not arrived yet -> defer. If it is in the PAST, the engine
+        # was not running when the entry should have filled; opening now would
+        # fabricate a fill at a backdated price -> EXPIRE the signal instead.
+        if entry_date > run_date:
+            return  # fill bar beyond this run -> defer (no look-ahead)
+        if entry_date < run_date:
+            self.lifecycle.transition(signal_id, SignalState.ARCHIVED, run_date,
+                                      actor="shadow_mgr", reason="entry-window-expired")
+            return
+
         atr = self.resolver.atr14(sig["ticker"], sig["signal_date"])
         if atr is None:
             return  # insufficient history -> do not open blind

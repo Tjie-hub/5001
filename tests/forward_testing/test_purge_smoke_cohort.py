@@ -21,7 +21,7 @@ def _open_one_position(ft_db, repo):
     SignalAdapter(repo, ft_db).ingest("2026-06-26")
     mgr = ShadowPositionManager(repo, MarketDataResolver(ft_db), ExitPolicyRegistry(),
                                 LifecycleManager(repo), ft_db, costs=Costs())
-    mgr.run("2026-06-26")  # opens BBCA at 2026-06-27
+    mgr.run("2026-06-27")  # fill bar 06-27 == run_date -> timely open (not look-ahead)
 
 
 def test_purge_clears_positions_and_resets_state(ft_db, repo):

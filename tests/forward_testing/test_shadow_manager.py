@@ -141,6 +141,38 @@ def test_suspended_ticker_holds(ft_db, repo):
     assert repo.get_shadow_trade(sid) is None
 
 
+def test_open_pass_expires_stale_signal_instead_of_backdating_entry(ft_db, repo):
+    # A signal whose fill bar (next_open) falls BEFORE run_date means the engine
+    # was not running when the entry should have filled. Opening now at that
+    # backdated price fabricates a fill we could not have gotten -> the signal must
+    # EXPIRE (archived), not open. (Exits still backfill; entries must be timely.)
+    conn = sqlite3.connect(ft_db)
+    seed_ohlcv(conn, "BBCA", FLAT + [
+        ("2026-06-29", 100, 100.5, 99.5, 100, 1000),
+        ("2026-06-30", 100, 100.5, 99.5, 100, 1000)])
+    conn.commit(); conn.close()
+    sid = _ingest_one(ft_db, repo, "BBCA", "vol_weighted", "BUY")   # signal_date 2026-06-26
+
+    _mgr(ft_db).run("2026-06-30")   # next_open(06-26)=06-29, which is < run_date 06-30
+
+    assert repo.get_shadow_position(sid) is None          # not opened at a backdated price
+    assert repo.get_signal_state(sid) == "ARCHIVED"       # expired, not OPENED
+
+
+def test_open_pass_opens_when_fill_bar_is_run_date(ft_db, repo):
+    # Timely fill: signal from the prior session fills at run_date's open. Guard
+    # must NOT expire this -- it is the normal daily path.
+    conn = sqlite3.connect(ft_db)
+    seed_ohlcv(conn, "BBCA", FLAT + [("2026-06-29", 100, 100.5, 99.5, 100, 1000)])
+    conn.commit(); conn.close()
+    sid = _ingest_one(ft_db, repo, "BBCA", "vol_weighted", "BUY")   # signal_date 2026-06-26
+
+    _mgr(ft_db).run("2026-06-29")   # next_open(06-26)=06-29 == run_date -> open
+
+    assert repo.get_shadow_position(sid) is not None
+    assert repo.get_signal_state(sid) == "OPENED"
+
+
 def test_exit_pass_backfills_skipped_trading_days(ft_db, repo):
     # C2: the engine is run on 06-27 (open) then NOT again until 06-29, skipping
     # the 06-28 bar entirely. The TP on 06-28 must still be detected and booked on
