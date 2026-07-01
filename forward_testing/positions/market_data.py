@@ -1,0 +1,83 @@
+"""OHLCV reads + SMA-ATR for the SHADOW engine.
+
+ATR is reimplemented locally (SMA convention, identical to engine.indicators.calc_atr)
+so forward_testing stays stdlib-only — no pandas dependency.
+"""
+from forward_testing.storage.db import ft_get_db
+
+
+def atr_sma(rows, period=14):
+    """SMA-ATR. rows: list of (high, low, close) in ascending date order.
+
+    Returns the mean of the last `period` True Ranges, or None if fewer than
+    `period` bars are available (matches calc_atr's min_periods behaviour).
+    """
+    if len(rows) < period:
+        return None
+    trs = []
+    prev_close = None
+    for h, l, c in rows:
+        if prev_close is None:
+            tr = h - l
+        else:
+            tr = max(h - l, abs(h - prev_close), abs(l - prev_close))
+        trs.append(tr)
+        prev_close = c
+    return sum(trs[-period:]) / period
+
+
+class MarketDataResolver:
+    """Reads ohlcv per ticker (cached for the run)."""
+
+    def __init__(self, db_path):
+        self.db_path = db_path
+        self._cache = {}
+
+    def _rows(self, ticker):
+        if ticker not in self._cache:
+            with ft_get_db(self.db_path) as c:
+                # Exclude all-NULL/incomplete bars: prod ohlcv carries empty rows for
+                # non-trading/suspended days. A complete bar needs open/high/low/close.
+                self._cache[ticker] = [
+                    dict(r) for r in c.execute(
+                        "SELECT date, open, high, low, close FROM ohlcv "
+                        "WHERE ticker=? AND open IS NOT NULL AND high IS NOT NULL "
+                        "AND low IS NOT NULL AND close IS NOT NULL ORDER BY date", (ticker,)
+                    ).fetchall()
+                ]
+        return self._cache[ticker]
+
+    def atr14(self, ticker, as_of):
+        rows = [(r["high"], r["low"], r["close"]) for r in self._rows(ticker) if r["date"] <= as_of]
+        return atr_sma(rows, 14)
+
+    def next_open(self, ticker, after_date):
+        for r in self._rows(ticker):
+            if r["date"] > after_date:
+                return (r["date"], r["open"])
+        return None
+
+    def bar(self, ticker, on_date):
+        for r in self._rows(ticker):
+            if r["date"] == on_date:
+                return (r["date"], r["open"], r["high"], r["low"], r["close"])
+        return None
+
+    def latest_bar(self, ticker):
+        """Most recent complete bar (date, close), or None. Used to detect a ticker
+        whose data has stopped (delisting) so a stuck position can be force-closed."""
+        rows = self._rows(ticker)
+        if not rows:
+            return None
+        r = rows[-1]
+        return (r["date"], r["close"])
+
+    def bars_between(self, ticker, after_date, on_date):
+        """Trading bar dates with after_date < date <= on_date, ascending.
+
+        Used by the exit pass to backfill every bar since a position was last
+        evaluated (a missed scheduler day must not swallow an exit). after_date
+        is exclusive (already evaluated); on_date is inclusive.
+        """
+        return [r["date"] for r in self._rows(ticker)
+                if after_date < r["date"] <= on_date]
