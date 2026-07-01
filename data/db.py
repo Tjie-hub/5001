@@ -51,6 +51,10 @@ def init_db():
     conn.close()
     print("DB initialized.")
     init_agent_firm_tables()
+    # Forward-testing foundation tables (Phase 1). Lazy import avoids any
+    # import cycle; idempotent so safe on every startup.
+    from forward_testing.storage.db import init_ft_tables
+    init_ft_tables(DB_PATH)
 
 def init_agent_firm_tables():
     """Idempotent migration for Phase 1 agent firm tables. Safe to call repeatedly."""
