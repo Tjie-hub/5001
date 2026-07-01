@@ -929,3 +929,48 @@ def run_vpin_backfill(days=90):
     except Exception as _e:
         logging.error(f"[vpin_backfill] error: {_e}")
         return {'computed': 0, 'errors': 0, 'dates': 0}
+
+
+def run_forward_test_cycle(db_path=None, run_date=None):
+    """Nightly SHADOW forward-test cycle: ingest today's signals + exit-pass open positions.
+
+    Fail-soft: logs and returns on any error so a bad cycle never takes down the
+    scheduler. db_path / run_date are injectable for tests; in production both
+    default (DB_PATH and today in WIB).
+    """
+    from forward_testing.storage.db import init_ft_tables
+    from forward_testing.storage.repo import FTRepo
+    from forward_testing.adapters.signal_adapter import SignalAdapter
+    from forward_testing.positions.market_data import MarketDataResolver
+    from forward_testing.positions.exit_policy import ExitPolicyRegistry
+    from forward_testing.positions.shadow_manager import ShadowPositionManager
+    from forward_testing.lifecycle.manager import LifecycleManager
+    from forward_testing.positions.costs import Costs
+
+    db = db_path or DB_PATH
+    rd = run_date or datetime.now(WIB).strftime("%Y-%m-%d")
+    try:
+        init_ft_tables(db)
+        repo = FTRepo(db)
+
+        def _trade_count():
+            with sqlite3.connect(db, timeout=30) as c:
+                return c.execute("SELECT COUNT(*) FROM ft_shadow_trade").fetchone()[0]
+
+        open_before = len(repo.get_open_shadow_positions())
+        trades_before = _trade_count()
+
+        n_ingested = SignalAdapter(repo, db).ingest(rd)
+        mgr = ShadowPositionManager(
+            repo, MarketDataResolver(db), ExitPolicyRegistry(),
+            LifecycleManager(repo), db, costs=Costs(),
+        )
+        mgr.run(rd)
+
+        open_after = len(repo.get_open_shadow_positions())
+        closed = _trade_count() - trades_before
+        opened = (open_after - open_before) + closed
+        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Forward-test cycle {rd}: "
+              f"ingested={n_ingested} opened={opened} closed={closed} open_now={open_after}")
+    except Exception as e:
+        print(f"[scheduler] Forward-test cycle error: {e}")

@@ -52,6 +52,7 @@ from scheduler.jobs import (  # noqa: F401
     run_market_health_report,
     run_premarket_firm_scan,
     run_eod_trade_plan,
+    run_forward_test_cycle,
     run_vpin_daily_batch,
     run_vpin_backfill,
     _refresh_backtest_cache,
@@ -180,6 +181,13 @@ def start_scheduler():
         day_of_week="mon-fri", hour=16, minute=40, timezone=WIB),
         id="eod_trade_plan", name="EOD Trade Plan 16:40")
 
+    # Forward-test SHADOW cycle — 18:30 WIB (after 16:00 close, 16:05 flow fetch,
+    # 18:00 VPIN batch). Ingests today's scheduled_signals into the ft model and
+    # runs the open + exit passes so the shadow-position population grows daily.
+    scheduler.add_job(run_forward_test_cycle, CronTrigger(
+        day_of_week="mon-fri", hour=18, minute=30, timezone=WIB),
+        id="forward_test_cycle", name="Forward-Test Cycle 18:30")
+
     scheduler.start()
     print("Scheduler started:")
     print("  📊 SIGNAL REPORT: 16:00")
@@ -190,6 +198,7 @@ def start_scheduler():
     print("  🏥 MARKET HEALTH: 08:45 pre-market")
     print("  🌅 PREMARKET FIRM: 08:35 pre-market (unified watchlist → agent firm)")
     print("  📋 EOD TRADE PLAN: 16:40 (all long sources → agent firm → 1 ranked msg)")
+    print("  🧪 FORWARD-TEST CYCLE: 18:30 (ingest signals → open/exit shadow positions)")
     return scheduler
 
 
