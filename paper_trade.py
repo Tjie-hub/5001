@@ -299,9 +299,11 @@ def open_trade(ticker: str, entry_price: float, strategy: str = None,
 
     # Cooldown: skip re-entry if ticker was stopped out at a loss within 3 days
     _conn = get_db()
+    # Stop-family exits (any engine era) at a loss trigger the 3-day cooldown.
     _recent_sl = _conn.execute("""
         SELECT exit_date FROM paper_trades
-        WHERE ticker=? AND exit_reason='STOPPED_OUT' AND pnl_pct < 0
+        WHERE ticker=? AND pnl_pct < 0
+          AND exit_reason IN ('STOPPED_OUT','SL','TRAIL','MA_BREAK','R7_TRAIL_SL')
           AND exit_date >= date('now','localtime','-3 days')
         ORDER BY exit_date DESC LIMIT 1
     """, (ticker,)).fetchone()

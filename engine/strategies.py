@@ -1719,13 +1719,12 @@ def strategy_swing_trend(df: pd.DataFrame,
                 gross   = (exit_price - entry_price) * lots * 100
                 pnl_pct = (exit_price - entry_price) / entry_price
                 capital += gross
-                reason_tag = 'TP' if gross > 0 and exit_reason != 'EOD' else (
-                    'SL' if exit_reason == 'R7_TRAIL_SL' else 'TRAIL'
-                )
+                # 1.9: record the REAL trigger (R1_MA_BREAK, R7_TRAIL_SL, ...)
+                # — the old TP/SL/TRAIL remap made exit-reason stats meaningless.
                 trades.append(Trade(
                     entry_date=entry_date, exit_date=date,
                     entry_price=entry_price, exit_price=exit_price,
-                    lots=lots, direction='BUY', exit_reason=reason_tag,
+                    lots=lots, direction='BUY', exit_reason=exit_reason,
                     pnl_rp=gross, pnl_pct=pnl_pct * 100,
                     strategy=f"{strategy_name}[{exit_reason}]"
                 ))

@@ -108,3 +108,21 @@ def test_open_trade_tfb_pure_trail_has_no_tp(pt_db):
     assert "error" not in res, res
     assert res["sl_price"] == 940
     assert res["tp_price"] is None
+
+
+def test_cooldown_covers_trail_and_ma_break_losses(pt_db):
+    """1.9: cooldown matched only 'STOPPED_OUT'; kernel reasons ('TRAIL',
+    'SL', 'MA_BREAK') and swing 'R7_TRAIL_SL' must also trigger it."""
+    import paper_trade as pt
+    conn = sqlite3.connect(pt_db)
+    conn.execute(
+        "INSERT INTO paper_trades (ticker, strategy, entry_date, entry_price,"
+        " lots, capital_used, tp_price, sl_price, status, exit_date,"
+        " exit_price, exit_reason, pnl_rp, pnl_pct)"
+        " VALUES ('TEST','momentum', date('now','localtime','-2 days'), 1000,"
+        " 10, 1000000, 1100, 950, 'CLOSED', date('now','localtime','-1 days'),"
+        " 940, 'TRAIL', -60000, -6.0)")
+    conn.commit()
+    conn.close()
+    res = pt.open_trade("TEST", 1000.0, sl_price=900.0, notify=False)
+    assert "error" in res and "cooldown" in res["error"].lower()

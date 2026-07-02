@@ -150,3 +150,14 @@ def test_tfb_trail_is_high_anchored_chandelier():
     t = trades[0]
     assert t.exit_reason == "TRAIL", f"got {t.exit_reason} @ {t.exit_date}"
     assert t.exit_date == str(df['date'].iloc[95])[:10]
+
+
+def test_swing_trend_trades_carry_real_exit_codes():
+    """1.9: Swing Trend recorded a lossy reason_tag ('TP'/'SL'/'TRAIL') in
+    Trade.exit_reason while burying the real R-code in the strategy suffix.
+    exit_reason must now be the actual trigger code."""
+    import inspect
+    from engine import strategies
+    src = inspect.getsource(strategies.strategy_swing_trend)
+    assert "reason_tag" not in src, "reason_tag remapping still present"
+    assert "exit_reason=exit_reason" in src
