@@ -482,7 +482,7 @@ def _run_vwma_bp(df: pd.DataFrame, signals: pd.Series,
                 continue
             # Min TP distance 1.5% untuk layak risk/reward
             if (tp_level - entry_price) / entry_price < 0.015:
-                equity.append(capital_cur)
+                equity.append(capital)
                 continue
 
             lots = lot_size(capital, entry_price, risk_per_trade, sl_pct_eff)
