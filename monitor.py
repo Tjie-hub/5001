@@ -100,8 +100,10 @@ def _get_flow_score(ticker: str) -> dict:
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         today = dt_date.today().isoformat()
+        # Column is trade_date; the old 'date=?' predicate raised
+        # OperationalError, silently killing this alert since inception (H-1).
         row = conn.execute(
-            'SELECT * FROM stockbit_flow WHERE ticker=? AND date=?', (ticker, today)
+            'SELECT * FROM stockbit_flow WHERE ticker=? AND trade_date=?', (ticker, today)
         ).fetchone()
         conn.close()
         return dict(row) if row else {}
@@ -130,123 +132,153 @@ def _get_current_price(ticker: str) -> float:
     return closes[0] if closes else None
 
 
+def _latest_bar(ticker: str):
+    """(date, open, high, low, close) of the most recent OHLCV bar, or None."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        row = conn.execute(
+            'SELECT date, open, high, low, close FROM ohlcv '
+            'WHERE ticker=? ORDER BY date DESC LIMIT 1', (ticker,)).fetchone()
+        conn.close()
+        return row
+    except Exception:
+        return None
+
+
+def _bars_held(ticker: str, entry_date) -> int:
+    """Completed OHLCV bars strictly after entry_date — the kernel's hold_days
+    unit is BARS (backtest parity), not calendar days."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        n = conn.execute('SELECT COUNT(*) FROM ohlcv WHERE ticker=? AND date>?',
+                         (ticker, str(entry_date)[:10])).fetchone()[0]
+        conn.close()
+        return int(n)
+    except Exception:
+        return 0
+
+
+def _sma(ticker: str, period: int):
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        row = conn.execute(
+            'SELECT AVG(close), COUNT(*) FROM (SELECT close FROM ohlcv '
+            'WHERE ticker=? ORDER BY date DESC LIMIT ?)', (ticker, period)).fetchone()
+        conn.close()
+        if row and row[1] == period:
+            return float(row[0])
+        return None
+    except Exception:
+        return None
+
+
+# R8 dead-capital cap: applied only to fixed-target policies without their own
+# hold_days. Trailing policies (TFB) self-terminate via the trail/MA-break.
+TIME_STOP_DEFAULT_BARS = 14
+
+
 def _check_trade(trade: dict) -> dict:
     """
-    Analyse one open trade. Returns dict with keys:
-      - should_close: bool (True if stop loss or TP hit)
+    Analyse one open trade via the strategy's OWN exit policy (shared kernel,
+    plan 1B / audit C-3). Returns dict with keys:
+      - should_close: bool
+      - exit_reason / exit_price: kernel decision when should_close
       - alerts: list of alert dicts if warnings found
       - trail_update: dict {new_sl, new_highest} if trailing state changed, else None
       Each alert: {ticker, trade_id, alert_type, severity, message}
     """
     ticker      = trade['ticker']
     entry_price = float(trade['entry_price'])
-    tp_price    = float(trade['tp_price'])
-    sl_price    = float(trade['sl_price'])
+    tp_price    = float(trade['tp_price']) if trade.get('tp_price') else None
+    sl_price    = float(trade.get('sl_price') or 0)
     trade_id    = trade['id']
 
     alerts = []
-    trail_update = None
-    current = _get_current_price(ticker)
-    if not current:
-        return {'should_close': False, 'alerts': alerts, 'trail_update': None}
+    from dataclasses import replace as _dc_replace
+    from engine.exits import PositionView, Bar, evaluate_exit, get_policy
 
-    # Trailing stop — compute before SL checks so updated SL is used
-    atr14 = float(trade.get('atr14') or 0) or _fetch_atr(ticker)
+    policy = get_policy(trade.get('strategy') or '')
+
+    bar_row = _latest_bar(ticker)
+    if bar_row is None:
+        return {'should_close': False, 'alerts': alerts, 'trail_update': None,
+                'exit_reason': None, 'exit_price': None}
+    bar = Bar(date=str(bar_row[0]), open=float(bar_row[1]), high=float(bar_row[2]),
+              low=float(bar_row[3]), close=float(bar_row[4]))
+    current = bar.close
+
+    atr14 = float(trade.get('atr14') or 0) or _fetch_atr(ticker) or 0.0
     highest = float(trade.get('highest_seen') or entry_price)
-    new_highest = max(highest, current)
+    bars_held = _bars_held(ticker, trade.get('entry_date'))
 
-    if atr14 and atr14 > 0:
-        new_sl = sl_price
-        if current >= entry_price + 2 * atr14:
-            # Trail SL at 1 ATR below highest seen
-            new_sl = max(sl_price, round(new_highest - atr14))
-        elif current >= entry_price + atr14:
-            # Move SL to breakeven
-            new_sl = max(sl_price, round(entry_price))
+    # Default time cap only for fixed-target policies without their own.
+    eff_policy = policy
+    if policy.hold_days is None and not (policy.trail_enable or policy.trail_atr_mult):
+        eff_policy = _dc_replace(policy, hold_days=TIME_STOP_DEFAULT_BARS)
 
-        if new_sl > sl_price or new_highest > highest:
-            trail_update = {'new_sl': new_sl, 'new_highest': new_highest}
-            sl_price = new_sl  # use updated SL for all checks below
+    view = PositionView(
+        policy=eff_policy, direction='LONG', entry=entry_price,
+        atr=atr14 if atr14 > 0 else max(entry_price * 0.015, 1.0),
+        highest_seen=highest, lowest_seen=entry_price, hold_days=bars_held,
+        sl_price=(sl_price if sl_price > 0 else None),
+        tp_price=(tp_price if tp_price and tp_price > 0 else None),
+    )
+    decision = evaluate_exit(view, bar)
+
+    exit_reason = exit_price = None
+    if decision is not None:
+        exit_reason, exit_price = decision.reason, float(decision.fill_price)
+    elif eff_policy.ma_break_period:
+        ma = _sma(ticker, eff_policy.ma_break_period)
+        if ma is not None and bar.close < ma:
+            exit_reason, exit_price = 'MA_BREAK', bar.close
+
+    # Persist trail progress for trailing policies (display + next-run anchor).
+    trail_update = None
+    new_highest = max(highest, bar.high)
+    if (eff_policy.trail_enable or eff_policy.trail_atr_mult) and atr14 > 0:
+        lv = eff_policy.initial_levels('LONG', entry_price, atr14)
+        if lv.trailing:
+            cur_stop = round(highest - lv.trail_mult * atr14)
+            if cur_stop > sl_price or new_highest > highest:
+                trail_update = {'new_sl': max(cur_stop, int(sl_price)),
+                                'new_highest': new_highest}
+                sl_price = max(cur_stop, sl_price)
+    elif new_highest > highest:
+        trail_update = {'new_sl': sl_price, 'new_highest': new_highest}
 
     pnl_pct = (current - entry_price) / entry_price * 100
 
-    # CRITICAL: Take profit hit — auto-close immediately
-    if current >= tp_price:
-        tp_exceeded_pct = (current - tp_price) / tp_price * 100
+    if exit_reason:
+        _emoji = {'TP': '✅', 'TRAIL': '📉', 'SL': '🚨',
+                  'TIME': '⏱', 'MA_BREAK': '🔻'}.get(exit_reason, '🔔')
         return {
             'should_close': True,
+            'exit_reason': exit_reason,
+            'exit_price': exit_price,
             'trail_update': trail_update,
             'alerts': [{
                 'ticker': ticker, 'trade_id': trade_id,
-                'alert_type': 'TARGET_REACHED', 'severity': 'INFO',
+                'alert_type': exit_reason,
+                'severity': 'CRITICAL' if exit_reason in ('SL', 'TRAIL') else 'INFO',
                 'message': (
-                    f"✅ <b>TAKE PROFIT HIT — AUTO-CLOSED</b> — {ticker}\n"
-                    f"Price: {current:,.0f}  TP: {tp_price:,.0f}\n"
-                    f"ABOVE TP by {tp_exceeded_pct:.1f}%\n"
-                    f"Entry: {entry_price:,.0f}  P&L: {pnl_pct:+.2f}%"
+                    f"{_emoji} <b>{exit_reason} — AUTO-CLOSED</b> — {ticker}\n"
+                    f"Fill: {exit_price:,.0f}  Entry: {entry_price:,.0f}\n"
+                    f"Policy: {trade.get('strategy')}  Held: {bars_held} bars\n"
+                    f"P&L: {pnl_pct:+.2f}%"
                 )
             }]
         }
 
-    # CRITICAL: Stop loss hit — auto-close immediately
-    if current <= sl_price:
-        sl_exceeded_pct = (sl_price - current) / sl_price * 100
-        return {
-            'should_close': True,
-            'trail_update': trail_update,
-            'alerts': [{
-                'ticker': ticker, 'trade_id': trade_id,
-                'alert_type': 'STOPPED_OUT', 'severity': 'CRITICAL',
-                'message': (
-                    f"🚨 <b>STOP LOSS HIT — AUTO-CLOSED</b> — {ticker}\n"
-                    f"Price: {current:,.0f}  SL: {sl_price:,.0f}\n"
-                    f"PAST SL by {sl_exceeded_pct:.1f}%\n"
-                    f"Entry: {entry_price:,.0f}  P&L: {pnl_pct:+.2f}%"
-                )
-            }]
-        }
-
-    # TIME STOP (R8): capital parked in a dead trade is dead capital in a
-    # bear market (BSML sat 27 days to exit flat). Panic Rebound's reversal
-    # alpha decays within ~5 bars, so it gets a tighter leash.
-    _strategy_l = (trade.get('strategy') or '').strip().lower()
-    _ts_days = 7 if _strategy_l == 'panic rebound' else 14
-    try:
-        from paper_trade import get_config as _ts_cfg
-        _ts_days = int(_ts_cfg().get(
-            'time_stop_days_panic' if _strategy_l == 'panic rebound' else 'time_stop_days',
-            _ts_days))
-    except Exception:
-        pass
-    try:
-        from datetime import date as _d
-        _age_days = (_d.today() - _d.fromisoformat(str(trade.get('entry_date'))[:10])).days
-    except Exception:
-        _age_days = 0
-    if _ts_days > 0 and _age_days >= _ts_days:
-        return {
-            'should_close': True,
-            'trail_update': trail_update,
-            'alerts': [{
-                'ticker': ticker, 'trade_id': trade_id,
-                'alert_type': 'R8_TIME_STOP', 'severity': 'INFO',
-                'message': (
-                    f"⏱ <b>TIME STOP — AUTO-CLOSED</b> — {ticker}\n"
-                    f"Open {_age_days}d (limit {_ts_days}d), no TP/SL resolution\n"
-                    f"Current: {current:,.0f}  Entry: {entry_price:,.0f}  P&L: {pnl_pct:+.2f}%"
-                )
-            }]
-        }
-
-    # 1. Near SL (within 0.5% of SL level)
-    if current <= sl_price * 1.005:
+    # 1. Near SL (within 0.5% of SL level) — skipped for no_sl policies
+    if not eff_policy.no_sl and sl_price > 0 and current <= sl_price * 1.005:
         alerts.append({
             'ticker': ticker, 'trade_id': trade_id,
             'alert_type': 'NEAR_SL', 'severity': 'HIGH',
             'message': (
                 f"⛔ <b>APPROACHING SL</b> — {ticker}\n"
                 f"Current: {current:,.0f}  SL: {sl_price:,.0f} ({pnl_pct:+.1f}%)\n"
-                f"TP: {tp_price:,.0f}  Entry: {entry_price:,.0f}\n"
+                f"TP: {'{:,.0f}'.format(tp_price) if tp_price else 'trail'}  Entry: {entry_price:,.0f}\n"
                 f"<i>Consider cutting loss</i>"
             )
         })
@@ -279,7 +311,7 @@ def _check_trade(trade: dict) -> dict:
                     f"🔴 <b>FLOW REVERSAL</b> — {ticker}\n"
                     f"Entry: {entry_price:,.0f}  Current: {current:,.0f} ({pnl_pct:+.1f}%)\n"
                     f"Flow: {flow_verdict} (score: {flow_score})\n"
-                    f"TP: {tp_price:,.0f}  SL: {sl_price:,.0f}\n"
+                    f"TP: {'{:,.0f}'.format(tp_price) if tp_price else 'trail'}  SL: {sl_price:,.0f}\n"
                     f"<i>Smart money turning bearish — consider exit</i>"
                 )
             })
@@ -301,7 +333,8 @@ def _check_trade(trade: dict) -> dict:
                 )
             })
 
-    return {'should_close': False, 'alerts': alerts, 'trail_update': trail_update}
+    return {'should_close': False, 'alerts': alerts, 'trail_update': trail_update,
+            'exit_reason': None, 'exit_price': None}
 
 
 def _evaluate_swing_trend(trade: dict) -> dict:
@@ -552,15 +585,13 @@ def check_all_open_trades():
             except Exception as e:
                 logger.error(f"[monitor] trail update failed: {e}")
 
-        # Auto-close on TP / SL / time-stop — record the actual trigger,
-        # not a blanket STOPPED_OUT (TP hits were being logged as stops).
+        # Auto-close at the kernel's decision: reason and gap-aware fill come
+        # straight from evaluate_exit (plan 1B — unified taxonomy, item 1.9).
         if result['should_close']:
-            _trigger = (result['alerts'][0]['alert_type'] if result.get('alerts')
-                        else 'STOPPED_OUT')
-            _reason = {'TARGET_REACHED': 'TP_HIT',
-                       'STOPPED_OUT': 'STOPPED_OUT',
-                       'R8_TIME_STOP': 'R8_TIME_STOP'}.get(_trigger, 'STOPPED_OUT')
-            cur = _get_current_price(trade['ticker']) or float(trade.get('sl_price') or trade['entry_price'])
+            _reason = result.get('exit_reason') or 'STOPPED_OUT'
+            cur = (result.get('exit_price')
+                   or _get_current_price(trade['ticker'])
+                   or float(trade.get('sl_price') or trade['entry_price']))
             try:
                 close_trade(int(trade['id']), float(cur), _reason, notify=False)
                 logger.info(f"[monitor] Auto-closed {trade['ticker']} ({_reason})")
