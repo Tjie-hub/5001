@@ -15,6 +15,7 @@ from .strategies import (
     strategy_inside_bar_breakout,
     strategy_nr7_breakout,
     strategy_orb,
+    strategy_vwma_breakout_pullback,
     strategy_swing_trend,
     strategy_trend_following_breakout,
     strategy_crash_recovery,
@@ -178,11 +179,13 @@ STRATEGY_FUNCS = {
     'Inside Bar Breakout':       strategy_inside_bar_breakout,
     'NR7 Breakout':              strategy_nr7_breakout,
     'ORB':                       strategy_orb,
+    'VWMA Breakout Pullback':    strategy_vwma_breakout_pullback,
     'Swing Trend':               strategy_swing_trend,
     'Trend Following Breakout':  strategy_trend_following_breakout,
     'Crash Recovery':            strategy_crash_recovery,
     'Panic Rebound':             strategy_panic_rebound,
     'Liquidity Sweep':           strategy_liquidity_sweep_flow,
+    'Regime Adaptive':           strategy_regime_adaptive,
 }
 
 

@@ -482,7 +482,7 @@ def _run_vwma_bp(df: pd.DataFrame, signals: pd.Series,
                 continue
             # Min TP distance 1.5% untuk layak risk/reward
             if (tp_level - entry_price) / entry_price < 0.015:
-                equity.append(capital_cur)
+                equity.append(capital)
                 continue
 
             lots = lot_size(capital, entry_price, risk_per_trade, sl_pct_eff)
@@ -1806,7 +1806,8 @@ def strategy_swing_trend(df: pd.DataFrame,
 
 def strategy_trend_following_breakout(df: pd.DataFrame,
                                       capital: float = 50_000_000,
-                                      filters: list = None) -> dict:
+                                      filters: list = None,
+                                      atr_mult: float = 3.0) -> dict:
     """
     Trend-Following Breakout — catch high-momentum breakouts, let runners run.
 
@@ -1814,12 +1815,24 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
       1. close > prior 20-bar Donchian high (breakout)
       2. volume > 1.8× MA20(volume)
       3. ATR(14) > 0.5× 60-bar median ATR  (volatility expanding)
-      4. close > MA50                        (regime filter)
+      4. close > MA50                        (level regime filter)
+      5. MA20 slope > 0.5%                    (trend actually rising — market context)
+      6. volume < 4.0× MA20(volume)           (reject climax blow-off)
     Exit:
-      - ATR trailing stop: max(prev_stop, close − 2.5×ATR)  [ratchets up only]
+      - ATR trailing stop: max(prev_stop, close − atr_mult×ATR)  [ratchets up only]
       - OR close < MA20
-    Sizing: risk 0.5% of capital; SL = 2.5×ATR; max 30% capital per trade.
+    Sizing: risk 0.5% of capital; SL = atr_mult×ATR; max 30% capital per trade.
+    atr_mult defaults to 3.0 (full-history WF validated 2026-06-27: pooled PF
+    1.82->1.98, avg P&L/trade +4.63->+6.03% vs the prior 2.5; see scripts/tfb_trail_wf.py).
+    Was 2.5 through 2026-06-26. Tunable for walk-forward exit validation.
+
+    Conditions 5–6 (market-context gate) were validated out-of-sample: rolling
+    12mo/3mo walk-forward across 852 tickers lifted consistency 31.7%→40.7%,
+    win-rate 31.6%→39.6%, avg P&L/trade +0.95%→+4.63% (cost: ~46% fewer trades).
+    ADX was tested and rejected — winners/losers both ~27 (no separation).
     """
+    from engine.regime_filter import calc_ma_slope
+
     strategy_name  = 'Trend Following Breakout'
     initial_capital = capital
 
@@ -1834,6 +1847,7 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
     avg_vol     = df['volume'].rolling(20).mean()
     donchian20  = df['high'].rolling(20).max().shift(1)   # prior 20-bar high
     atr60_med   = atr.rolling(60).median()
+    ma20_slope  = calc_ma_slope(df, 20, 5)                # % rise of MA20 over 5 bars
 
     # Breakout signal per bar (NaN operands compare False, so unready bars
     # are naturally excluded). Evaluated on the signal bar; entry fills at the
@@ -1842,7 +1856,9 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
         (df['close']  > donchian20) &
         (df['volume'] > 1.8 * avg_vol) &
         (atr          > 0.5 * atr60_med) &
-        (df['close']  > ma50)
+        (df['close']  > ma50) &
+        (ma20_slope   > 0.5) &                # rising trend (not sideways/down)
+        (df['volume'] < 4.0 * avg_vol)        # not a climax blow-off
     )
 
     equity      = [capital]
@@ -1861,9 +1877,11 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
 
         if in_trade:
             low_i = row['low']
-            new_stop = row['close'] - 2.5 * cur_atr
-            trail_stop = max(trail_stop, new_stop)
-
+            # The stop governing THIS bar is the one ratcheted from PRIOR bars'
+            # closes (set at entry, advanced at each prior bar's end). Ratcheting
+            # it from today's close BEFORE testing today's low is intrabar
+            # look-ahead — there is no guarantee the close printed before the low —
+            # and it inflates trailing-stop exits. So: test first, ratchet after.
             exit_reason = None
             exit_price  = None
             if low_i <= trail_stop:
@@ -1888,13 +1906,16 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
                     strategy=strategy_name
                 ))
                 in_trade = False
+            else:
+                # No exit -> ratchet the stop for the NEXT bar using today's close.
+                trail_stop = max(trail_stop, row['close'] - atr_mult * cur_atr)
         elif signal.iloc[i - 1]:
             sig_atr = atr.iloc[i - 1]
             if pd.isna(sig_atr) or sig_atr <= 0:
                 equity.append(capital)
                 continue
             entry_price = apply_costs(row['open'], 'BUY')   # next-bar open
-            sl_dist     = 2.5 * sig_atr
+            sl_dist     = atr_mult * sig_atr
             sl_pct      = sl_dist / entry_price
             if sl_pct <= 0.001:
                 equity.append(capital)
@@ -1922,12 +1943,15 @@ def check_trend_following_breakout_signal(df: pd.DataFrame) -> dict:
     if len(df) < 65:
         return {'has_signal': False, 'reason': 'Data tidak cukup (65 bars)', 'details': {}}
 
+    from engine.regime_filter import calc_ma_slope
+
     ma20       = df['close'].rolling(20).mean()
     ma50       = df['close'].rolling(50).mean()
     atr        = calc_atr(df, 14)
     avg_vol    = df['volume'].rolling(20).mean()
     donchian20 = df['high'].rolling(20).max().shift(1)
     atr60_med  = atr.rolling(60).median()
+    ma20_slope = calc_ma_slope(df, 20, 5)
 
     latest     = df.iloc[-1]
     cur_atr    = atr.iloc[-1]
@@ -1936,8 +1960,9 @@ def check_trend_following_breakout_signal(df: pd.DataFrame) -> dict:
     cur_don    = donchian20.iloc[-1]
     cur_atr60  = atr60_med.iloc[-1]
     cur_avvol  = avg_vol.iloc[-1]
+    cur_slope  = ma20_slope.iloc[-1]
 
-    if any(pd.isna(v) for v in [cur_atr, cur_ma20, cur_ma50, cur_don, cur_atr60, cur_avvol]):
+    if any(pd.isna(v) for v in [cur_atr, cur_ma20, cur_ma50, cur_don, cur_atr60, cur_avvol, cur_slope]):
         return {'has_signal': False, 'reason': 'Indikator belum siap (NaN)', 'details': {}}
 
     cond_breakout = latest['close'] > cur_don
@@ -1947,6 +1972,9 @@ def check_trend_following_breakout_signal(df: pd.DataFrame) -> dict:
 
     vol_ratio = latest['volume'] / cur_avvol if cur_avvol > 0 else 0
 
+    cond_slope    = cur_slope > 0.5            # MA20 rising (market context)
+    cond_no_climax = vol_ratio < 4.0           # not a climax blow-off
+
     details = {
         'close':         latest['close'],
         'donchian20':    round(cur_don, 0),
@@ -1955,22 +1983,26 @@ def check_trend_following_breakout_signal(df: pd.DataFrame) -> dict:
         'atr60_median':  round(cur_atr60, 2),
         'ma20':          round(cur_ma20, 0),
         'ma50':          round(cur_ma50, 0),
+        'ma20_slope':    round(cur_slope, 2),
         'cond_breakout': cond_breakout,
         'cond_volume':   cond_volume,
         'cond_atr_exp':  cond_atr_exp,
         'cond_regime':   cond_regime,
+        'cond_slope':    cond_slope,
+        'cond_no_climax': cond_no_climax,
     }
 
-    if cond_breakout and cond_volume and cond_atr_exp and cond_regime:
+    if cond_breakout and cond_volume and cond_atr_exp and cond_regime and cond_slope and cond_no_climax:
         return {
             'has_signal': True,
-            'reason': f"TFB: breakout D20={cur_don:.0f}, VR={vol_ratio:.1f}x, ATR expanding",
+            'reason': f"TFB: breakout D20={cur_don:.0f}, VR={vol_ratio:.1f}x, slope={cur_slope:.1f}%, ATR expanding",
             'details': details,
         }
 
     missing = [k for k, v in {
         'breakout': cond_breakout, 'volume': cond_volume,
-        'atr_exp': cond_atr_exp, 'regime': cond_regime
+        'atr_exp': cond_atr_exp, 'regime': cond_regime,
+        'slope': cond_slope, 'no_climax': cond_no_climax
     }.items() if not v]
     return {
         'has_signal': False,
