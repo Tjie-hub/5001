@@ -1843,9 +1843,12 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
       4. close > MA50                        (level regime filter)
       5. MA20 slope > 0.5%                    (trend actually rising — market context)
       6. volume < 4.0× MA20(volume)           (reject climax blow-off)
-    Exit:
-      - ATR trailing stop: max(prev_stop, close − atr_mult×ATR)  [ratchets up only]
-      - OR close < MA20
+    Exit (shared kernel, engine/exits — plan 1B):
+      - Chandelier trail: stop = highest_seen(prior bars) − atr_mult×ATR(entry)
+      - OR close < MA20 (ma_break_period=20 policy metadata)
+    NOTE 2026-07-02: trail anchor unified close→high to match the forward-test
+    engine; the old label 'TRAIL_SL' is now the kernel's 'TRAIL'. The entry
+    bar itself is evaluated (a gap can exit day one), matching the ft engine.
     Sizing: risk 0.5% of capital; SL = atr_mult×ATR; max 30% capital per trade.
     atr_mult defaults to 3.0 (full-history WF validated 2026-06-27: pooled PF
     1.82->1.98, avg P&L/trade +4.63->+6.03% vs the prior 2.5; see scripts/tfb_trail_wf.py).
@@ -1886,38 +1889,74 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
         (df['volume'] < 4.0 * avg_vol)        # not a climax blow-off
     )
 
+    from engine.exits import ExitPolicy, PositionView, Bar, evaluate_exit
+    # atr_mult is a backtest parameter (trail-sweep validation); build the
+    # policy from it so non-default sweeps stay honest. At the default 3.0
+    # this equals get_policy('Trend Following Breakout') minus ma_break
+    # metadata (the MA20 break is evaluated inline below).
+    _policy = ExitPolicy(trail_enable=True, trail_atr_mult=atr_mult,
+                         ma_break_period=20)
+
     equity      = [capital]
     trades      = []
     in_trade    = False
     entry_price = 0.0
-    trail_stop  = 0.0
+    entry_atr   = 0.0
+    highest     = 0.0
+    lowest      = 0.0
     lots        = 0
     entry_date  = ''
 
     for i in range(65, len(df)):
         row     = df.iloc[i]
         date    = str(row['date'])[:10]
-        cur_atr = atr.iloc[i]
         cur_ma20 = ma20.iloc[i]
+        bar = Bar(date=date, open=float(row['open']), high=float(row['high']),
+                  low=float(row['low']), close=float(row['close']))
+
+        if not in_trade and signal.iloc[i - 1]:
+            sig_atr = atr.iloc[i - 1]
+            if pd.isna(sig_atr) or sig_atr <= 0:
+                equity.append(capital)
+                continue
+            entry_price = apply_costs(row['open'], 'BUY')   # next-bar open
+            sl_dist     = atr_mult * sig_atr
+            sl_pct      = sl_dist / entry_price
+            if sl_pct <= 0.001:
+                equity.append(capital)
+                continue
+            lots = lot_size(capital, entry_price, 0.005, sl_pct)
+            cost = entry_price * lots * 100
+            if cost <= capital and lots > 0:
+                in_trade    = True
+                entry_date  = date
+                entry_atr   = float(sig_atr)
+                highest     = entry_price
+                lowest      = entry_price
+                # fall through: evaluate the entry bar too (gap day-one exit)
+            else:
+                equity.append(capital)
+                continue
 
         if in_trade:
-            low_i = row['low']
-            # The stop governing THIS bar is the one ratcheted from PRIOR bars'
-            # closes (set at entry, advanced at each prior bar's end). Ratcheting
-            # it from today's close BEFORE testing today's low is intrabar
-            # look-ahead — there is no guarantee the close printed before the low —
-            # and it inflates trailing-stop exits. So: test first, ratchet after.
-            exit_reason = None
-            exit_price  = None
-            if low_i <= trail_stop:
-                exit_price  = apply_costs(trail_stop, 'SELL')
-                exit_reason = 'TRAIL_SL'
-            elif row['close'] < cur_ma20:
-                exit_price  = apply_costs(row['close'], 'SELL')
+            # Kernel decides SL/TRAIL/TP/TIME from PRIOR-bar extremes —
+            # the C3 (2026-06-30) test-first/ratchet-after discipline, now
+            # high-anchored (Chandelier) to match the forward-test engine.
+            view = PositionView(policy=_policy, direction='LONG',
+                                entry=entry_price, atr=entry_atr,
+                                highest_seen=highest, lowest_seen=lowest,
+                                hold_days=0)
+            decision = evaluate_exit(view, bar)
+            exit_reason = exit_price = None
+            if decision is not None:
+                exit_reason = decision.reason              # 'TRAIL'
+                exit_price  = apply_costs(decision.fill_price, 'SELL')
+            elif not pd.isna(cur_ma20) and bar.close < cur_ma20:
                 exit_reason = 'MA20_BREAK'
+                exit_price  = apply_costs(bar.close, 'SELL')
             elif i == len(df) - 1:
-                exit_price  = apply_costs(row['close'], 'SELL')
                 exit_reason = 'EOD'
+                exit_price  = apply_costs(bar.close, 'SELL')
 
             if exit_reason:
                 gross   = (exit_price - entry_price) * lots * 100
@@ -1932,25 +1971,8 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
                 ))
                 in_trade = False
             else:
-                # No exit -> ratchet the stop for the NEXT bar using today's close.
-                trail_stop = max(trail_stop, row['close'] - atr_mult * cur_atr)
-        elif signal.iloc[i - 1]:
-            sig_atr = atr.iloc[i - 1]
-            if pd.isna(sig_atr) or sig_atr <= 0:
-                equity.append(capital)
-                continue
-            entry_price = apply_costs(row['open'], 'BUY')   # next-bar open
-            sl_dist     = atr_mult * sig_atr
-            sl_pct      = sl_dist / entry_price
-            if sl_pct <= 0.001:
-                equity.append(capital)
-                continue
-            lots = lot_size(capital, entry_price, 0.005, sl_pct)
-            cost = entry_price * lots * 100
-            if cost <= capital and lots > 0:
-                trail_stop  = entry_price - sl_dist
-                in_trade    = True
-                entry_date  = date
+                highest = max(highest, bar.high)
+                lowest  = min(lowest, bar.low)
 
         equity.append(capital)
 
