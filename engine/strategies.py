@@ -1177,15 +1177,45 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
+# Live checker dispatch — one entry per live-capable strategy. Consistency with
+# engine/strategy_specs.SPECS and scanner._REGIME_STRATEGY_MAP is pinned by
+# tests/test_strategy_specs.py (audit C-1: a strategy must not be
+# live-selectable without a working checker).
+_CHECKER_DISPATCH = {
+    'vol_weighted':             lambda ticker, df: check_vol_weighted_signal(df),
+    'momentum':                 lambda ticker, df: check_momentum_signal(df),
+    'vwap_reversion':           lambda ticker, df: check_vwap_reversion_signal(df),
+    'conservative':             lambda ticker, df: check_conservative_signal(df),
+    'Trend Following Breakout': lambda ticker, df: check_trend_following_breakout_signal(df),
+    # True intraday ORB — bypasses daily df; uses ticks DB directly.
+    'orb_intraday':             lambda ticker, df: check_orb_intraday_signal(ticker),
+    'ORB_intraday':             lambda ticker, df: check_orb_intraday_signal(ticker),
+    'Crash Recovery':           lambda ticker, df: check_crash_recovery_signal(ticker, df),
+    'Panic Rebound':            lambda ticker, df: check_panic_rebound_signal(df),
+    'Liquidity Sweep':          lambda ticker, df: check_sweep_flow_signal(df, ticker),
+}
+
+# Counter-trend/reversal setups skip the weekly-trend gate by design:
+# Crash Recovery (crash bounce), Panic Rebound (the signal IS a downtrend),
+# Liquidity Sweep (the setup IS a dip). Matches the pre-refactor early returns.
+_WEEKLY_GATE_BYPASS = {'Crash Recovery', 'Panic Rebound', 'Liquidity Sweep'}
+
+
 def check_current_entry_signal(ticker: str, strategy: str, df: pd.DataFrame = None) -> dict:
     """
     Cek apakah ticker memenuhi entry criteria dari strategy yang dipilih
     pada data terbaru (last bar).
-    Includes multi-timeframe weekly trend confirmation as final gate.
+    Includes multi-timeframe weekly trend confirmation as final gate
+    (bypassed for the counter-trend book).
+
+    Output contract (audit C-1): any has_signal=True result carries
+    details['price'] — enforced via engine.strategy_specs.ensure_entry_price.
 
     Returns:
         dict: {'has_signal': bool, 'reason': str, 'details': dict}
     """
+    from engine.strategy_specs import ensure_entry_price
+
     if df is None:
         df = get_ticker_data(ticker)
 
@@ -1196,45 +1226,26 @@ def check_current_entry_signal(ticker: str, strategy: str, df: pd.DataFrame = No
             'details': {}
         }
 
-    # Route to strategy-specific checker
-    if strategy == 'vol_weighted':
-        result = check_vol_weighted_signal(df)
-    elif strategy == 'momentum':
-        result = check_momentum_signal(df)
-    elif strategy == 'vwap_reversion':
-        result = check_vwap_reversion_signal(df)
-    elif strategy == 'conservative':
-        result = check_conservative_signal(df)
-    elif strategy == 'Trend Following Breakout':
-        result = check_trend_following_breakout_signal(df)
-    elif strategy in ('orb_intraday', 'ORB_intraday'):
-        # True intraday ORB — bypasses daily df; uses ticks DB directly.
-        result = check_orb_intraday_signal(ticker)
-    elif strategy == 'Crash Recovery':
-        # Counter-trend — bypass the weekly-trend gate (irrelevant for crash bounce)
-        return check_crash_recovery_signal(ticker, df)
-    elif strategy == 'Panic Rebound':
-        # Counter-trend — bypass the weekly-trend gate (the signal IS a downtrend)
-        return check_panic_rebound_signal(df)
-    elif strategy == 'Liquidity Sweep':
-        # Reversal/bottom-fishing — bypass the weekly-trend gate (the setup IS a dip)
-        return check_sweep_flow_signal(df, ticker)
-    else:
+    checker = _CHECKER_DISPATCH.get(strategy)
+    if checker is None:
         return {
             'has_signal': False,
             'reason': f'Strategy {strategy} belum didukung',
             'details': {}
         }
 
-    # Multi-timeframe gate: only check when daily signal passes
-    if result.get('has_signal'):
+    result = checker(ticker, df)
+
+    # Multi-timeframe gate: only when the daily signal passes and the
+    # strategy is not in the counter-trend bypass set.
+    if strategy not in _WEEKLY_GATE_BYPASS and result.get('has_signal'):
         w_pass, w_reason = calc_weekly_trend(df)
         result['details']['weekly_trend'] = w_reason
         if not w_pass:
             result['has_signal'] = False
             result['reason'] = f"W-BLOCK: {w_reason} | daily: {result['reason']}"
 
-    return result
+    return ensure_entry_price(result, df)
 
 
 def check_vol_weighted_signal(df: pd.DataFrame) -> dict:

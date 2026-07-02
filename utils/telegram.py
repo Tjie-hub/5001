@@ -27,9 +27,27 @@ def send_telegram(msg: str) -> None:
 
     for attempt in range(_MAX_RETRIES + 1):
         try:
-            requests.post(url, json=payload, timeout=10)
-            _last_sent = time.time()
-            return
+            resp = requests.post(url, json=payload, timeout=10)
+            if resp.ok:
+                _last_sent = time.time()
+                logger.info(f"[telegram] sent OK ({len(msg)} chars)")
+                return
+            # 400 often means HTML parse error — strip to plain text and retry
+            if resp.status_code == 400 and payload.get("parse_mode") == "HTML":
+                logger.warning(f"[telegram] HTML parse error (400), retrying as plain text")
+                payload["parse_mode"] = None
+                resp2 = requests.post(url, json=payload, timeout=10)
+                if resp2.ok:
+                    _last_sent = time.time()
+                    logger.info(f"[telegram] sent OK as plain text ({len(msg)} chars)")
+                    return
+                logger.error(f"[telegram] plain-text fallback also failed: {resp2.status_code} {resp2.text[:200]}")
+                return
+            logger.error(f"[telegram] HTTP {resp.status_code}: {resp.text[:200]}")
+            if attempt < _MAX_RETRIES:
+                time.sleep(2 ** attempt)
+            else:
+                return
         except requests.exceptions.RequestException as e:
             if attempt == _MAX_RETRIES:
                 logger.error(f"[telegram] send failed after {_MAX_RETRIES + 1} attempts: {e}")

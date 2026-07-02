@@ -633,9 +633,12 @@ def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
 # single-stock washouts in BEAR/SIDEWAYS tickers but is stripped whenever
 # the MACRO panic state is on (its walkforward edge inverts in market-wide
 # panics — see the v1-v4 history above strategy_panic_rebound).
+# Inside Bar Breakout / NR7 Breakout removed 2026-07-02 (audit C-1): they
+# have no live checker in check_current_entry_signal, so selecting them
+# produced zero signals silently. Re-add only WITH a checker (the
+# consistency test in tests/test_strategy_specs.py enforces this).
 _REGIME_STRATEGY_MAP = {
     'BULL_MODERATE': ['Trend Following Breakout', 'momentum',
-                      'Inside Bar Breakout', 'NR7 Breakout',
                       'vol_weighted', 'vwap_reversion'],
     'BULL_STRONG':   ['conservative', 'momentum', 'Trend Following Breakout',
                       'vol_weighted', 'vwap_reversion'],
