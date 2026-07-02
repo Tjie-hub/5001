@@ -77,3 +77,48 @@ def test_counter_trend_specs_are_flagged():
     from engine.strategy_specs import SPECS
     ct = {n for n, s in SPECS.items() if s.counter_trend}
     assert ct == {"Crash Recovery", "Panic Rebound", "Liquidity Sweep"}
+
+
+# ── contract applied end-to-end by the dispatcher ────────────────────────────
+
+def _momentum_signal_df() -> pd.DataFrame:
+    """30 bars: flat, then 2 consecutive up closes + volume spike on the last
+    bar. Fires check_momentum_signal (streak>=2, VR>1.3). Kept under 100 bars
+    so calc_weekly_trend soft-passes ('W:insufficient_data')."""
+    n = 30
+    dates = pd.date_range("2026-01-01", periods=n, freq="D")
+    close = np.full(n, 1000.0)
+    close[-2] = 1010.0
+    close[-1] = 1025.0
+    vol = np.full(n, 1_000_000.0)
+    vol[-1] = 3_000_000.0
+    return pd.DataFrame({
+        "date": dates, "open": close - 5, "high": close + 10,
+        "low": close - 10, "close": close, "volume": vol,
+    })
+
+
+def test_momentum_dispatch_result_carries_price():
+    """Audit C-1 regression: momentum checker details had no 'price' key, so
+    scanner's trade-open path skipped every momentum signal."""
+    from engine.strategies import check_current_entry_signal
+    df = _momentum_signal_df()
+    res = check_current_entry_signal("TEST", "momentum", df=df)
+    assert res["has_signal"] is True, res["reason"]
+    assert res["details"]["price"] == pytest.approx(1025.0)
+
+
+def test_unsupported_strategy_message_preserved():
+    from engine.strategies import check_current_entry_signal
+    df = _momentum_signal_df()
+    res = check_current_entry_signal("TEST", "Nonexistent Strategy", df=df)
+    assert res["has_signal"] is False
+    assert "belum didukung" in res["reason"]
+
+
+def test_dispatch_dict_exists_and_covers_known_checkers():
+    from engine.strategies import _CHECKER_DISPATCH
+    for name in ("vol_weighted", "momentum", "vwap_reversion", "conservative",
+                 "Trend Following Breakout", "Crash Recovery", "Panic Rebound",
+                 "Liquidity Sweep", "orb_intraday", "ORB_intraday"):
+        assert name in _CHECKER_DISPATCH, name
