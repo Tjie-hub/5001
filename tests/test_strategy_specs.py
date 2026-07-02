@@ -122,3 +122,33 @@ def test_dispatch_dict_exists_and_covers_known_checkers():
                  "Trend Following Breakout", "Crash Recovery", "Panic Rebound",
                  "Liquidity Sweep", "orb_intraday", "ORB_intraday"):
         assert name in _CHECKER_DISPATCH, name
+
+
+# ── cross-map consistency (scanner ↔ specs ↔ dispatch) ───────────────────────
+
+def test_regime_map_strategies_are_live_capable():
+    """Every strategy the scanner can select MUST have a live checker.
+    Audit C-1: Inside Bar Breakout / NR7 Breakout were selectable but had no
+    checker at all, so they could signal nothing, silently."""
+    from scheduler.scanner import _REGIME_STRATEGY_MAP
+    from engine.strategy_specs import SPECS
+    from engine.strategies import _CHECKER_DISPATCH
+    for band, names in _REGIME_STRATEGY_MAP.items():
+        for name in names:
+            assert name in SPECS, f"{name} ({band}) not in SPECS"
+            assert SPECS[name].live_checker, f"{name} ({band}) has no live checker"
+            assert name in _CHECKER_DISPATCH, f"{name} ({band}) missing from dispatch"
+
+
+def test_counter_trend_book_matches_specs():
+    from scheduler.scanner import _COUNTER_TREND_BOOK
+    from engine.strategy_specs import SPECS
+    for name in _COUNTER_TREND_BOOK:
+        assert SPECS[name].counter_trend, name
+
+
+def test_live_checker_flag_matches_dispatch():
+    from engine.strategies import _CHECKER_DISPATCH
+    from engine.strategy_specs import SPECS
+    for name, spec in SPECS.items():
+        assert spec.live_checker == (name in _CHECKER_DISPATCH), name
