@@ -206,6 +206,59 @@ def run_flow_fetch():
             )
 
 
+def check_flow_coverage(db_path: str, trade_date: str, lookback: int = 10,
+                        hard_floor: int = 50) -> dict:
+    """Assess whether stockbit_flow coverage for trade_date looks healthy.
+
+    Compares the distinct-ticker count for trade_date against the median over
+    the prior `lookback` sessions that had data. A coverage outage (e.g. the
+    2026-04-22/23 zero-ticker gap) can only be backfilled the same day — the
+    Stockbit tradebook API will not serve a historical session — so this exists
+    to alert while the data is still fetchable.
+
+    Returns dict: {date, count, baseline, severity, healthy, reason}.
+    severity ∈ {'ok', 'warning', 'critical'}.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        count = conn.execute(
+            "SELECT COUNT(DISTINCT ticker) FROM stockbit_flow WHERE trade_date=?",
+            (trade_date,),
+        ).fetchone()[0]
+        rows = conn.execute(
+            "SELECT trade_date, COUNT(DISTINCT ticker) c FROM stockbit_flow "
+            "WHERE trade_date < ? GROUP BY trade_date HAVING c > 0 "
+            "ORDER BY trade_date DESC LIMIT ?",
+            (trade_date, lookback),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    counts = sorted(c for _, c in rows)
+    baseline = None
+    if counts:
+        m = len(counts)
+        baseline = (counts[m // 2] if m % 2
+                    else (counts[m // 2 - 1] + counts[m // 2]) // 2)
+
+    if count == 0:
+        severity = "critical"
+        reason = ("Tidak ada satu pun ticker tersimpan — kemungkinan fetch "
+                  "outage atau token Stockbit expired.")
+    else:
+        threshold = max(hard_floor, int(0.5 * baseline)) if baseline else hard_floor
+        if count < threshold:
+            severity = "warning"
+            reason = (f"Coverage {count} jauh di bawah ambang {threshold} "
+                      f"(baseline {baseline}).")
+        else:
+            severity = "ok"
+            reason = "Coverage normal."
+
+    return {"date": trade_date, "count": count, "baseline": baseline,
+            "severity": severity, "healthy": severity == "ok", "reason": reason}
+
+
 def run_broker_flow_fetch():
     """Fetch broker flow data setelah 20:00 WIB saat Stockbit publish summary harian."""
     if _holiday_skip("run_broker_flow_fetch"):
@@ -239,6 +292,22 @@ def run_broker_flow_fetch():
         ).fetchone()[0]
         conn.close()
         print(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow selesai. {count} tickers untuk {today_str}.")
+
+        # Coverage monitor: alert on a stockbit_flow outage while it can still be
+        # re-fetched today (a past session cannot be backfilled later).
+        cov = check_flow_coverage(DB_PATH, today_str)
+        print(f"[{dt.now(WIB).strftime('%H:%M')}] Flow coverage {today_str}: "
+              f"{cov['count']} tickers (baseline {cov['baseline']}) → {cov['severity']}")
+        if not cov["healthy"]:
+            icon = "🔴" if cov["severity"] == "critical" else "⚠️"
+            send_telegram(
+                f"{icon} <b>Flow Coverage {cov['severity'].upper()}</b>\n\n"
+                f"<code>stockbit_flow</code> untuk {today_str}: "
+                f"<b>{cov['count']}</b> tickers (baseline ~{cov['baseline']}).\n"
+                f"{cov['reason']}\n\n"
+                f"Backfill hanya mungkin selagi sesi masih live — cek token & "
+                f"re-run <code>run_broker_flow_fetch</code> hari ini."
+            )
     except Exception as e:
         print(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow fetch error: {e}")
         send_telegram(f"🔴 <b>Broker Flow Fetch Error</b>\n<code>{str(e)[:200]}</code>")
