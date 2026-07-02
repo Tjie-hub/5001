@@ -89,3 +89,22 @@ def test_aggregate_cap_allows_within_capital(pt_db):
     conn.close()
     res = pt.open_trade("TEST", 1000.0, sl_price=900.0, notify=False)
     assert "error" not in res, res
+
+
+def test_open_trade_uses_policy_levels_momentum(pt_db):
+    """momentum policy: SL = 1.2xATR = 24 -> 976; TP = 2.4xATR = 48 -> 1048."""
+    import paper_trade as pt
+    res = pt.open_trade("TEST", 1000.0, strategy="momentum", notify=False)
+    assert "error" not in res, res
+    assert res["sl_price"] == 976
+    assert res["tp_price"] == 1048
+
+
+def test_open_trade_tfb_pure_trail_has_no_tp(pt_db):
+    """TFB policy: pure 3xATR trail -> initial stop 940, tp_price None."""
+    import paper_trade as pt
+    res = pt.open_trade("TEST", 1000.0, strategy="Trend Following Breakout",
+                        notify=False)
+    assert "error" not in res, res
+    assert res["sl_price"] == 940
+    assert res["tp_price"] is None
