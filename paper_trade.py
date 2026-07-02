@@ -299,9 +299,11 @@ def open_trade(ticker: str, entry_price: float, strategy: str = None,
 
     # Cooldown: skip re-entry if ticker was stopped out at a loss within 3 days
     _conn = get_db()
+    # Stop-family exits (any engine era) at a loss trigger the 3-day cooldown.
     _recent_sl = _conn.execute("""
         SELECT exit_date FROM paper_trades
-        WHERE ticker=? AND exit_reason='STOPPED_OUT' AND pnl_pct < 0
+        WHERE ticker=? AND pnl_pct < 0
+          AND exit_reason IN ('STOPPED_OUT','SL','TRAIL','MA_BREAK','R7_TRAIL_SL')
           AND exit_date >= date('now','localtime','-3 days')
         ORDER BY exit_date DESC LIMIT 1
     """, (ticker,)).fetchone()
@@ -315,37 +317,58 @@ def open_trade(ticker: str, entry_price: float, strategy: str = None,
     # Always compute ATR14 upfront — used for SL/TP and sizing
     atr = _calc_atr_from_db(ticker)
 
+    # Plan 1B: initial SL/TP come from the strategy's OWN exit policy (the
+    # same registry the backtests, monitor, and forward test consume), not a
+    # blanket 2xATR/3xATR bracket. Explicit caller levels still win.
+    from engine.exits import get_policy
+    _policy = get_policy(strategy)
+
     if sl_price is not None and sl_price > 0:
-        # Explicit SL provided (e.g. from Swing Onset screener)
+        # Explicit SL provided (e.g. from Swing Onset screener / counter-trend levels)
         sl_dist = entry_price - sl_price
         sl_pct  = sl_dist / entry_price if entry_price > 0 else 0
     else:
         if atr and atr > 0:
-            sl_dist = atr * sl_atr_mult   # SL = entry - (2 × ATR14)
-            sl_pct  = sl_dist / entry_price
+            _lv = _policy.initial_levels('LONG', entry_price, atr)
+            _stop = _lv.initial_stop if _lv.initial_stop is not None else _lv.sl_price
+            if _stop is not None:
+                sl_price = round(_stop)
+                sl_dist  = entry_price - sl_price
+                sl_pct   = sl_dist / entry_price
+            else:
+                # no_sl policy (Panic Rebound): no live price stop; keep a
+                # synthetic 1xATR distance purely as the SIZING input.
+                sl_dist  = atr
+                sl_pct   = sl_dist / entry_price
+                sl_price = round(entry_price - sl_dist)
         else:
             sl_pct  = cfg.get("sl_pct", 0.025)
             sl_dist = entry_price * sl_pct
-        sl_price = round(entry_price - sl_dist)
+        sl_price = round(entry_price - sl_dist) if sl_price is None or sl_price <= 0 else sl_price
 
     if tp_price is None or tp_price <= 0:
         if is_swing:
             # TP aim only — real exit is R1–R7, not a price level. Pick 3R as display target.
             tp_price = round(entry_price + 3 * sl_dist)
+        elif atr and atr > 0:
+            _lv = _policy.initial_levels('LONG', entry_price, atr)
+            # Pure-trail policies (TFB) have NO target: tp_price stays None
+            # and the monitor exits on TRAIL / MA-break only.
+            tp_price = round(_lv.tp_price) if _lv.tp_price is not None else None
+            if tp_price is not None:
+                # A caller-supplied stop deeper than the policy's own still
+                # needs a min_rr-consistent target (pre-1B behavior). No-op
+                # for pure-policy trades: policy TP already = min_rr x its SL.
+                tp_price = max(tp_price, round(entry_price + sl_dist * min_rr))
         else:
-            # TP = entry + (3 × ATR14); fallback to fixed % if no ATR
-            if atr and atr > 0:
-                tp_price = round(entry_price + 3 * atr)
-            else:
-                tp_price = round(entry_price * 1.06)
-            # Ensure minimum 2:1 R/R
+            tp_price = round(entry_price * 1.06)
             min_tp = entry_price + sl_dist * min_rr
             tp_price = max(tp_price, round(min_tp))
 
     # IDX ARA/ARB cap: TP above ARA won't fill (stock halts at limit) and SL below
     # ARB similarly unfillable. Apply with 0.5% safety margin from the limit.
     _ar = calc_ara_arb_levels(entry_price)
-    if tp_price >= _ar["ara_price"]:
+    if tp_price is not None and tp_price >= _ar["ara_price"]:
         _orig_tp = tp_price
         tp_price = round(_ar["ara_price"] * 0.995)
         print(f"[paper_trade] {ticker}: TP capped {_orig_tp:,.0f} -> {tp_price:,.0f} (ARA Rp {_ar['ara_price']:,.0f})")
@@ -358,8 +381,8 @@ def open_trade(ticker: str, entry_price: float, strategy: str = None,
 
     # After capping, re-validate min_rr — skip entry if capped TP can't deliver enough
     # reward vs the SL distance (no realistic edge under IDX auto-rejection rules).
-    # Swing Trend exits via R1-R7 not price TP, so skip the gate.
-    if not is_swing:
+    # Swing Trend exits via R1-R7 and pure-trail policies have no TP — skip the gate.
+    if not is_swing and tp_price is not None:
         capped_reward = tp_price - entry_price
         capped_risk   = entry_price - sl_price
         if capped_risk > 0 and capped_reward / capped_risk < min_rr:
@@ -423,7 +446,7 @@ def open_trade(ticker: str, entry_price: float, strategy: str = None,
             send_telegram(
                 f"📝 <b>Paper Trade OPENED</b>\n\n"
                 f"🟢 <b>{ticker}</b> @ Rp {entry_price:,.0f}\n"
-                f"   📈 TP: Rp {tp_price:,.0f}\n"
+                f"   📈 TP: {'Rp {:,.0f}'.format(tp_price) if tp_price else 'trail exit'}\n"
                 f"   🛑 SL: Rp {sl_price:,.0f}\n"
                 f"   Lot: {lots} | Capital: Rp {capital_used:,.0f}\n"
                 f"   Strategy: {strategy}"
