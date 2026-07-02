@@ -23,7 +23,6 @@ from .strategies import (
     strategy_liquidity_sweep_flow,
     Trade
 )
-from engine.regime_filter import strategy_regime_adaptive, RegimeClassifier
 from engine.indicators import get_warmup, calc_atr, calc_adx, calc_ma_slope, calc_vwap
 
 
@@ -185,22 +184,19 @@ STRATEGY_FUNCS = {
     'Crash Recovery':            strategy_crash_recovery,
     'Panic Rebound':             strategy_panic_rebound,
     'Liquidity Sweep':           strategy_liquidity_sweep_flow,
-    'Regime Adaptive':           strategy_regime_adaptive,
+    # 'Regime Adaptive' deregistered 2026-07-02 (audit C-7): whole-window
+    # look-ahead — regime chosen from the window's LAST bar. The function
+    # remains in engine/regime_filter.py; re-register only after a per-bar
+    # reimplementation.
 }
 
 
 def run_all_strategies(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None) -> List[dict]:
-    """Full backtest semua 4 strategy pada df penuh."""
+    """Full backtest semua strategi terdaftar pada df penuh."""
     results = []
-    # Train regime classifier once on full df
-    regime_clf = RegimeClassifier()
-    train_result = regime_clf.train(df)
-    if 'error' in train_result:
-        regime_clf = None
-
     for name, func in STRATEGY_FUNCS.items():
-        if name == 'Regime Adaptive' and regime_clf:
-            raw = func(df, capital=capital, filters=filters, classifier=regime_clf)
+        if func.__name__ == "strategy_vwma_breakout_pullback":
+            raw = func(df, capital=capital)   # takes no filters kwarg
         else:
             raw = func(df, capital=capital, filters=filters)
         metrics = compute_metrics(raw)
@@ -249,18 +245,9 @@ def run_walk_forward(df: pd.DataFrame, capital: float = 50_000_000, filters: lis
         warmup_tail = train_df.tail(WARMUP_BARS) if len(train_df) >= WARMUP_BARS else train_df
         extended_df = pd.concat([warmup_tail, test_df], ignore_index=True)
 
-        # Train regime classifier on train_df for this window
-        regime_clf = RegimeClassifier()
-        train_result = regime_clf.train(w['train'])
-        if 'error' in train_result:
-            regime_clf = None
-
         for name, func in STRATEGY_FUNCS.items():
-            if name == 'Regime Adaptive':
-                raw = func(extended_df, capital=capital, filters=filters,
-                           classifier=regime_clf if regime_clf else None)
-            elif func.__name__ == "strategy_vwma_breakout_pullback":
-                raw = func(extended_df, capital=capital)
+            if func.__name__ == "strategy_vwma_breakout_pullback":
+                raw = func(extended_df, capital=capital)   # takes no filters kwarg
             else:
                 raw = func(extended_df, capital=capital, filters=filters)
 

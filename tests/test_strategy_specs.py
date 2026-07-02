@@ -152,3 +152,17 @@ def test_live_checker_flag_matches_dispatch():
     from engine.strategy_specs import SPECS
     for name, spec in SPECS.items():
         assert spec.live_checker == (name in _CHECKER_DISPATCH), name
+
+
+def test_specs_match_strategy_funcs():
+    from engine.walkforward_multi import STRATEGY_FUNCS
+    from engine.strategy_specs import SPECS
+    assert set(STRATEGY_FUNCS) == set(SPECS)
+
+
+def test_regime_adaptive_not_registered():
+    """Audit C-7: strategy_regime_adaptive picks the regime from the LAST bar
+    of the window and applies it to the whole window — look-ahead. It must not
+    be a walk-forward research strategy until reimplemented per-bar."""
+    from engine.walkforward_multi import STRATEGY_FUNCS
+    assert "Regime Adaptive" not in STRATEGY_FUNCS
