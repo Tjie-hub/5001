@@ -38,6 +38,9 @@ def test_kill_switch_overrides(monkeypatch, tmp_path):
 def test_pricing_defaults(monkeypatch):
     monkeypatch.delenv("AGENT_FIRM_PRICE_IN", raising=False)
     monkeypatch.delenv("AGENT_FIRM_PRICE_OUT", raising=False)
+    # Isolate from the production .env, which sets AGENT_FIRM_MODEL and made
+    # the MODEL_ID default assertion fail on the live checkout.
+    monkeypatch.delenv("AGENT_FIRM_MODEL", raising=False)
     cfg = reload_config()
     assert cfg.PRICE_INPUT_PER_M == pytest.approx(0.435)
     assert cfg.PRICE_OUTPUT_PER_M == pytest.approx(0.870)

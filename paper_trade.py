@@ -375,17 +375,35 @@ def open_trade(ticker: str, entry_price: float, strategy: str = None,
             'R4_DISTRIBUTION', 'R5_FLOW_FLIP', 'R6_BEAR_ENGULF', 'R7_TRAIL_SL'
         ])
 
-    # Volatility-adjusted position sizing: lots = capital_risk / (ATR14 × 100)
+    # Position sizing (audit C-2): risk_pct of capital against the ACTUAL stop
+    # distance, using the same authority as the backtests
+    # (engine.strategies.lot_size: risk-based, 30%-of-capital cap, min 1 lot).
+    # The old formula divided by 1×ATR regardless of the real stop (2×ATR or a
+    # strategy-provided level), systematically oversizing risk.
+    from engine.strategies import lot_size as _lot_size
     cost_per_lot = entry_price * 100
-    risk_rp      = capital * risk_pct
-    if atr and atr > 0:
-        lots = int(risk_rp / (atr * 100))
-    else:
-        sl_rp = cost_per_lot * sl_pct if sl_pct > 0 else cost_per_lot * 0.02
-        lots  = int(risk_rp / sl_rp) if sl_rp > 0 else 1
     max_lots     = int((capital * 0.30) / cost_per_lot)
-    lots         = max(1, min(int(lots * lots_multiplier), max_lots))
+    lots         = _lot_size(capital, entry_price, risk_pct,
+                             sl_pct if sl_pct > 0 else 0.02)
+    lots         = min(int(lots * lots_multiplier), max_lots)
+    if lots < 1:
+        return {"error": (
+            f"{ticker} skipped: sized to <1 lot "
+            f"(risk {risk_pct:.1%} of Rp {capital:,.0f} vs stop {sl_pct:.1%}, "
+            f"multiplier {lots_multiplier})"
+        )}
     capital_used = lots * cost_per_lot
+
+    # Aggregate exposure cap (audit C-2): total open notional must stay within
+    # capital. Blunt 100% guard for Phase 1; real portfolio heat management is
+    # Phase 4 (see Audit/REMEDIATION_PLAN.md).
+    open_capital = sum(float(t.get("capital_used") or 0) for t in open_trades)
+    if open_capital + capital_used > capital:
+        return {"error": (
+            f"{ticker} skipped: aggregate exposure cap — open Rp {open_capital:,.0f}"
+            f" + new Rp {capital_used:,.0f} > capital Rp {capital:,.0f}"
+        )}
+
     now          = datetime.now(WIB).strftime("%Y-%m-%d")
 
     conn = get_db()
