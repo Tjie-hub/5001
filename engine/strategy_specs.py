@@ -67,3 +67,19 @@ def ensure_entry_price(result: dict, df=None) -> dict:
     if df is not None and len(df) > 0:
         details["price"] = float(df["close"].iloc[-1])
     return result
+
+
+# Display-name aliases: several strategy functions report display names that
+# differ from their canonical registry keys, and paper_trades.strategy rows
+# store those display names (open_trade defaults / backtest_cache).
+DISPLAY_ALIASES = {
+    "Momentum Following":   "momentum",
+    "Vol-Weighted Entry":   "vol_weighted",
+    "VWAP Reversion":       "vwap_reversion",
+    "Conservative Confirm": "conservative",
+}
+
+
+def resolve_strategy_name(name: str) -> str:
+    """Canonical registry key for a strategy/display name."""
+    return DISPLAY_ALIASES.get(name, name)
