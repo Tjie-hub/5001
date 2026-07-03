@@ -86,7 +86,7 @@ def load_all_tickers() -> list:
 def fetch_ticker(ticker, period="2y"):
     symbol = ticker + ".JK"
     print(f"Fetching {symbol}...")
-    df = yf.download(symbol, period=period, auto_adjust=True, progress=False)
+    df = yf.download(symbol, period=period, auto_adjust=False, progress=False)
     if df.empty:
         print(f"  WARNING: no data for {symbol}")
         return 0
@@ -101,6 +101,7 @@ def _save_df(ticker, df) -> int:
     df = df.rename(columns={
         "Date": "date", "Open": "open", "High": "high",
         "Low": "low", "Close": "close", "Volume": "volume",
+        "Dividends": "dividends", "Stock Splits": "splits",
     })
     df["date"] = df["date"].astype(str).str[:10]
     import math
@@ -111,21 +112,45 @@ def _save_df(ticker, df) -> int:
         if close_val is None or (isinstance(close_val, float) and math.isnan(close_val)):
             continue  # skip incomplete intraday rows
         try:
+            # Phase 2A: yfinance NEVER overwrites an existing bar (the scraper
+            # is the EOD authority); it fills gaps (is_final=1, settled
+            # history) and repairs NULL-close placeholder rows only.
             conn.execute(
-                """INSERT INTO ohlcv (ticker,date,open,high,low,close,volume)
-                   VALUES (?,?,?,?,?,?,?)
+                """INSERT INTO ohlcv (ticker,date,open,high,low,close,volume,is_final)
+                   VALUES (?,?,?,?,?,?,?,1)
                    ON CONFLICT(ticker,date) DO UPDATE SET
                      open=excluded.open, high=excluded.high, low=excluded.low,
-                     close=excluded.close, volume=excluded.volume
+                     close=excluded.close, volume=excluded.volume, is_final=1
                    WHERE ohlcv.close IS NULL""",
                 (ticker, row["date"], row["open"], row["high"], row["low"], close_val, row["volume"]),
             )
             saved += 1
         except Exception:
             pass
+    _save_actions(conn, ticker, df)
     conn.commit()
     conn.close()
     return saved
+
+
+def _save_actions(conn, ticker, df) -> int:
+    """Persist non-zero dividends/splits into corporate_actions. Fail-soft if
+    the table is missing (pre-migration DB)."""
+    n = 0
+    try:
+        for _, row in df.iterrows():
+            for col, action in (("dividends", "dividend"), ("splits", "split")):
+                val = row.get(col)
+                if val is not None and not (isinstance(val, float) and (val != val)) and float(val) != 0.0:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO corporate_actions (ticker,date,action,value,source)"
+                        " VALUES (?,?,?,?,'yfinance')",
+                        (ticker, row["date"], action, float(val)),
+                    )
+                    n += 1
+    except Exception:
+        pass
+    return n
 
 
 def _fetch_batch(tickers: list, period: str = None, start: str = None) -> dict[str, int]:
@@ -135,7 +160,7 @@ def _fetch_batch(tickers: list, period: str = None, start: str = None) -> dict[s
     """
     symbols = [t + ".JK" for t in tickers]
     try:
-        kwargs = dict(auto_adjust=True, progress=False, threads=True)
+        kwargs = dict(auto_adjust=False, actions=True, progress=False, threads=True)
         if start:
             kwargs["start"] = start
         elif period:
@@ -213,80 +238,42 @@ def fetch_ihsg(period: str = "2y"):
     """Fetch IHSG (^JKSE) OHLCV and store as ticker='IHSG' in ohlcv table."""
     symbol = "^JKSE"
     print(f"Fetching {symbol} (IHSG)...")
-    df = yf.download(symbol, period=period, auto_adjust=True, progress=False)
+    df = yf.download(symbol, period=period, auto_adjust=False, progress=False)
     if df.empty:
         print(f"  WARNING: no data for {symbol}")
         return 0
     return _save_df("IHSG", df)
 
 
-def _purge_duplicate_non_trading_days():
-    """
-    Remove OHLCV rows for non-trading days (weekends/holidays) where yfinance
-    fills with the last available data.
+MIN_CALENDAR_DAYS = 200   # refuse to purge against a sparse/unbuilt calendar
 
-    Two-pass strategy:
-      1. Per-ticker: remove rows where close + volume exactly match previous
-         (catches weekends + most holidays).
-      2. Per-date: if >= 95% of tickers have the same close as previous trading
-         day (within 0.1%), the entire date is a non-trading day — purge all rows.
-         This catches holidays where yfinance returns slightly different volumes.
+
+def purge_non_calendar_days(min_days: int = MIN_CALENDAR_DAYS) -> int:
+    """Delete ohlcv rows whose date is not an IDX trading day (Phase 2A, C-5).
+
+    Replaces the old duplicate-row purge, which deleted REAL sessions of
+    illiquid names (identical close+volume days) and thereby fabricated the
+    calendar gaps Crash Recovery reads as suspensions. This version only
+    trusts the trading_calendar table (IHSG-derived + scraper EOD upserts)
+    and refuses to act when the calendar looks unbuilt.
     """
     conn = get_db()
-
-    # Pass 1: per-ticker exact match (close + volume)
-    tickers = [r["ticker"] for r in conn.execute(
-        "SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker"
-    ).fetchall()]
-    purged = 0
-    for t in tickers:
-        rows = conn.execute(
-            "SELECT rowid, date, close, volume FROM ohlcv WHERE ticker=? ORDER BY date",
-            (t,)
-        ).fetchall()
-        for i in range(1, len(rows)):
-            prev = rows[i - 1]
-            cur = rows[i]
-            if cur["close"] == prev["close"] and cur["volume"] == prev["volume"]:
-                conn.execute("DELETE FROM ohlcv WHERE rowid=?", (cur[0],))
-                purged += 1
-    if purged:
-        print(f"  Pass 1: purged {purged} exact-match duplicate rows")
-
-    # Pass 2: date-level close-match check
-    all_dates = [r["date"] for r in conn.execute(
-        "SELECT DISTINCT date FROM ohlcv ORDER BY date"
-    ).fetchall()]
-
-    purged_total = 0
-    for date in all_dates:
-        rows = conn.execute(
-            """SELECT a.ticker, a.close,
-                      b.close AS prev_close
-               FROM ohlcv a
-               LEFT JOIN ohlcv b ON a.ticker = b.ticker
-                   AND b.date = (SELECT MAX(c.date) FROM ohlcv c
-                                 WHERE c.ticker = a.ticker AND c.date < a.date)
-               WHERE a.date = ? AND b.ticker IS NOT NULL""",
-            (date,)
-        ).fetchall()
-        if not rows:
-            continue
-        total = len(rows)
-        same_close = sum(
-            1 for r in rows
-            if r["prev_close"] is not None
-            and r["close"] == r["prev_close"]
-        )
-        if total > 0 and same_close / total >= 0.95:
-            conn.execute("DELETE FROM ohlcv WHERE date=?", (date,))
-            purged_total += total
-            print(f"  Pass 2: purged {date} ({total} rows, {same_close}/{total} same close)")
-
-    conn.commit()
-    conn.close()
-    if purged_total:
-        print(f"  Total: {purged_total} holiday rows removed")
+    try:
+        try:
+            n_cal = conn.execute("SELECT COUNT(*) FROM trading_calendar").fetchone()[0]
+        except Exception:
+            return 0  # table missing (pre-migration) — do nothing
+        if n_cal < min_days:
+            print(f"  [purge skipped: calendar has only {n_cal} days (<{min_days})]")
+            return 0
+        cur = conn.execute(
+            "DELETE FROM ohlcv WHERE date NOT IN (SELECT date FROM trading_calendar)")
+        conn.commit()
+        if cur.rowcount:
+            print(f"  Calendar purge: removed {cur.rowcount} non-trading-day rows")
+        return cur.rowcount
+    finally:
+        conn.close()
 
 
 def fetch_all_incremental(category: str = None):
@@ -352,15 +339,21 @@ def fetch_all_incremental(category: str = None):
         total_saved += fetch_ihsg(period="2y")
     elif ihsg_max < today:
         ihsg_start = (datetime.strptime(ihsg_max, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
-        df_ihsg = yf.download("^JKSE", start=ihsg_start, auto_adjust=True, progress=False)
+        df_ihsg = yf.download("^JKSE", start=ihsg_start, auto_adjust=False, progress=False)
         if not df_ihsg.empty:
             total_saved += _save_df("IHSG", df_ihsg)
 
-    # Strip non-trading-day duplicates (holiday/weekend fills from yfinance)
+    # Refresh the trading calendar from IHSG, then strip any non-trading-day
+    # rows (holiday/weekend fills from yfinance). Never deletes real sessions
+    # (Phase 2A, audit C-5).
     try:
-        _purge_duplicate_non_trading_days()
+        from data.market_schema import build_trading_calendar
+        _cal_conn = get_db()
+        build_trading_calendar(_cal_conn)
+        _cal_conn.close()
+        purge_non_calendar_days()
     except Exception as e:
-        print(f"  [purge skipped: {e}]")
+        print(f"  [calendar purge skipped: {e}]")
 
     print(f"Done: {total_saved} new bars saved")
     return total_saved
