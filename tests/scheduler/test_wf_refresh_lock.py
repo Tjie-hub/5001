@@ -39,7 +39,7 @@ def tmp_db(tmp_path, monkeypatch):
                   "PRIMARY KEY(ticker,strategy))")
     monkeypatch.setattr(jobs, "DB_PATH", db)
     monkeypatch.setattr(jobs, "get_all_tickers", lambda: ["AAA", "BBB"])
-    monkeypatch.setattr(jobs, "_load_ohlcv_bulk", lambda: {"AAA": _mini_df(), "BBB": _mini_df()})
+    monkeypatch.setattr(jobs, "_load_ohlcv_bulk", lambda final_only=False: {"AAA": _mini_df(), "BBB": _mini_df()})
     monkeypatch.setattr(jobs, "send_telegram", lambda *a, **k: None)
     return db
 
