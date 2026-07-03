@@ -65,3 +65,46 @@ def test_build_calendar_from_ihsg(db):
     assert dates == {"2026-01-02", "2026-01-05", "2026-01-06"}
     assert build_trading_calendar(conn) == 0    # idempotent: nothing new
     conn.close()
+
+
+def _mk_prod_like_db(tmp_path):
+    from data.market_schema import ensure_market_data_schema
+    path = str(tmp_path / "scr.db")
+    conn = sqlite3.connect(path)
+    conn.execute("CREATE TABLE ohlcv (id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                 " ticker TEXT, date TEXT, open REAL, high REAL, low REAL,"
+                 " close REAL, volume REAL, UNIQUE(ticker,date))")
+    conn.commit()
+    conn.close()
+    ensure_market_data_schema(path)
+    return path
+
+
+def test_scraper_intraday_is_provisional_eod_is_final(tmp_path, monkeypatch):
+    import screener.idx_scraper as scraper
+    db = _mk_prod_like_db(tmp_path)
+    monkeypatch.setattr(scraper, "_DB_PATH", db)
+    bar = {"TST": {"open": 100, "high": 110, "low": 95, "close": 105, "volume": 5000}}
+
+    scraper.save_ohlcv_to_db(bar, "2026-07-03")                  # intraday default
+    conn = sqlite3.connect(db)
+    assert conn.execute("SELECT is_final FROM ohlcv WHERE ticker='TST'").fetchone()[0] == 0
+    conn.close()
+
+    bar["TST"]["close"] = 106
+    scraper.save_ohlcv_to_db(bar, "2026-07-03", is_final=True)   # 16:15 EOD
+    conn = sqlite3.connect(db)
+    row = conn.execute("SELECT close, is_final FROM ohlcv WHERE ticker='TST'").fetchone()
+    assert row == (106, 1)
+    conn.close()
+
+
+def test_scraper_eod_save_upserts_calendar(tmp_path, monkeypatch):
+    import screener.idx_scraper as scraper
+    db = _mk_prod_like_db(tmp_path)
+    monkeypatch.setattr(scraper, "_DB_PATH", db)
+    bar = {"TST": {"open": 100, "high": 110, "low": 95, "close": 105, "volume": 5000}}
+    scraper.save_ohlcv_to_db(bar, "2026-07-03", is_final=True)
+    conn = sqlite3.connect(db)
+    assert conn.execute("SELECT COUNT(*) FROM trading_calendar WHERE date='2026-07-03'").fetchone()[0] == 1
+    conn.close()
