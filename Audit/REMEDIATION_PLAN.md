@@ -43,6 +43,13 @@ Finding IDs (C-x, H-x) reference `Audit/INSTITUTIONAL_AUDIT_2026-07-02.md`.
 > purge; corporate_actions captured; research jobs exclude provisional bars.
 > 5y raw corpus rebuild script shipped — prod build/verify/swap executed at
 > deploy. wf_scores now DOUBLY stale (old exits AND old corpus) until 2.3/2.8.
+>
+> **items 2.3 + 2.4 + 2.7 SHIPPED (PR #9):** avg_pf NaN fixed + pooled
+> total_trades exposed; Sharpe floor 3->5; ~16 OOS windows pinned on the 5y
+> corpus; WF refresh scores the full corpus (survivorship); tuning/embargo
+> protocol doc. 2.8 recompute executed at deploy (wf_scores_pre_2b archived).
+> REMAINING: 2.5 strategy consolidation (roster change — needs buy-in, forces
+> a 2nd recompute) + 2.6 regime-classifier honesty.
 
 ### Work items
 | # | Item | Findings |

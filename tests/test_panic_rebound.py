@@ -120,21 +120,28 @@ def test_time_stop_forces_exit():
 
 def test_sharpe_is_sane():
     """compute_metrics Sharpe must stay in a sane band — the old per-bar
-    annualization produced |Sharpe| in the thousands."""
-    trades = [
-        Trade(entry_date='2026-01-05', exit_date='2026-01-12',
-              entry_price=100, exit_price=105, lots=10, direction='BUY',
-              exit_reason='TP', pnl_rp=5000, pnl_pct=5.0, strategy='x'),
-        Trade(entry_date='2026-02-02', exit_date='2026-02-09',
-              entry_price=100, exit_price=103, lots=10, direction='BUY',
-              exit_reason='TP', pnl_rp=3000, pnl_pct=3.0, strategy='x'),
-        Trade(entry_date='2026-03-02', exit_date='2026-03-09',
-              entry_price=100, exit_price=98, lots=10, direction='BUY',
-              exit_reason='SL', pnl_rp=-2000, pnl_pct=-2.0, strategy='x'),
+    annualization produced |Sharpe| in the thousands.
+    plan 2B: SHARPE_MIN_TRADES raised 3->5, so the fixture now carries 6
+    trades to still exercise the sane-band property (not just the floor)."""
+    specs = [
+        ('2026-01-05', '2026-01-12', 105, 5000, 5.0),
+        ('2026-02-02', '2026-02-09', 103, 3000, 3.0),
+        ('2026-03-02', '2026-03-09', 98, -2000, -2.0),
+        ('2026-04-02', '2026-04-09', 104, 4000, 4.0),
+        ('2026-05-04', '2026-05-11', 99, -1000, -1.0),
+        ('2026-06-01', '2026-06-08', 106, 6000, 6.0),
     ]
-    result = {'strategy': 'x', 'trades': trades,
-              'equity': [1e6, 1.005e6, 1.008e6, 1.006e6],
-              'final_capital': 1.006e6, 'initial_capital': 1e6}
+    trades = [
+        Trade(entry_date=ed, exit_date=xd, entry_price=100, exit_price=xp,
+              lots=10, direction='BUY', exit_reason='TP', pnl_rp=rp,
+              pnl_pct=pct, strategy='x')
+        for ed, xd, xp, rp, pct in specs
+    ]
+    eq = [1e6]
+    for t in trades:
+        eq.append(eq[-1] + t.pnl_rp)
+    result = {'strategy': 'x', 'trades': trades, 'equity': eq,
+              'final_capital': eq[-1], 'initial_capital': 1e6}
     m = compute_metrics(result)
     assert -10 <= m['sharpe'] <= 10
     assert m['sharpe'] != 0
