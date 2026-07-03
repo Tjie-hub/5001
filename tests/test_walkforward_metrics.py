@@ -37,3 +37,40 @@ def test_summary_shapes_are_json_safe():
         summ = _summarize_strategy("t", [_win(2.0, pf)])
         v = summ["avg_profit_factor"]
         assert math.isfinite(v)
+
+
+from engine.walkforward_multi import compute_metrics, SHARPE_MIN_TRADES
+
+
+class _T:
+    def __init__(self, pnl_pct):
+        self.pnl_rp = pnl_pct * 1000
+        self.pnl_pct = pnl_pct
+        self.entry_date = "2026-01-01"
+        self.exit_date = "2026-01-05"
+        self.exit_reason = "TP"
+
+
+def _result(pnls_pct):
+    trades = [_T(p) for p in pnls_pct]
+    eq = [1_000_000]
+    for t in trades:
+        eq.append(eq[-1] + t.pnl_rp)
+    return {"strategy": "t", "trades": trades, "equity": eq,
+            "initial_capital": 1_000_000, "final_capital": eq[-1]}
+
+
+def test_sharpe_floor_is_at_least_five():
+    assert SHARPE_MIN_TRADES >= 5
+
+
+def test_sharpe_zero_below_floor():
+    m = compute_metrics(_result([1.0, -0.5, 2.0, 1.5]))   # 4 trades < floor
+    assert m["sharpe"] == 0
+    assert m["total_trades"] == 4
+
+
+def test_sharpe_computed_at_or_above_floor():
+    m = compute_metrics(_result([1.0, -0.5, 2.0, 1.5, 0.8, -0.3]))  # 6 >= floor
+    assert m["sharpe"] != 0
+    assert -10.0 <= m["sharpe"] <= 10.0

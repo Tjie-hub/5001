@@ -30,6 +30,9 @@ from engine.indicators import get_warmup, calc_atr, calc_adx, calc_ma_slope, cal
 # METRICS
 # ─────────────────────────────────────────────
 
+SHARPE_MIN_TRADES = 5   # below this the per-trade Sharpe is noise -> report 0
+
+
 def compute_metrics(result: dict) -> dict:
     trades: List[Trade] = result['trades']
     equity = result['equity']
@@ -71,7 +74,7 @@ def compute_metrics(result: dict) -> dict:
     # per-trade (not daily) returns — annualizing those with sqrt(252)
     # produced the +-1000s garbage that polluted wf_scores.avg_sharpe.
     sharpe = 0.0
-    if len(pnls_pct) >= 3:
+    if len(pnls_pct) >= SHARPE_MIN_TRADES:
         rets = np.array(pnls_pct) / 100.0
         ret_std = rets.std(ddof=1)
         if ret_std > 0:
