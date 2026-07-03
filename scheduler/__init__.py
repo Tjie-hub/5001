@@ -81,6 +81,13 @@ def start_scheduler():
     except Exception as _e:
         print(f"[scheduler] watchlist table init error: {_e}")
 
+    # Phase 2A: market-data schema (is_final / calendar / corporate_actions)
+    try:
+        from data.market_schema import ensure_market_data_schema
+        ensure_market_data_schema(DB_PATH)
+    except Exception as _e:
+        print(f"[scheduler] market schema init error: {_e}")
+
     scheduler = BackgroundScheduler(timezone=WIB)
 
     # Daily signal scan — Mon-Fri 16:00 WIB (market close, always send even if no signals)
