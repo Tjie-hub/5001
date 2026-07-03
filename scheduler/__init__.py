@@ -43,6 +43,7 @@ from scheduler.jobs import (  # noqa: F401
     refresh_wf_scores,
     run_flow_fetch,
     run_broker_flow_fetch,
+    run_ohlcv_reconciliation,
     run_foreign_snapshot,
     run_news_fetch,
     run_premover_eod,
@@ -156,6 +157,11 @@ def start_scheduler():
     scheduler.add_job(run_broker_flow_fetch, CronTrigger(
         day_of_week="mon-fri", hour=20, minute=15, timezone=WIB),
         id="broker_flow_fetch", name="Broker Flow Fetch 20:15")
+
+    # OHLCV reconciliation — 21:00 WIB (after 20:15 broker flow; alert-only)
+    scheduler.add_job(run_ohlcv_reconciliation, CronTrigger(
+        day_of_week="mon-fri", hour=21, minute=0, timezone=WIB),
+        id="ohlcv_reconciliation", name="OHLCV Reconciliation 21:00")
 
     # Pre-mover EOD scan — 16:30 WIB
     scheduler.add_job(run_premover_eod, CronTrigger(

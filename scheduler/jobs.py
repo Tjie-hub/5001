@@ -313,6 +313,31 @@ def run_broker_flow_fetch():
         send_telegram(f"🔴 <b>Broker Flow Fetch Error</b>\n<code>{str(e)[:200]}</code>")
 
 
+def run_ohlcv_reconciliation():
+    """21:00 WIB — alert-only comparison of today's scraper-final closes vs
+    yfinance raw (Phase 2A, audit C-4). Scraper stays the authority."""
+    if _holiday_skip("run_ohlcv_reconciliation"):
+        return
+    from data.reconcile import reconcile_ohlcv
+    today = datetime.now(WIB).strftime('%Y-%m-%d')
+    try:
+        rep = reconcile_ohlcv(today)
+        n = len(rep["mismatches"])
+        print(f"[{datetime.now(WIB).strftime('%H:%M')}] OHLCV reconcile {today}: "
+              f"{rep['compared']} compared, {rep['missing_yf']} missing on yf, {n} mismatches")
+        if n:
+            top = "\n".join(
+                f"  {m['ticker']}: scraper {m['scraper']:,.0f} vs yf {m['yfinance']:,.0f} ({m['diff_pct']}%)"
+                for m in rep["mismatches"][:10])
+            send_telegram(
+                f"\u2696\ufe0f <b>OHLCV Reconciliation {today}</b>\n\n"
+                f"{n} mismatch(es) > 0.1% of {rep['compared']} compared "
+                f"(alert-only; scraper is authority):\n{top}"
+            )
+    except Exception as e:
+        print(f"[scheduler] OHLCV reconcile error: {e}")
+
+
 def run_foreign_snapshot():
     """14:30 WIB — Pre-close foreign accumulation watchlist alert.
 
