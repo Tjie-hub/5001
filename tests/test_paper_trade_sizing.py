@@ -126,3 +126,18 @@ def test_cooldown_covers_trail_and_ma_break_losses(pt_db):
     conn.close()
     res = pt.open_trade("TEST", 1000.0, sl_price=900.0, notify=False)
     assert "error" in res and "cooldown" in res["error"].lower()
+
+
+def test_close_trade_pnl_is_net_of_costs(pt_db):
+    """Item 1.7: paper P&L must carry the same cost legs as backtests.
+    entry raw 1000 -> net 1002.5 (BUY +0.25%); exit raw 1050 -> net 1046.325
+    (SELL -0.35%); 100 lots x 100 shares:
+      pnl_rp  = (1046.325 - 1002.5) * 10000 = 438,250
+      pnl_pct = 43.825 / 1002.5 = +4.37%
+    Old gross math said +5.0% / 500,000."""
+    import paper_trade as pt
+    res = pt.open_trade("TEST", 1000.0, sl_price=900.0, notify=False)
+    assert "error" not in res, res
+    out = pt.close_trade(res["id"], 1050.0, "TP", notify=False)
+    assert out["pnl_rp"] == pytest.approx(438250, abs=1)
+    assert out["pnl_pct"] == pytest.approx(4.37, abs=0.01)

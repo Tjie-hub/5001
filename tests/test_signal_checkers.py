@@ -91,7 +91,9 @@ def test_signal_checker_structure(strategy, expected_fields):
     """Test that signal checkers return expected structure with required fields."""
     from engine.strategies import check_current_entry_signal
 
-    n = 100 if strategy == 'Trend Following Breakout' else 50
+    # plan 1C: vwap_reversion needs >=60 bars (rolling-60 calc_vwap,
+    # backtest parity) - 70 covers all non-TFB checkers.
+    n = 100 if strategy == 'Trend Following Breakout' else 70
     df = make_sample_df(length=n, trend='up', vol_spike=True)
     result = check_current_entry_signal('TEST', strategy, df)
 
@@ -145,7 +147,8 @@ class TestVwapReversionSignal:
 
     def test_structure(self):
         from engine.strategies import check_vwap_reversion_signal
-        df = make_sample_df(length=30)
+        # plan 1C: checker uses rolling-60 calc_vwap (backtest parity) -> 70 bars
+        df = make_sample_df(length=70)
         result = check_vwap_reversion_signal(df)
         assert set(result.keys()) == {'has_signal', 'reason', 'details'}
         assert 'distance_pct' in result['details']

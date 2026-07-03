@@ -475,8 +475,14 @@ def close_trade(trade_id: int, exit_price: float, exit_reason: str = "MANUAL", n
         return {"error": "Trade tidak ditemukan"}
 
     trade    = dict(trade)
-    pnl_rp   = round((exit_price - trade["entry_price"]) * trade["lots"] * 100)
-    pnl_pct  = round((exit_price - trade["entry_price"]) / trade["entry_price"] * 100, 2)
+    # Item 1.7: P&L is NET of the same commission+slippage the backtests and
+    # the SHADOW engine apply (engine/exits/costs.py). Stored entry_price /
+    # exit_price stay RAW (display + level bookkeeping); only P&L is netted.
+    from engine.exits.costs import apply_costs as _apply_costs
+    _entry_net = _apply_costs(trade["entry_price"], "BUY")
+    _exit_net  = _apply_costs(exit_price, "SELL")
+    pnl_rp   = round((_exit_net - _entry_net) * trade["lots"] * 100)
+    pnl_pct  = round((_exit_net - _entry_net) / _entry_net * 100, 2)
     now      = datetime.now(WIB).strftime("%Y-%m-%d")
 
     conn.execute("""

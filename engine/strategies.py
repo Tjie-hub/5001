@@ -20,11 +20,9 @@ from engine.indicators import (
 )
 
 # ─────────────────────────────────────────────
-# CONFIG
+# CONFIG — cost values live in engine/exits/costs.py (single authority, plan 1C)
 # ─────────────────────────────────────────────
-COMMISSION_BUY  = 0.0015   # 0.15%
-COMMISSION_SELL = 0.0025   # 0.25%
-SLIPPAGE        = 0.001    # 0.10%
+from engine.exits.costs import COMMISSION_BUY, COMMISSION_SELL, SLIPPAGE
 
 @dataclass
 class Trade:
@@ -74,10 +72,10 @@ def atr_tp_sl(entry: float, atr: float, sl_mult: float = 1.0, min_rr: float = 2.
     return tp_price, sl_price, tp_pct, sl_pct
 
 def apply_costs(price: float, side: str) -> float:
-    if side == 'BUY':
-        return price * (1 + COMMISSION_BUY + SLIPPAGE)
-    else:
-        return price * (1 - COMMISSION_SELL - SLIPPAGE)
+    """Thin wrapper over the single cost authority (kept for the many
+    strategy call sites and tests that use the 2-arg signature)."""
+    from engine.exits.costs import apply_costs as _apply
+    return _apply(price, side)
 
 
 def _watch_signal_block(df: pd.DataFrame) -> pd.Series:
@@ -1264,61 +1262,45 @@ def check_current_entry_signal(ticker: str, strategy: str, df: pd.DataFrame = No
 
 def check_vol_weighted_signal(df: pd.DataFrame) -> dict:
     """
-    Vol-Weighted Entry Signal Checker
-    
-    Entry Criteria:
-    - Volume Ratio (VR) > 1.8x
-    - Price > VWAP (optional tapi recommended)
-    
-    Returns:
-        dict dengan has_signal, reason, details
+    Vol-Weighted Entry Signal Checker — mirrors strategy_vol_weighted exactly
+    (plan 1C item 1.6): VR > 1.8x AND delta > 0 AND close > open.
+    Pure: no df mutation (audit H-4). VWAP shown is the rolling-60 calc_vwap
+    (info only, not a gate).
     """
+    from engine.indicators import calc_delta, calc_vwap
+
     latest = df.iloc[-1]
-    
-    # Hitung Volume Ratio
-    # VR = current_volume / avg_volume_20d
-    if 'avg_volume_20d' not in df.columns:
-        # Calculate avg volume 20 days
-        df['avg_volume_20d'] = df['volume'].rolling(window=20).mean()
-        latest = df.iloc[-1]
-    
-    current_volume = latest['volume']
-    avg_volume = latest['avg_volume_20d']
-    
+    avg_volume = df['volume'].rolling(window=20).mean().iloc[-1]
     if pd.isna(avg_volume) or avg_volume == 0:
         return {
             'has_signal': False,
             'reason': 'Avg volume tidak tersedia',
             'details': {}
         }
-    
+
+    current_volume = latest['volume']
     vr = current_volume / avg_volume
-    
-    # Hitung VWAP
-    if 'vwap' not in df.columns:
-        # Calculate VWAP: (typical_price * volume).cumsum() / volume.cumsum()
-        typical_price = (df['high'] + df['low'] + df['close']) / 3
-        df['vwap'] = (typical_price * df['volume']).cumsum() / df['volume'].cumsum()
-        latest = df.iloc[-1]
-    
+
+    delta_val = float(calc_delta(df).iloc[-1])
+    bullish = bool(latest['close'] > latest['open'])
+
+    vwap = calc_vwap(df).iloc[-1]
     current_price = latest['close']
-    vwap = latest['vwap']
-    price_vs_vwap = ((current_price - vwap) / vwap * 100) if vwap > 0 else 0
-    
-    # Check entry criteria
-    vr_pass = vr > 1.8
-    price_above_vwap = current_price > vwap
-    
-    # Entry signal = VR > 1.8 (VWAP check optional)
-    has_signal = vr_pass
-    
-    # Build reason string
-    if has_signal:
-        vwap_status = "above VWAP ✓" if price_above_vwap else "below VWAP ⚠"
-        reason = f"VR {vr:.2f}x > 1.8 ✓, Price {vwap_status}"
+    if pd.isna(vwap) or vwap <= 0:
+        vwap, price_vs_vwap = None, 0.0
     else:
+        price_vs_vwap = (current_price - vwap) / vwap * 100
+
+    vr_pass = vr > 1.8
+    has_signal = vr_pass and delta_val > 0 and bullish
+
+    if has_signal:
+        reason = f"VR {vr:.2f}x > 1.8 ✓, delta {delta_val:,.0f} > 0 ✓, bullish ✓"
+    elif not vr_pass:
         reason = f"VR {vr:.2f}x ≤ 1.8 (butuh > 1.8)"
-    
+    else:
+        reason = f"VR {vr:.2f}x ✓ tapi delta/candle tidak bullish (delta={delta_val:,.0f})"
+
     return {
         'has_signal': bool(has_signal),
         'reason': str(reason),
@@ -1327,98 +1309,98 @@ def check_vol_weighted_signal(df: pd.DataFrame) -> dict:
             'current_volume': int(current_volume),
             'avg_volume': int(avg_volume),
             'price': float(round(current_price, 2)),
-            'vwap': float(round(vwap, 2)),
+            'delta': float(round(delta_val, 0)),
+            'bullish': bullish,
+            'vwap': float(round(vwap, 2)) if vwap else None,
             'price_vs_vwap_pct': float(round(price_vs_vwap, 2)),
-            'price_above_vwap': bool(price_above_vwap)
+            'price_above_vwap': bool(vwap and current_price > vwap),
         }
     }
 
 
 def check_momentum_signal(df: pd.DataFrame) -> dict:
     """
-    Momentum Following Signal Checker
-
-    Entry Criteria:
-    - 2-day consecutive up streak
-    - Volume Ratio (VR) > 1.3x
+    Momentum Following Signal Checker — mirrors strategy_momentum exactly
+    (plan 1C item 1.6): 2-day up streak AND 1.3 < VR ≤ 5.0 AND not
+    watch-blocked. Pure: no df mutation.
     """
-    # Calculate streak
-    df['daily_return'] = df['close'].pct_change()
-    latest = df.iloc[-1]  # capture after daily_return column is added
+    daily_return = df['close'].pct_change()
     streak = 0
     for i in range(len(df) - 1, max(len(df) - 10, -1), -1):
-        if df.iloc[i]['daily_return'] > 0:
+        r = daily_return.iloc[i]
+        if not pd.isna(r) and r > 0:
             streak += 1
         else:
             break
-    
-    # Calculate VR
-    if 'avg_volume_20d' not in df.columns:
-        df['avg_volume_20d'] = df['volume'].rolling(window=20).mean()
-        latest = df.iloc[-1]
-    
-    vr = latest['volume'] / latest['avg_volume_20d'] if latest['avg_volume_20d'] > 0 else 0
-    
-    # Check criteria
+
+    avg_volume = df['volume'].rolling(window=20).mean().iloc[-1]
+    latest = df.iloc[-1]
+    vr = latest['volume'] / avg_volume if (not pd.isna(avg_volume) and avg_volume > 0) else 0
+
+    watch_blocked = bool(_watch_signal_block(df).iloc[-1])
+
     streak_pass = streak >= 2
-    vr_pass = vr > 1.3
-    has_signal = streak_pass and vr_pass
-    
+    vr_pass = 1.3 < vr <= 5.0
+    has_signal = streak_pass and vr_pass and not watch_blocked
+
     if has_signal:
         reason = f"{streak}-day streak ✓, VR {vr:.2f}x ✓"
     elif not streak_pass:
         reason = f"Streak {streak} < 2 days"
+    elif watch_blocked:
+        reason = "Watch-blocked (VR elevated, non-bullish session)"
+    elif vr > 5.0:
+        reason = f"VR {vr:.2f}x > 5.0 (climax cap)"
     else:
         reason = f"VR {vr:.2f}x ≤ 1.3"
-    
+
+    last_ret = daily_return.iloc[-1]
     return {
         'has_signal': bool(has_signal),
         'reason': str(reason),
         'details': {
             'streak': int(streak),
             'vr': float(round(vr, 2)),
-            'daily_return': float(round(latest['daily_return'] * 100, 2))
+            'daily_return': float(round((last_ret if not pd.isna(last_ret) else 0) * 100, 2)),
+            'watch_blocked': watch_blocked,
         }
     }
 
 
 def check_vwap_reversion_signal(df: pd.DataFrame) -> dict:
     """
-    VWAP Mean Reversion Signal Checker
-    
-    Entry Criteria:
-    - Distance from VWAP < -1% (oversold)
-    - Volume Ratio > 1.3x
+    VWAP Mean Reversion Signal Checker — mirrors strategy_vwap_reversion
+    exactly (plan 1C item 1.6): rolling-60 calc_vwap (the old anchored-cumsum
+    VWAP changed value with however much history was loaded — audit H-5),
+    distance < -1%, VR > 1.3.  Pure: no df mutation.
     """
+    from engine.indicators import calc_vwap
+
     latest = df.iloc[-1]
-    
-    # Calculate VWAP
-    if 'vwap' not in df.columns:
-        typical_price = (df['high'] + df['low'] + df['close']) / 3
-        df['vwap'] = (typical_price * df['volume']).cumsum() / df['volume'].cumsum()
-        latest = df.iloc[-1]
-    
-    distance = ((latest['close'] - latest['vwap']) / latest['vwap'] * 100) if latest['vwap'] > 0 else 0
-    
-    # Calculate VR
-    if 'avg_volume_20d' not in df.columns:
-        df['avg_volume_20d'] = df['volume'].rolling(window=20).mean()
-        latest = df.iloc[-1]
-    
-    vr = latest['volume'] / latest['avg_volume_20d'] if latest['avg_volume_20d'] > 0 else 0
-    
-    # Check criteria
+    vwap = calc_vwap(df).iloc[-1]
+    if pd.isna(vwap) or vwap <= 0:
+        return {
+            'has_signal': False,
+            'reason': 'VWAP-60 belum siap (butuh 60 bars)',
+            'details': {}
+        }
+
+    distance = (latest['close'] - vwap) / vwap * 100
+
+    avg_volume = df['volume'].rolling(window=20).mean().iloc[-1]
+    vr = latest['volume'] / avg_volume if (not pd.isna(avg_volume) and avg_volume > 0) else 0
+
     distance_pass = distance < -1
     vr_pass = vr > 1.3
     has_signal = distance_pass and vr_pass
-    
+
     if has_signal:
         reason = f"Distance {distance:.2f}% < -1% ✓, VR {vr:.2f}x ✓"
     elif not distance_pass:
         reason = f"Distance {distance:.2f}% ≥ -1% (not oversold)"
     else:
         reason = f"VR {vr:.2f}x ≤ 1.3"
-    
+
     return {
         'has_signal': bool(has_signal),
         'reason': str(reason),
@@ -1426,58 +1408,55 @@ def check_vwap_reversion_signal(df: pd.DataFrame) -> dict:
             'distance_pct': float(round(distance, 2)),
             'vr': float(round(vr, 2)),
             'price': float(round(latest['close'], 2)),
-            'vwap': float(round(latest['vwap'], 2))
+            'vwap': float(round(vwap, 2))
         }
     }
 
 
 def check_conservative_signal(df: pd.DataFrame) -> dict:
     """
-    Conservative Confirm Signal Checker
-    
-    Entry Criteria:
-    - Volume Ratio > 1.3x
-    - Bullish candle (close > open)
-    - Price above MA20
-    - ATR check (optional)
+    Conservative Confirm Signal Checker — mirrors strategy_conservative
+    exactly (plan 1C item 1.6): VR > 1.3, bullish candle, close > MA20,
+    AND ATR calm (ATR < 1.5x its 10-bar mean — was missing live).
+    Pure: no df mutation.
     """
+    from engine.indicators import calc_atr
+
     latest = df.iloc[-1]
-    
-    # Calculate VR
-    if 'avg_volume_20d' not in df.columns:
-        df['avg_volume_20d'] = df['volume'].rolling(window=20).mean()
-        latest = df.iloc[-1]
-    
-    vr = latest['volume'] / latest['avg_volume_20d'] if latest['avg_volume_20d'] > 0 else 0
-    
-    # Calculate MA20
-    if 'ma20' not in df.columns:
-        df['ma20'] = df['close'].rolling(window=20).mean()
-        latest = df.iloc[-1]
-    
-    # Check criteria
+    avg_volume = df['volume'].rolling(window=20).mean().iloc[-1]
+    vr = latest['volume'] / avg_volume if (not pd.isna(avg_volume) and avg_volume > 0) else 0
+    ma20 = df['close'].rolling(window=20).mean().iloc[-1]
+
+    atr = calc_atr(df, 14)
+    atr_ma = atr.rolling(10).mean()
+    atr_now, atr_ma_now = atr.iloc[-1], atr_ma.iloc[-1]
+    atr_ok = (not pd.isna(atr_now) and not pd.isna(atr_ma_now)
+              and atr_now < atr_ma_now * 1.5)
+
     vr_pass = vr > 1.3
-    bullish = latest['close'] > latest['open']
-    above_ma = latest['close'] > latest['ma20']
-    
-    has_signal = vr_pass and bullish and above_ma
-    
-    checks = []
-    checks.append(f"VR {vr:.2f}x {'✓' if vr_pass else '✗'}")
-    checks.append(f"Bullish {'✓' if bullish else '✗'}")
-    checks.append(f"Above MA20 {'✓' if above_ma else '✗'}")
-    
+    bullish = bool(latest['close'] > latest['open'])
+    above_ma = bool(not pd.isna(ma20) and latest['close'] > ma20)
+
+    has_signal = vr_pass and bullish and above_ma and atr_ok
+
+    checks = [
+        f"VR {vr:.2f}x {'✓' if vr_pass else '✗'}",
+        f"Bullish {'✓' if bullish else '✗'}",
+        f"Above MA20 {'✓' if above_ma else '✗'}",
+        f"ATR calm {'✓' if atr_ok else '✗'}",
+    ]
     reason = ", ".join(checks)
-    
+
     return {
         'has_signal': bool(has_signal),
         'reason': str(reason),
         'details': {
             'vr': float(round(vr, 2)),
-            'bullish': bool(bullish),
-            'above_ma20': bool(above_ma),
+            'bullish': bullish,
+            'above_ma20': above_ma,
+            'atr_ok': bool(atr_ok),
             'price': float(round(latest['close'], 2)),
-            'ma20': float(round(latest['ma20'], 2))
+            'ma20': float(round(ma20, 2)) if not pd.isna(ma20) else None,
         }
     }
 
