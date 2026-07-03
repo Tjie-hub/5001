@@ -180,13 +180,24 @@ class RegimeClassifier:
         self.feature_cols = ['adx', 'ma_slope', 'vr_mean', 'range_pct',
                              'close_vs_ma', 'pct_above_ma']
         self.is_trained = False
-        self.train_accuracy = 0.0
+        self.train_accuracy = 0.0          # in-sample (optimistic; see holdout_accuracy)
+        self.holdout_accuracy = None       # honest temporal-holdout accuracy (item 2.6)
+        self.beats_baseline = None         # holdout_accuracy > holdout majority baseline?
         self.majority_baseline = 0.0
 
     def train(self, df: pd.DataFrame, forward_days: int = 5,
-              trend_threshold: float = 2.0) -> dict:
+              trend_threshold: float = 2.0, holdout_frac: float = 0.3) -> dict:
         """
-        Train on full df. Returns training metrics.
+        Train on df. Returns training metrics.
+
+        Honesty (audit item 2.6): the headline `accuracy` is a TEMPORAL-holdout
+        number — fit on the early (1-holdout_frac) of the labeled data, evaluate
+        on the later portion, with a `forward_days` embargo at the split so the
+        forward-looking labels never leak across it. In-sample accuracy is still
+        reported but clearly labeled `in_sample_accuracy`. `beats_baseline` says
+        whether the holdout accuracy exceeds the holdout majority baseline — a
+        classifier that doesn't is no better than "guess the common regime".
+        The DEPLOYED model (self.model) is fit on ALL labeled data.
         """
         from sklearn.linear_model import LogisticRegression
         from sklearn.preprocessing import StandardScaler
@@ -195,26 +206,50 @@ class RegimeClassifier:
         features = build_regime_features(df)
         labels   = label_regime_from_future(df, forward_days, trend_threshold)
 
-        # join on index, drop unlabeled (last forward_days rows) and NaN features
+        # join on index, drop unlabeled (last forward_days rows) and NaN features.
+        # keep chronological order for the temporal split.
         aligned = features.join(labels.rename('label')).dropna()
+        aligned = aligned.sort_index()
 
         if len(aligned) < 60:
             return {'error': 'Not enough labeled data', 'n_samples': len(aligned)}
 
         X = aligned[self.feature_cols].values
         y = aligned['label'].values
+        n = len(aligned)
 
+        # ── Temporal holdout with embargo (the honest OOS estimate) ──────────
+        split = int(n * (1.0 - holdout_frac))
+        tr_end = max(0, split - forward_days)          # embargo the boundary
+        holdout_accuracy = None
+        holdout_baseline = None
+        beats_baseline   = None
+        if tr_end >= 40 and (n - split) >= 15 and len(set(y[:tr_end])) >= 2:
+            _sc = StandardScaler()
+            X_tr = _sc.fit_transform(X[:tr_end])
+            _m = LogisticRegression(C=1.0, max_iter=500,
+                                    class_weight='balanced', random_state=42)
+            _m.fit(X_tr, y[:tr_end])
+            X_ho = _sc.transform(X[split:])
+            y_ho = y[split:]
+            holdout_accuracy = float(accuracy_score(y_ho, _m.predict(X_ho)))
+            _u, _c = np.unique(y_ho, return_counts=True)
+            holdout_baseline = float(_c.max() / len(y_ho))
+            beats_baseline = bool(holdout_accuracy > holdout_baseline)
+
+        # ── Deployed model: fit on ALL labeled data ──────────────────────────
         self.scaler  = StandardScaler()
         X_scaled     = self.scaler.fit_transform(X)
-
         self.model = LogisticRegression(
             C=1.0, max_iter=500, class_weight='balanced',
             random_state=42,
         )
         self.model.fit(X_scaled, y)
         self.is_trained   = True
-        y_pred            = self.model.predict(X_scaled)
-        self.train_accuracy = accuracy_score(y, y_pred)
+        in_sample = float(accuracy_score(y, self.model.predict(X_scaled)))
+        self.train_accuracy = in_sample
+        self.holdout_accuracy = holdout_accuracy
+        self.beats_baseline = beats_baseline
 
         unique, counts = np.unique(y, return_counts=True)
         self.majority_baseline = float(counts.max() / len(y))
@@ -225,7 +260,13 @@ class RegimeClassifier:
         }
 
         return {
-            'accuracy':           round(self.train_accuracy, 4),
+            # honest headline: the temporal-holdout accuracy (falls back to the
+            # in-sample number only when the holdout was too small to estimate).
+            'accuracy':           round(holdout_accuracy, 4) if holdout_accuracy is not None else round(in_sample, 4),
+            'in_sample_accuracy': round(in_sample, 4),
+            'holdout_accuracy':   round(holdout_accuracy, 4) if holdout_accuracy is not None else round(in_sample, 4),
+            'holdout_baseline':   round(holdout_baseline, 4) if holdout_baseline is not None else round(self.majority_baseline, 4),
+            'beats_baseline':     bool(beats_baseline) if beats_baseline is not None else False,
             'n_samples':          int(len(aligned)),
             'class_counts':       dict(zip(unique.tolist(), counts.tolist())),
             'feature_importance': feature_importance,
