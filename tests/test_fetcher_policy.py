@@ -90,3 +90,60 @@ def test_all_yf_download_calls_are_raw():
     src = inspect.getsource(f)
     assert "auto_adjust=True" not in src
     assert "auto_adjust=False" in src
+
+
+def _seed_calendar(db, dates):
+    conn = sqlite3.connect(db)
+    conn.executemany("INSERT OR IGNORE INTO trading_calendar (date, source) VALUES (?, 'test')",
+                     [(d,) for d in dates])
+    conn.commit()
+    conn.close()
+
+
+def test_calendar_purge_keeps_identical_price_sessions(db):
+    """Audit C-5 regression: an illiquid name printing the same close+volume
+    on consecutive REAL sessions must survive the purge."""
+    from data.fetcher import purge_non_calendar_days
+    _seed_calendar(db, ["2026-07-01", "2026-07-02"])
+    conn = sqlite3.connect(db)
+    for d in ("2026-07-01", "2026-07-02"):
+        conn.execute("INSERT INTO ohlcv (ticker,date,open,high,low,close,volume)"
+                     " VALUES ('ILLQ',?,50,50,50,50,0)", (d,))
+    conn.commit()
+    conn.close()
+    removed = purge_non_calendar_days(min_days=1)
+    conn = sqlite3.connect(db)
+    assert conn.execute("SELECT COUNT(*) FROM ohlcv WHERE ticker='ILLQ'").fetchone()[0] == 2
+    conn.close()
+    assert removed == 0
+
+
+def test_calendar_purge_removes_non_trading_dates(db):
+    from data.fetcher import purge_non_calendar_days
+    _seed_calendar(db, ["2026-07-01"])
+    conn = sqlite3.connect(db)
+    conn.execute("INSERT INTO ohlcv (ticker,date,open,high,low,close,volume)"
+                 " VALUES ('TST','2026-07-01',1,2,0.5,1.5,10)")     # real session
+    conn.execute("INSERT INTO ohlcv (ticker,date,open,high,low,close,volume)"
+                 " VALUES ('TST','2026-07-05',1,2,0.5,1.5,10)")     # Sunday fill
+    conn.commit()
+    conn.close()
+    assert purge_non_calendar_days(min_days=1) == 1
+    conn = sqlite3.connect(db)
+    dates = [r[0] for r in conn.execute("SELECT date FROM ohlcv WHERE ticker='TST'")]
+    conn.close()
+    assert dates == ["2026-07-01"]
+
+
+def test_calendar_purge_noop_when_calendar_sparse(db):
+    """Safety: with a near-empty calendar (< MIN_CALENDAR_DAYS) the purge must
+    refuse to run rather than delete the whole table."""
+    from data.fetcher import purge_non_calendar_days, MIN_CALENDAR_DAYS
+    _seed_calendar(db, ["2026-07-01"])          # 1 << MIN_CALENDAR_DAYS
+    conn = sqlite3.connect(db)
+    conn.execute("INSERT INTO ohlcv (ticker,date,open,high,low,close,volume)"
+                 " VALUES ('TST','2026-07-05',1,2,0.5,1.5,10)")
+    conn.commit()
+    conn.close()
+    assert MIN_CALENDAR_DAYS >= 100
+    assert purge_non_calendar_days() == 0       # refused: calendar too sparse
