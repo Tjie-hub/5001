@@ -74,3 +74,35 @@ def test_sharpe_computed_at_or_above_floor():
     m = compute_metrics(_result([1.0, -0.5, 2.0, 1.5, 0.8, -0.3]))  # 6 >= floor
     assert m["sharpe"] != 0
     assert -10.0 <= m["sharpe"] <= 10.0
+
+
+import pandas as pd
+import numpy as np
+from engine.walkforward_multi import walk_forward_split
+
+
+def _five_year_daily_df():
+    # ~5y of business days
+    dates = pd.bdate_range("2021-07-05", "2026-07-03")
+    n = len(dates)
+    rng = np.random.default_rng(0)
+    close = 1000 + np.cumsum(rng.normal(0, 5, n))
+    return pd.DataFrame({"date": dates, "open": close, "high": close + 5,
+                         "low": close - 5, "close": close,
+                         "volume": np.full(n, 1e6)})
+
+
+def test_five_year_span_yields_about_sixteen_windows():
+    """Audit C-6: the old 2.2y corpus gave ~4 windows (consistency>=50% ~=
+    a coin flip). 5y of 12mo-train/3mo-test rolling windows gives ~16, so
+    the 33%/50% gates finally mean something."""
+    windows = walk_forward_split(_five_year_daily_df(), train_months=12,
+                                 test_months=3)
+    assert 14 <= len(windows) <= 17, len(windows)
+
+
+def test_windows_are_chronological_and_non_overlapping():
+    windows = walk_forward_split(_five_year_daily_df(), 12, 3)
+    for a, b in zip(windows, windows[1:]):
+        assert a["test_end"] <= b["test_start"]     # test slices don't overlap
+        assert a["train_start"] < b["train_start"]  # rolling forward

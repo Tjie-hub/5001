@@ -130,8 +130,14 @@ def walk_forward_split(df: pd.DataFrame,
                        train_months: int = 12,
                        test_months:  int = 3) -> List[dict]:
     """
-    Bagi df menjadi rolling train/test windows.
-    Returns list of {'train': df, 'test': df, 'window': N}
+    Rolling train/test split. 12mo train / 3mo test, stepping by test_months.
+    Returns list of {'train','test','window','train_start','train_end',
+    'test_start','test_end'}.
+
+    On the Phase-2A 5-year corpus this yields ~16 non-overlapping OOS windows
+    per ticker (was ~4 on the old 2.2y data — audit C-6, the reason the
+    33%/50% consistency gates in scanner.py are only now statistically
+    meaningful). Params are frozen; see docs/wf_tuning_protocol.md.
     """
     df = df.copy()
     df['date'] = pd.to_datetime(df['date'])
