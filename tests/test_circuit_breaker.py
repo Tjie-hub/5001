@@ -56,7 +56,12 @@ def test_run_premover_eod_skips_trades_when_breaker_open(capsys):
     """run_premover_eod should not open trades when circuit breaker is OPEN."""
     from scheduler.jobs import run_premover_eod
 
-    with patch('scheduler.jobs.get_market_risk_for_circuit_breaker',
+    # Bypass the holiday/weekend gate so this exercises the breaker branch
+    # regardless of the calendar date the suite runs on (was failing every
+    # weekend: run_premover_eod short-circuits on _holiday_skip before the
+    # circuit-breaker logic).
+    with patch('scheduler.jobs._holiday_skip', return_value=False), \
+         patch('scheduler.jobs.get_market_risk_for_circuit_breaker',
                return_value={'tier': 'CRITICAL', 'score': 92.0}), \
          patch('scheduler.jobs.send_telegram', MagicMock()), \
          patch('paper_trade.get_premover_mode', return_value='auto'):
