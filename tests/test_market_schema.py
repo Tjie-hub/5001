@@ -108,3 +108,24 @@ def test_scraper_eod_save_upserts_calendar(tmp_path, monkeypatch):
     conn = sqlite3.connect(db)
     assert conn.execute("SELECT COUNT(*) FROM trading_calendar WHERE date='2026-07-03'").fetchone()[0] == 1
     conn.close()
+
+
+def test_load_ohlcv_bulk_final_only(tmp_path, monkeypatch):
+    """Research jobs (WF refresh, backtest cache) must not see provisional
+    intraday bars (Phase 2A item 2.1)."""
+    import scheduler.utils as su
+    db = _mk_prod_like_db(tmp_path)
+    monkeypatch.setattr(su, "DB_PATH", db)
+    conn = sqlite3.connect(db)
+    conn.execute("INSERT INTO ohlcv (ticker,date,open,high,low,close,volume,is_final)"
+                 " VALUES ('TST','2026-07-02',1,2,0.5,1.5,10,1)")
+    conn.execute("INSERT INTO ohlcv (ticker,date,open,high,low,close,volume,is_final)"
+                 " VALUES ('TST','2026-07-03',1,2,0.5,1.5,10,0)")   # partial today
+    conn.commit()
+    conn.close()
+
+    full = su._load_ohlcv_bulk()
+    finals = su._load_ohlcv_bulk(final_only=True)
+    assert len(full["TST"]) == 2
+    assert len(finals["TST"]) == 1
+    assert str(finals["TST"]["date"].iloc[0])[:10] == "2026-07-02"

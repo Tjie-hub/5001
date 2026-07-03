@@ -108,10 +108,25 @@ def fetch_latest():
             f"<code>{str(e)[:150]}</code>"
         )
 
-def _load_ohlcv_bulk() -> dict:
-    """Load all OHLCV in one query. Returns {ticker: DataFrame}."""
+def _load_ohlcv_bulk(final_only: bool = False) -> dict:
+    """Load all OHLCV in one query. Returns {ticker: DataFrame}.
+
+    final_only=True excludes provisional intraday bars (is_final=0) — required
+    for research jobs (WF refresh, backtest cache) so a partial 14:35 bar never
+    contaminates scores (Phase 2A item 2.1). Live scans keep the default:
+    partial bars ARE their signal input. COALESCE keeps pre-migration DBs and
+    test fixtures without the column working.
+    """
     conn = sqlite3.connect(DB_PATH)
-    all_df = pd.read_sql('SELECT * FROM ohlcv ORDER BY ticker, date ASC', conn)
+    if final_only:
+        try:
+            all_df = pd.read_sql(
+                'SELECT * FROM ohlcv WHERE COALESCE(is_final, 1) = 1 '
+                'ORDER BY ticker, date ASC', conn)
+        except Exception:
+            all_df = pd.read_sql('SELECT * FROM ohlcv ORDER BY ticker, date ASC', conn)
+    else:
+        all_df = pd.read_sql('SELECT * FROM ohlcv ORDER BY ticker, date ASC', conn)
     conn.close()
     for c in ["open", "high", "low", "close", "volume"]:
         all_df[c] = all_df[c].astype(float)

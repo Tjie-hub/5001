@@ -81,7 +81,7 @@ def refresh_wf_scores():
         return
     try:
         tickers = get_all_tickers()
-        ohlcv_map = _load_ohlcv_bulk()
+        ohlcv_map = _load_ohlcv_bulk(final_only=True)  # research: no partial bars (plan 2A)
         now_str = dt.now().strftime("%Y-%m-%d %H:%M")
 
         # ---- COMPUTE PHASE: no DB write lock held (this is the ~35-min CPU work) ----
@@ -445,7 +445,7 @@ def _refresh_backtest_cache():
                 sharpe REAL, total_trades INTEGER, profitable INTEGER,
                 regime TEXT, updated_at TEXT, PRIMARY KEY (ticker, computed_date)
             )""")
-        ohlcv_map = _load_ohlcv_bulk()
+        ohlcv_map = _load_ohlcv_bulk(final_only=True)  # research: no partial bars (plan 2A)
         computed = 0
         rows_to_insert = []
         for ticker, df in ohlcv_map.items():
