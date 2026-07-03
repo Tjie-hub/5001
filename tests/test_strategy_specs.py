@@ -92,10 +92,16 @@ def _momentum_signal_df() -> pd.DataFrame:
     close[-1] = 1025.0
     vol = np.full(n, 1_000_000.0)
     vol[-1] = 3_000_000.0
-    return pd.DataFrame({
+    df = pd.DataFrame({
         "date": dates, "open": close - 5, "high": close + 10,
         "low": close - 10, "close": close, "volume": vol,
     })
+    # plan 1C: the checker now mirrors the backtest's watch-block proxy, which
+    # requires close > typical price on a volume-elevated bar. Symmetric
+    # high/low made typical == close (blocked); skew the last bar bullish.
+    df.loc[n - 1, "high"] = 1030.0
+    df.loc[n - 1, "low"] = 1012.0
+    return df
 
 
 def test_momentum_dispatch_result_carries_price():
