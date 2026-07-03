@@ -44,7 +44,8 @@ def _load_stockbit_token() -> str | None:
         return None
 
 
-def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None) -> dict:
+def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None,
+                 final: bool = False) -> dict:
     t0 = time.time()
     if trade_date is None:
         trade_date = dt_date.today().isoformat()
@@ -92,7 +93,7 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None) -
         except Exception:
             pass
 
-    scraper.save_ohlcv_to_db(ohlcv_all, trade_date)
+    scraper.save_ohlcv_to_db(ohlcv_all, trade_date, is_final=final)
 
     for i, ticker in enumerate(tickers):
         _task_state['current'] = ticker
@@ -133,7 +134,7 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
 
     logger.info(f"[screener] EOD RUN {trade_date}")
 
-    intraday_result = run_intraday(trade_date)
+    intraday_result = run_intraday(trade_date, final=True)   # 16:15: bars become FINAL
 
     # VPIN calculation
     logger.info("[screener] Calculating VPIN...")

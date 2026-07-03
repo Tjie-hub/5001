@@ -153,13 +153,18 @@ def fetch_all_stockbit(
 
 # ── OHLCV DB persistence ──────────────────────────────────────────────────────
 
-def save_ohlcv_to_db(ohlcv_all: dict, trade_date: str) -> int:
+def save_ohlcv_to_db(ohlcv_all: dict, trade_date: str, is_final: bool = False) -> int:
     """
     Save derived OHLCV to the ohlcv table so historical data stays current.
+
+    Phase 2A finality: intraday runs write PROVISIONAL bars (is_final=0);
+    the 16:15 EOD run writes the FINAL bar (is_final=1 — the scraper is the
+    EOD authority) and upserts the date into trading_calendar.
     Returns number of rows saved.
     """
     rows = [
-        (ticker, trade_date, v['open'], v['high'], v['low'], v['close'], v['volume'])
+        (ticker, trade_date, v['open'], v['high'], v['low'], v['close'],
+         v['volume'], 1 if is_final else 0)
         for ticker, v in ohlcv_all.items()
         if v.get('close')
     ]
@@ -168,13 +173,21 @@ def save_ohlcv_to_db(ohlcv_all: dict, trade_date: str) -> int:
     try:
         conn = sqlite3.connect(_DB_PATH)
         conn.executemany(
-            """INSERT OR REPLACE INTO ohlcv (ticker, date, open, high, low, close, volume)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT OR REPLACE INTO ohlcv (ticker, date, open, high, low, close, volume, is_final)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             rows,
         )
+        if is_final:
+            try:
+                conn.execute(
+                    "INSERT OR IGNORE INTO trading_calendar (date, source) VALUES (?, 'scraper_eod')",
+                    (trade_date,),
+                )
+            except sqlite3.OperationalError:
+                pass  # calendar table not migrated yet — fail-soft
         conn.commit()
         conn.close()
-        logger.info(f"[scraper] Saved {len(rows)} OHLCV rows to DB ({trade_date})")
+        logger.info(f"[scraper] Saved {len(rows)} OHLCV rows to DB ({trade_date}, final={is_final})")
         return len(rows)
     except Exception as e:
         logger.error(f"[scraper] save_ohlcv_to_db error: {e}")
