@@ -37,6 +37,13 @@ Finding IDs (C-x, H-x) reference `Audit/INSTITUTIONAL_AUDIT_2026-07-02.md`.
 ## Phase 2 — Statistical Integrity
 **Goal: every metric can be trusted — including the data it's computed on.**
 
+> **STATUS 2026-07-03: items 2.1 + 2.2 SHIPPED (PR #8).** Scraper 16:15 bar =
+> final EOD authority (is_final flag); yfinance raw = backfill/reconcile-only
+> (nightly 21:00 alert job); trading_calendar replaces the session-deleting
+> purge; corporate_actions captured; research jobs exclude provisional bars.
+> 5y raw corpus rebuild script shipped — prod build/verify/swap executed at
+> deploy. wf_scores now DOUBLY stale (old exits AND old corpus) until 2.3/2.8.
+
 ### Work items
 | # | Item | Findings |
 |---|---|---|
