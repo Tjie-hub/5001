@@ -86,7 +86,7 @@ def load_all_tickers() -> list:
 def fetch_ticker(ticker, period="2y"):
     symbol = ticker + ".JK"
     print(f"Fetching {symbol}...")
-    df = yf.download(symbol, period=period, auto_adjust=True, progress=False)
+    df = yf.download(symbol, period=period, auto_adjust=False, progress=False)
     if df.empty:
         print(f"  WARNING: no data for {symbol}")
         return 0
@@ -101,6 +101,7 @@ def _save_df(ticker, df) -> int:
     df = df.rename(columns={
         "Date": "date", "Open": "open", "High": "high",
         "Low": "low", "Close": "close", "Volume": "volume",
+        "Dividends": "dividends", "Stock Splits": "splits",
     })
     df["date"] = df["date"].astype(str).str[:10]
     import math
@@ -111,21 +112,45 @@ def _save_df(ticker, df) -> int:
         if close_val is None or (isinstance(close_val, float) and math.isnan(close_val)):
             continue  # skip incomplete intraday rows
         try:
+            # Phase 2A: yfinance NEVER overwrites an existing bar (the scraper
+            # is the EOD authority); it fills gaps (is_final=1, settled
+            # history) and repairs NULL-close placeholder rows only.
             conn.execute(
-                """INSERT INTO ohlcv (ticker,date,open,high,low,close,volume)
-                   VALUES (?,?,?,?,?,?,?)
+                """INSERT INTO ohlcv (ticker,date,open,high,low,close,volume,is_final)
+                   VALUES (?,?,?,?,?,?,?,1)
                    ON CONFLICT(ticker,date) DO UPDATE SET
                      open=excluded.open, high=excluded.high, low=excluded.low,
-                     close=excluded.close, volume=excluded.volume
+                     close=excluded.close, volume=excluded.volume, is_final=1
                    WHERE ohlcv.close IS NULL""",
                 (ticker, row["date"], row["open"], row["high"], row["low"], close_val, row["volume"]),
             )
             saved += 1
         except Exception:
             pass
+    _save_actions(conn, ticker, df)
     conn.commit()
     conn.close()
     return saved
+
+
+def _save_actions(conn, ticker, df) -> int:
+    """Persist non-zero dividends/splits into corporate_actions. Fail-soft if
+    the table is missing (pre-migration DB)."""
+    n = 0
+    try:
+        for _, row in df.iterrows():
+            for col, action in (("dividends", "dividend"), ("splits", "split")):
+                val = row.get(col)
+                if val is not None and not (isinstance(val, float) and (val != val)) and float(val) != 0.0:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO corporate_actions (ticker,date,action,value,source)"
+                        " VALUES (?,?,?,?,'yfinance')",
+                        (ticker, row["date"], action, float(val)),
+                    )
+                    n += 1
+    except Exception:
+        pass
+    return n
 
 
 def _fetch_batch(tickers: list, period: str = None, start: str = None) -> dict[str, int]:
@@ -135,7 +160,7 @@ def _fetch_batch(tickers: list, period: str = None, start: str = None) -> dict[s
     """
     symbols = [t + ".JK" for t in tickers]
     try:
-        kwargs = dict(auto_adjust=True, progress=False, threads=True)
+        kwargs = dict(auto_adjust=False, actions=True, progress=False, threads=True)
         if start:
             kwargs["start"] = start
         elif period:
@@ -213,7 +238,7 @@ def fetch_ihsg(period: str = "2y"):
     """Fetch IHSG (^JKSE) OHLCV and store as ticker='IHSG' in ohlcv table."""
     symbol = "^JKSE"
     print(f"Fetching {symbol} (IHSG)...")
-    df = yf.download(symbol, period=period, auto_adjust=True, progress=False)
+    df = yf.download(symbol, period=period, auto_adjust=False, progress=False)
     if df.empty:
         print(f"  WARNING: no data for {symbol}")
         return 0
@@ -352,7 +377,7 @@ def fetch_all_incremental(category: str = None):
         total_saved += fetch_ihsg(period="2y")
     elif ihsg_max < today:
         ihsg_start = (datetime.strptime(ihsg_max, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
-        df_ihsg = yf.download("^JKSE", start=ihsg_start, auto_adjust=True, progress=False)
+        df_ihsg = yf.download("^JKSE", start=ihsg_start, auto_adjust=False, progress=False)
         if not df_ihsg.empty:
             total_saved += _save_df("IHSG", df_ihsg)
 
