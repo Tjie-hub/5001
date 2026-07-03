@@ -20,11 +20,9 @@ from engine.indicators import (
 )
 
 # ─────────────────────────────────────────────
-# CONFIG
+# CONFIG — cost values live in engine/exits/costs.py (single authority, plan 1C)
 # ─────────────────────────────────────────────
-COMMISSION_BUY  = 0.0015   # 0.15%
-COMMISSION_SELL = 0.0025   # 0.25%
-SLIPPAGE        = 0.001    # 0.10%
+from engine.exits.costs import COMMISSION_BUY, COMMISSION_SELL, SLIPPAGE
 
 @dataclass
 class Trade:
@@ -74,10 +72,10 @@ def atr_tp_sl(entry: float, atr: float, sl_mult: float = 1.0, min_rr: float = 2.
     return tp_price, sl_price, tp_pct, sl_pct
 
 def apply_costs(price: float, side: str) -> float:
-    if side == 'BUY':
-        return price * (1 + COMMISSION_BUY + SLIPPAGE)
-    else:
-        return price * (1 - COMMISSION_SELL - SLIPPAGE)
+    """Thin wrapper over the single cost authority (kept for the many
+    strategy call sites and tests that use the 2-arg signature)."""
+    from engine.exits.costs import apply_costs as _apply
+    return _apply(price, side)
 
 
 def _watch_signal_block(df: pd.DataFrame) -> pd.Series:

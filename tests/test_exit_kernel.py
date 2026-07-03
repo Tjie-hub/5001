@@ -106,3 +106,25 @@ def test_registry_key_policies_match_backtests():
     assert crash.fixed_levels
     # display-name alias resolves
     assert get_policy("Momentum Following").trail_enable
+
+
+def test_single_cost_authority():
+    """Plan 1C item 1.7: one cost table for backtest, ft, and paper."""
+    import pytest
+    from engine.exits.costs import (COMMISSION_BUY, COMMISSION_SELL, SLIPPAGE,
+                                    Costs, DEFAULT_COSTS, apply_costs)
+    from engine import strategies as st
+    from forward_testing.positions.costs import Costs as FtCosts, apply_costs as ft_apply
+
+    assert (COMMISSION_BUY, COMMISSION_SELL, SLIPPAGE) == (0.0015, 0.0025, 0.001)
+    assert st.COMMISSION_BUY == COMMISSION_BUY
+    assert st.COMMISSION_SELL == COMMISSION_SELL
+    assert st.SLIPPAGE == SLIPPAGE
+    assert FtCosts is Costs                       # shim re-exports the same class
+    assert ft_apply is apply_costs
+
+    assert apply_costs(1000.0, "BUY") == pytest.approx(1002.5)
+    assert apply_costs(1000.0, "SELL") == pytest.approx(996.5)
+    assert st.apply_costs(1000.0, "BUY") == pytest.approx(1002.5)
+    assert apply_costs(1000.0, "BUY", Costs.zero()) == 1000.0
+    assert DEFAULT_COSTS.commission_buy == COMMISSION_BUY

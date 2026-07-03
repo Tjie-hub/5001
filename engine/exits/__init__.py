@@ -7,6 +7,7 @@ ExitPolicyRegistry + evaluate_exit so live exits are the validated exits.
 """
 from engine.exits.policy import ExitPolicy, InitialLevels, ExitPolicyRegistry
 from engine.exits.evaluator import Bar, PositionView, ExitDecision, evaluate_exit
+from engine.exits.costs import Costs, DEFAULT_COSTS, apply_costs
 
 _REGISTRY = ExitPolicyRegistry()
 
