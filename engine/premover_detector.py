@@ -399,7 +399,9 @@ def run_scan(db_path: str, send_alert_fn=None) -> list:
 
     Returns list of NEW setups inserted this run (not previously seen today).
     """
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=30)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=30000")
     _init_table(conn)
 
     detected_at = datetime.now().strftime('%Y-%m-%d')
