@@ -80,8 +80,12 @@ def refresh_wf_scores():
         print("[WF] refresh_wf_scores: another run is in progress — skipped")
         return
     try:
-        tickers = get_all_tickers()
+        # Survivorship (item 2.4): score EVERY ticker in the corpus, not just
+        # currently-active idx_tickers — a name that later delists must keep
+        # its real (often losing) history in wf_scores. _refresh_backtest_cache
+        # already iterates the corpus; this aligns the WF refresh.
         ohlcv_map = _load_ohlcv_bulk(final_only=True)  # research: no partial bars (plan 2A)
+        tickers = sorted(ohlcv_map.keys())
         now_str = dt.now().strftime("%Y-%m-%d %H:%M")
 
         # ---- COMPUTE PHASE: no DB write lock held (this is the ~35-min CPU work) ----

@@ -30,6 +30,9 @@ from engine.indicators import get_warmup, calc_atr, calc_adx, calc_ma_slope, cal
 # METRICS
 # ─────────────────────────────────────────────
 
+SHARPE_MIN_TRADES = 5   # below this the per-trade Sharpe is noise -> report 0
+
+
 def compute_metrics(result: dict) -> dict:
     trades: List[Trade] = result['trades']
     equity = result['equity']
@@ -71,7 +74,7 @@ def compute_metrics(result: dict) -> dict:
     # per-trade (not daily) returns — annualizing those with sqrt(252)
     # produced the +-1000s garbage that polluted wf_scores.avg_sharpe.
     sharpe = 0.0
-    if len(pnls_pct) >= 3:
+    if len(pnls_pct) >= SHARPE_MIN_TRADES:
         rets = np.array(pnls_pct) / 100.0
         ret_std = rets.std(ddof=1)
         if ret_std > 0:
@@ -127,8 +130,14 @@ def walk_forward_split(df: pd.DataFrame,
                        train_months: int = 12,
                        test_months:  int = 3) -> List[dict]:
     """
-    Bagi df menjadi rolling train/test windows.
-    Returns list of {'train': df, 'test': df, 'window': N}
+    Rolling train/test split. 12mo train / 3mo test, stepping by test_months.
+    Returns list of {'train','test','window','train_start','train_end',
+    'test_start','test_end'}.
+
+    On the Phase-2A 5-year corpus this yields ~16 non-overlapping OOS windows
+    per ticker (was ~4 on the old 2.2y data — audit C-6, the reason the
+    33%/50% consistency gates in scanner.py are only now statistically
+    meaningful). Params are frozen; see docs/wf_tuning_protocol.md.
     """
     df = df.copy()
     df['date'] = pd.to_datetime(df['date'])
@@ -167,6 +176,48 @@ def walk_forward_split(df: pd.DataFrame,
         cur += pd.DateOffset(months=step_months)
 
     return windows
+
+
+PF_SENTINEL = 999   # profit_factor stand-in for "no losing trades" (inf)
+
+
+def _summarize_strategy(name: str, window_list: list) -> dict:
+    """Aggregate per-window metrics into one strategy summary row.
+
+    avg_profit_factor averages only the FINITE-PF windows; when every window
+    was lossless (all PF == PF_SENTINEL) the mean of an empty list is NaN
+    (audit item 2.7) — report the sentinel instead. total_trades exposes the
+    pooled sample size so consumers can see how thin a score is.
+    """
+    n = len(window_list)
+    avg_wr  = float(np.mean([w['win_rate']        for w in window_list]))
+    avg_ret = float(np.mean([w['total_return_pct'] for w in window_list]))
+    avg_dd  = float(np.mean([w['max_drawdown_pct'] for w in window_list]))
+    avg_sh  = float(np.mean([w['sharpe']           for w in window_list]))
+
+    finite_pf = [w['profit_factor'] for w in window_list
+                 if w['profit_factor'] < PF_SENTINEL]
+    if finite_pf:
+        avg_pf = round(float(np.mean(finite_pf)), 2)
+    else:
+        avg_pf = PF_SENTINEL   # every window lossless -> keep the sentinel, never NaN
+
+    n_profitable = sum(1 for w in window_list if w['total_return_pct'] > 0)
+    total_trades = sum(w.get('total_trades', 0) for w in window_list)
+
+    return {
+        'strategy':            name,
+        'windows_tested':      n,
+        'windows_profitable':  n_profitable,
+        'consistency_pct':     round(n_profitable / n * 100, 1),
+        'avg_win_rate':        round(avg_wr, 1),
+        'avg_return_pct':      round(avg_ret, 2),
+        'avg_max_drawdown':    round(avg_dd, 2),
+        'avg_sharpe':          round(avg_sh, 2),
+        'avg_profit_factor':   avg_pf,
+        'total_trades':        total_trades,
+        'windows':             window_list,
+    }
 
 
 STRATEGY_FUNCS = {
@@ -275,25 +326,7 @@ def run_walk_forward(df: pd.DataFrame, capital: float = 50_000_000, filters: lis
     for name, window_list in wf_results.items():
         if not window_list:
             continue
-        avg_wr  = np.mean([w['win_rate']        for w in window_list])
-        avg_ret = np.mean([w['total_return_pct'] for w in window_list])
-        avg_dd  = np.mean([w['max_drawdown_pct'] for w in window_list])
-        avg_sh  = np.mean([w['sharpe']           for w in window_list])
-        avg_pf  = np.mean([w['profit_factor']    for w in window_list if w['profit_factor'] < 999])
-        n_profitable = sum(1 for w in window_list if w['total_return_pct'] > 0)
-
-        summary[name] = {
-            'strategy':            name,
-            'windows_tested':      len(window_list),
-            'windows_profitable':  n_profitable,
-            'consistency_pct':     round(n_profitable / len(window_list) * 100, 1),
-            'avg_win_rate':        round(avg_wr, 1),
-            'avg_return_pct':      round(avg_ret, 2),
-            'avg_max_drawdown':    round(avg_dd, 2),
-            'avg_sharpe':          round(avg_sh, 2),
-            'avg_profit_factor':   round(avg_pf, 2) if avg_pf else 0,
-            'windows':             window_list
-        }
+        summary[name] = _summarize_strategy(name, window_list)
 
     # Rank: weighted score — profit-first (return 40%, others 15% each).
     # Rebalanced 2026-05-18: pure consistency was picking strategies that
