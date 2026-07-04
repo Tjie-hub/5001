@@ -82,6 +82,13 @@ Finding IDs (C-x, H-x) reference `Audit/INSTITUTIONAL_AUDIT_2026-07-02.md`.
 ## Phase 3 — Production Stability
 **Goal: no silent failures, no fail-open, no hidden assumptions.**
 
+> **STATUS: 3A SHIPPED 2026-07-04 (PR #13).** Token-expiry pre-alert (08:20/12:00),
+> OHLCV coverage monitor (17:00), EOD auto calendar-purge (stops holiday-fill
+> accumulation). The token chaos-drill exit criterion ("kill token → alarm, not
+> silent") now holds. REMAINING Phase 3: 3.1 fail-open inventory (C-9 agent-firm
+> enforce bypass), 3.3 DB centralization (WAL/busy_timeout), 3.5 requirements.txt,
+> 3.6 keystats fetch-in-loop, 3.7 dead-man's-switch / log unification.
+
 ### Work items
 | # | Item | Findings |
 |---|---|---|
