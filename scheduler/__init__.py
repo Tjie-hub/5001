@@ -44,6 +44,8 @@ from scheduler.jobs import (  # noqa: F401
     run_flow_fetch,
     run_broker_flow_fetch,
     run_ohlcv_reconciliation,
+    run_token_health_check,
+    run_ohlcv_coverage_check,
     run_foreign_snapshot,
     run_news_fetch,
     run_premover_eod,
@@ -162,6 +164,18 @@ def start_scheduler():
     scheduler.add_job(run_ohlcv_reconciliation, CronTrigger(
         day_of_week="mon-fri", hour=21, minute=0, timezone=WIB),
         id="ohlcv_reconciliation", name="OHLCV Reconciliation 21:00")
+
+    # Token health — 08:20 (pre-market, before flow jobs) + 12:00 (mid-session).
+    # Alerts if the 24h Stockbit JWT is expired/expiring (2026-07-04 silent-death fix).
+    for _h, _m in [(8, 20), (12, 0)]:
+        scheduler.add_job(run_token_health_check, CronTrigger(
+            day_of_week="mon-fri", hour=_h, minute=_m, timezone=WIB),
+            id=f"token_health_{_h:02d}{_m:02d}", name=f"Token Health {_h:02d}:{_m:02d}")
+
+    # OHLCV coverage monitor — 17:00 WIB (after EOD scraper/trade-plan settle)
+    scheduler.add_job(run_ohlcv_coverage_check, CronTrigger(
+        day_of_week="mon-fri", hour=17, minute=0, timezone=WIB),
+        id="ohlcv_coverage_check", name="OHLCV Coverage Check 17:00")
 
     # Pre-mover EOD scan — 16:30 WIB
     scheduler.add_job(run_premover_eod, CronTrigger(

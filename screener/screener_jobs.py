@@ -127,6 +127,28 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None,
     return {'ok': ok, 'err': err, 'duration_s': duration, 'type': 'intraday'}
 
 
+def _eod_calendar_cleanup(min_days: int = 1) -> int:
+    """Phase 3A: self-clean the corpus daily — refresh the IHSG-derived trading
+    calendar, then drop non-trading-day rows (yfinance holiday-fills). Previously
+    only the yfinance incremental path purged, so fills accumulated (4,138 rows
+    by 2026-07-04). Fail-soft: never let cleanup break the EOD run. Returns rows
+    removed (0 on any error)."""
+    try:
+        from data.db import get_db
+        from data.market_schema import build_trading_calendar
+        from data.fetcher import purge_non_calendar_days
+        _cal = get_db()
+        build_trading_calendar(_cal)
+        _cal.close()
+        removed = purge_non_calendar_days(min_days=min_days)
+        if removed:
+            logger.info(f"[screener] EOD calendar purge removed {removed} non-trading-day rows")
+        return removed
+    except Exception as e:
+        logger.warning(f"[screener] EOD calendar purge skipped: {e}")
+        return 0
+
+
 def run_eod(trade_date: str = None, send_telegram=None) -> dict:
     t0 = time.time()
     if trade_date is None:
@@ -237,6 +259,8 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
                 pass
     except Exception as _re:
         logger.error(f"[screener] Reversal scan error: {_re}")
+
+    _eod_calendar_cleanup()
 
     duration = round(time.time() - t0, 1)
     ok = intraday_result['ok']
