@@ -67,3 +67,42 @@ def test_get_ticker_best_strategies_uses_edge(edge_db, monkeypatch):
 def test_get_ticker_best_strategies_empty_when_no_edge(edge_db):
     from scheduler.scanner import get_ticker_best_strategies
     assert get_ticker_best_strategies("NOPE") == []
+
+
+import numpy as np
+import pandas as pd
+
+
+def _bull_df(n=90):
+    dates = pd.date_range("2026-01-01", periods=n, freq="D")
+    close = 1000 + np.arange(n) * 8.0      # steady uptrend -> BULL
+    return pd.DataFrame({"date": dates, "open": close - 2, "high": close + 6,
+                         "low": close - 6, "close": close,
+                         "volume": np.full(n, 1e6)})
+
+
+def test_adaptive_selector_uses_edge(edge_db, monkeypatch):
+    """BULL regime: momentum is a candidate but has NEGATIVE edge -> excluded;
+    a positive-edge BULL candidate is selected. Uses wf_edge, not wf_scores."""
+    import scheduler.scanner as scanner
+    import engine.regime_filter as rf
+    monkeypatch.setattr(rf, "detect_regime", lambda df: "BULL")  # imported locally in selector
+    monkeypatch.setattr(scanner, "_get_disabled_strategies", lambda: set())
+    monkeypatch.setattr(scanner, "_macro_panic_state", lambda: False)
+    monkeypatch.setattr(scanner, "_event_guard_active", lambda: (False, 1.0))
+    conn = sqlite3.connect(edge_db)
+    conn.execute("INSERT INTO wf_edge VALUES ('BBCA','Trend Following Breakout',"
+                 "1.2,0,55,40,0.4,60,15,'x')")
+    # Swing Trend has positive edge but is NOT in the BULL regime map — it must
+    # be excluded, proving the PRIMARY regime-filtered block (not the unfiltered
+    # fallback) drove selection.
+    conn.execute("INSERT INTO wf_edge VALUES ('BBCA','Swing Trend',"
+                 "2.0,0,60,45,0.6,80,15,'x')")
+    conn.commit()
+    conn.close()
+    from scheduler.scanner import adaptive_strategy_selector
+    got = adaptive_strategy_selector("BBCA", _bull_df())
+    assert "Trend Following Breakout" in got
+    assert "momentum" not in got            # negative edge -> not selected
+    assert "vwap_reversion" not in got
+    assert "Swing Trend" not in got         # positive edge but off-regime-map

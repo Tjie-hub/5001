@@ -794,24 +794,12 @@ def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
     if wf_candidates:
         try:
             conn = sqlite3.connect(DB_PATH)
-            placeholders = ','.join('?' * len(wf_candidates))
             try:
-                from paper_trade import get_config as _gc
-                _wf_gate = float(_gc().get("wf_score_gate", 0.0))
-            except Exception:
-                _wf_gate = 0.0
-            rows = conn.execute(f"""
-                SELECT strategy, weighted_score
-                FROM wf_scores
-                WHERE ticker = ?
-                  AND strategy IN ({placeholders})
-                  AND consistency_pct >= ?
-                  AND avg_return_pct > 0
-                  AND weighted_score >= ?
-                ORDER BY weighted_score DESC
-            """, [ticker, *wf_candidates, min_consistency, _wf_gate]).fetchall()
-            conn.close()
-            selected = [r[0] for r in rows]
+                # Phase 2C: gate the regime-map candidates on positive pooled
+                # wf_edge expectancy, not per-ticker consistency (audit C-6).
+                selected = _edge_selectable(conn, ticker, wf_candidates)
+            finally:
+                conn.close()
         except Exception:
             selected = []
 
