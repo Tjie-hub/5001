@@ -37,7 +37,7 @@ SPECS: dict = {s.name: s for s in [
     StrategySpec("conservative",             "momentum",      True),
     StrategySpec("Volume Profile POC",       "reversion",     False),
     StrategySpec("Inside Bar Breakout",      "breakout",      False),
-    StrategySpec("NR7 Breakout",             "breakout",      False),
+    StrategySpec("NR7 Breakout",             "breakout",      True),
     StrategySpec("ORB",                      "breakout",      False),
     StrategySpec("VWMA Breakout Pullback",   "breakout",      False),
     StrategySpec("Swing Trend",              "trend",         False),

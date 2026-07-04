@@ -911,6 +911,69 @@ def strategy_nr7_breakout(df: pd.DataFrame, capital: float = 50_000_000,
     }
 
 
+def check_nr7_signal(df: pd.DataFrame) -> dict:
+    """Live NR7 Breakout checker — mirrors strategy_nr7_breakout's per-bar entry
+    applied to the last bar (the one positive-edge strategy from the 2026-07-04
+    re-baseline; audit item 2.5 follow-up).
+
+    Setup: bar[-2] is the narrowest-range bar of the trailing 7 (NR7), with
+    volume >= 0.8x its 5-bar average. Trigger: the last bar opened above bar[-2]'s
+    high (breakout). Entry = last open; SL = NR7-bar low; TP = entry + 2xATR14
+    (min 1.5%). Pure: no df mutation.
+    """
+    if df is None or len(df) < 22:
+        return {'has_signal': False, 'reason': 'Data tidak cukup (minimum 22 bars)',
+                'details': {}}
+
+    ranges   = df['high'] - df['low']
+    atr      = calc_atr(df, 14)
+    avg_vol5 = df['volume'].rolling(5).mean()
+
+    nr7_bar = df.iloc[-2]
+    last    = df.iloc[-1]
+
+    nr7_window = ranges.iloc[-8:-1]          # the 7 bars ending at bar[-2]
+    is_nr7  = bool(ranges.iloc[-2] == nr7_window.min())
+    v5      = avg_vol5.iloc[-2]
+    vol_ok  = bool(pd.isna(v5) or nr7_bar['volume'] >= v5 * 0.8)
+
+    entry   = float(last['open'])
+    sl      = float(nr7_bar['low'])
+    cur_atr = atr.iloc[-2]
+    tp      = entry + (float(cur_atr) * 2 if not pd.isna(cur_atr)
+                       else float(ranges.iloc[-2]) * 2)
+
+    breakout = bool(entry > float(nr7_bar['high']))
+    sl_ok    = bool(sl < entry)
+    tp_ok    = bool(entry > 0 and (tp - entry) / entry >= 0.015)
+
+    has_signal = bool(is_nr7 and vol_ok and breakout and tp_ok and sl_ok)
+
+    details = {
+        'price':           entry,
+        'sl':              round(sl),
+        'tp':              round(tp),
+        'nr7_range':       float(round(ranges.iloc[-2], 2)),
+        'breakout_level':  float(nr7_bar['high']),
+        'is_nr7':          is_nr7,
+        'vol_ok':          vol_ok,
+        'breakout':        breakout,
+    }
+    if has_signal:
+        reason = (f"NR7 breakout: open {entry:.0f} > NR7 high "
+                  f"{float(nr7_bar['high']):.0f}, SL {sl:.0f} TP {tp:.0f}")
+    else:
+        miss = []
+        if not is_nr7:    miss.append('not 7-bar narrowest')
+        if not vol_ok:    miss.append('low NR7 volume')
+        if not breakout:  miss.append(f"no breakout (open {entry:.0f} <= "
+                                      f"{float(nr7_bar['high']):.0f})")
+        if not tp_ok:     miss.append('TP < 1.5%')
+        if not sl_ok:     miss.append('SL >= entry')
+        reason = f"NR7: {', '.join(miss)}"
+    return {'has_signal': has_signal, 'reason': str(reason), 'details': details}
+
+
 # STRATEGY - OPENING RANGE BREAKOUT (Daily Approximation)
 #
 # NOTE: Despite the "Opening Range Breakout" name and registry key 'ORB', this is
@@ -1199,6 +1262,7 @@ _CHECKER_DISPATCH = {
     'vwap_reversion':           lambda ticker, df: check_vwap_reversion_signal(df),
     'conservative':             lambda ticker, df: check_conservative_signal(df),
     'Trend Following Breakout': lambda ticker, df: check_trend_following_breakout_signal(df),
+    'NR7 Breakout':             lambda ticker, df: check_nr7_signal(df),
     # True intraday ORB — bypasses daily df; uses ticks DB directly.
     'orb_intraday':             lambda ticker, df: check_orb_intraday_signal(ticker),
     'ORB_intraday':             lambda ticker, df: check_orb_intraday_signal(ticker),
