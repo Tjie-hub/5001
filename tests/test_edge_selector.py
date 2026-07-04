@@ -106,3 +106,25 @@ def test_adaptive_selector_uses_edge(edge_db, monkeypatch):
     assert "momentum" not in got            # negative edge -> not selected
     assert "vwap_reversion" not in got
     assert "Swing Trend" not in got         # positive edge but off-regime-map
+
+
+def test_default_disabled_covers_negative_roster():
+    """The 8 strategies the 2026-07-04 re-baseline proved lose money are
+    disabled by default."""
+    from scheduler.scanner import _DEFAULT_DISABLED
+    disabled = {s.strip() for s in _DEFAULT_DISABLED.split(",")}
+    for loser in ("vwap_reversion", "vol_weighted", "conservative", "momentum",
+                  "Liquidity Sweep", "ORB", "Volume Profile POC",
+                  "Inside Bar Breakout"):
+        assert loser in disabled, loser
+    assert "NR7 Breakout" not in disabled     # the one positive edge stays enabled
+
+
+def test_momentum_scan_skips_when_momentum_disabled(monkeypatch):
+    """scan_momentum_signals must not run when 'momentum' is disabled (it opens
+    Momentum-Following trades directly, bypassing the adaptive selector)."""
+    import scheduler.scanner as scanner
+    monkeypatch.setattr(scanner, "_get_disabled_strategies", lambda: {"momentum"})
+    monkeypatch.setattr(scanner, "get_all_tickers", lambda: [])
+    out = scanner.scan_momentum_signals()
+    assert out == []

@@ -231,6 +231,14 @@ def scan_momentum_signals():
         logging.warning(f"[scan_momentum] BLACKOUT aktif: {_bl_reason} — scan dilewati.")
         return []
 
+    # Phase 2C: the Momentum-Following book has negative pooled OOS expectancy;
+    # when 'momentum' is in the disabled set this standalone scan (which opens
+    # trades directly, bypassing the adaptive selector) must open nothing.
+    from engine.strategy_specs import resolve_strategy_name as _resolve
+    if _resolve("Momentum Following") in _get_disabled_strategies():
+        logging.info("[scan_momentum] 'momentum' disabled — scan skipped.")
+        return []
+
     # Pre-compute sector scores once for entire scan (1-hour TTL cache)
     _sector_scores = _get_sector_scores_cached()
 
@@ -682,7 +690,12 @@ _MOMENTUM_FAMILY = {
     'Swing Trend', 'conservative', 'Momentum Following',
 }
 
-_DEFAULT_DISABLED = 'vwap_reversion,vol_weighted,conservative'
+# Default = every strategy the 2026-07-04 trustworthy re-baseline proved has
+# NEGATIVE pooled OOS expectancy (wf_edge). Only NR7 Breakout showed positive
+# edge; the counter-trend book (Crash Recovery / Panic Rebound) is event-driven
+# and gated separately (not a proven loser — unmeasurable, too few trades).
+_DEFAULT_DISABLED = ('vwap_reversion,vol_weighted,conservative,momentum,'
+                     'Liquidity Sweep,ORB,Volume Profile POC,Inside Bar Breakout')
 
 
 def _get_disabled_strategies() -> set:
