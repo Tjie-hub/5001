@@ -342,6 +342,69 @@ def run_ohlcv_reconciliation():
         print(f"[scheduler] OHLCV reconcile error: {e}")
 
 
+def run_token_health_check(token_file: str = None):
+    """Alert if the Stockbit token is expired or expiring soon (Phase 3A).
+
+    The 24h JWT is refreshed by a morning cron; when that cron fails the token
+    dies silently and every fetch 401s (the 2026-07-04 incident). This surfaces
+    it. Alert-only — refresh stays owned by auto_token.py."""
+    if _holiday_skip("run_token_health_check"):
+        return
+    import os
+    from engine.pipeline_health import token_status
+    tf = token_file or os.path.join(os.path.dirname(os.path.dirname(__file__)), ".stockbit_token")
+    try:
+        tok = open(tf).read().strip()
+    except Exception:
+        tok = ""
+    s = token_status(tok)
+    if s["healthy"]:
+        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Token health OK "
+              f"({s['hours_left']:.1f}h left)")
+        return
+    hl = s["hours_left"]
+    left = f"{hl:.1f}h left" if hl is not None else "unreadable"
+    icon = "🔴" if s["status"] in ("expired", "invalid") else "⚠️"
+    send_telegram(
+        f"{icon} <b>Stockbit Token {s['status'].upper()}</b>\n\n"
+        f"Token: {left}. Fetching/backfill will 401 until refreshed.\n"
+        f"Refresh: <code>python3 auto_token.py</code>"
+    )
+    print(f"[{datetime.now(WIB).strftime('%H:%M')}] Token health ALERT: {s['status']} ({left})")
+
+
+def run_ohlcv_coverage_check(date_str: str = None):
+    """Alert when a trading day's OHLCV ticker coverage is thin/absent vs the
+    active universe (Phase 3A) — catches fetch outages (e.g. token death) and
+    scraper failures the reconciliation job (close-value only) misses."""
+    if _holiday_skip("run_ohlcv_coverage_check"):
+        return
+    from engine.pipeline_health import ohlcv_coverage
+    day = date_str or datetime.now(WIB).strftime("%Y-%m-%d")
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        universe = conn.execute(
+            "SELECT COUNT(*) FROM idx_tickers WHERE status='active'").fetchone()[0]
+        count = conn.execute(
+            "SELECT COUNT(DISTINCT ticker) FROM ohlcv WHERE date=? AND ticker!='IHSG'",
+            (day,)).fetchone()[0]
+        conn.close()
+    except Exception as e:
+        print(f"[coverage] DB error: {e}")
+        return
+    s = ohlcv_coverage(count, universe)
+    print(f"[{datetime.now(WIB).strftime('%H:%M')}] OHLCV coverage {day}: "
+          f"{count}/{universe} ({s['pct']*100:.0f}%) — {s['severity']}")
+    if not s["healthy"]:
+        icon = "🔴" if s["severity"] == "critical" else "⚠️"
+        send_telegram(
+            f"{icon} <b>OHLCV Coverage {s['severity'].upper()} — {day}</b>\n\n"
+            f"Only <b>{count}/{universe}</b> tickers ({s['pct']*100:.0f}%) have a bar.\n"
+            f"Likely a fetch outage (check token: <code>python3 auto_token.py --check</code>) "
+            f"or scraper failure."
+        )
+
+
 def run_foreign_snapshot():
     """14:30 WIB — Pre-close foreign accumulation watchlist alert.
 
