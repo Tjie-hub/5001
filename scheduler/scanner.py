@@ -231,6 +231,14 @@ def scan_momentum_signals():
         logging.warning(f"[scan_momentum] BLACKOUT aktif: {_bl_reason} — scan dilewati.")
         return []
 
+    # Phase 2C: the Momentum-Following book has negative pooled OOS expectancy;
+    # when 'momentum' is in the disabled set this standalone scan (which opens
+    # trades directly, bypassing the adaptive selector) must open nothing.
+    from engine.strategy_specs import resolve_strategy_name as _resolve
+    if _resolve("Momentum Following") in _get_disabled_strategies():
+        logging.info("[scan_momentum] 'momentum' disabled — scan skipped.")
+        return []
+
     # Pre-compute sector scores once for entire scan (1-hour TTL cache)
     _sector_scores = _get_sector_scores_cached()
 
@@ -593,32 +601,47 @@ def daily_signal_scan():
     return signals
 
 
+def _edge_selectable(conn, ticker: str, candidates) -> list:
+    """Strategies that earned a live edge for `ticker`: a wf_edge row with
+    POSITIVE pooled OOS expectancy (wf_edge already requires >=20 trades at
+    write time). Best expectancy first. `candidates=None` scans every strategy.
+
+    This is the honest selector (Phase 2C, audit C-6). It replaces the old
+    per-ticker consistency gate, which passed strategies that looked consistent
+    on one ticker's windows while losing money across the universe.
+    """
+    if candidates is not None and not candidates:
+        return []
+    sql = ("SELECT strategy FROM wf_edge "
+           "WHERE ticker = ? AND expectancy_pct > 0")
+    params = [ticker]
+    if candidates is not None:
+        sql += " AND strategy IN (%s)" % ",".join("?" * len(candidates))
+        params += list(candidates)
+    sql += " ORDER BY expectancy_pct DESC"
+    try:
+        return [r[0] for r in conn.execute(sql, params).fetchall()]
+    except Exception:
+        return []
+
+
 def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
     """
-    Get best strategies for ticker from WF scores.
-    Returns list of strategies with consistency >= min_consistency AND a
-    positive walk-forward return. No fallback: a ticker with no profitable
-    strategy generates no BUY signal (2026-06-13 audit — the old
-    vol_weighted/vwap_reversion fallback routed money-losing strategies).
+    Strategies with a proven live edge for `ticker` — positive pooled OOS
+    expectancy in wf_edge (Phase 2C, item 2.5). No fallback: a ticker with no
+    positive-expectancy strategy generates no BUY signal. `min_consistency` is
+    accepted for signature compatibility but no longer gates (the switch from
+    consistency to expectancy is the whole point — audit C-6).
     """
     import sqlite3
     try:
-        from paper_trade import get_config as _gc
-        _wf_gate = float(_gc().get("wf_score_gate", 0.0))
-    except Exception:
-        _wf_gate = 0.0
-    try:
         conn = sqlite3.connect(DB_PATH)
-        rows = conn.execute("""
-            SELECT strategy, consistency_pct, weighted_score
-            FROM wf_scores
-            WHERE ticker = ? AND consistency_pct >= ?
-              AND avg_return_pct > 0 AND weighted_score >= ?
-            ORDER BY weighted_score DESC
-        """, (ticker, min_consistency, _wf_gate)).fetchall()
-        conn.close()
+        try:
+            selectable = _edge_selectable(conn, ticker, None)
+        finally:
+            conn.close()
         disabled = _get_disabled_strategies()
-        return [r[0] for r in rows if r[0] not in disabled]
+        return [s for s in selectable if s not in disabled]
     except Exception as e:
         print(f"[get_best_strategies] {ticker} error: {e}")
         return []
@@ -667,7 +690,12 @@ _MOMENTUM_FAMILY = {
     'Swing Trend', 'conservative', 'Momentum Following',
 }
 
-_DEFAULT_DISABLED = 'vwap_reversion,vol_weighted,conservative'
+# Default = every strategy the 2026-07-04 trustworthy re-baseline proved has
+# NEGATIVE pooled OOS expectancy (wf_edge). Only NR7 Breakout showed positive
+# edge; the counter-trend book (Crash Recovery / Panic Rebound) is event-driven
+# and gated separately (not a proven loser — unmeasurable, too few trades).
+_DEFAULT_DISABLED = ('vwap_reversion,vol_weighted,conservative,momentum,'
+                     'Liquidity Sweep,ORB,Volume Profile POC,Inside Bar Breakout')
 
 
 def _get_disabled_strategies() -> set:
@@ -779,24 +807,12 @@ def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
     if wf_candidates:
         try:
             conn = sqlite3.connect(DB_PATH)
-            placeholders = ','.join('?' * len(wf_candidates))
             try:
-                from paper_trade import get_config as _gc
-                _wf_gate = float(_gc().get("wf_score_gate", 0.0))
-            except Exception:
-                _wf_gate = 0.0
-            rows = conn.execute(f"""
-                SELECT strategy, weighted_score
-                FROM wf_scores
-                WHERE ticker = ?
-                  AND strategy IN ({placeholders})
-                  AND consistency_pct >= ?
-                  AND avg_return_pct > 0
-                  AND weighted_score >= ?
-                ORDER BY weighted_score DESC
-            """, [ticker, *wf_candidates, min_consistency, _wf_gate]).fetchall()
-            conn.close()
-            selected = [r[0] for r in rows]
+                # Phase 2C: gate the regime-map candidates on positive pooled
+                # wf_edge expectancy, not per-ticker consistency (audit C-6).
+                selected = _edge_selectable(conn, ticker, wf_candidates)
+            finally:
+                conn.close()
         except Exception:
             selected = []
 
