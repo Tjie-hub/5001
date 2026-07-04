@@ -37,6 +37,15 @@ Finding IDs (C-x, H-x) reference `Audit/INSTITUTIONAL_AUDIT_2026-07-02.md`.
 ## Phase 2 — Statistical Integrity
 **Goal: every metric can be trusted — including the data it's computed on.**
 
+> **STATUS: COMPLETE 2026-07-04.** 2.1/2.2 (PR #8, data freeze + 5y raw rebuild),
+> 2.3/2.4/2.7 (PR #9, WF metric fixes + survivorship + 5y windows), 2.6 (PR #10,
+> regime holdout honesty), 2.5 (PR #11, disable losers + wf_edge selector). The
+> 2026-07-04 recompute produced the first trustworthy wf_scores: pooled per-trade
+> expectancy shows ONLY NR7 Breakout positive; 8 measured strategies negative and
+> now disabled; live selection gates on wf_edge expectancy, not consistency
+> (C-6 fixed). Live long book is effectively empty (NR7 has no checker) — the
+> honest, intended pre-capital state.
+
 > **STATUS 2026-07-03: items 2.1 + 2.2 SHIPPED (PR #8).** Scraper 16:15 bar =
 > final EOD authority (is_final flag); yfinance raw = backfill/reconcile-only
 > (nightly 21:00 alert job); trading_calendar replaces the session-deleting
