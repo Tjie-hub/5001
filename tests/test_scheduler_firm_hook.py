@@ -143,22 +143,79 @@ def test_gate_enforce_mode_filters_from_intersection_results():
     assert result[0]["ticker"] == "AMMN"
 
 
-def test_gate_enforce_mode_lets_degraded_pass_through():
-    """Fail-open: a degraded decision (LLM failed) must not be filtered out in
-    enforce mode — only an explicit veto blocks a signal."""
+def test_enforce_degraded_non_flow_confirmed_is_dropped(monkeypatch):
+    """C-9 fix: degraded (LLM failed) on a NON-flow-confirmed ticker falls back
+    to the flow gate → dropped. Explicit approve still promotes."""
+    import engine.fail_open_alarm as fa
+    monkeypatch.setattr(fa, "fail_open_alarm", lambda *a, **k: "")
     approved = MagicMock(ticker="AMMN", decision="approve")
     degraded = MagicMock(ticker="MDKA", decision="degraded")
-    vetoed = MagicMock(ticker="ANTM", decision="veto")
 
     intersection_results = [
         _make_result("AMMN", flow_score=1, confirmed=False),
         _make_result("MDKA", flow_score=1, confirmed=False),
-        _make_result("ANTM", flow_score=-1, confirmed=False),
     ]
 
     result = _call_gate(intersection_results, [],
-                        _mock_firm_module(lambda c: [approved, degraded, vetoed]),
+                        _mock_firm_module(lambda c: [approved, degraded]),
                         _mock_config_module(is_active=True, get_enforce=True))
 
-    tickers = {r["ticker"] for r in result}
-    assert tickers == {"AMMN", "MDKA"}, "degraded must pass, only veto blocks"
+    assert {r["ticker"] for r in result} == {"AMMN"}, \
+        "approve promotes; degraded non-flow-confirmed is dropped"
+
+
+def test_enforce_degraded_flow_confirmed_is_kept(monkeypatch):
+    """degraded on a flow-confirmed ticker falls back to flow → kept."""
+    import engine.fail_open_alarm as fa
+    monkeypatch.setattr(fa, "fail_open_alarm", lambda *a, **k: "")
+    degraded = MagicMock(ticker="BBRI", decision="degraded")
+
+    flow_confirmed = [_make_result("BBRI", flow_score=3, confirmed=True)]
+    intersection_results = list(flow_confirmed)
+
+    result = _call_gate(intersection_results, flow_confirmed,
+                        _mock_firm_module(lambda c: [degraded]),
+                        _mock_config_module(is_active=True, get_enforce=True))
+
+    assert {r["ticker"] for r in result} == {"BBRI"}
+
+
+def test_enforce_veto_drops_flow_confirmed(monkeypatch):
+    """Explicit veto wins over the flow gate — a flow-confirmed veto is dropped."""
+    import engine.fail_open_alarm as fa
+    monkeypatch.setattr(fa, "fail_open_alarm", lambda *a, **k: "")
+    vetoed = MagicMock(ticker="MDKA", decision="veto")
+    approved = MagicMock(ticker="BBRI", decision="approve")
+
+    flow_confirmed = [
+        _make_result("MDKA", flow_score=3, confirmed=True),
+        _make_result("BBRI", flow_score=3, confirmed=True),
+    ]
+    intersection_results = list(flow_confirmed)
+
+    result = _call_gate(intersection_results, flow_confirmed,
+                        _mock_firm_module(lambda c: [vetoed, approved]),
+                        _mock_config_module(is_active=True, get_enforce=True))
+
+    assert {r["ticker"] for r in result} == {"BBRI"}
+
+
+def test_enforce_outage_fires_fail_open_alarm(monkeypatch):
+    """Any degraded/bypassed present → a single visible fail-open alarm fires."""
+    import engine.fail_open_alarm as fa
+    calls = []
+    monkeypatch.setattr(fa, "fail_open_alarm",
+                        lambda *a, **k: calls.append((a, k)) or "")
+    degraded = MagicMock(ticker="MDKA", decision="degraded")
+    bypassed = MagicMock(ticker="ANTM", decision="bypassed")
+
+    intersection_results = [
+        _make_result("MDKA", flow_score=1, confirmed=False),
+        _make_result("ANTM", flow_score=1, confirmed=False),
+    ]
+
+    _call_gate(intersection_results, [],
+               _mock_firm_module(lambda c: [degraded, bypassed]),
+               _mock_config_module(is_active=True, get_enforce=True))
+
+    assert len(calls) == 1, "outage must alarm exactly once per gate call"
