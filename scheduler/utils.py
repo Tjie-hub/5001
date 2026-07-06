@@ -15,11 +15,12 @@ TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 from utils.telegram import send_telegram  # noqa: E402
+from data.db import connect as db_connect  # noqa: E402
 from engine.indicators import IndicatorCache
 
 def get_all_tickers():
     """Return all active tickers: idx_tickers table first, fallback to ohlcv."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     # Prefer the master list (populated after discovery)
     try:
         rows = conn.execute(
@@ -51,7 +52,7 @@ def send_suspension_resume_alerts(
         as_of = _date.today().isoformat()
 
     try:
-        conn = sqlite3.connect(db_path)
+        conn = db_connect(db_path)
         rows = conn.execute(
             "SELECT ticker, missing_td, gap_pct FROM suspension_events "
             "WHERE resume_date = ? AND classification = 'suspension'",
@@ -117,7 +118,7 @@ def _load_ohlcv_bulk(final_only: bool = False) -> dict:
     partial bars ARE their signal input. COALESCE keeps pre-migration DBs and
     test fixtures without the column working.
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     if final_only:
         try:
             all_df = pd.read_sql(

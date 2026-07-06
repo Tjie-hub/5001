@@ -12,6 +12,7 @@ WIB = pytz.timezone("Asia/Jakarta")
 DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
 
 from utils.telegram import send_telegram  # noqa: E402
+from data.db import connect as db_connect  # noqa: E402
 from scheduler.utils import get_all_tickers, _load_ohlcv_bulk  # noqa: E402
 
 
@@ -43,8 +44,7 @@ def _pid_alive(pid) -> bool:
 def _wf_lock_acquire(db_path: str, job: str = _WF_LOCK_JOB) -> bool:
     """Take a pid-aware advisory lock so two heavy refreshes can't run at once.
     A lock held by a dead pid is treated as stale and overwritten (self-healing)."""
-    with sqlite3.connect(db_path, timeout=30) as g:
-        g.execute("PRAGMA busy_timeout=30000")
+    with db_connect(db_path) as g:
         g.execute("CREATE TABLE IF NOT EXISTS _job_lock "
                   "(job TEXT PRIMARY KEY, pid INTEGER, started_at TEXT)")
         row = g.execute("SELECT pid FROM _job_lock WHERE job=?", (job,)).fetchone()
@@ -57,8 +57,7 @@ def _wf_lock_acquire(db_path: str, job: str = _WF_LOCK_JOB) -> bool:
 
 def _wf_lock_release(db_path: str, job: str = _WF_LOCK_JOB) -> None:
     try:
-        with sqlite3.connect(db_path, timeout=30) as g:
-            g.execute("PRAGMA busy_timeout=30000")
+        with db_connect(db_path) as g:
             g.execute("DELETE FROM _job_lock WHERE job=? AND pid=?", (job, os.getpid()))
     except Exception as e:
         print(f"[WF] lock release error: {e}")
@@ -119,9 +118,8 @@ def refresh_wf_scores():
                 print(f"[WF] {ticker} error: {e}")
 
         # ---- WRITE PHASE: one short transaction (lock held ~seconds) ----
-        conn = sqlite3.connect(DB_PATH, timeout=30)
+        conn = db_connect(DB_PATH)
         try:
-            conn.execute("PRAGMA busy_timeout=30000")
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS wf_scores ("
                 "ticker TEXT NOT NULL, strategy TEXT NOT NULL, consistency_pct REAL, "
@@ -186,7 +184,7 @@ def run_flow_fetch():
         flow_main()
         _sys.argv = _argv
         # Verifikasi data tersimpan
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         count = conn.execute(
             "SELECT COUNT(*) FROM stockbit_flow WHERE trade_date=?", (today_str,)
         ).fetchone()[0]
@@ -223,7 +221,7 @@ def check_flow_coverage(db_path: str, trade_date: str, lookback: int = 10,
     Returns dict: {date, count, baseline, severity, healthy, reason}.
     severity ∈ {'ok', 'warning', 'critical'}.
     """
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     try:
         count = conn.execute(
             "SELECT COUNT(DISTINCT ticker) FROM stockbit_flow WHERE trade_date=?",
@@ -280,7 +278,7 @@ def run_broker_flow_fetch():
             return
         tickers = get_tickers("ALL")
         # Include open paper trade tickers not already in ALL list
-        conn_pt = sqlite3.connect(DB_PATH)
+        conn_pt = db_connect(DB_PATH)
         extra = [r[0] for r in conn_pt.execute(
             "SELECT DISTINCT ticker FROM paper_trades WHERE status='OPEN'"
         ).fetchall()]
@@ -290,7 +288,7 @@ def run_broker_flow_fetch():
             print(f"[{now_str}] + {len(extra_new)} extra tickers from paper trades: {extra_new}")
             tickers = tickers + extra_new
         run_flow(token, tickers)
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         count = conn.execute(
             "SELECT COUNT(DISTINCT ticker) FROM broker_flow WHERE trade_date=?", (today_str,)
         ).fetchone()[0]
@@ -382,7 +380,7 @@ def run_ohlcv_coverage_check(date_str: str = None):
     from engine.pipeline_health import ohlcv_coverage
     day = date_str or datetime.now(WIB).strftime("%Y-%m-%d")
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         universe = conn.execute(
             "SELECT COUNT(*) FROM idx_tickers WHERE status='active'").fetchone()[0]
         count = conn.execute(
@@ -504,7 +502,7 @@ def _refresh_backtest_cache():
         from engine.regime_filter import detect_regime
         from datetime import date
         today = date.today().isoformat()
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS backtest_cache (
                 ticker TEXT NOT NULL, computed_date TEXT NOT NULL,
@@ -821,7 +819,7 @@ def run_premarket_firm_scan():
     # Dedup guard — prevents duplicate sends when two instances briefly overlap
     # (systemd Restart=always can start a new process before the old one fully exits).
     # First instance to INSERT wins; second gets IntegrityError and skips silently.
-    with sqlite3.connect(DB_PATH, timeout=5) as _g:
+    with db_connect(DB_PATH, timeout=5) as _g:
         _g.execute(
             "CREATE TABLE IF NOT EXISTS _job_sentinel "
             "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))"
@@ -844,7 +842,7 @@ def run_premarket_firm_scan():
     # Value-base liquidity: keep the 3 best long-only setups whose 30d avg daily
     # traded value (close*volume, Rp) clears the turnover floor — drops thin names
     # that a volume/lot count would let through at low price levels.
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     try:
         longs = select_top_liquid_longs(rows, conn, date_str, top_n=3)
     finally:
@@ -859,7 +857,7 @@ def run_premarket_firm_scan():
         try:
             from engine.edge_enrich import enrich_candidate, market_regime
             from engine.veto import apply_vetoes
-            _c = sqlite3.connect(DB_PATH)
+            _c = db_connect(DB_PATH)
             try:
                 _mreg = market_regime(_c)
                 _open = _c.execute(
@@ -946,8 +944,7 @@ def run_eod_trade_plan():
     # Dedup guard (mirrors premarket firm scan) — first INSERT wins. 30s busy_timeout
     # waits out transient writers (the 16:40 slot can overlap a long EOD write on the
     # 2.5GB WAL db, unlike the quiet 08:35 premarket slot).
-    with sqlite3.connect(DB_PATH, timeout=30) as _g:
-        _g.execute("PRAGMA busy_timeout=30000")
+    with db_connect(DB_PATH) as _g:
         _g.execute("CREATE TABLE IF NOT EXISTS _job_sentinel "
                    "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))")
         try:
@@ -958,9 +955,8 @@ def run_eod_trade_plan():
 
     from config import edge_mode
 
-    conn = sqlite3.connect(DB_PATH, timeout=30)
+    conn = db_connect(DB_PATH)
     try:
-        conn.execute("PRAGMA busy_timeout=30000")
         cands = tp.gather_long_candidates(conn, date_str)
         regime = tp.get_regime(conn, date_str)
         top = tp.select_top(cands, n=8) if cands else []
@@ -1064,7 +1060,7 @@ def run_vpin_daily_batch(date_str=None):
     errors = 0
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         ensure_vpin_scores_table(conn)
     except Exception as _e:
         logging.error(f"[vpin_batch] DB init error: {_e}")
@@ -1107,7 +1103,7 @@ def run_vpin_backfill(days=90):
     print(f"[{now_str}] VPIN backfill starting ({days} days)...")
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         ensure_vpin_scores_table(conn)
 
         # Get dates that have daily_screen data but may not have vpin_scores
@@ -1178,7 +1174,7 @@ def run_forward_test_cycle(db_path=None, run_date=None):
         repo = FTRepo(db)
 
         def _trade_count():
-            with sqlite3.connect(db, timeout=30) as c:
+            with db_connect(db) as c:
                 return c.execute("SELECT COUNT(*) FROM ft_shadow_trade").fetchone()[0]
 
         open_before = len(repo.get_open_shadow_positions())

@@ -13,6 +13,7 @@ WIB = pytz.timezone("Asia/Jakarta")
 DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
 
 from utils.telegram import send_telegram  # noqa: E402
+from data.db import connect as db_connect  # noqa: E402
 from scheduler.state import _regime_clf_cache  # noqa: E402  — dict; _sector_scores_cache handled inside _get_sector_scores_cached via scheduler.state ref
 from scheduler.utils import get_all_tickers, _load_ohlcv_bulk, fetch_latest  # noqa: E402
 
@@ -50,7 +51,7 @@ def calc_votes(df):
 def check_fundamental(ticker):
     """Check stockbit_keystats: PE>0, ROE>5, PBV<5. Returns (pass, reason)."""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         row = conn.execute(
             'SELECT pe_ttm, pbv, roe FROM stockbit_keystats WHERE ticker=? ORDER BY fetch_date DESC LIMIT 1',
             (ticker,)
@@ -112,7 +113,7 @@ def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
     """
     db = _db_path or DB_PATH
     try:
-        with sqlite3.connect(db) as conn:
+        with db_connect(db) as conn:
             row = conn.execute(
                 'SELECT fetch_date FROM stockbit_keystats WHERE ticker=? ORDER BY fetch_date DESC LIMIT 1',
                 (ticker,)
@@ -150,7 +151,7 @@ def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
         if not stats:
             logging.info(f"[keystats] {ticker} stale_shock:{stale_days}d — fetch empty, blocking")
             return False, f'stale_shock:{stale_days}d,fetch_empty'
-        with sqlite3.connect(db) as conn2:
+        with db_connect(db) as conn2:
             save_keystats(conn2, stats)
             conn2.commit()
         logging.info(
@@ -264,7 +265,7 @@ def scan_momentum_signals():
     tickers = get_all_tickers()
     wf_map = {}
     try:
-        conn_wf = sqlite3.connect(DB_PATH)
+        conn_wf = db_connect(DB_PATH)
         rows = conn_wf.execute(
             "SELECT ticker, consistency_pct, weighted_score FROM wf_scores WHERE strategy=?",
             (STRATEGY,)
@@ -326,7 +327,7 @@ def scan_momentum_signals():
                 passes_value_liquidity_gate as _val_liq_gate,
                 passes_value_gate as _val_gate,
             )
-            _liq_conn = sqlite3.connect(DB_PATH)
+            _liq_conn = db_connect(DB_PATH)
             try:
                 _liq_ok, _liq_reason = _liq_gate(_liq_conn, ticker, _today_str)
                 _val_liq_ok, _val_liq_reason = _val_liq_gate(_liq_conn, ticker, _today_str)
@@ -369,7 +370,7 @@ def scan_momentum_signals():
             try:
                 import sqlite3 as _sqlite3
                 from engine.vpin import calc_vpin_multi as _calc_vpin_multi
-                _vpin_conn = _sqlite3.connect(DB_PATH)
+                _vpin_conn = _db_connect(DB_PATH)
                 _vpin_multi = _calc_vpin_multi(_vpin_conn, ticker, _today_str)
                 _vpin_conn.close()
                 _vpin_signal = _vpin_multi['signal'] if _vpin_multi else 'NO_SIGNAL'
@@ -393,7 +394,7 @@ def scan_momentum_signals():
             if sig.iloc[-1]:
                 # Signal quality gate — block 'watch' (100% loss rate in audit)
                 try:
-                    _sig_conn = sqlite3.connect(DB_PATH)
+                    _sig_conn = db_connect(DB_PATH)
                     _sig_row = _sig_conn.execute(
                         "SELECT signal, delta FROM daily_screen WHERE ticker=? AND date=?",
                         (ticker, _today_str)
@@ -635,7 +636,7 @@ def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
     """
     import sqlite3
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         try:
             selectable = _edge_selectable(conn, ticker, None)
         finally:
@@ -722,7 +723,7 @@ def _macro_panic_state() -> bool:
         return _macro_panic_cache[today]
     panic = False
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         rows = conn.execute(
             "SELECT close FROM ohlcv WHERE ticker='IHSG' "
             "ORDER BY date DESC LIMIT 260"
@@ -806,7 +807,7 @@ def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
     selected = []
     if wf_candidates:
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect(DB_PATH)
             try:
                 # Phase 2C: gate the regime-map candidates on positive pooled
                 # wf_edge expectancy, not per-ticker consistency (audit C-6).
@@ -865,7 +866,7 @@ def run_edge_veto_stage(intersection_results, flow_confirmed, ohlcv_map,
     try:
         from engine.edge_enrich import enrich_candidate, market_regime
         from engine.veto import apply_vetoes
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         try:
             mreg = market_regime(conn)
             open_n = conn.execute(
@@ -1008,7 +1009,7 @@ def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
             return
 
         # Skip tickers already approved today — avoids redundant LLM calls
-        _conn = sqlite3.connect(DB_PATH)
+        _conn = db_connect(DB_PATH)
         try:
             _already = {
                 row[0] for row in _conn.execute(
@@ -1105,7 +1106,7 @@ def scan_distribution_signals(ohlcv_map, date_str, time_str):
     """
     results = []
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         rows = conn.execute(
             """SELECT ticker, composite_score, smart_money
                FROM stockbit_flow
@@ -1179,7 +1180,7 @@ def scheduled_multi_strategy_scan():
         from engine.breadth import get_market_breadth as _get_breadth_rs
         from engine.technicals import detect_ihsg_technicals as _detect_tech_rs
         from engine.risk_score import compute_market_risk_score as _compute_risk
-        _rs_conn = sqlite3.connect(DB_PATH)
+        _rs_conn = db_connect(DB_PATH)
         _rs_vpin = _get_vpin_rs(_rs_conn, date_str)
         _rs_accdist = _get_accdist_rs(date_str)
         _rs_breadth = _get_breadth_rs(_rs_conn, date_str)
@@ -1196,7 +1197,7 @@ def scheduled_multi_strategy_scan():
         # Route alert based on tier
         try:
             from engine.risk_alert import route_risk_alert as _route_alert
-            _alert_conn = sqlite3.connect(DB_PATH)
+            _alert_conn = db_connect(DB_PATH)
             _route_alert(_alert_conn, _market_risk, date_str, time_str)
             _alert_conn.close()
         except Exception as _ra_err:
@@ -1217,7 +1218,7 @@ def scheduled_multi_strategy_scan():
 
     try:
         from engine.technicals import detect_ihsg_technicals as _detect_tech
-        _tech_conn = sqlite3.connect(DB_PATH)
+        _tech_conn = db_connect(DB_PATH)
         _tech = _detect_tech(_tech_conn, date_str)
         _tech_conn.close()
         if _tech['close'] is not None:
@@ -1245,7 +1246,7 @@ def scheduled_multi_strategy_scan():
 
     try:
         from engine.breadth import get_market_breadth as _get_breadth
-        _breadth_conn = sqlite3.connect(DB_PATH)
+        _breadth_conn = db_connect(DB_PATH)
         _breadth = _get_breadth(_breadth_conn, date_str)
         _breadth_conn.close()
         if _breadth['total'] > 0:
@@ -1257,7 +1258,7 @@ def scheduled_multi_strategy_scan():
 
     try:
         from engine.vpin import get_market_vpin_summary as _get_vpin
-        _vpin_conn = sqlite3.connect(DB_PATH)
+        _vpin_conn = db_connect(DB_PATH)
         _vpin_summary = _get_vpin(_vpin_conn, date_str)
         _vpin_conn.close()
         if _vpin_summary['tickers_with_vpin'] > 0:
@@ -1298,7 +1299,7 @@ def scheduled_multi_strategy_scan():
     # Value-base liquidity pre-filter connection — opened once, reused per ticker.
     # Avg daily traded value (close*volume) must be >= Rp 5B to pass.
     from engine.liquidity import passes_value_liquidity_gate as _vliq_gate
-    _liq_conn = sqlite3.connect(DB_PATH)
+    _liq_conn = db_connect(DB_PATH)
 
     for ticker in tickers:
         try:
@@ -1394,7 +1395,7 @@ def scheduled_multi_strategy_scan():
     print(f"[{time_str}] Flow confirmed (>= +{flow_threshold}): {len(flow_confirmed)} tickers")
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         _ensure_scheduled_signals_table(conn)
         for r in flow_confirmed:
             r.setdefault('signal_direction', 'BUY')
