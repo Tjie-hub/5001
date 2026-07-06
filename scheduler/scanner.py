@@ -919,7 +919,8 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
     - firm disabled → flow_confirmed unchanged
     - active + no signals → idle-log, flow_confirmed unchanged
     - shadow mode → flow_confirmed unchanged (agent evaluates, doesn't filter)
-    - enforce mode → agent-approved tickers from intersection_results[:20]
+    - enforce mode → flow_confirmed minus vetoes, plus explicitly-approved
+      promotions; degraded/bypassed fall back to the flow gate (+ alarm).
     """
     try:
         from engine.agent_firm import config as _firm_cfg
@@ -957,11 +958,29 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
             r["agent_size_hint"] = _size_map.get(r["ticker"], 1.0)
 
         if _firm_cfg.get_enforce():
-            # Pass-set is the evaluated candidates that were not explicitly vetoed.
-            # Fail-open: degraded/bypassed (LLM failed or spend-capped) proceed per
-            # the decision contract; only an explicit veto blocks a signal.
-            _pass = {d.ticker for d in _decisions if d.decision != "veto"}
-            return [r for r in intersection_results if r["ticker"] in _pass]
+            # C-9 fix (Phase 3B): the firm is a filter ON TOP OF the flow gate.
+            #   approve  → kept (may promote a non-flow-confirmed candidate)
+            #   veto     → dropped (wins even over a flow-confirmed signal)
+            #   degraded / bypassed → NO real evaluation → fall back to the flow
+            #     gate's verdict (kept iff already flow-confirmed) + alarm, so an
+            #     LLM outage can no longer silently promote every signal.
+            _approved = {d.ticker for d in _decisions if d.decision == "approve"}
+            _vetoed = {d.ticker for d in _decisions if d.decision == "veto"}
+            _outage = [d.ticker for d in _decisions
+                       if d.decision in ("degraded", "bypassed")]
+            if _outage:
+                from engine.fail_open_alarm import fail_open_alarm
+                fail_open_alarm(
+                    "agent_firm_enforce",
+                    f"{len(_outage)} degraded/bypassed → flow-gate fallback",
+                    count=len(_outage),
+                )
+            _flow_tickers = {r["ticker"] for r in flow_confirmed}
+            _kept_fc = [r for r in flow_confirmed if r["ticker"] not in _vetoed]
+            _promoted = [r for r in intersection_results
+                         if r["ticker"] in _approved
+                         and r["ticker"] not in _flow_tickers]
+            return _kept_fc + _promoted
 
         return flow_confirmed
     except Exception as _err:
