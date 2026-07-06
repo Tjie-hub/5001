@@ -1314,8 +1314,14 @@ def scheduled_multi_strategy_scan():
                 _vliq_ok, _vliq_reason = _vliq_gate(_liq_conn, ticker, date_str)
                 if not _vliq_ok:
                     continue
-            except Exception:
-                pass  # fail-open: don't block a ticker because the gate threw
+            except Exception as _vliq_err:
+                # fail-open: don't block a ticker because the gate threw — but
+                # make it visible rather than silent (Phase 3B). Log-only: this
+                # is per-ticker inside the scan loop, so notify=False avoids spam.
+                from engine.fail_open_alarm import fail_open_alarm
+                fail_open_alarm("liquidity_gate",
+                                f"{ticker} gate error, passed: {str(_vliq_err)[:120]}",
+                                count=1, notify=False)
 
             df = ohlcv_map.get(ticker)
             if df is None or len(df) < 20:
@@ -1378,6 +1384,9 @@ def scheduled_multi_strategy_scan():
                     r['flow'] = {'score': None, 'verdict': 'UNAVAILABLE', 'confirmed': False}
         except Exception as e:
             print(f"[{time_str}] Flow fetch error: {e}")
+            from engine.fail_open_alarm import fail_open_alarm
+            fail_open_alarm("flow_batch", f"flow fetch failed: {str(e)[:120]}",
+                            count=len(intersection_results))
             for r in intersection_results:
                 r['flow'] = {'score': None, 'verdict': 'UNAVAILABLE', 'confirmed': False}
 
