@@ -6,6 +6,7 @@ near-SL/TP approach, regime change.
 """
 import logging
 import sqlite3
+from data.db import connect as db_connect
 from datetime import date as dt_date
 
 from config import DB_PATH
@@ -50,7 +51,7 @@ def _agent_confirms_exit(trade: dict, result: dict) -> bool:
 def _fetch_recent_closes(ticker: str, n: int = 5) -> list:
     """Fetch last N daily closes from walkforward DB."""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         rows = conn.execute(
             'SELECT close FROM ohlcv WHERE ticker=? ORDER BY date DESC LIMIT ?', (ticker, n)
         ).fetchall()
@@ -64,7 +65,7 @@ def _fetch_atr(ticker: str, periods: int = 14) -> float:
     """Compute ATR from recent OHLCV."""
     try:
         import pandas as pd
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         df = pd.read_sql(
             'SELECT high, low, close FROM ohlcv WHERE ticker=? ORDER BY date DESC LIMIT ?',
             conn, params=(ticker, periods + 5)
@@ -97,7 +98,7 @@ def _detect_momentum_reversal(closes: list, entry_price: float) -> bool:
 def _get_flow_score(ticker: str) -> dict:
     """Fetch today's cached flow score from DB."""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         today = dt_date.today().isoformat()
         # Column is trade_date; the old 'date=?' predicate raised
@@ -114,7 +115,7 @@ def _get_flow_score(ticker: str) -> dict:
 def _get_vpin(ticker: str) -> dict:
     """Fetch today's VPIN from daily_screen."""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         today = dt_date.today().isoformat()
         row = conn.execute(
@@ -135,7 +136,7 @@ def _get_current_price(ticker: str) -> float:
 def _latest_bar(ticker: str):
     """(date, open, high, low, close) of the most recent OHLCV bar, or None."""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         row = conn.execute(
             'SELECT date, open, high, low, close FROM ohlcv '
             'WHERE ticker=? ORDER BY date DESC LIMIT 1', (ticker,)).fetchone()
@@ -149,7 +150,7 @@ def _bars_held(ticker: str, entry_date) -> int:
     """Completed OHLCV bars strictly after entry_date — the kernel's hold_days
     unit is BARS (backtest parity), not calendar days."""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         n = conn.execute('SELECT COUNT(*) FROM ohlcv WHERE ticker=? AND date>?',
                          (ticker, str(entry_date)[:10])).fetchone()[0]
         conn.close()
@@ -160,7 +161,7 @@ def _bars_held(ticker: str, entry_date) -> int:
 
 def _sma(ticker: str, period: int):
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         row = conn.execute(
             'SELECT AVG(close), COUNT(*) FROM (SELECT close FROM ohlcv '
             'WHERE ticker=? ORDER BY date DESC LIMIT ?)', (ticker, period)).fetchone()
@@ -355,7 +356,7 @@ def _evaluate_swing_trend(trade: dict) -> dict:
     highest     = float(trade.get('highest_seen') or entry_price)
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         df = pd.read_sql(
             'SELECT date, open, high, low, close, volume FROM ohlcv WHERE ticker=? ORDER BY date ASC',
             conn, params=(ticker,)
@@ -460,7 +461,7 @@ def _evaluate_swing_trend(trade: dict) -> dict:
 
     # R5: flow bearish 2d
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         rows = conn.execute(
             'SELECT composite_score FROM stockbit_flow WHERE ticker=? ORDER BY trade_date DESC LIMIT 2',
             (ticker,)
