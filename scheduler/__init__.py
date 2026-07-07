@@ -229,7 +229,6 @@ def start_scheduler():
     print("  📰 NEWS FETCH: 08:00 pre-market, 17:00 EOD")
     print("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
     print("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
-    print("  🔄 BACKTEST ROLLER: 1st Sun/month 10:00")
     print("  🏥 MARKET HEALTH: 08:45 pre-market")
     print("  🌅 PREMARKET FIRM: 08:35 pre-market (unified watchlist → agent firm)")
     print("  📋 EOD TRADE PLAN: 16:40 (all long sources → agent firm → 1 ranked msg)")
