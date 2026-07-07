@@ -16,9 +16,7 @@ PRODUCTION_FILES = ["monitor.py", "paper_trade.py", "app.py",
                     "news_filter.py", "flow_filter.py", "stockbit_fetcher.py"]
 
 # Documented exceptions — each must shrink over time, never grow silently.
-ALLOWLIST = {
-    "scheduler/jobs.py",        # research jobs (refresh_wf_scores, roller) — REMOVED IN M3
-}
+ALLOWLIST = set()      # emptied in M3 (research jobs left the scheduler)
 
 
 def _py_files(scopes, files):
@@ -51,4 +49,4 @@ def test_research_does_not_import_execution():
 
 def test_allowlist_shrinks_only():
     # If someone adds an exception, this number forces a conscious edit + review.
-    assert len(ALLOWLIST) == 1
+    assert len(ALLOWLIST) == 0

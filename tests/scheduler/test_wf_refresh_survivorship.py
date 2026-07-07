@@ -19,7 +19,7 @@ def _df(n=400, seed=1):
 
 @pytest.fixture()
 def wf_db(tmp_path, monkeypatch):
-    import scheduler.jobs as jobs
+    import research.jobs as jobs
     db = str(tmp_path / "wf.db")
     monkeypatch.setattr(jobs, "DB_PATH", db)
     conn = sqlite3.connect(db)
@@ -31,12 +31,11 @@ def wf_db(tmp_path, monkeypatch):
     # Corpus has both tickers; the active list has only LIVE.
     monkeypatch.setattr(jobs, "_load_ohlcv_bulk",
                         lambda final_only=False: {"LIVE": _df(), "DELISTED": _df(seed=2)})
-    monkeypatch.setattr(jobs, "get_all_tickers", lambda: ["LIVE"])
     return db
 
 
 def test_refresh_scores_delisted_ticker_in_corpus(wf_db):
-    from scheduler.jobs import refresh_wf_scores
+    from research.jobs import refresh_wf_scores
     refresh_wf_scores()
     conn = sqlite3.connect(wf_db)
     scored = {r[0] for r in conn.execute("SELECT DISTINCT ticker FROM wf_scores")}
