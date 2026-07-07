@@ -99,7 +99,8 @@ def _load_stockbit_token(_token_file: str = None) -> str:
 
 
 def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
-                             _db_path: str = None, _token_file: str = None):
+                             _db_path: str = None, _token_file: str = None,
+                             allow_refetch: bool = True):
     """
     Returns (ok: bool, reason: str).
     Stale + price shock: attempts re-fetch via Stockbit API.
@@ -139,7 +140,10 @@ def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
         logging.debug(f"[keystats] {ticker} stale:{stale_days}d, no shock — allow")
         return True, f'stale:{stale_days}d'
 
-    # Stale + price shock — attempt re-fetch
+    # Stale + price shock — attempt re-fetch (unless the batch pre-pass owns it)
+    if not allow_refetch:
+        return False, f'stale_shock:{stale_days}d,not_refreshed'
+
     token = _load_stockbit_token(_token_file)
     if not token:
         logging.info(f"[keystats] {ticker} stale_shock:{stale_days}d — no token, blocking")
@@ -162,6 +166,31 @@ def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
     except Exception as _e:
         logging.warning(f"[keystats] {ticker} re-fetch error: {_e}")
         return False, f'stale_shock:{stale_days}d,fetch_error'
+
+
+def _batch_refresh_stale_keystats(tickers, ohlcv_map, _db_path=None,
+                                  _token_file=None):
+    """Pre-scan pass: refetch keystats for stale+shock tickers up front so the
+    per-ticker gate in the scan loop stays read-only (audit item 3.6, H-18).
+
+    Reuses check_keystats_freshness(allow_refetch=True) purely for its refetch
+    side effect; per-ticker errors are swallowed so one bad fetch can't abort
+    the pass.
+    """
+    refreshed = 0
+    for ticker in tickers:
+        try:
+            ok, reason = check_keystats_freshness(
+                ticker, ohlcv_map.get(ticker), _db_path=_db_path,
+                _token_file=_token_file, allow_refetch=True,
+            )
+            if reason.startswith("refreshed:"):
+                refreshed += 1
+        except Exception as _e:
+            logging.warning(f"[keystats-batch] {ticker} refresh error: {_e}")
+    if refreshed:
+        logging.info(f"[keystats-batch] refreshed {refreshed} stale+shock tickers pre-scan")
+    return refreshed
 
 
 def _get_sector_scores_cached():
@@ -300,14 +329,22 @@ def scan_momentum_signals():
         macro_data = get_macro_overlay()
     except Exception as _e:
         macro_data = {"idr_weakening": 0.0, "bi_rate": 6.25, "source": "fallback", "error": str(_e)}
+
+    # Pre-scan keystats refetch (audit 3.6/H-18): do all stale+shock network
+    # refetches in one bounded pass BEFORE the loop, so the per-ticker gate below
+    # is read-only (no blocking network interleaved with flow fetch + strategy eval).
+    if _f_fundamental:
+        _batch_refresh_stale_keystats(tickers, ohlcv_map)
+
     for ticker in tickers:
         wf = wf_map.get(ticker)
         if wf and wf["consistency_pct"] < BLACKLIST:
             continue
         df = ohlcv_map.get(ticker)
-        # Fundamental filter
+        # Fundamental filter — read-only (the pre-pass above owns refetching)
         if _f_fundamental:
-            freshness_ok, fresh_reason = check_keystats_freshness(ticker, df)
+            freshness_ok, fresh_reason = check_keystats_freshness(
+                ticker, df, allow_refetch=False)
             if not freshness_ok:
                 logging.info(f"[scan_momentum] {ticker} blocked: {fresh_reason}")
                 continue

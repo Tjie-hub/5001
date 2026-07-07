@@ -165,3 +165,71 @@ class TestCheckKeystatsFreshness:
         assert "refreshed" in reason
         mock_fetch.assert_called_once_with("eyJmYWtlLnRva2Vu.payload.sig", "BRPT")
         mock_save.assert_called_once()
+
+    def test_allow_refetch_false_blocks_without_network(self, tmp_path):
+        """Stale+shock with allow_refetch=False returns a block and never
+        touches the network (the batch pre-pass owns refetching)."""
+        old = (date.today() - timedelta(days=45)).isoformat()
+        db = _make_keystats_db(tmp_path, old)
+        tf = tmp_path / ".stockbit_token"
+        tf.write_text("eyJmYWtlLnRva2Vu.payload.sig")
+        with patch("stockbit_fetcher.fetch_keystats",
+                   side_effect=AssertionError("must not fetch in-loop")):
+            ok, reason = check_keystats_freshness(
+                "BRPT", _shock_df(), _db_path=db, _token_file=str(tf),
+                allow_refetch=False,
+            )
+        assert ok is False
+        assert "stale_shock" in reason
+        assert "not_refreshed" in reason
+
+    def test_allow_refetch_false_still_allows_fresh(self, tmp_path):
+        db = _make_keystats_db(tmp_path, date.today().isoformat())
+        ok, reason = check_keystats_freshness(
+            "BRPT", _flat_df(), _db_path=db, allow_refetch=False,
+        )
+        assert ok is True
+        assert reason == "OK"
+
+    def test_allow_refetch_false_stale_no_shock_allows(self, tmp_path):
+        old = (date.today() - timedelta(days=45)).isoformat()
+        db = _make_keystats_db(tmp_path, old)
+        ok, reason = check_keystats_freshness(
+            "BRPT", _flat_df(), _db_path=db, allow_refetch=False,
+        )
+        assert ok is True
+        assert reason.startswith("stale:")
+
+
+class TestBatchRefreshStaleKeystats:
+    def test_batch_refetches_only_stale_shock_tickers(self, tmp_path):
+        """The pre-pass fetches for a stale+shock ticker and skips a fresh one."""
+        from scheduler.scanner import _batch_refresh_stale_keystats
+        old = (date.today() - timedelta(days=45)).isoformat()
+        db = _make_keystats_db(tmp_path, old)            # BRPT stale
+        with sqlite3.connect(db) as c:
+            c.execute("INSERT INTO stockbit_keystats "
+                      "(ticker, fetch_date, pe_ttm, pbv, roe, updated_at) "
+                      "VALUES ('BBCA', ?, 10, 2, 15, '2026-01-01T00:00:00')",
+                      (date.today().isoformat(),))
+        tf = tmp_path / ".stockbit_token"
+        tf.write_text("eyJmYWtlLnRva2Vu.payload.sig")
+        ohlcv = {"BRPT": _shock_df(), "BBCA": _flat_df()}
+        stats = {"ticker": "BRPT", "pe_ttm": 8.0, "roe": 12.0, "pbv": 2.0}
+        with patch("stockbit_fetcher.fetch_keystats", return_value=stats) as mf, \
+             patch("stockbit_fetcher.save_keystats", return_value=None):
+            _batch_refresh_stale_keystats(["BRPT", "BBCA"], ohlcv,
+                                          _db_path=db, _token_file=str(tf))
+        mf.assert_called_once_with("eyJmYWtlLnRva2Vu.payload.sig", "BRPT")
+
+    def test_batch_swallows_errors_per_ticker(self, tmp_path):
+        """A fetch error for one ticker must not abort the whole pre-pass."""
+        from scheduler.scanner import _batch_refresh_stale_keystats
+        old = (date.today() - timedelta(days=45)).isoformat()
+        db = _make_keystats_db(tmp_path, old)
+        tf = tmp_path / ".stockbit_token"
+        tf.write_text("eyJmYWtlLnRva2Vu.payload.sig")
+        with patch("stockbit_fetcher.fetch_keystats", side_effect=Exception("timeout")):
+            # must not raise
+            _batch_refresh_stale_keystats(["BRPT"], {"BRPT": _shock_df()},
+                                          _db_path=db, _token_file=str(tf))
