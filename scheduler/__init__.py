@@ -227,6 +227,9 @@ def start_scheduler():
     scheduler.start()
     print("Scheduler started:")
     print("  💓 SCHEDULER HEARTBEAT: every 5 min (dead-man's-switch)")
+    # Edge Registry (M1 inversion): load once, announce what production runs on.
+    from engine.registry_loader import announce_registry
+    announce_registry()
     print("  📊 SIGNAL REPORT: 16:00")
     print("  📰 NEWS FETCH: 08:00 pre-market, 17:00 EOD")
     print("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
