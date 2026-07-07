@@ -10,6 +10,7 @@ import os
 import time
 import logging
 import sqlite3
+from data.db import connect as db_connect
 import requests
 from datetime import date as dt_date
 from data.fetcher import load_all_tickers
@@ -171,7 +172,7 @@ def save_ohlcv_to_db(ohlcv_all: dict, trade_date: str, is_final: bool = False) -
     if not rows:
         return 0
     try:
-        conn = sqlite3.connect(_DB_PATH)
+        conn = db_connect(_DB_PATH)
         conn.executemany(
             """INSERT OR REPLACE INTO ohlcv (ticker, date, open, high, low, close, volume, is_final)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -201,7 +202,7 @@ def get_avg_vol_20d_from_db(ticker: str, before_date: str = None) -> int | None:
     if before_date is None:
         before_date = dt_date.today().isoformat()
     try:
-        conn = sqlite3.connect(_DB_PATH)
+        conn = db_connect(_DB_PATH)
         row = conn.execute(
             """SELECT AVG(volume) FROM (
                  SELECT volume FROM ohlcv

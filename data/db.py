@@ -4,8 +4,26 @@ from contextlib import contextmanager
 
 DB_PATH = os.getenv('DB_PATH', os.path.join(os.path.dirname(__file__), 'walkforward.db'))
 
+def connect(path=None, timeout=30):
+    """The one SQLite entry point: timeout + busy_timeout + WAL.
+
+    Drop-in replacement for ``sqlite3.connect(path)`` — no row_factory, same
+    return type, same ``with conn:`` transaction semantics. Every production
+    connection to any of our DBs should come through here so lock-hardening
+    lives in exactly one place (audit item 3.3; the 2026-06 lock bugs were all
+    missing-pragma variants of the same defect).
+    """
+    conn = sqlite3.connect(path or DB_PATH, timeout=timeout)
+    try:
+        conn.execute("PRAGMA busy_timeout=30000")
+        conn.execute("PRAGMA journal_mode=WAL")
+    except sqlite3.OperationalError:
+        pass  # :memory:/read-only paths may reject WAL — timeout still applies
+    return conn
+
+
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = connect()
     conn.row_factory = sqlite3.Row
     return conn
 

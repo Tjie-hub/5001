@@ -18,6 +18,7 @@ import sys
 import time
 import json
 import sqlite3
+from data.db import connect as db_connect
 import logging
 import feedparser
 from datetime import datetime, date, timedelta
@@ -89,7 +90,7 @@ def save_news_count(ticker, count, headlines, trade_date=None, conn=None):
         trade_date = str(date.today())
     own_conn = conn is None
     if own_conn:
-        conn = sqlite3.connect(_DB_PATH)
+        conn = db_connect(_DB_PATH)
     try:
         _ensure_table(conn)
         conn.execute("""
@@ -112,7 +113,7 @@ def get_30d_avg(ticker, conn=None):
     """Average news count over the trailing 30 days, excluding today."""
     own_conn = conn is None
     if own_conn:
-        conn = sqlite3.connect(_DB_PATH)
+        conn = db_connect(_DB_PATH)
     try:
         _ensure_table(conn)
         today_str = str(date.today())
@@ -134,7 +135,7 @@ def has_news_spike(ticker, today_count=None, conn=None):
     """
     own_conn = conn is None
     if own_conn:
-        conn = sqlite3.connect(_DB_PATH)
+        conn = db_connect(_DB_PATH)
     try:
         _ensure_table(conn)
         today_str = str(date.today())
@@ -169,7 +170,7 @@ def get_today_headlines(ticker, conn=None):
     """Return today's saved headlines list for a ticker, or []."""
     own_conn = conn is None
     if own_conn:
-        conn = sqlite3.connect(_DB_PATH)
+        conn = db_connect(_DB_PATH)
     try:
         _ensure_table(conn)
         today_str = str(date.today())
@@ -192,7 +193,7 @@ def get_spiking_tickers(conn=None):
     """Return spike-info dicts for every ticker with a news spike today, sorted by ratio desc."""
     own_conn = conn is None
     if own_conn:
-        conn = sqlite3.connect(_DB_PATH)
+        conn = db_connect(_DB_PATH)
     try:
         _ensure_table(conn)
         today_str = str(date.today())
@@ -219,7 +220,7 @@ def run_news_batch(tickers=None, delay=1.0):
     if not tickers:
         print("[News] No tickers to fetch")
         return 0
-    conn = sqlite3.connect(_DB_PATH)
+    conn = db_connect(_DB_PATH)
     _ensure_table(conn)
     today_str = str(date.today())
     today_obj = date.today()
