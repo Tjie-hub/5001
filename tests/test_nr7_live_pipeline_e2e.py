@@ -73,6 +73,10 @@ def drill_env(tmp_path, monkeypatch):
         monkeypatch.setattr(mod, "DB_PATH", db)
     monkeypatch.setattr(dl, "DB_PATH", db)
 
+    # Macro-panic gate: module-level per-day cache — reset so THIS fixture's
+    # IHSG decides (a prior test's panic verdict must not leak in).
+    monkeypatch.setattr(scanner, "_macro_panic_cache", {})
+
     pt.init_paper_table()
     conn = sqlite3.connect(db)
     conn.execute("CREATE TABLE IF NOT EXISTS ohlcv (ticker TEXT, date TEXT, open REAL,"
@@ -81,6 +85,11 @@ def drill_env(tmp_path, monkeypatch):
     df.assign(ticker="DRILL")[['ticker', 'date', 'open', 'high', 'low', 'close',
                                'volume']].to_sql('ohlcv', conn, if_exists='append',
                                                  index=False)
+    # Calm IHSG (above 200MA, low vol) so the Daniel-Moskowitz panic gate
+    # passes on MERIT (honesty contract: gate 0 of the gauntlet).
+    df.assign(ticker="IHSG")[['ticker', 'date', 'open', 'high', 'low', 'close',
+                              'volume']].to_sql('ohlcv', conn, if_exists='append',
+                                                index=False)
     conn.execute("CREATE TABLE IF NOT EXISTS wf_edge "
                  "(ticker TEXT, strategy TEXT, expectancy_pct REAL)")
     conn.commit(); conn.close()
