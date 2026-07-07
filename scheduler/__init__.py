@@ -56,6 +56,7 @@ from scheduler.jobs import (  # noqa: F401
     run_premarket_firm_scan,
     run_eod_trade_plan,
     run_forward_test_cycle,
+    run_scheduler_heartbeat,
     run_vpin_daily_batch,
     run_vpin_backfill,
     _refresh_backtest_cache,
@@ -215,8 +216,17 @@ def start_scheduler():
         day_of_week="mon-fri", hour=18, minute=30, timezone=WIB),
         id="forward_test_cycle", name="Forward-Test Cycle 18:30")
 
+    # Dead-man's-switch — stamp a heartbeat every 5 min (audit item 3.7). An
+    # external crontab watchdog (scripts/check_scheduler_heartbeat.py) alarms if
+    # this goes stale, catching a dead scheduler/process that would otherwise
+    # silently stop trading.
+    scheduler.add_job(run_scheduler_heartbeat, CronTrigger(
+        minute="*/5", timezone=WIB), id="scheduler_heartbeat",
+        name="Scheduler Heartbeat", replace_existing=True)
+
     scheduler.start()
     print("Scheduler started:")
+    print("  💓 SCHEDULER HEARTBEAT: every 5 min (dead-man's-switch)")
     print("  📊 SIGNAL REPORT: 16:00")
     print("  📰 NEWS FETCH: 08:00 pre-market, 17:00 EOD")
     print("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")

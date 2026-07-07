@@ -13,6 +13,24 @@ DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/d
 
 from utils.telegram import send_telegram  # noqa: E402
 from data.db import connect as db_connect  # noqa: E402
+from engine.heartbeat import write_heartbeat  # noqa: E402
+
+HEARTBEAT_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                              "logs", "scheduler_heartbeat.txt")
+
+
+def run_scheduler_heartbeat():
+    """Dead-man's-switch writer: stamp the heartbeat file (audit 3.7).
+
+    Fires every 5 min regardless of market hours, so a stale file means the
+    scheduler is actually dead — the external watchdog
+    (scripts/check_scheduler_heartbeat.py) alarms on staleness.
+    """
+    from datetime import timezone
+    try:
+        write_heartbeat(HEARTBEAT_PATH, datetime.now(timezone.utc))
+    except Exception as e:  # never let the heartbeat crash the scheduler
+        logging.warning(f"[heartbeat] write failed: {e}")
 from scheduler.utils import get_all_tickers, _load_ohlcv_bulk  # noqa: E402
 
 
