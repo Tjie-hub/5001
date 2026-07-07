@@ -165,3 +165,37 @@ class TestCheckKeystatsFreshness:
         assert "refreshed" in reason
         mock_fetch.assert_called_once_with("eyJmYWtlLnRva2Vu.payload.sig", "BRPT")
         mock_save.assert_called_once()
+
+    def test_allow_refetch_false_blocks_without_network(self, tmp_path):
+        """Stale+shock with allow_refetch=False returns a block and never
+        touches the network (the batch pre-pass owns refetching)."""
+        old = (date.today() - timedelta(days=45)).isoformat()
+        db = _make_keystats_db(tmp_path, old)
+        tf = tmp_path / ".stockbit_token"
+        tf.write_text("eyJmYWtlLnRva2Vu.payload.sig")
+        with patch("stockbit_fetcher.fetch_keystats",
+                   side_effect=AssertionError("must not fetch in-loop")):
+            ok, reason = check_keystats_freshness(
+                "BRPT", _shock_df(), _db_path=db, _token_file=str(tf),
+                allow_refetch=False,
+            )
+        assert ok is False
+        assert "stale_shock" in reason
+        assert "not_refreshed" in reason
+
+    def test_allow_refetch_false_still_allows_fresh(self, tmp_path):
+        db = _make_keystats_db(tmp_path, date.today().isoformat())
+        ok, reason = check_keystats_freshness(
+            "BRPT", _flat_df(), _db_path=db, allow_refetch=False,
+        )
+        assert ok is True
+        assert reason == "OK"
+
+    def test_allow_refetch_false_stale_no_shock_allows(self, tmp_path):
+        old = (date.today() - timedelta(days=45)).isoformat()
+        db = _make_keystats_db(tmp_path, old)
+        ok, reason = check_keystats_freshness(
+            "BRPT", _flat_df(), _db_path=db, allow_refetch=False,
+        )
+        assert ok is True
+        assert reason.startswith("stale:")

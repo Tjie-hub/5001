@@ -99,7 +99,8 @@ def _load_stockbit_token(_token_file: str = None) -> str:
 
 
 def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
-                             _db_path: str = None, _token_file: str = None):
+                             _db_path: str = None, _token_file: str = None,
+                             allow_refetch: bool = True):
     """
     Returns (ok: bool, reason: str).
     Stale + price shock: attempts re-fetch via Stockbit API.
@@ -139,7 +140,10 @@ def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
         logging.debug(f"[keystats] {ticker} stale:{stale_days}d, no shock — allow")
         return True, f'stale:{stale_days}d'
 
-    # Stale + price shock — attempt re-fetch
+    # Stale + price shock — attempt re-fetch (unless the batch pre-pass owns it)
+    if not allow_refetch:
+        return False, f'stale_shock:{stale_days}d,not_refreshed'
+
     token = _load_stockbit_token(_token_file)
     if not token:
         logging.info(f"[keystats] {ticker} stale_shock:{stale_days}d — no token, blocking")
