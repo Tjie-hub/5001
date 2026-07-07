@@ -40,7 +40,6 @@ from scheduler.scanner import (  # noqa: F401
 
 # Re-export jobs
 from scheduler.jobs import (  # noqa: F401
-    refresh_wf_scores,
     run_flow_fetch,
     run_broker_flow_fetch,
     run_ohlcv_reconciliation,
@@ -49,7 +48,6 @@ from scheduler.jobs import (  # noqa: F401
     run_foreign_snapshot,
     run_news_fetch,
     run_premover_eod,
-    run_backtest_roller,
     run_hourly_risk_bundle,
     run_eod_risk_summary,
     run_market_health_report,
@@ -60,7 +58,6 @@ from scheduler.jobs import (  # noqa: F401
     run_phase5_bull_watch,
     run_vpin_daily_batch,
     run_vpin_backfill,
-    _refresh_backtest_cache,
     _run_open_trade_monitor,
     _run_screener_intraday,
     _run_screener_eod,
@@ -100,14 +97,8 @@ def start_scheduler():
         day_of_week="mon-fri", hour=16, minute=0, timezone=WIB
     ), id="daily_scan", name="Signal Report 16:00")
 
-    # WF score refresh — Fri 16:00 WIB
-    scheduler.add_job(refresh_wf_scores, CronTrigger(
-        day_of_week="fri", hour=16, minute=0, timezone=WIB))
-
-    # Backtest cache pre-compute — daily at 08:30 WIB (before market open)
-    scheduler.add_job(_refresh_backtest_cache, CronTrigger(
-        day_of_week="mon-fri", hour=8, minute=30, timezone=WIB),
-        id="backtest_cache_refresh", name="Backtest Cache 08:30")
+    # WF score refresh / backtest cache / roller moved OFF the production
+    # scheduler in M3 (spec §10-M3) — run via `python -m research.cli`.
 
     # Flow fetch — hourly 09:30–15:15 WIB, plus a post-close fetch at 16:05
     # (IDX closes 16:00; 16:05 captures the final pre-closing/closing-auction flow
@@ -183,11 +174,6 @@ def start_scheduler():
     scheduler.add_job(run_premover_eod, CronTrigger(
         day_of_week="mon-fri", hour=16, minute=30, timezone=WIB),
         id="premover_eod", name="Pre-mover EOD Scan 16:30")
-
-    # Backtest roller — 1st Sunday of each month at 10:00 WIB
-    scheduler.add_job(run_backtest_roller, CronTrigger(
-        day="1-7", day_of_week="sun", hour=10, minute=0, timezone=WIB),
-        id="backtest_roller", name="Backtest Roller Sun 10:00")
 
     # VPIN daily batch — 18:00 WIB
     scheduler.add_job(run_vpin_daily_batch, CronTrigger(
