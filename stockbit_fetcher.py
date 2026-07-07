@@ -29,6 +29,7 @@ import re
 import json
 import time
 import sqlite3
+from data.db import connect as db_connect
 import requests
 import base64
 from datetime import datetime
@@ -312,7 +313,7 @@ def parse_value(val):
 
 def init_db():
     """Create stockbit_keystats table if not exists."""
-    conn = sqlite3.connect(WALKFORWARD_DB)
+    conn = db_connect(WALKFORWARD_DB)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS stockbit_keystats (
             ticker TEXT NOT NULL,
@@ -540,7 +541,7 @@ def fetch_flow(token, ticker, date=None):
 
 
 def init_flow_db():
-    conn = sqlite3.connect(WALKFORWARD_DB)
+    conn = db_connect(WALKFORWARD_DB)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS stockbit_flow (
             ticker TEXT NOT NULL,
