@@ -218,7 +218,7 @@ def roll_all(tickers: list = None, include_partial: bool = True,
     Roll walk-forward windows for all (or a subset of) tickers.
     Returns summary: {new_complete, new_partial, tickers_updated, errors, total_tickers}.
     """
-    from scheduler.utils import get_all_tickers, _load_ohlcv_bulk
+    from data.loaders import get_all_tickers, _load_ohlcv_bulk
 
     if db_path is None:
         db_path = DB_PATH
