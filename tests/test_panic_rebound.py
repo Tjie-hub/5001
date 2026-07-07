@@ -14,7 +14,7 @@ from engine.strategies import (
     Trade,
     PANIC_TIME_STOP_BARS,
 )
-from engine.walkforward_multi import compute_metrics, _rank_strategies
+from research.walkforward_multi import compute_metrics, _rank_strategies
 
 
 def _mk_df(closes, opens=None, highs=None, lows=None, volumes=None,
@@ -167,7 +167,7 @@ def test_score_gate_zeroes_losing_strategies():
 
 
 def test_registered_in_strategy_funcs():
-    from engine.walkforward_multi import STRATEGY_FUNCS
+    from research.walkforward_multi import STRATEGY_FUNCS
     assert 'Panic Rebound' in STRATEGY_FUNCS
 
 

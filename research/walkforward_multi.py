@@ -6,7 +6,7 @@ Untuk idx-walkforward integration
 import pandas as pd
 import numpy as np
 from typing import List
-from .strategies import (
+from engine.strategies import (
     strategy_vol_weighted,
     strategy_momentum,
     strategy_vwap_reversion,
@@ -220,26 +220,7 @@ def _summarize_strategy(name: str, window_list: list) -> dict:
     }
 
 
-STRATEGY_FUNCS = {
-    'vol_weighted':              strategy_vol_weighted,
-    'momentum':                  strategy_momentum,
-    'vwap_reversion':            strategy_vwap_reversion,
-    'conservative':              strategy_conservative,
-    'Volume Profile POC':        strategy_volume_profile_poc,
-    'Inside Bar Breakout':       strategy_inside_bar_breakout,
-    'NR7 Breakout':              strategy_nr7_breakout,
-    'ORB':                       strategy_orb,
-    'VWMA Breakout Pullback':    strategy_vwma_breakout_pullback,
-    'Swing Trend':               strategy_swing_trend,
-    'Trend Following Breakout':  strategy_trend_following_breakout,
-    'Crash Recovery':            strategy_crash_recovery,
-    'Panic Rebound':             strategy_panic_rebound,
-    'Liquidity Sweep':           strategy_liquidity_sweep_flow,
-    # 'Regime Adaptive' deregistered 2026-07-02 (audit C-7): whole-window
-    # look-ahead — regime chosen from the window's LAST bar. The function
-    # remains in engine/regime_filter.py; re-register only after a per-bar
-    # reimplementation.
-}
+from engine.strategies import STRATEGY_FUNCS  # noqa: F401,E402  (moved in M2 — shared floor)
 
 
 def run_all_strategies(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None) -> List[dict]:

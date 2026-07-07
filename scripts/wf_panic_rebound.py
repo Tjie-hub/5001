@@ -19,7 +19,7 @@ from collections import defaultdict
 import pandas as pd
 
 from engine.strategies import strategy_panic_rebound
-from engine.walkforward_multi import walk_forward_split
+from research.walkforward_multi import walk_forward_split
 from scheduler.utils import _load_ohlcv_bulk
 
 WARMUP_BARS = 60

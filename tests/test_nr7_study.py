@@ -1,6 +1,6 @@
 import math
 import pytest
-import engine.nr7_study as ns
+import research.nr7_study as ns
 
 
 def _t(ticker, date, entry, exit_, regime='BULL'):

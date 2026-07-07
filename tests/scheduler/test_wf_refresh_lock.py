@@ -13,7 +13,7 @@ import pandas as pd
 import pytest
 
 import scheduler.jobs as jobs
-import engine.walkforward_multi as wfm
+import research.walkforward_multi as wfm
 
 
 def _mini_df(n=80):

@@ -114,8 +114,10 @@ def test_load_ohlcv_bulk_final_only(tmp_path, monkeypatch):
     """Research jobs (WF refresh, backtest cache) must not see provisional
     intraday bars (Phase 2A item 2.1)."""
     import scheduler.utils as su
+    import data.loaders as dl
     db = _mk_prod_like_db(tmp_path)
-    monkeypatch.setattr(su, "DB_PATH", db)
+    # impl moved to data.loaders in M2 — patch the new home (su re-exports it)
+    monkeypatch.setattr(dl, "DB_PATH", db)
     conn = sqlite3.connect(db)
     conn.execute("INSERT INTO ohlcv (ticker,date,open,high,low,close,volume,is_final)"
                  " VALUES ('TST','2026-07-02',1,2,0.5,1.5,10,1)")

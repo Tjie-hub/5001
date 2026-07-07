@@ -4,7 +4,7 @@ generalized collector's shape contract and the scan matrix wiring only."""
 import numpy as np
 import pandas as pd
 
-import scripts.regime_edge_scan as scan
+import research.studies.regime_edge_scan as scan
 from engine.strategies import strategy_vwap_reversion, strategy_vwma_breakout_pullback
 
 
