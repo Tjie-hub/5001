@@ -9,6 +9,10 @@ import pytest
 @pytest.fixture()
 def edge_db(tmp_path, monkeypatch):
     import scheduler.scanner as scanner
+    import engine.registry_loader as rl
+    # This suite tests the LEGACY (ungoverned) wf_edge path; isolate it from
+    # the real Edge Registry so M1 governance doesn't apply here.
+    monkeypatch.setattr(rl, "approved_universe", lambda s: None)
     db = str(tmp_path / "e.db")
     monkeypatch.setattr(scanner, "DB_PATH", db)
     conn = sqlite3.connect(db)

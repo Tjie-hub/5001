@@ -1,0 +1,19 @@
+# registry/edge_registry.yaml — the ONLY research→production interface (spec §6).
+# Entries are IMMUTABLE once status leaves CANDIDATE; changes = new version.
+# Promotion / suspension / rollback = git commit (PR + CI + manual merge).
+- id: NR7_BULL
+  version: 1
+  status: APPROVED
+  strategy_fn: "NR7 Breakout"
+  regimes: [BULL_MODERATE, BULL_STRONG]
+  universe_artifact: artifacts/NR7_BULL_v1_tickers.json
+  risk_category: breakout-long
+  owner: tjie
+  approved: "2026-07-04"
+  manifest: manifests/NR7_BULL_v1.yaml
+  requires:
+    data_schema: 1
+    exit_kernel: 1
+    regime_model: 1
+    engine_version: 1
+  changelog: "v1 — M1 freeze of the live config approved after the Phase-2 recompute (PR #12) and generalization study (PR #18)."

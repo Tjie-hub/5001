@@ -1,0 +1,20 @@
+# registry/manifests/NR7_BULL_v1.yaml — immutable approval evidence (spec §6).
+# Answers "why was NR7_BULL v1 approved?" with every artifact pinned in git.
+approval:
+  strategy: NR7_BULL
+  version: 1
+  approved_by: tjie
+  approval_date: "2026-07-04"
+  decision: "APPROVED for BULL regimes only; per-ticker universe frozen from wf_edge>0. SIDEWAYS explicitly rejected (-0.82%/trade, N=628); universe-wide generalization rejected (T1 -0.001%)."
+artifacts:
+  walkforward: docs/superpowers/results/2026-07-07-nr7-generalization-study.md
+  universe: artifacts/NR7_BULL_v1_tickers.json
+  report: docs/superpowers/results/2026-07-07-regime-edge-scan.md
+  config_hash: "8845c57b918a67ed513e67357d89f5f60388ce61105c20d8d496e303eab87a08"  # sha256 of strategy_nr7_breakout source
+  code_commit: "1e401a8d1e6bad1f4470ddd67fed257912066a56"  # freeze commit
+  corpus_snapshot: {as_of: "2026-07-07", basis: "raw is_final (Phase 2A)", history: "5y"}
+evidence_summary:
+  oos: {exp_net_pct: 1.18, n_trades: 346, win_pct: 54.0, regime: BULL}
+  pooled_44_ticker: {exp_net_pct: 1.75, n_trades: 1061}
+  robustness: {universe_generalization: "FAIL (T1 -0.001%)", regime_stratification: "BULL PASS", sideways: "REJECTED"}
+  shadow: {from: "2026-07-04", trades: 0, verdict: pending}

@@ -640,27 +640,44 @@ def daily_signal_scan():
 
 
 def _edge_selectable(conn, ticker: str, candidates) -> list:
-    """Strategies that earned a live edge for `ticker`: a wf_edge row with
-    POSITIVE pooled OOS expectancy (wf_edge already requires >=20 trades at
-    write time). Best expectancy first. `candidates=None` scans every strategy.
+    """Strategies with a live edge for `ticker`.
 
-    This is the honest selector (Phase 2C, audit C-6). It replaces the old
-    per-ticker consistency gate, which passed strategies that looked consistent
-    on one ticker's windows while losing money across the universe.
+    Registry-governed strategies (spec §6, M1 inversion): eligibility comes from
+    the FROZEN universe artifact in registry/ — production no longer reads
+    research's wf_edge for them. Ungoverned strategies keep the legacy live
+    wf_edge query (positive pooled OOS expectancy, Phase 2C / audit C-6).
+    Governed results first, then ungoverned by expectancy DESC.
     """
     if candidates is not None and not candidates:
         return []
-    sql = ("SELECT strategy FROM wf_edge "
-           "WHERE ticker = ? AND expectancy_pct > 0")
-    params = [ticker]
-    if candidates is not None:
-        sql += " AND strategy IN (%s)" % ",".join("?" * len(candidates))
-        params += list(candidates)
-    sql += " ORDER BY expectancy_pct DESC"
-    try:
-        return [r[0] for r in conn.execute(sql, params).fetchall()]
-    except Exception:
-        return []
+    from engine.registry_loader import approved_universe
+    governed, ungoverned = [], []
+    if candidates is None:
+        ungoverned = None          # legacy: scan every strategy in wf_edge
+    else:
+        for s in candidates:
+            uni = approved_universe(s)
+            if uni is not None:
+                if ticker in uni:
+                    governed.append(s)
+            else:
+                ungoverned.append(s)
+    result = list(governed)
+    if ungoverned is None or ungoverned:
+        sql = ("SELECT strategy FROM wf_edge "
+               "WHERE ticker = ? AND expectancy_pct > 0")
+        params = [ticker]
+        if ungoverned is not None:
+            sql += " AND strategy IN (%s)" % ",".join("?" * len(ungoverned))
+            params += list(ungoverned)
+        sql += " ORDER BY expectancy_pct DESC"
+        try:
+            for r in conn.execute(sql, params).fetchall():
+                if r[0] not in result:
+                    result.append(r[0])
+        except Exception:
+            pass
+    return result
 
 
 def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
