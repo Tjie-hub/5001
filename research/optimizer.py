@@ -242,7 +242,7 @@ def grid_search(
     Returns list sorted by Sharpe (descending).
     Each item: {'params': {...}, 'metrics': {...}}.
     """
-    from engine.walkforward_multi import compute_metrics
+    from research.walkforward_multi import compute_metrics
     if strategy_key not in STRATEGY_RUNNERS:
         raise ValueError(f"Unknown strategy: {strategy_key!r}. Valid: {list(STRATEGY_RUNNERS)}")
     runner = STRATEGY_RUNNERS[strategy_key]
@@ -276,7 +276,7 @@ def optimize_strategy(
     """
     import numpy as np
     from collections import Counter
-    from engine.walkforward_multi import compute_metrics, walk_forward_split
+    from research.walkforward_multi import compute_metrics, walk_forward_split
 
     if strategy_key not in STRATEGY_RUNNERS:
         raise ValueError(f"Unknown strategy: {strategy_key!r}. Valid: {list(STRATEGY_RUNNERS)}")

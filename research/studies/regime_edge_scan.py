@@ -4,23 +4,23 @@
 Runs every roster strategy through walk-forward across the liquid universe,
 labels each OOS trade's entry regime, and classifies each (strategy, regime)
 cell CONFIRMED / PROMISING / REJECTED against pre-registered thresholds. Reuses
-engine.nr7_study for all statistics. Read-only w.r.t. production.
+research.nr7_study for all statistics. Read-only w.r.t. production.
 """
 import json
 import os
 import sys
 from datetime import datetime
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import pandas as pd
 
 from data.db import connect as db_connect
 from engine.liquidity import get_adv_value_30d, VALUE_LIQ_MIN_IDR
-from engine.walkforward_multi import STRATEGY_FUNCS, walk_forward_split
+from research.walkforward_multi import STRATEGY_FUNCS, walk_forward_split
 from engine.regime_filter import detect_regime
 from engine.exits.costs import COMMISSION_SELL, SLIPPAGE
-import engine.nr7_study as ns
+import research.nr7_study as ns
 
 DB_PATH = os.getenv('DB_PATH', os.path.join(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))), 'data', 'walkforward.db'))
