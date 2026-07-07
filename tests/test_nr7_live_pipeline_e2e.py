@@ -149,3 +149,37 @@ def test_e2e_signal_to_paper_trade(drill_env, monkeypatch):
     conn.close()
     assert row["strategy"] == "NR7 Breakout"
     assert row["lots"] > 0 and row["sl_price"] < entry_price
+
+
+def test_e2e_monitor_closes_with_net_pnl(drill_env, monkeypatch):
+    """After opening, append a TP-hitting bar; monitor._check_trade (production)
+    must close via the kernel with NET P&L consistent with the cost model."""
+    import paper_trade as pt
+    import monitor as mon
+    from engine.strategies import check_current_entry_signal
+    df = drill_env["df"]
+
+    sig = check_current_entry_signal("DRILL", "NR7 Breakout", df)
+    entry_price = float(sig["details"]["price"])
+    trade = pt.open_trade("DRILL", entry_price, notify=False, strategy="NR7 Breakout")
+    assert "error" not in trade
+
+    conn = sqlite3.connect(drill_env["db"]); conn.row_factory = sqlite3.Row
+    row = dict(conn.execute("SELECT * FROM paper_trades WHERE ticker='DRILL' "
+                            "AND status='OPEN'").fetchone())
+    tp = float(row["tp_price"])
+    # next session gaps through TP
+    conn.execute("INSERT INTO ohlcv VALUES ('DRILL', '2026-07-09', ?, ?, ?, ?, 2000000)",
+                 (tp * 1.001, tp * 1.02, tp * 0.999, tp * 1.01))
+    conn.commit(); conn.close()
+
+    res = mon._check_trade(row)
+    assert res["should_close"] is True
+    assert res["exit_reason"] in ("TP", "TRAIL", "SL", "MA_BREAK", "TIME")
+
+    closed = pt.close_trade(row["id"], float(res["exit_price"]),
+                            exit_reason=res["exit_reason"], notify=False)
+    # NET P&L: costs on both legs already applied by close_trade (Phase 1C)
+    gross_pct = (float(res["exit_price"]) - entry_price) / entry_price * 100
+    assert closed["pnl_pct"] < gross_pct            # net < gross, always
+    assert closed["pnl_pct"] == pytest.approx(gross_pct - 0.60, abs=0.25)
