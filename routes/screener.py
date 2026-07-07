@@ -151,14 +151,14 @@ def dive(ticker):
 
 @screener_main_bp.route('/api/fastmover/summary', methods=['GET'])
 def api_fastmover_summary():
-    from engine.fastmover_study import get_summary
+    from research.fastmover_study import get_summary
     return jsonify(get_summary(DB_PATH))
 
 
 @screener_main_bp.route('/api/fastmover/run', methods=['POST'])
 def api_fastmover_run():
     import threading
-    from engine.fastmover_study import run_study
+    from research.fastmover_study import run_study
 
     def _run():
         try:
@@ -178,7 +178,7 @@ def api_ticker_full(ticker):
     import sqlite3, pandas as pd
     from engine.strategies import check_current_entry_signal
     from engine.regime_filter import detect_regime
-    from engine.walkforward_multi import STRATEGY_FUNCS
+    from engine.strategies import STRATEGY_FUNCS
 
     ticker = ticker.upper()
     conn = sqlite3.connect(DB_PATH)
@@ -463,7 +463,7 @@ STRATEGY_MARKER_META = {
 
 @screener_main_bp.route('/api/strategy/list', methods=['GET'])
 def api_strategy_list():
-    from engine.walkforward_multi import STRATEGY_FUNCS
+    from engine.strategies import STRATEGY_FUNCS
     items = []
     for key in STRATEGY_FUNCS:
         meta = STRATEGY_MARKER_META.get(key, {'label': key, 'color': '#94a3b8', 'text': '•'})
@@ -481,7 +481,7 @@ def api_strategy_markers(strategy, ticker):
     """
     import sqlite3
     import pandas as pd
-    from engine.walkforward_multi import STRATEGY_FUNCS
+    from engine.strategies import STRATEGY_FUNCS
 
     ticker = ticker.upper()
     if strategy not in STRATEGY_FUNCS:

@@ -77,7 +77,7 @@ def test_live_check_blocked_by_negative_flow(monkeypatch):
 
 
 def test_registered_in_strategy_funcs():
-    from engine.walkforward_multi import STRATEGY_FUNCS
+    from research.walkforward_multi import STRATEGY_FUNCS
     assert 'Liquidity Sweep' in STRATEGY_FUNCS
 
 

@@ -11,7 +11,7 @@ rolling folds, warmup tail, test-window trade filter) — across many tickers �
 at trail mults {2.5 (shipped), 3.0, 3.5} and compares the headline metrics.
 
 It calls the REAL engine.strategy_trend_following_breakout (now parameterized
-with atr_mult, default 2.5) and mirrors engine.walkforward_multi.run_walk_forward
+with atr_mult, default 2.5) and mirrors research.walkforward_multi.run_walk_forward
 exactly for the TFB path — so the only thing varying is the exit tightness.
 
 DECISION
@@ -37,7 +37,7 @@ import numpy as np
 
 from config import DB_PATH
 from engine.strategies import strategy_trend_following_breakout
-from engine.walkforward_multi import walk_forward_split, compute_metrics
+from research.walkforward_multi import walk_forward_split, compute_metrics
 from engine.indicators import get_warmup, calc_vwap, calc_adx, calc_ma_slope, calc_atr
 
 CAPITAL = 50_000_000
