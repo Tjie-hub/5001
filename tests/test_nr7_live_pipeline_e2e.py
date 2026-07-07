@@ -57,3 +57,95 @@ def test_fixture_fires_nr7_checker():
     sig = check_nr7_signal(_drill_df())
     assert sig['has_signal'] is True, sig.get('reason')
     assert sig['details'].get('price') or sig['details'].get('entry')
+
+
+@pytest.fixture()
+def drill_env(tmp_path, monkeypatch):
+    """Fixture DB + test registry governing DRILL; production DB_PATHs repointed."""
+    import paper_trade as pt
+    import monitor as mon
+    import scheduler.scanner as scanner
+    import engine.registry_loader as rl
+    import data.loaders as dl
+
+    db = str(tmp_path / "drill.db")
+    for mod in (pt, mon, scanner):
+        monkeypatch.setattr(mod, "DB_PATH", db)
+    monkeypatch.setattr(dl, "DB_PATH", db)
+
+    pt.init_paper_table()
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE IF NOT EXISTS ohlcv (ticker TEXT, date TEXT, open REAL,"
+                 " high REAL, low REAL, close REAL, volume REAL)")
+    df = _drill_df()
+    df.assign(ticker="DRILL")[['ticker', 'date', 'open', 'high', 'low', 'close',
+                               'volume']].to_sql('ohlcv', conn, if_exists='append',
+                                                 index=False)
+    conn.execute("CREATE TABLE IF NOT EXISTS wf_edge "
+                 "(ticker TEXT, strategy TEXT, expectancy_pct REAL)")
+    conn.commit(); conn.close()
+
+    # test registry: DRILL in NR7's frozen universe
+    reg = tmp_path / "registry"; (reg / "artifacts").mkdir(parents=True)
+    (reg / "artifacts" / "u.json").write_text(json.dumps({"tickers": ["DRILL"]}))
+    entry = [dict(id="NR7_BULL", version=1, status="APPROVED",
+                  strategy_fn="NR7 Breakout", regimes=["BULL_MODERATE", "BULL_STRONG"],
+                  universe_artifact="artifacts/u.json", risk_category="t", owner="t",
+                  approved="2026-07-08", manifest="m.yaml",
+                  requires=dict(data_schema=1, exit_kernel=1, regime_model=1,
+                                engine_version=1), changelog="drill")]
+    (reg / "edge_registry.yaml").write_text(yaml.safe_dump(entry))
+    monkeypatch.setattr(rl, "REGISTRY_PATH", str(reg / "edge_registry.yaml"))
+    rl._reset_cache()
+    yield {"db": db, "df": df}
+    rl._reset_cache()
+
+
+def test_e2e_signal_to_paper_trade(drill_env, monkeypatch):
+    """The seven-gate gauntlet, every function production: selector → checker →
+    firm gate (inactive) → check_trend → open_trade ⇒ a paper_trades row."""
+    import paper_trade as pt
+    from scheduler.scanner import adaptive_strategy_selector, run_agent_firm_gate
+    from engine.strategies import check_current_entry_signal
+    df = drill_env["df"]
+
+    # Gate 1-2: registry universe + regime map + ADX band + edge gate
+    strategies = adaptive_strategy_selector("DRILL", df)
+    assert "NR7 Breakout" in strategies, f"selector gave {strategies}"
+
+    # Gate 3: live checker (production dispatch)
+    sig = check_current_entry_signal("DRILL", "NR7 Breakout", df)
+    assert sig["has_signal"], sig.get("reason")
+    entry_price = float(sig["details"]["price"])
+
+    # Gate 4 (flow): network seam — signal arrives flow-confirmed
+    result = {"ticker": "DRILL", "strategies": ["NR7 Breakout"],
+              "flow": {"score": 3.0, "verdict": "BUY", "smart_money": "YES",
+                       "confirmed": True},
+              "signal_details": {"NR7 Breakout": sig["details"]}}
+
+    # Gate 5 (agent firm): production gate, firm inactive → passthrough
+    import engine.agent_firm as _pkg
+    import engine.agent_firm.config  # noqa: F401  (bind submodule before patching)
+    import engine.agent_firm.firm    # noqa: F401
+    import sys as _sys
+    from unittest.mock import MagicMock, patch
+    cfg = MagicMock(); cfg.is_active = MagicMock(return_value=False)
+    with patch.object(_pkg, "config", cfg), \
+         patch.dict(_sys.modules, {"engine.agent_firm.config": cfg}):
+        kept = run_agent_firm_gate([result], [result], "2026-07-08", "16:00")
+    assert kept and kept[0]["ticker"] == "DRILL"
+
+    # Gate 6: trend gate (production, reads fixture DB)
+    assert pt.check_trend("DRILL") == "UPTREND"
+
+    # Gate 7: open_trade — sizing off actual stop distance
+    trade = pt.open_trade("DRILL", entry_price, notify=False,
+                          strategy="NR7 Breakout")
+    assert "error" not in trade, trade.get("error")
+    conn = sqlite3.connect(drill_env["db"]); conn.row_factory = sqlite3.Row
+    row = dict(conn.execute("SELECT * FROM paper_trades WHERE ticker='DRILL' "
+                            "AND status='OPEN'").fetchone())
+    conn.close()
+    assert row["strategy"] == "NR7 Breakout"
+    assert row["lots"] > 0 and row["sl_price"] < entry_price
