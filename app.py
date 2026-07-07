@@ -11,6 +11,7 @@ from screener.routes import screener_bp
 from screener.db import init_screener_tables
 from stockbit_fetcher import init_flow_db
 from data.db import init_agent_firm_tables
+from data.db import connect as db_connect
 from routes.telegram import telegram_bp, telegram_poller_loop
 from routes.flow import flow_bp
 from routes.screener import screener_main_bp
@@ -62,7 +63,7 @@ def health():
     import sqlite3
     result = {"status": "ok", "db": "ok", "last_scan": None, "open_trades": 0}
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         result["last_scan"] = conn.execute(
             "SELECT MAX(scan_time) FROM scheduled_signals"
         ).fetchone()[0]
@@ -139,7 +140,7 @@ def prometheus_metrics():
             return None
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         from datetime import date as _date
         import datetime as _dt
         today = str(_date.today())

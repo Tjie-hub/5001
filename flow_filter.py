@@ -16,6 +16,7 @@ import os
 import sys
 import time
 import sqlite3
+from data.db import connect as db_connect
 import requests
 from datetime import datetime, date
 
@@ -258,7 +259,7 @@ def get_flow_from_db(ticker, trade_date=None):
     if trade_date is None:
         trade_date = str(date.today())
     try:
-        conn = sqlite3.connect(_DB_PATH)
+        conn = db_connect(_DB_PATH)
         row = conn.execute(
             """SELECT composite_score, verdict, smart_money,
                       buy_lot, sell_lot, net_lot, net_value, last_price
@@ -293,7 +294,7 @@ def get_foreign_accumulation(ticker, days=5, db_path=None):
     if db_path is None:
         db_path = _DB_PATH
     try:
-        conn = sqlite3.connect(db_path)
+        conn = db_connect(db_path)
         dates = [r[0] for r in conn.execute(
             """SELECT DISTINCT trade_date FROM broker_flow
                WHERE investor_type='Asing' AND ticker=?
@@ -348,7 +349,7 @@ def get_top_foreign_accumulation(tickers=None, days=5, top_n=10, db_path=None):
         db_path = _DB_PATH
     if tickers is None:
         try:
-            conn = sqlite3.connect(db_path)
+            conn = db_connect(db_path)
             tickers = [r[0] for r in conn.execute(
                 "SELECT DISTINCT ticker FROM broker_flow WHERE investor_type='Asing'"
             ).fetchall()]
@@ -372,7 +373,7 @@ def save_results_to_db(results, db_path=None):
     if db_path is None:
         db_path = _DB_PATH
     trade_date = str(date.today())
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS stockbit_flow (
             ticker TEXT, trade_date TEXT, composite_score INTEGER,
@@ -460,7 +461,7 @@ def get_market_accdist_summary(date=None):
         'label': 'NEUTRAL',
     }
     try:
-        conn = sqlite3.connect(_DB_PATH)
+        conn = db_connect(_DB_PATH)
         rows = conn.execute(
             "SELECT broker_accdist FROM bandar_detector WHERE trade_date=?",
             (date,),

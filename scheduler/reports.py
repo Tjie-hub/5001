@@ -13,6 +13,7 @@ WIB = pytz.timezone("Asia/Jakarta")
 DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
 
 from utils.telegram import send_telegram  # noqa: E402
+from data.db import connect as db_connect  # noqa: E402
 
 
 def _holiday_skip(fn_name: str) -> bool:
@@ -41,7 +42,7 @@ def daily_fetch_report():
         time_str = now.strftime("%H:%M")
         date_str = now.strftime("%d/%m/%Y")
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         cursor = conn.cursor()
 
         # Count total tickers
@@ -80,7 +81,7 @@ def daily_fetch_report():
         # Flow fetch counts for today
         today_str = now.strftime("%Y-%m-%d")
         try:
-            flow_conn = sqlite3.connect(DB_PATH)
+            flow_conn = db_connect(DB_PATH)
             flow_ticker_count = flow_conn.execute(
                 "SELECT COUNT(DISTINCT ticker) FROM stockbit_flow WHERE trade_date=?", (today_str,)
             ).fetchone()[0]
@@ -159,7 +160,7 @@ def open_trades_status_report():
             return
 
         # Get current prices
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
 
         msg = f"📊 <b>Open Trades Report — {time_str}</b>\n\n"
 
@@ -315,7 +316,7 @@ def flow_broker_report():
             get_today_headlines = lambda *a, **kw: []
 
         # Get today's signals (from 16:00 scan)
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         signals = pd.read_sql(
             'SELECT ticker FROM daily_screen WHERE date = date("now") AND signal IS NOT NULL ORDER BY ticker',
             conn
@@ -468,7 +469,7 @@ def auto_trade_status_report():
         return
     now = datetime.now(WIB).strftime("%d/%m/%Y %H:%M")
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
 
         # Get last auto-trade results from yesterday
         yesterday = (datetime.now() - __import__('datetime').timedelta(days=1)).strftime("%Y-%m-%d")

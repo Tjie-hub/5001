@@ -17,6 +17,7 @@ Alert threshold: score >= 50 (at minimum CONTINUATION + one more check).
 """
 
 import sqlite3
+from data.db import connect as db_connect
 import json
 import pandas as pd
 import numpy as np
@@ -399,9 +400,7 @@ def run_scan(db_path: str, send_alert_fn=None) -> list:
 
     Returns list of NEW setups inserted this run (not previously seen today).
     """
-    conn = sqlite3.connect(db_path, timeout=30)
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=30000")
+    conn = db_connect(db_path)
     _init_table(conn)
 
     detected_at = datetime.now().strftime('%Y-%m-%d')
@@ -492,7 +491,7 @@ def get_watchlist(db_path: str, min_score: int = ALERT_THRESHOLD,
                   days: int = 5, fired: bool = False,
                   pattern_type: str = None) -> list:
     """Return active watchlist entries from the last N days."""
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     _init_table(conn)
     try:
         clauses = ['score >= ?', 'fired = ?',
@@ -536,7 +535,7 @@ def get_watchlist(db_path: str, min_score: int = ALERT_THRESHOLD,
 
 def mark_fired(db_path: str, ticker: str):
     """Mark ticker's unfired setups as fired (breakout occurred)."""
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     _init_table(conn)
     conn.execute("""
         UPDATE watchlist_premover SET fired=1, fired_at=datetime('now')
@@ -553,7 +552,7 @@ def daily_pattern_summary(db_path: str, days: int = 1) -> str:
     one-per-pattern_type ordered by alert count desc. Returns an empty
     string when there are no alerts in the window.
     """
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     _init_table(conn)
     rows = conn.execute("""
         SELECT

@@ -2,6 +2,7 @@
 import os
 from dotenv import load_dotenv
 import sqlite3
+from data.db import connect as db_connect
 import json
 from datetime import datetime
 import pytz
@@ -20,7 +21,7 @@ def calc_swing_tp(ticker: str, entry_price: float, lookback: int = 20) -> float:
     """
     import pandas as pd
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         df = pd.read_sql(
             'SELECT date, high, close FROM ohlcv WHERE ticker=? ORDER BY date DESC LIMIT ?',
             conn,
@@ -66,7 +67,7 @@ def calc_swing_tp(ticker: str, entry_price: float, lookback: int = 20) -> float:
         return round(entry_price * 1.04)
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
