@@ -115,3 +115,19 @@ def startup_summary():
     n_sh = sum(1 for e in r['entries'] if e['status'] == 'SHADOW')
     return (f"registry @{r['hash']}: {n_app} approved, {n_sh} shadow, "
             f"{len(r['skipped'])} skipped")
+
+
+def announce_registry(telegram_fn=None):
+    """Log + best-effort Telegram the loaded registry state at startup."""
+    msg = "📜 " + startup_summary()
+    logger.info(msg)
+    print(f"  {msg}")
+    if telegram_fn is None:
+        try:
+            from utils.telegram import send_telegram as telegram_fn
+        except Exception:
+            return
+    try:
+        telegram_fn(msg)
+    except Exception as ex:
+        logger.debug("registry announce telegram failed: %s", ex)

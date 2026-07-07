@@ -79,3 +79,16 @@ def test_approved_universe_and_summary(tmp_path, monkeypatch):
     s = rl.startup_summary()
     assert "1 approved" in s and "1 shadow" in s and "0 skipped" in s
     rl._reset_cache()
+
+
+def test_startup_banner_helper_never_raises(monkeypatch):
+    # announce_registry logs + telegrams best-effort; must never raise.
+    monkeypatch.setattr(rl, "get_registry",
+                        lambda: {'entries': [], 'skipped': [], 'hash': 'x'})
+    sent = []
+    rl.announce_registry(telegram_fn=lambda m: sent.append(m))
+    assert sent and "registry @x" in sent[0]
+
+    def _boom(_m):
+        raise RuntimeError("down")
+    rl.announce_registry(telegram_fn=_boom)   # must not raise
