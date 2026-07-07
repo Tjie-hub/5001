@@ -133,8 +133,17 @@ def refresh_wf_scores():
             # cross-ticker average walk-forward return is negative. This is how the
             # Jan-2026 regime break should have been caught in days, not months.
             try:
-                from scheduler.scanner import _get_disabled_strategies
-                disabled = _get_disabled_strategies()
+                # Inline paper_config read (M3): research must not import the
+                # scanner. Data-level read of production config is the allowed
+                # direction; prod always has the key (set by Phase 2C).
+                try:
+                    _raw = conn.execute(
+                        "SELECT value FROM paper_config WHERE key='disabled_strategies'"
+                    ).fetchone()
+                    disabled = {s.strip() for s in str(_raw[0]).split(',')
+                                if s.strip()} if _raw else set()
+                except Exception:
+                    disabled = set()
                 rows = conn.execute(
                     "SELECT strategy, ROUND(AVG(avg_return_pct),2), COUNT(*) "
                     "FROM wf_scores GROUP BY strategy"
