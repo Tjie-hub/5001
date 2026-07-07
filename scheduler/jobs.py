@@ -1212,3 +1212,54 @@ def run_forward_test_cycle(db_path=None, run_date=None):
               f"ingested={n_ingested} opened={opened} closed={closed} open_now={open_after}")
     except Exception as e:
         print(f"[scheduler] Forward-test cycle error: {e}")
+
+
+def run_phase5_bull_watch():
+    """Phase 5 (spec 2026-07-08): daily post-EOD regime-band check for the NR7
+    governed universe; Telegram on band TRANSITIONS only (state persisted in
+    phase5_regime_state) so the moment the market lets NR7 trade is loud."""
+    import pandas as pd
+    from engine.registry_loader import approved_universe
+    from engine.phase5_watch import band_changes
+    from engine.regime_filter import detect_regime
+    from engine.indicators import calc_adx
+    from scheduler.scanner import _BULL_STRONG_ADX
+    universe = approved_universe("NR7 Breakout") or set()
+    if not universe:
+        return
+    conn = db_connect(DB_PATH)
+    try:
+        conn.execute("CREATE TABLE IF NOT EXISTS phase5_regime_state "
+                     "(ticker TEXT PRIMARY KEY, band TEXT, updated TEXT)")
+        prev = {r[0]: r[1] for r in conn.execute(
+            "SELECT ticker, band FROM phase5_regime_state")}
+        cur = {}
+        for t in sorted(universe):
+            df = pd.read_sql("SELECT date, open, high, low, close, volume FROM ohlcv "
+                             "WHERE ticker=? ORDER BY date DESC LIMIT 250",
+                             conn, params=(t,)).iloc[::-1].reset_index(drop=True)
+            if len(df) < 30:
+                continue
+            reg = detect_regime(df)
+            if reg == 'BULL':
+                try:
+                    adx = float(calc_adx(df, 14).iloc[-1])
+                except Exception:
+                    adx = 0.0
+                reg = 'BULL_STRONG' if adx >= _BULL_STRONG_ADX else 'BULL_MODERATE'
+            cur[t] = reg
+        changes = band_changes(prev, cur)
+        now_s = datetime.now(WIB).strftime("%Y-%m-%d %H:%M")
+        for t, band in cur.items():
+            conn.execute("INSERT OR REPLACE INTO phase5_regime_state VALUES (?,?,?)",
+                         (t, band, now_s))
+        conn.commit()
+    finally:
+        conn.close()
+    if changes:
+        eligible_n = sum(1 for b in cur.values()
+                         if b in ("BULL_MODERATE", "BULL_STRONG"))
+        lines = [f"{'🟢' if new in ('BULL_MODERATE','BULL_STRONG') else '⚪'} "
+                 f"{t}: {old} → {new}" for t, old, new in changes]
+        send_telegram("📡 <b>PHASE 5 BULL-watch</b>\n" + "\n".join(lines)
+                      + f"\nNR7-eligible now: {eligible_n}/{len(cur)}")
