@@ -57,6 +57,7 @@ from scheduler.jobs import (  # noqa: F401
     run_eod_trade_plan,
     run_forward_test_cycle,
     run_scheduler_heartbeat,
+    run_phase5_bull_watch,
     run_vpin_daily_batch,
     run_vpin_backfill,
     _refresh_backtest_cache,
@@ -216,6 +217,13 @@ def start_scheduler():
         day_of_week="mon-fri", hour=18, minute=30, timezone=WIB),
         id="forward_test_cycle", name="Forward-Test Cycle 18:30")
 
+    # Phase 5 (spec 2026-07-08) — daily BULL-watch on the NR7 governed universe;
+    # alerts only on band transitions, so the moment NR7 becomes eligible is loud.
+    scheduler.add_job(run_phase5_bull_watch, CronTrigger(
+        day_of_week="mon-fri", hour=17, minute=10, timezone=WIB),
+        id="phase5_bull_watch", name="Phase 5 BULL-watch 17:10",
+        replace_existing=True)
+
     # Dead-man's-switch — stamp a heartbeat every 5 min (audit item 3.7). An
     # external crontab watchdog (scripts/check_scheduler_heartbeat.py) alarms if
     # this goes stale, catching a dead scheduler/process that would otherwise
@@ -227,6 +235,7 @@ def start_scheduler():
     scheduler.start()
     print("Scheduler started:")
     print("  💓 SCHEDULER HEARTBEAT: every 5 min (dead-man's-switch)")
+    print("  📡 PHASE 5 BULL-WATCH: 17:10 (NR7 universe band transitions)")
     # Edge Registry (M1 inversion): load once, announce what production runs on.
     from engine.registry_loader import announce_registry
     announce_registry()

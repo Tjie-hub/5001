@@ -1455,6 +1455,22 @@ def scheduled_multi_strategy_scan():
             r.setdefault('signal_direction', 'BUY')
         _save_signals_to_db(conn, flow_confirmed, date_str, time_str)
 
+        # Phase 5 (spec 2026-07-08): distinctive alert when NR7 — the one
+        # approved edge — fires live; the GO/NO-GO clock runs on these.
+        try:
+            _nr7_hits = [r['ticker'] for r in flow_confirmed
+                         if 'NR7 Breakout' in (r.get('strategies') or [])]
+            if _nr7_hits:
+                from engine.phase5_watch import nr7_signal_alert_msg
+                _n = conn.execute(
+                    "SELECT COUNT(*) FROM scheduled_signals WHERE "
+                    "strategies LIKE '%NR7%' AND signal_direction='BUY'"
+                ).fetchone()[0]
+                for _t in _nr7_hits:
+                    send_telegram(nr7_signal_alert_msg(_t, _n))
+        except Exception as _p5e:
+            logging.warning(f"[phase5] signal alert failed: {_p5e}")
+
         # ── SELL/BEARISH signal path ──────────────────────────────────────────
         sell_signals = scan_distribution_signals(ohlcv_map, date_str, time_str)
         if sell_signals:
