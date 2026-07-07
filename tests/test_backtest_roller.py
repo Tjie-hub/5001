@@ -93,12 +93,13 @@ def test_roll_ticker_partial_window():
 def test_roll_all_returns_summary(monkeypatch, tmp_path):
     """roll_all returns dict with expected keys."""
     import research.backtest_roller as roller
-    import scheduler.utils as sutils
+    import data.loaders as dl
     db = str(tmp_path / "test.db")
     df = _make_df(400)
     monkeypatch.setattr(roller, "DB_PATH", db)
-    monkeypatch.setattr(sutils, "_load_ohlcv_bulk", lambda: {"ACES": df})
-    monkeypatch.setattr(sutils, "get_all_tickers", lambda: ["ACES"])
+    # roller's lazy import resolves data.loaders at call time (M2) — patch there
+    monkeypatch.setattr(dl, "_load_ohlcv_bulk", lambda: {"ACES": df})
+    monkeypatch.setattr(dl, "get_all_tickers", lambda: ["ACES"])
 
     result = roller.roll_all(db_path=db)
     for key in ["new_complete", "new_partial", "tickers_updated", "errors", "total_tickers"]:
