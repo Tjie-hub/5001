@@ -2,7 +2,7 @@
 """NR7 edge-generalization study runner (audit Phase 4, first increment).
 
 Runs NR7 walk-forward across the liquid universe, labels each OOS trade with its
-entry regime, feeds engine.nr7_study, and writes a results doc + JSON. Read-only
+entry regime, feeds research.nr7_study, and writes a results doc + JSON. Read-only
 w.r.t. production: creates no live-path changes, only the results file.
 """
 import json
@@ -10,17 +10,17 @@ import os
 import sys
 from datetime import datetime
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import pandas as pd
 
 from data.db import connect as db_connect
 from engine.liquidity import get_adv_value_30d, VALUE_LIQ_MIN_IDR
 from engine.strategies import strategy_nr7_breakout
-from engine.walkforward_multi import walk_forward_split
+from research.walkforward_multi import walk_forward_split
 from engine.regime_filter import detect_regime
 from engine.exits.costs import COMMISSION_SELL, SLIPPAGE
-import engine.nr7_study as ns
+import research.nr7_study as ns
 
 DB_PATH = os.getenv('DB_PATH', os.path.join(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))), 'data', 'walkforward.db'))

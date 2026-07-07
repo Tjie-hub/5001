@@ -49,7 +49,7 @@ def roll_ticker(ticker: str, df: pd.DataFrame, conn: sqlite3.Connection,
     Insert any new walk-forward windows for ticker into backtest_windows.
     Returns {'new_complete': int, 'new_partial': int}.
     """
-    from engine.walkforward_multi import run_walk_forward, walk_forward_split, STRATEGY_FUNCS
+    from research.walkforward_multi import run_walk_forward, walk_forward_split, STRATEGY_FUNCS
     from engine.regime_filter import build_regime_features
 
     if len(df) < 60:
@@ -124,7 +124,7 @@ def _roll_partial(ticker: str, df: pd.DataFrame, windows: list,
     Insert/update the current in-progress test window (data beyond last complete test_end).
     Replaces any existing partial row for this ticker. Returns 1 if inserted, 0 otherwise.
     """
-    from engine.walkforward_multi import STRATEGY_FUNCS, compute_metrics
+    from research.walkforward_multi import STRATEGY_FUNCS, compute_metrics
     from engine.regime_filter import build_regime_features
 
     if not windows:
@@ -218,7 +218,7 @@ def roll_all(tickers: list = None, include_partial: bool = True,
     Roll walk-forward windows for all (or a subset of) tickers.
     Returns summary: {new_complete, new_partial, tickers_updated, errors, total_tickers}.
     """
-    from scheduler.utils import get_all_tickers, _load_ohlcv_bulk
+    from data.loaders import get_all_tickers, _load_ohlcv_bulk
 
     if db_path is None:
         db_path = DB_PATH

@@ -19,9 +19,9 @@ def _make_df(n=80, seed=42):
 
 
 def test_run_returns_expected_keys():
-    from engine.portfolio_backtest import run_portfolio_backtest
+    from research.portfolio_backtest import run_portfolio_backtest
     df = _make_df(80, seed=1)
-    with patch('engine.portfolio_backtest._load_ohlcv', return_value=df):
+    with patch('research.portfolio_backtest._load_ohlcv', return_value=df):
         result = run_portfolio_backtest(['AAA', 'BBB'], 'vol_weighted', 10_000_000, ':memory:')
     assert 'portfolio' in result
     assert 'per_ticker' in result
@@ -31,28 +31,28 @@ def test_run_returns_expected_keys():
 
 
 def test_equity_curve_length_equals_date_intersection():
-    from engine.portfolio_backtest import run_portfolio_backtest
+    from research.portfolio_backtest import run_portfolio_backtest
     df_a = _make_df(80, seed=1)
     df_b = _make_df(80, seed=2)
 
     def _mock(ticker, db_path):
         return df_a if ticker == 'AAA' else df_b
 
-    with patch('engine.portfolio_backtest._load_ohlcv', side_effect=_mock):
+    with patch('research.portfolio_backtest._load_ohlcv', side_effect=_mock):
         result = run_portfolio_backtest(['AAA', 'BBB'], 'vol_weighted', 10_000_000, ':memory:')
 
     assert len(result['portfolio']['equity_curve']) == 80
 
 
 def test_portfolio_return_equals_equal_weight_average():
-    from engine.portfolio_backtest import run_portfolio_backtest
+    from research.portfolio_backtest import run_portfolio_backtest
     df_a = _make_df(80, seed=1)
     df_b = _make_df(80, seed=2)
 
     def _mock(ticker, db_path):
         return df_a if ticker == 'AAA' else df_b
 
-    with patch('engine.portfolio_backtest._load_ohlcv', side_effect=_mock):
+    with patch('research.portfolio_backtest._load_ohlcv', side_effect=_mock):
         result = run_portfolio_backtest(['AAA', 'BBB'], 'vol_weighted', 10_000_000, ':memory:')
 
     r_a = result['per_ticker'][0]['total_return_pct']
@@ -62,14 +62,14 @@ def test_portfolio_return_equals_equal_weight_average():
 
 
 def test_correlation_matrix_symmetric_and_diagonal_one():
-    from engine.portfolio_backtest import run_portfolio_backtest
+    from research.portfolio_backtest import run_portfolio_backtest
     df_a = _make_df(80, seed=1)
     df_b = _make_df(80, seed=2)
 
     def _mock(ticker, db_path):
         return df_a if ticker == 'AAA' else df_b
 
-    with patch('engine.portfolio_backtest._load_ohlcv', side_effect=_mock):
+    with patch('research.portfolio_backtest._load_ohlcv', side_effect=_mock):
         result = run_portfolio_backtest(['AAA', 'BBB'], 'vol_weighted', 10_000_000, ':memory:')
 
     m = result['correlation']['matrix']
@@ -79,14 +79,14 @@ def test_correlation_matrix_symmetric_and_diagonal_one():
 
 
 def test_ticker_skipped_if_less_than_60_bars():
-    from engine.portfolio_backtest import run_portfolio_backtest
+    from research.portfolio_backtest import run_portfolio_backtest
     df_short = _make_df(30, seed=1)
     df_ok    = _make_df(80, seed=2)
 
     def _mock(ticker, db_path):
         return df_short if ticker == 'SHORT' else df_ok
 
-    with patch('engine.portfolio_backtest._load_ohlcv', side_effect=_mock):
+    with patch('research.portfolio_backtest._load_ohlcv', side_effect=_mock):
         result = run_portfolio_backtest(['SHORT', 'OK'], 'vol_weighted', 10_000_000, ':memory:')
 
     assert 'SHORT' in result['tickers_skipped']
@@ -94,32 +94,32 @@ def test_ticker_skipped_if_less_than_60_bars():
 
 
 def test_all_skipped_raises_value_error():
-    from engine.portfolio_backtest import run_portfolio_backtest
+    from research.portfolio_backtest import run_portfolio_backtest
     df_short = _make_df(30, seed=1)
-    with patch('engine.portfolio_backtest._load_ohlcv', return_value=df_short):
+    with patch('research.portfolio_backtest._load_ohlcv', return_value=df_short):
         with pytest.raises(ValueError, match='No tickers with sufficient data'):
             run_portfolio_backtest(['AAA', 'BBB'], 'vol_weighted', 10_000_000, ':memory:')
 
 
 def test_unknown_strategy_raises_value_error():
-    from engine.portfolio_backtest import run_portfolio_backtest
+    from research.portfolio_backtest import run_portfolio_backtest
     with pytest.raises(ValueError, match='Unknown strategy'):
         run_portfolio_backtest(['AAA'], 'nonexistent_strat', 10_000_000, ':memory:')
 
 
 def test_single_ticker_correlation_is_one_by_one():
-    from engine.portfolio_backtest import run_portfolio_backtest
+    from research.portfolio_backtest import run_portfolio_backtest
     df = _make_df(80, seed=1)
-    with patch('engine.portfolio_backtest._load_ohlcv', return_value=df):
+    with patch('research.portfolio_backtest._load_ohlcv', return_value=df):
         result = run_portfolio_backtest(['AAA'], 'vol_weighted', 10_000_000, ':memory:')
     assert result['correlation']['matrix'] == [[1.0]]
     assert result['correlation']['tickers'] == ['AAA']
 
 
 def test_per_ticker_allocation_sums_to_capital():
-    from engine.portfolio_backtest import run_portfolio_backtest
+    from research.portfolio_backtest import run_portfolio_backtest
     df = _make_df(80, seed=1)
-    with patch('engine.portfolio_backtest._load_ohlcv', return_value=df):
+    with patch('research.portfolio_backtest._load_ohlcv', return_value=df):
         result = run_portfolio_backtest(['AAA', 'BBB', 'CCC'], 'vol_weighted', 9_000_000, ':memory:')
     total = sum(t['allocation'] for t in result['per_ticker'])
     assert abs(total - 9_000_000) < 10

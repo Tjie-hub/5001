@@ -23,7 +23,7 @@ def _make_df(n_bars: int = 400, start: str = "2024-01-02") -> pd.DataFrame:
 
 
 def test_init_table_creates_backtest_windows():
-    from engine.backtest_roller import _init_table
+    from research.backtest_roller import _init_table
     conn = sqlite3.connect(":memory:")
     _init_table(conn)
     tables = [r[0] for r in conn.execute(
@@ -38,7 +38,7 @@ def test_init_table_creates_backtest_windows():
 
 def test_roll_ticker_inserts_complete_windows():
     """roll_ticker inserts complete windows for a 400-bar ticker."""
-    from engine.backtest_roller import _init_table, roll_ticker
+    from research.backtest_roller import _init_table, roll_ticker
     conn = sqlite3.connect(":memory:")
     _init_table(conn)
     df = _make_df(400)
@@ -53,7 +53,7 @@ def test_roll_ticker_inserts_complete_windows():
 
 def test_roll_ticker_idempotent():
     """Calling roll_ticker twice inserts no duplicate rows."""
-    from engine.backtest_roller import _init_table, roll_ticker
+    from research.backtest_roller import _init_table, roll_ticker
     conn = sqlite3.connect(":memory:")
     _init_table(conn)
     df = _make_df(400)
@@ -68,7 +68,7 @@ def test_roll_ticker_idempotent():
 
 def test_roll_ticker_skips_short_df():
     """Tickers with <60 bars return zero without error."""
-    from engine.backtest_roller import _init_table, roll_ticker
+    from research.backtest_roller import _init_table, roll_ticker
     conn = sqlite3.connect(":memory:")
     _init_table(conn)
     df = _make_df(50)
@@ -78,7 +78,7 @@ def test_roll_ticker_skips_short_df():
 
 def test_roll_ticker_partial_window():
     """roll_ticker with include_partial=True includes partial window key in result."""
-    from engine.backtest_roller import _init_table, roll_ticker
+    from research.backtest_roller import _init_table, roll_ticker
     conn = sqlite3.connect(":memory:")
     _init_table(conn)
     df = _make_df(400)
@@ -92,13 +92,14 @@ def test_roll_ticker_partial_window():
 
 def test_roll_all_returns_summary(monkeypatch, tmp_path):
     """roll_all returns dict with expected keys."""
-    import engine.backtest_roller as roller
-    import scheduler.utils as sutils
+    import research.backtest_roller as roller
+    import data.loaders as dl
     db = str(tmp_path / "test.db")
     df = _make_df(400)
     monkeypatch.setattr(roller, "DB_PATH", db)
-    monkeypatch.setattr(sutils, "_load_ohlcv_bulk", lambda: {"ACES": df})
-    monkeypatch.setattr(sutils, "get_all_tickers", lambda: ["ACES"])
+    # roller's lazy import resolves data.loaders at call time (M2) — patch there
+    monkeypatch.setattr(dl, "_load_ohlcv_bulk", lambda: {"ACES": df})
+    monkeypatch.setattr(dl, "get_all_tickers", lambda: ["ACES"])
 
     result = roller.roll_all(db_path=db)
     for key in ["new_complete", "new_partial", "tickers_updated", "errors", "total_tickers"]:
@@ -109,7 +110,7 @@ def test_roll_all_returns_summary(monkeypatch, tmp_path):
 
 def test_export_meta_dataset_format(tmp_path):
     """export_meta_dataset writes valid JSON matching meta_dataset_backtest.json schema."""
-    import engine.backtest_roller as roller
+    import research.backtest_roller as roller
     db = str(tmp_path / "test.db")
     out = str(tmp_path / "out.json")
 
@@ -146,7 +147,7 @@ def test_export_meta_dataset_format(tmp_path):
 
 def test_export_meta_dataset_ticker_filter(tmp_path):
     """export_meta_dataset tickers= parameter filters output."""
-    import engine.backtest_roller as roller
+    import research.backtest_roller as roller
     db = str(tmp_path / "test.db")
     out = str(tmp_path / "out.json")
 

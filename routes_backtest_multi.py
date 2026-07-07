@@ -10,7 +10,7 @@ import json
 import sqlite3
 import pandas as pd
 from flask import Blueprint, jsonify, request
-from engine.walkforward_multi import run_all_strategies, run_walk_forward
+from research.walkforward_multi import run_all_strategies, run_walk_forward
 from engine.strategies import (
     filter_vwma_above, filter_above_ma50,
     filter_low_atr, filter_vr_min, filter_uptrend

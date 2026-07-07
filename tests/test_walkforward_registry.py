@@ -21,7 +21,7 @@ def _ohlcv(n=120):
 
 
 def test_run_all_strategies_covers_registry_without_errors():
-    from engine.walkforward_multi import run_all_strategies, STRATEGY_FUNCS
+    from research.walkforward_multi import run_all_strategies, STRATEGY_FUNCS
     results = run_all_strategies(_ohlcv(), capital=50_000_000)
     names = {r["strategy"] for r in results}
     assert len(results) == len(STRATEGY_FUNCS)

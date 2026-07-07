@@ -5,7 +5,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-from engine.walkforward_multi import STRATEGY_FUNCS, compute_metrics
+from research.walkforward_multi import STRATEGY_FUNCS, compute_metrics
 
 
 def _load_ohlcv(ticker: str, db_path: str) -> pd.DataFrame:

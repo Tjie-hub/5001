@@ -102,7 +102,7 @@ def attach_flow_data(results, include_flow=True, flow_threshold=2):
 @backtest_bp.route('/api/backtest/scan_all', methods=['POST'])
 def api_scan_all():
     import sqlite3, pandas as pd
-    from engine.walkforward_multi import run_all_strategies
+    from research.walkforward_multi import run_all_strategies
     from engine.regime_filter import detect_regime
     from routes_backtest_multi import resolve_filters
     body = request.get_json(force=True)
@@ -250,7 +250,7 @@ def api_quick_scan():
     """Quick scan - signal check + backtest metrics for each ticker"""
     import sqlite3, pandas as pd
     from engine.strategies import check_current_entry_signal
-    from engine.walkforward_multi import run_all_strategies
+    from research.walkforward_multi import run_all_strategies
     from engine.regime_filter import detect_regime
 
     body = request.get_json(force=True)
@@ -426,7 +426,7 @@ def api_precompute():
     Run this once daily (or manually) to speed up quick_scan.
     """
     import sqlite3, pandas as pd
-    from engine.walkforward_multi import run_all_strategies
+    from research.walkforward_multi import run_all_strategies
     from engine.regime_filter import detect_regime
     from datetime import date
 
@@ -551,7 +551,7 @@ def api_multi_quick_scan():
 
     if intersection_mode:
         # INTERSECTION: hanya ticker yang pass SEMUA strategy
-        from engine.walkforward_multi import run_all_strategies
+        from research.walkforward_multi import run_all_strategies
         from engine.regime_filter import detect_regime
         capital = float(body.get('capital', 50_000_000))
 
@@ -671,7 +671,7 @@ def api_multi_quick_scan():
         })
     else:
         # UNION: group by strategy - include backtest metrics
-        from engine.walkforward_multi import run_all_strategies
+        from research.walkforward_multi import run_all_strategies
         from engine.regime_filter import detect_regime
         capital = float(body.get('capital', 50_000_000))
         results_by_strategy = {s: [] for s in strategies}
@@ -1124,7 +1124,7 @@ def api_optimizer_run():
     if not ticker or not strategy:
         return jsonify({'error': 'ticker and strategy required'}), 400
 
-    from engine.optimizer import STRATEGY_RUNNERS, optimize_strategy, save_optimizer_result
+    from research.optimizer import STRATEGY_RUNNERS, optimize_strategy, save_optimizer_result
     if strategy not in STRATEGY_RUNNERS:
         return jsonify({
             'error': f"Unknown strategy: {strategy!r}. Valid: {list(STRATEGY_RUNNERS)}"
@@ -1157,7 +1157,7 @@ def api_optimizer_run():
 @backtest_bp.route('/api/optimizer/result/<ticker>/<strategy>', methods=['GET'])
 def api_optimizer_result(ticker, strategy):
     """GET cached optimizer result for (ticker, strategy)."""
-    from engine.optimizer import get_optimizer_result
+    from research.optimizer import get_optimizer_result
     result = get_optimizer_result(ticker.upper(), strategy, DB_PATH)
     if not result:
         return jsonify({'error': f'No optimizer result for {ticker}/{strategy}'}), 404
@@ -1170,7 +1170,7 @@ def api_backtest_roll():
     Body: {"tickers": ["BRPT", ...], "include_partial": true}
     tickers is optional — omit to roll all tickers.
     """
-    from engine.backtest_roller import roll_all, export_meta_dataset
+    from research.backtest_roller import roll_all, export_meta_dataset
     body = request.get_json(force=True) or {}
     tickers = body.get('tickers')
     include_partial = bool(body.get('include_partial', True))

@@ -89,7 +89,7 @@ def refresh_wf_scores():
     at the end (lock held ~seconds, not the ~35 min that used to block EOD scans).
     A pid-aware _job_lock guard prevents concurrent refreshes from stacking.
     """
-    from engine.walkforward_multi import run_walk_forward
+    from research.walkforward_multi import run_walk_forward
     from engine.wf_edge import aggregate_wf_windows, save_wf_edge, ensure_wf_edge_table
     from datetime import datetime as dt
 
@@ -516,7 +516,7 @@ def _run_screener_eod():
 
 def _refresh_backtest_cache():
     try:
-        from engine.walkforward_multi import run_all_strategies
+        from research.walkforward_multi import run_all_strategies
         from engine.regime_filter import detect_regime
         from datetime import date
         today = date.today().isoformat()
@@ -667,7 +667,7 @@ def run_premover_eod():
 
 def run_backtest_roller():
     """Monthly backtest window roller — appends new windows, exports JSON."""
-    from engine.backtest_roller import roll_all, export_meta_dataset
+    from research.backtest_roller import roll_all, export_meta_dataset
     now_str = datetime.now(WIB).strftime('%H:%M')
     print(f"[{now_str}] Backtest roller dimulai...")
     try:

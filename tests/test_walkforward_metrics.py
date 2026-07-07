@@ -1,7 +1,7 @@
 """Phase 2B — walk-forward summary metric correctness (audit item 2.7)."""
 import math
 
-from engine.walkforward_multi import _summarize_strategy
+from research.walkforward_multi import _summarize_strategy
 
 
 def _win(total_return_pct, profit_factor, win_rate=50.0, sharpe=0.5,
@@ -39,7 +39,7 @@ def test_summary_shapes_are_json_safe():
         assert math.isfinite(v)
 
 
-from engine.walkforward_multi import compute_metrics, SHARPE_MIN_TRADES
+from research.walkforward_multi import compute_metrics, SHARPE_MIN_TRADES
 
 
 class _T:
@@ -78,7 +78,7 @@ def test_sharpe_computed_at_or_above_floor():
 
 import pandas as pd
 import numpy as np
-from engine.walkforward_multi import walk_forward_split
+from research.walkforward_multi import walk_forward_split
 
 
 def _five_year_daily_df():

@@ -5,8 +5,8 @@ from flask import Blueprint, jsonify, request
 
 from config import DB_PATH
 from engine.sector_rotation import IDX_SECTOR_MAP
-from engine.walkforward_multi import STRATEGY_FUNCS
-from engine.portfolio_backtest import run_portfolio_backtest
+from engine.strategies import STRATEGY_FUNCS
+from research.portfolio_backtest import run_portfolio_backtest
 
 portfolio_bp = Blueprint('portfolio', __name__)
 
