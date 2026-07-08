@@ -15,8 +15,9 @@ from langgraph.graph import END, StateGraph
 
 from . import config
 from .agents import bear, bull, flow, news, regime, risk, technical
-from .client import DeepSeekClient
 from .guardrails import apply_guardrails
+from .providers.base import FirmLLMProvider
+from .providers.factory import build_router
 from .schemas import AgentDecision, AgentResult, AgentState, SignalCandidate
 from .tools import news_lookup
 from .tools.sqlite_query import query
@@ -226,7 +227,8 @@ async def _run_risk(state: AgentState) -> dict:
     ]
     tokens_in = sum(t.tokens_in for t in traces)
     tokens_out = sum(t.tokens_out for t in traces)
-    cost_usd = DeepSeekClient._calc_cost(tokens_in, tokens_out)
+    cost_usd = sum(t.cost_usd for t in traces)
+    providers_used = sorted({t.provider for t in traces if t.provider})
     candidate = state["candidate"]
 
     decision = AgentDecision(
@@ -243,6 +245,7 @@ async def _run_risk(state: AgentState) -> dict:
         tokens_out=tokens_out,
         cost_usd=cost_usd,
         duration_s=0.0,
+        providers_used=providers_used,
     )
     return {"risk_result": result, "decision": decision}
 
@@ -281,10 +284,10 @@ _GRAPH = _build_graph()
 
 async def evaluate_async(
     candidates: list[SignalCandidate],
-    client: DeepSeekClient | None = None,
+    client: FirmLLMProvider | None = None,
 ) -> list[AgentDecision]:
     if client is None:
-        client = DeepSeekClient()
+        client = build_router()
     initial_states = [
         AgentState(
             candidate=c,
@@ -308,7 +311,7 @@ async def evaluate_async(
 
 def evaluate(
     candidates: list[SignalCandidate],
-    client: DeepSeekClient | None = None,
+    client: FirmLLMProvider | None = None,
 ) -> list[AgentDecision]:
     if not config.is_active():
         return [
@@ -331,7 +334,7 @@ def evaluate(
 
 async def _run_stage1(
     candidate: SignalCandidate,
-    client: DeepSeekClient,
+    client: FirmLLMProvider,
 ) -> tuple[AgentResult, AgentResult]:
     """Stage 1: technical + regime in parallel (~$0.004 per candidate)."""
     import data.db as _db
@@ -364,7 +367,7 @@ def _is_both_bearish(tech: AgentResult, reg: AgentResult) -> bool:
 
 async def evaluate_staged_async(
     candidates: list[SignalCandidate],
-    client: DeepSeekClient | None = None,
+    client: FirmLLMProvider | None = None,
 ) -> list[AgentDecision]:
     """
     Two-stage evaluation:
@@ -374,7 +377,7 @@ async def evaluate_staged_async(
     In bear markets, 60-80% of candidates fail Stage 1.
     """
     if client is None:
-        client = DeepSeekClient()
+        client = build_router()
 
     stage1_pairs = await asyncio.gather(*[_run_stage1(c, client) for c in candidates])
 
@@ -385,6 +388,8 @@ async def evaluate_staged_async(
         if _is_both_bearish(tech_r, reg_r):
             tokens_in = tech_r.tokens_in + reg_r.tokens_in
             tokens_out = tech_r.tokens_out + reg_r.tokens_out
+            cost_usd = tech_r.cost_usd + reg_r.cost_usd
+            providers_used = sorted({p for p in (tech_r.provider, reg_r.provider) if p})
             decision = AgentDecision(
                 ticker=candidate.ticker,
                 strategy=candidate.strategy,
@@ -395,8 +400,9 @@ async def evaluate_staged_async(
                 traces=[tech_r, reg_r],
                 tokens_in=tokens_in,
                 tokens_out=tokens_out,
-                cost_usd=DeepSeekClient._calc_cost(tokens_in, tokens_out),
+                cost_usd=cost_usd,
                 duration_s=0.0,
+                providers_used=providers_used,
             )
             vetoed.append(decision)
             _persist(decision)
@@ -409,7 +415,7 @@ async def evaluate_staged_async(
 
 def evaluate_staged(
     candidates: list[SignalCandidate],
-    client: DeepSeekClient | None = None,
+    client: FirmLLMProvider | None = None,
 ) -> list[AgentDecision]:
     """Sync wrapper for evaluate_staged_async. Use instead of evaluate() in bear markets."""
     if not config.is_active():
@@ -438,14 +444,14 @@ def _persist(decision: AgentDecision) -> int:
         cur = conn.execute(
             "INSERT OR REPLACE INTO agent_decisions "
             "(scan_time, ticker, strategy, quant_score, decision, confidence, "
-            "size_hint, rationale, tokens_in, tokens_out, cost_usd, duration_s) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            "size_hint, rationale, tokens_in, tokens_out, cost_usd, duration_s, providers_used) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 decision.scan_time, decision.ticker, decision.strategy,
                 decision.quant_score, decision.decision, decision.confidence,
                 decision.size_hint, decision.rationale,
                 decision.tokens_in, decision.tokens_out, decision.cost_usd,
-                decision.duration_s,
+                decision.duration_s, json.dumps(decision.providers_used),
             ),
         )
         decision_id = cur.lastrowid
@@ -453,13 +459,16 @@ def _persist(decision: AgentDecision) -> int:
             conn.execute(
                 "INSERT INTO agent_traces "
                 "(decision_id, role, prompt_version, output, tools_called, "
-                "tokens_in, tokens_out, duration_s) "
-                "VALUES (?,?,?,?,?,?,?,?)",
+                "tokens_in, tokens_out, duration_s, provider, model, "
+                "runtime_version, failover, error) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     decision_id, trace.role, trace.prompt_version,
                     None if trace.output is None else json.dumps(trace.output),
                     json.dumps(trace.tools_called),
                     trace.tokens_in, trace.tokens_out, trace.duration_s,
+                    trace.provider, trace.model, trace.runtime_version,
+                    int(trace.failover), trace.error,
                 ),
             )
         conn.commit()
