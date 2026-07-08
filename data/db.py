@@ -119,12 +119,43 @@ def init_agent_firm_tables():
             scan_time TEXT NOT NULL,
             ticker TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS provider_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type TEXT NOT NULL,
+            provider TEXT NOT NULL,
+            model TEXT,
+            reason TEXT,
+            duration_s REAL,
+            request_id TEXT,
+            failover INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_provider_events_provider_date
+            ON provider_events(provider, created_at);
     """)
+
     cols = {r[1] for r in conn.execute("PRAGMA table_info(scheduled_signals)")}
     if "agent_decision_id" not in cols:
         conn.execute(
             "ALTER TABLE scheduled_signals ADD COLUMN agent_decision_id INTEGER "
             "REFERENCES agent_decisions(id)"
         )
+
+    trace_cols = {r[1] for r in conn.execute("PRAGMA table_info(agent_traces)")}
+    for col, ddl in [
+        ("provider", "ALTER TABLE agent_traces ADD COLUMN provider TEXT"),
+        ("model", "ALTER TABLE agent_traces ADD COLUMN model TEXT"),
+        ("runtime_version", "ALTER TABLE agent_traces ADD COLUMN runtime_version TEXT"),
+        ("failover", "ALTER TABLE agent_traces ADD COLUMN failover INTEGER DEFAULT 0"),
+        ("error", "ALTER TABLE agent_traces ADD COLUMN error TEXT"),
+    ]:
+        if col not in trace_cols:
+            conn.execute(ddl)
+
+    decision_cols = {r[1] for r in conn.execute("PRAGMA table_info(agent_decisions)")}
+    if "providers_used" not in decision_cols:
+        conn.execute("ALTER TABLE agent_decisions ADD COLUMN providers_used TEXT")
+
     conn.commit()
     conn.close()

@@ -35,3 +35,36 @@ def test_indexes_exist(tmp_db):
     idx = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
     assert "idx_agent_decisions_ticker_date" in idx
     assert "idx_agent_traces_decision" in idx
+
+
+def test_agent_traces_has_provider_columns(tmp_db):
+    conn = sqlite3.connect(tmp_db)
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(agent_traces)")}
+    assert {"provider", "model", "runtime_version", "failover", "error"}.issubset(cols)
+
+
+def test_agent_decisions_has_providers_used(tmp_db):
+    conn = sqlite3.connect(tmp_db)
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(agent_decisions)")}
+    assert "providers_used" in cols
+
+
+def test_provider_events_table_exists(tmp_db):
+    conn = sqlite3.connect(tmp_db)
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(provider_events)")}
+    expected = {"id", "event_type", "provider", "model", "reason",
+                "duration_s", "request_id", "failover", "created_at"}
+    assert expected.issubset(cols)
+
+
+def test_provider_events_index_exists(tmp_db):
+    conn = sqlite3.connect(tmp_db)
+    idx = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+    assert "idx_provider_events_provider_date" in idx
+
+
+def test_migration_idempotent_on_existing_db(tmp_db):
+    """Calling init_agent_firm_tables() twice must not error (existing columns)."""
+    from data.db import init_agent_firm_tables
+    init_agent_firm_tables()
+    init_agent_firm_tables()
