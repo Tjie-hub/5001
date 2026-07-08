@@ -35,3 +35,13 @@ Promotion/suspension/rollback = git commit (PR + CI + manual merge). Never edit 
 approved entry — supersede it with a new version. Each APPROVED/SHADOW version carries an
 approval manifest binding: walkforward output, frozen universe, report, config hash,
 code commit, corpus snapshot.
+
+## Research data products (M4-lite, 2026-07-08)
+
+`wf_scores`, `wf_edge`, `backtest_cache` live in `walkforward.db` but are research
+data products: **only `research/` writes them** (CI-enforced by
+`tests/test_research_data_fence.py`; DAO exception `engine/wf_edge.py`, whose
+`save_wf_edge` is research-only by rule W2). Production may read them (legacy gates,
+dashboards); each such reader's retirement toward registry-artifact evidence is a
+future, separate decision. `ensure_wf_edge_table` (idempotent CREATE) stays usable by
+readers — schema-safety, not a data write.
