@@ -30,9 +30,14 @@ class AgentResult(BaseModel):
     prompt_version: str = "v1"
     tokens_in: int = 0
     tokens_out: int = 0
+    cost_usd: float = 0.0
     duration_s: float = 0.0
     tools_called: list[dict[str, Any]] = Field(default_factory=list)
     error: Optional[str] = None
+    provider: str = ""
+    model: str = ""
+    runtime_version: str = ""
+    failover: bool = False
 
 
 class AgentDecision(BaseModel):
@@ -49,13 +54,14 @@ class AgentDecision(BaseModel):
     tokens_out: int = 0
     cost_usd: float = 0.0
     duration_s: float = 0.0
+    providers_used: list[str] = Field(default_factory=list)
 
 
 class AgentState(TypedDict):
     candidate: SignalCandidate
     db_path: str
     context: dict[str, Any]
-    client: Any  # DeepSeekClient — in-memory only, not serialized
+    client: Any  # FirmLLMProvider (in practice, the ProviderRouter) — in-memory only, not serialized
     technical_result: Optional[AgentResult]
     flow_result: Optional[AgentResult]
     regime_result: Optional[AgentResult]

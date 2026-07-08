@@ -74,3 +74,21 @@ def test_agent_decision_rejects_invalid_decision():
             scan_time="2026-05-19T16:00:00+07:00",
             quant_score=4.2, decision="maybe",
         )
+
+
+def test_agent_result_provider_fields_default_empty():
+    from engine.agent_firm.schemas import AgentResult
+    r = AgentResult(role="technical", status="ok")
+    assert r.provider == ""
+    assert r.model == ""
+    assert r.runtime_version == ""
+    assert r.failover is False
+    assert r.cost_usd == 0.0
+
+
+def test_agent_decision_providers_used_defaults_empty_list():
+    from engine.agent_firm.schemas import AgentDecision
+    d = AgentDecision(
+        ticker="BBRI", strategy="x", scan_time="t", quant_score=1.0, decision="approve",
+    )
+    assert d.providers_used == []
