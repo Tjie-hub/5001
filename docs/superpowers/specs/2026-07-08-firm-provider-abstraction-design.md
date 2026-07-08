@@ -66,6 +66,7 @@ practice, the Router itself, which also satisfies the interface).
 ```python
 class FirmLLMProvider(Protocol):
     name: str                                   # "claude" | "zai"
+    capabilities: ProviderCapabilities           # see below
 
     async def generate(
         self, messages: list[dict], *, timeout: float | None = None,
@@ -77,6 +78,32 @@ class FirmLLMProvider(Protocol):
 ```
 
 No `availability()`, no `retry()` on the interface (see §2, §3).
+
+### ProviderCapabilities
+
+Static metadata each provider declares about itself, so future providers
+(e.g. a tool-less local model, or one without native JSON mode) can be
+added — and the Router/Firm can make informed decisions about them — without
+ever changing the `FirmLLMProvider` method signatures themselves:
+
+```python
+class ProviderCapabilities(BaseModel):
+    supports_json_mode: bool        # can force valid-JSON output natively
+    supports_json_schema: bool      # can enforce a specific JSON Schema
+    supports_tools: bool            # can be given tool/function definitions
+    max_context_tokens: int | None = None
+```
+
+`ZAIProvider.capabilities` → `supports_json_mode=True` (already sets
+`response_format={"type": "json_object"}`), `supports_json_schema=False`,
+`supports_tools=True` (unused by Firm today, but true of the underlying
+API). `ClaudeProvider.capabilities` → `supports_json_mode=True`,
+`supports_json_schema=True` (CLI's `--json-schema` flag), `supports_tools=
+True` (deliberately disabled per-call via `--disallowedTools`, see §5 — a
+capability being *true* doesn't mean Firm chooses to use it). Nothing in
+this refactor currently branches on capabilities — they're declared now so
+a future provider lacking one of them has a documented contract to satisfy
+instead of requiring a `FirmLLMProvider` interface change.
 
 ### ProviderResponse
 
@@ -90,7 +117,9 @@ class ProviderResponse(BaseModel):
     cost_usd: float
     duration_s: float
     request_id: str | None = None   # Claude: session_id; Z.ai: response.id
-    timestamp: str                  # ISO8601, set at response time
+    timestamp: datetime             # UTC, set at response time — not a
+                                     # string, so callers can do time-range
+                                     # math/comparisons without reparsing
     failover: bool = False          # True if this is a fallback response
                                      # after the primary provider failed
 ```
@@ -156,6 +185,38 @@ unchanged).
 provider-local resilience for transient errors); that is distinct from the
 Router's cross-provider failover.
 
+### Provider Registry
+
+The Router is built from provider **names** (`AGENT_FIRM_PRIMARY`/
+`_FALLBACK`, or a single `AGENT_FIRM_PROVIDER`), not hardcoded classes —
+`router.py` never imports `ClaudeProvider`/`ZAIProvider` directly.
+`engine/agent_firm/providers/registry.py` holds the name → constructor
+mapping:
+
+```python
+_PROVIDERS: dict[str, Callable[[], FirmLLMProvider]] = {}
+
+def register(name: str):
+    def deco(cls):
+        _PROVIDERS[name] = cls
+        return cls
+    return deco
+
+def build(name: str) -> FirmLLMProvider:
+    if name not in _PROVIDERS:
+        raise ValueError(f"unknown provider {name!r}; registered: {list(_PROVIDERS)}")
+    return _PROVIDERS[name]()
+```
+
+`ClaudeProvider`/`ZAIProvider` self-register via `@register("claude")` /
+`@register("zai")` class decorators. A future `OpenAIProvider` does the
+same in its own file — the Router's `build(primary_name)`/
+`build(fallback_name)` calls, and the `AGENT_FIRM_PROVIDER` validation in
+§4, need zero changes to accommodate it. `firm.py`'s lazy-import pattern
+(`__init__.py` already avoids eager `langgraph` import) extends naturally
+here: `router.py` only imports whichever provider module(s) are actually
+named in config, via the registry's lazy `build()`.
+
 ## 4. Configuration
 
 All env-var based, matching the existing all-`os.getenv` pattern in
@@ -180,11 +241,18 @@ AGENT_FIRM_CLAUDE_TIMEOUT=      # optional override; falls back to PROVIDER_TIME
 
 **Startup validation, fail loud:** when the Router is constructed (lazily,
 first call into `firm.evaluate()` — matching the existing lazy-import
-pattern in `__init__.py`), validate `AGENT_FIRM_PROVIDER ∈
-{claude, zai, auto}` and, if `auto`, that `AGENT_FIRM_PRIMARY` /
-`AGENT_FIRM_FALLBACK` are each in `{claude, zai}` and distinct. An invalid
-value raises immediately with a clear message — never silently falls back
-to a default provider.
+pattern in `__init__.py`), validate:
+
+1. `AGENT_FIRM_PROVIDER ∈ {claude, zai, auto}`.
+2. If `auto`: `AGENT_FIRM_PRIMARY` and `AGENT_FIRM_FALLBACK` are each a
+   name registered in the Provider Registry (§3) — so this check
+   automatically covers future providers too, not just `{claude, zai}`.
+3. **`AGENT_FIRM_PRIMARY != AGENT_FIRM_FALLBACK`** — a router configured to
+   fail over to itself is a config error, not a valid single-provider
+   setup (use `AGENT_FIRM_PROVIDER=claude` for that).
+
+Any violation raises immediately with a clear message identifying which
+check failed — never silently falls back to a default provider.
 
 ## 5. ClaudeProvider
 
@@ -292,9 +360,15 @@ queries — not a live/streaming metrics system.
 
 ```python
 def provider_stats(db_path: str, provider: str, since: str) -> ProviderStats:
-    """calls, failures, timeouts, failovers, avg/p50/p95 duration_s,
-    (zai only) total cost_usd + tokens, computed from agent_traces."""
+    """calls, failures, timeouts, failovers, success_rate,
+    avg/p50/p95 duration_s, (zai only) total cost_usd + tokens,
+    computed from agent_traces."""
 ```
+
+`success_rate = (calls - failures) / calls` (`1.0` when `calls == 0`,
+avoiding a divide-by-zero on a quiet day) — the single most useful
+at-a-glance number for "is this provider healthy," ahead of drilling into
+the failure/timeout/failover breakdown.
 
 P50/P95 computed in Python from the queried `duration_s` list (SQLite has
 no native percentile function) — consistent with how other stats in this
@@ -349,7 +423,9 @@ interface) plus the `smoke.py` harness.
 
 ## Future providers
 
-Adding e.g. `OpenAIProvider` means: implement `FirmLLMProvider`, register
-it in the Router's provider-name lookup, add its env vars. No change to
-`firm.py`, any `agents/*.py` module, prompts, schemas beyond the interface,
-or Telegram builders.
+Adding e.g. `OpenAIProvider` means: implement `FirmLLMProvider` (including
+declaring its `ProviderCapabilities`), self-register via `@register
+("openai")` in the Provider Registry (§3), add its env vars. No change to
+`router.py`, the config validation logic (§4 — it already resolves names
+against the registry, not a hardcoded set), `firm.py`, any `agents/*.py`
+module, prompts, schemas beyond the interface, or Telegram builders.
