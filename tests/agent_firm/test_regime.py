@@ -1,7 +1,11 @@
 import json
+from datetime import datetime, timezone
+
 import pytest
 from unittest.mock import AsyncMock
+
 from engine.agent_firm.agents import regime
+from engine.agent_firm.providers.base import ProviderResponse
 from engine.agent_firm.schemas import SignalCandidate
 
 
@@ -25,18 +29,23 @@ def _make_context():
     }
 
 
+def _response(content: str, tokens_in=700, tokens_out=55) -> ProviderResponse:
+    return ProviderResponse(
+        content=content, provider="zai", model="glm-5.2", runtime_version="1.0.0",
+        tokens_in=tokens_in, tokens_out=tokens_out, cost_usd=0.0003, duration_s=2.0,
+        timestamp=datetime.now(timezone.utc),
+    )
+
+
 @pytest.mark.asyncio
 async def test_regime_returns_ok_on_success():
     fake_client = AsyncMock()
-    fake_client.chat.return_value = {
-        "content": json.dumps({
-            "regime_call": "BULL",
-            "sector_tailwind": True,
-            "macro_risk": "LOW",
-            "reasoning": "Consistent walk-forward with elevated VPIN",
-        }),
-        "tokens_in": 700, "tokens_out": 55, "cost_usd": 0.0003, "duration_s": 2.0,
-    }
+    fake_client.generate.return_value = _response(json.dumps({
+        "regime_call": "BULL",
+        "sector_tailwind": True,
+        "macro_risk": "LOW",
+        "reasoning": "Consistent walk-forward with elevated VPIN",
+    }))
     result = await regime.run(_make_candidate(), fake_client, _make_context())
     assert result.role == "regime"
     assert result.status == "ok"
@@ -46,10 +55,7 @@ async def test_regime_returns_ok_on_success():
 @pytest.mark.asyncio
 async def test_regime_returns_failed_on_invalid_json():
     fake_client = AsyncMock()
-    fake_client.chat.return_value = {
-        "content": "bad json", "tokens_in": 50, "tokens_out": 3,
-        "cost_usd": 0.0, "duration_s": 1.0,
-    }
+    fake_client.generate.return_value = _response("bad json", tokens_in=50, tokens_out=3)
     result = await regime.run(_make_candidate(), fake_client, _make_context())
     assert result.status == "failed"
 
@@ -57,7 +63,7 @@ async def test_regime_returns_failed_on_invalid_json():
 @pytest.mark.asyncio
 async def test_regime_returns_failed_on_client_exception():
     fake_client = AsyncMock()
-    fake_client.chat.side_effect = RuntimeError("network down")
+    fake_client.generate.side_effect = RuntimeError("network down")
     result = await regime.run(_make_candidate(), fake_client, _make_context())
     assert result.status == "failed"
     assert "network down" in result.error

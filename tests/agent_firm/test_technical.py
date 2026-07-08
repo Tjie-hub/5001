@@ -1,10 +1,12 @@
 import json
 import sqlite3
+from datetime import datetime, timezone
 
 import pytest
 from unittest.mock import AsyncMock
 
 from engine.agent_firm.agents import technical
+from engine.agent_firm.providers.base import ProviderResponse
 from engine.agent_firm.schemas import SignalCandidate
 
 
@@ -26,6 +28,14 @@ def _seed(db_path):
     conn.close()
 
 
+def _response(content: str, tokens_in=1200, tokens_out=80) -> ProviderResponse:
+    return ProviderResponse(
+        content=content, provider="zai", model="glm-5.2", runtime_version="1.0.0",
+        tokens_in=tokens_in, tokens_out=tokens_out, cost_usd=0.0006, duration_s=3.2,
+        timestamp=datetime.now(timezone.utc),
+    )
+
+
 @pytest.mark.asyncio
 async def test_technical_returns_ok_result_on_success(tmp_path):
     db = tmp_path / "t.db"
@@ -35,15 +45,12 @@ async def test_technical_returns_ok_result_on_success(tmp_path):
         score=4.2, scan_time="2026-05-19T16:00:00+07:00",
     )
     fake_client = AsyncMock()
-    fake_client.chat.return_value = {
-        "content": json.dumps({
-            "verdict": "BULLISH",
-            "conviction": 0.75,
-            "key_levels": {"support": 5000, "resistance": 5200},
-            "reasoning": "Higher highs and rising volume",
-        }),
-        "tokens_in": 1200, "tokens_out": 80, "cost_usd": 0.0006, "duration_s": 3.2,
-    }
+    fake_client.generate.return_value = _response(json.dumps({
+        "verdict": "BULLISH",
+        "conviction": 0.75,
+        "key_levels": {"support": 5000, "resistance": 5200},
+        "reasoning": "Higher highs and rising volume",
+    }))
     result = await technical.run(candidate, fake_client, str(db))
     assert result.role == "technical"
     assert result.status == "ok"
@@ -62,10 +69,7 @@ async def test_technical_returns_failed_on_invalid_json(tmp_path):
         score=4.2, scan_time="2026-05-19T16:00:00+07:00",
     )
     fake_client = AsyncMock()
-    fake_client.chat.return_value = {
-        "content": "not valid json",
-        "tokens_in": 100, "tokens_out": 5, "cost_usd": 0.0, "duration_s": 1.0,
-    }
+    fake_client.generate.return_value = _response("not valid json", tokens_in=100, tokens_out=5)
     result = await technical.run(candidate, fake_client, str(db))
     assert result.status == "failed"
     assert "json" in result.error.lower() or "decode" in result.error.lower()
@@ -80,7 +84,7 @@ async def test_technical_returns_failed_on_client_exception(tmp_path):
         score=4.2, scan_time="2026-05-19T16:00:00+07:00",
     )
     fake_client = AsyncMock()
-    fake_client.chat.side_effect = RuntimeError("network down")
+    fake_client.generate.side_effect = RuntimeError("network down")
     result = await technical.run(candidate, fake_client, str(db))
     assert result.status == "failed"
     assert "network down" in result.error

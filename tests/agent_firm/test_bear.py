@@ -1,7 +1,11 @@
 import json
+from datetime import datetime, timezone
+
 import pytest
 from unittest.mock import AsyncMock
+
 from engine.agent_firm.agents import bear
+from engine.agent_firm.providers.base import ProviderResponse
 from engine.agent_firm.schemas import AgentResult, SignalCandidate
 
 
@@ -32,30 +36,33 @@ def _make_bull():
     )
 
 
+def _response(content: str, tokens_in=1200, tokens_out=85) -> ProviderResponse:
+    return ProviderResponse(
+        content=content, provider="zai", model="glm-5.2", runtime_version="1.0.0",
+        tokens_in=tokens_in, tokens_out=tokens_out, cost_usd=0.0006, duration_s=3.2,
+        timestamp=datetime.now(timezone.utc),
+    )
+
+
 @pytest.mark.asyncio
 async def test_bear_returns_ok_on_success():
     fake_client = AsyncMock()
-    fake_client.chat.return_value = {
-        "content": json.dumps({
-            "bear_case": "Foreign flows can reverse rapidly if BI surprises.",
-            "key_risk": "BI rate surprise causing sector rotation out of banks",
-        }),
-        "tokens_in": 1200, "tokens_out": 85, "cost_usd": 0.0006, "duration_s": 3.2,
-    }
+    fake_client.generate.return_value = _response(json.dumps({
+        "bear_case": "Foreign flows can reverse rapidly if BI surprises.",
+        "key_risk": "BI rate surprise causing sector rotation out of banks",
+    }))
     result = await bear.run(_make_candidate(), _make_analysts(), _make_bull(), fake_client)
     assert result.role == "bear"
     assert result.status == "ok"
     assert "bear_case" in result.output
     assert result.tokens_in == 1200
+    assert result.provider == "zai"
 
 
 @pytest.mark.asyncio
 async def test_bear_returns_failed_on_invalid_json():
     fake_client = AsyncMock()
-    fake_client.chat.return_value = {
-        "content": "nope", "tokens_in": 50, "tokens_out": 3,
-        "cost_usd": 0.0, "duration_s": 1.0,
-    }
+    fake_client.generate.return_value = _response("nope", tokens_in=50, tokens_out=3)
     result = await bear.run(_make_candidate(), _make_analysts(), _make_bull(), fake_client)
     assert result.status == "failed"
 
@@ -63,7 +70,7 @@ async def test_bear_returns_failed_on_invalid_json():
 @pytest.mark.asyncio
 async def test_bear_returns_failed_on_client_exception():
     fake_client = AsyncMock()
-    fake_client.chat.side_effect = RuntimeError("conn reset")
+    fake_client.generate.side_effect = RuntimeError("conn reset")
     result = await bear.run(_make_candidate(), _make_analysts(), _make_bull(), fake_client)
     assert result.status == "failed"
     assert "conn reset" in result.error

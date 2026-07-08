@@ -4,8 +4,8 @@ import json
 import time
 from pathlib import Path
 
-from ..client import DeepSeekClient
 from ..guardrails import normalize_quant
+from ..providers.base import FirmLLMProvider
 from ..schemas import AgentResult, SignalCandidate
 
 _PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "risk_v2.md"
@@ -19,7 +19,7 @@ def _load_prompt() -> str:
 async def run(
     candidate: SignalCandidate,
     analyst_results: list[AgentResult],
-    client: DeepSeekClient,
+    client: FirmLLMProvider,
 ) -> AgentResult:
     start = time.monotonic()
     try:
@@ -34,12 +34,12 @@ async def run(
                 for r in analyst_results
             ],
         })
-        resp = await client.chat([
+        resp = await client.generate([
             {"role": "system", "content": _load_prompt()},
             {"role": "user", "content": user_msg},
         ])
         try:
-            output = json.loads(resp["content"])
+            output = json.loads(resp.content)
         except json.JSONDecodeError as json_err:
             raise ValueError(f"json decode error: {json_err}") from json_err
         return AgentResult(
@@ -47,9 +47,11 @@ async def run(
             status="ok",
             output=output,
             prompt_version=PROMPT_VERSION,
-            tokens_in=resp["tokens_in"],
-            tokens_out=resp["tokens_out"],
-            duration_s=resp["duration_s"],
+            tokens_in=resp.tokens_in,
+            tokens_out=resp.tokens_out,
+            cost_usd=resp.cost_usd, duration_s=resp.duration_s,
+            provider=resp.provider, model=resp.model,
+            runtime_version=resp.runtime_version, failover=resp.failover,
         )
     except Exception as err:
         return AgentResult(

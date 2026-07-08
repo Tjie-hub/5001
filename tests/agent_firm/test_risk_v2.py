@@ -1,7 +1,11 @@
 import json
+from datetime import datetime, timezone
+
 import pytest
 from unittest.mock import AsyncMock
+
 from engine.agent_firm.agents import risk
+from engine.agent_firm.providers.base import ProviderResponse
 from engine.agent_firm.schemas import AgentResult, SignalCandidate
 
 
@@ -29,17 +33,22 @@ def _make_all_analysts():
     ]
 
 
+def _response(content: str, tokens_in=2000, tokens_out=100) -> ProviderResponse:
+    return ProviderResponse(
+        content=content, provider="zai", model="glm-5.2", runtime_version="1.0.0",
+        tokens_in=tokens_in, tokens_out=tokens_out, cost_usd=0.0009, duration_s=5.0,
+        timestamp=datetime.now(timezone.utc),
+    )
+
+
 @pytest.mark.asyncio
 async def test_risk_v2_approve_on_full_bullish_committee():
     fake_client = AsyncMock()
-    fake_client.chat.return_value = {
-        "content": json.dumps({
-            "decision": "approve", "confidence": 0.82,
-            "size_hint": 1.2,
-            "rationale": "Risk: all analysts aligned.\nBull/Bear: bull case dominates.",
-        }),
-        "tokens_in": 2000, "tokens_out": 100, "cost_usd": 0.0009, "duration_s": 5.0,
-    }
+    fake_client.generate.return_value = _response(json.dumps({
+        "decision": "approve", "confidence": 0.82,
+        "size_hint": 1.2,
+        "rationale": "Risk: all analysts aligned.\nBull/Bear: bull case dominates.",
+    }))
     result = await risk.run(_make_candidate(), _make_all_analysts(), fake_client)
     assert result.status == "ok"
     assert result.output["decision"] == "approve"
@@ -50,17 +59,16 @@ async def test_risk_v2_approve_on_full_bullish_committee():
 @pytest.mark.asyncio
 async def test_risk_v2_all_6_reports_in_payload():
     captured = {}
-    async def capture_chat(messages, **kwargs):
+
+    async def capture_generate(messages, **kwargs):
         captured["body"] = messages
-        return {
-            "content": json.dumps({
-                "decision": "approve", "confidence": 0.6,
-                "size_hint": 1.0, "rationale": "ok.\nok.",
-            }),
-            "tokens_in": 50, "tokens_out": 30, "cost_usd": 0.0, "duration_s": 1.0,
-        }
+        return _response(json.dumps({
+            "decision": "approve", "confidence": 0.6,
+            "size_hint": 1.0, "rationale": "ok.\nok.",
+        }), tokens_in=50, tokens_out=30)
+
     fake_client = AsyncMock()
-    fake_client.chat.side_effect = capture_chat
+    fake_client.generate.side_effect = capture_generate
     await risk.run(_make_candidate(), _make_all_analysts(), fake_client)
     payload = json.loads(captured["body"][1]["content"])
     roles = [r["role"] for r in payload["analyst_reports"]]

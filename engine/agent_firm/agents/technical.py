@@ -4,7 +4,7 @@ import json
 import time
 from pathlib import Path
 
-from ..client import DeepSeekClient
+from ..providers.base import FirmLLMProvider
 from ..schemas import AgentResult, SignalCandidate
 from ..tools.sqlite_query import query
 
@@ -18,7 +18,7 @@ def _load_prompt() -> str:
 
 async def run(
     candidate: SignalCandidate,
-    client: DeepSeekClient,
+    client: FirmLLMProvider,
     db_path: str,
 ) -> AgentResult:
     start = time.monotonic()
@@ -35,12 +35,12 @@ async def run(
             "candidate": candidate.model_dump(),
             "ohlcv_recent_60d": ohlcv,
         })
-        resp = await client.chat([
+        resp = await client.generate([
             {"role": "system", "content": _load_prompt()},
             {"role": "user", "content": user_msg},
         ])
         try:
-            output = json.loads(resp["content"])
+            output = json.loads(resp.content)
         except json.JSONDecodeError as json_err:
             raise ValueError(f"json decode error: {json_err}") from json_err
         return AgentResult(
@@ -48,9 +48,11 @@ async def run(
             status="ok",
             output=output,
             prompt_version=PROMPT_VERSION,
-            tokens_in=resp["tokens_in"],
-            tokens_out=resp["tokens_out"],
-            duration_s=resp["duration_s"],
+            tokens_in=resp.tokens_in,
+            tokens_out=resp.tokens_out,
+            cost_usd=resp.cost_usd, duration_s=resp.duration_s,
+            provider=resp.provider, model=resp.model,
+            runtime_version=resp.runtime_version, failover=resp.failover,
             tools_called=tools_called,
         )
     except Exception as err:

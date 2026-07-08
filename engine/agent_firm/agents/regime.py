@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from ..client import DeepSeekClient
+from ..providers.base import FirmLLMProvider
 from ..schemas import AgentResult, SignalCandidate
 
 _PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "regime_v1.md"
@@ -14,7 +14,7 @@ PROMPT_VERSION = "v1"
 
 async def run(
     candidate: SignalCandidate,
-    client: DeepSeekClient,
+    client: FirmLLMProvider,
     context: dict[str, Any],
 ) -> AgentResult:
     start = time.monotonic()
@@ -24,19 +24,21 @@ async def run(
             "wf_scores": context.get("wf_scores", []),
             "sector_data_10d": context.get("sector_data", []),
         })
-        resp = await client.chat([
+        resp = await client.generate([
             {"role": "system", "content": _PROMPT_PATH.read_text()},
             {"role": "user", "content": user_msg},
         ])
         try:
-            output = json.loads(resp["content"])
+            output = json.loads(resp.content)
         except json.JSONDecodeError as e:
             raise ValueError(f"json decode error: {e}") from e
         return AgentResult(
             role="regime", status="ok", output=output,
             prompt_version=PROMPT_VERSION,
-            tokens_in=resp["tokens_in"], tokens_out=resp["tokens_out"],
-            duration_s=resp["duration_s"],
+            tokens_in=resp.tokens_in, tokens_out=resp.tokens_out,
+            cost_usd=resp.cost_usd, duration_s=resp.duration_s,
+            provider=resp.provider, model=resp.model,
+            runtime_version=resp.runtime_version, failover=resp.failover,
         )
     except Exception as err:
         return AgentResult(

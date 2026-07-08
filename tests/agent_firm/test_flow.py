@@ -1,7 +1,11 @@
 import json
+from datetime import datetime, timezone
+
 import pytest
 from unittest.mock import AsyncMock
+
 from engine.agent_firm.agents import flow
+from engine.agent_firm.providers.base import ProviderResponse
 from engine.agent_firm.schemas import SignalCandidate
 
 
@@ -27,18 +31,23 @@ def _make_context(verdict="ACCUMULATING"):
     }
 
 
+def _response(content: str, tokens_in=800, tokens_out=60) -> ProviderResponse:
+    return ProviderResponse(
+        content=content, provider="zai", model="glm-5.2", runtime_version="1.0.0",
+        tokens_in=tokens_in, tokens_out=tokens_out, cost_usd=0.0004, duration_s=2.5,
+        timestamp=datetime.now(timezone.utc),
+    )
+
+
 @pytest.mark.asyncio
 async def test_flow_returns_ok_on_success():
     fake_client = AsyncMock()
-    fake_client.chat.return_value = {
-        "content": json.dumps({
-            "flow_verdict": "ACCUMULATING",
-            "smart_money_signal": "BUY",
-            "net_foreign_14d": 3000,
-            "reasoning": "Consistent net buying with smart money",
-        }),
-        "tokens_in": 800, "tokens_out": 60, "cost_usd": 0.0004, "duration_s": 2.5,
-    }
+    fake_client.generate.return_value = _response(json.dumps({
+        "flow_verdict": "ACCUMULATING",
+        "smart_money_signal": "BUY",
+        "net_foreign_14d": 3000,
+        "reasoning": "Consistent net buying with smart money",
+    }))
     result = await flow.run(_make_candidate(), fake_client, _make_context())
     assert result.role == "flow"
     assert result.status == "ok"
@@ -49,10 +58,7 @@ async def test_flow_returns_ok_on_success():
 @pytest.mark.asyncio
 async def test_flow_returns_failed_on_invalid_json():
     fake_client = AsyncMock()
-    fake_client.chat.return_value = {
-        "content": "not json",
-        "tokens_in": 100, "tokens_out": 5, "cost_usd": 0.0, "duration_s": 1.0,
-    }
+    fake_client.generate.return_value = _response("not json", tokens_in=100, tokens_out=5)
     result = await flow.run(_make_candidate(), fake_client, _make_context())
     assert result.status == "failed"
 
@@ -60,7 +66,7 @@ async def test_flow_returns_failed_on_invalid_json():
 @pytest.mark.asyncio
 async def test_flow_returns_failed_on_client_exception():
     fake_client = AsyncMock()
-    fake_client.chat.side_effect = RuntimeError("timeout")
+    fake_client.generate.side_effect = RuntimeError("timeout")
     result = await flow.run(_make_candidate(), fake_client, _make_context())
     assert result.status == "failed"
     assert "timeout" in result.error
