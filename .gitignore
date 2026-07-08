@@ -58,3 +58,6 @@ venv_test/
 
 # claude-mem persistent memory (per-developer)
 memory/
+
+# git worktrees (superpowers:using-git-worktrees)
+.worktrees/
