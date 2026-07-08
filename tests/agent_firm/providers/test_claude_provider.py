@@ -1,7 +1,7 @@
 import asyncio
 import json
 import subprocess
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -60,9 +60,17 @@ async def test_generate_raises_provider_timeout_on_wait_for_timeout():
 
     hung_proc = AsyncMock()
     hung_proc.communicate = _hang
+    # Process.kill() is synchronous in asyncio's subprocess API; Process.wait()
+    # is a coroutine. AsyncMock() would make both attributes async by default,
+    # so kill must be overridden with a plain Mock to match the real API.
+    hung_proc.kill = Mock()
+    hung_proc.wait = AsyncMock()
     with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=hung_proc)):
         with pytest.raises(ProviderTimeout):
             await provider.generate([{"role": "user", "content": "x"}])
+
+    hung_proc.kill.assert_called_once()
+    hung_proc.wait.assert_awaited_once()
 
 
 @pytest.mark.asyncio

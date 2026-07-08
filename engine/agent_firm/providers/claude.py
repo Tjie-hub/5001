@@ -84,6 +84,8 @@ class ClaudeProvider:
                     proc.communicate(), timeout=effective_timeout,
                 )
             except asyncio.TimeoutError as err:
+                proc.kill()
+                await proc.wait()
                 raise ProviderTimeout(
                     f"claude CLI timed out after {effective_timeout}s"
                 ) from err
