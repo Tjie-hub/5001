@@ -108,6 +108,7 @@ def init_agent_firm_tables():
             tools_called TEXT,
             tokens_in INTEGER,
             tokens_out INTEGER,
+            cost_usd REAL,
             duration_s REAL,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
@@ -149,6 +150,7 @@ def init_agent_firm_tables():
         ("runtime_version", "ALTER TABLE agent_traces ADD COLUMN runtime_version TEXT"),
         ("failover", "ALTER TABLE agent_traces ADD COLUMN failover INTEGER DEFAULT 0"),
         ("error", "ALTER TABLE agent_traces ADD COLUMN error TEXT"),
+        ("cost_usd", "ALTER TABLE agent_traces ADD COLUMN cost_usd REAL"),
     ]:
         if col not in trace_cols:
             conn.execute(ddl)

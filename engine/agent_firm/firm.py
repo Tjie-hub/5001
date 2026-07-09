@@ -459,14 +459,14 @@ def _persist(decision: AgentDecision) -> int:
             conn.execute(
                 "INSERT INTO agent_traces "
                 "(decision_id, role, prompt_version, output, tools_called, "
-                "tokens_in, tokens_out, duration_s, provider, model, "
+                "tokens_in, tokens_out, cost_usd, duration_s, provider, model, "
                 "runtime_version, failover, error) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     decision_id, trace.role, trace.prompt_version,
                     None if trace.output is None else json.dumps(trace.output),
                     json.dumps(trace.tools_called),
-                    trace.tokens_in, trace.tokens_out, trace.duration_s,
+                    trace.tokens_in, trace.tokens_out, trace.cost_usd, trace.duration_s,
                     trace.provider, trace.model, trace.runtime_version,
                     int(trace.failover), trace.error,
                 ),
