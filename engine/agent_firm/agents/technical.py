@@ -23,6 +23,7 @@ async def run(
 ) -> AgentResult:
     start = time.monotonic()
     tools_called: list[dict] = []
+    resp = None
     try:
         ohlcv = query(
             db_path,
@@ -63,4 +64,11 @@ async def run(
             error=str(err),
             duration_s=time.monotonic() - start,
             tools_called=tools_called,
+            tokens_in=resp.tokens_in if resp is not None else 0,
+            tokens_out=resp.tokens_out if resp is not None else 0,
+            cost_usd=resp.cost_usd if resp is not None else 0.0,
+            provider=resp.provider if resp is not None else "",
+            model=resp.model if resp is not None else "",
+            runtime_version=resp.runtime_version if resp is not None else "",
+            failover=resp.failover if resp is not None else False,
         )

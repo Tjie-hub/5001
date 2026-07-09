@@ -73,6 +73,15 @@ async def test_technical_returns_failed_on_invalid_json(tmp_path):
     result = await technical.run(candidate, fake_client, str(db))
     assert result.status == "failed"
     assert "json" in result.error.lower() or "decode" in result.error.lower()
+    # client.generate() succeeded (real, billable call happened) before the
+    # JSON parse failed — the failed result must still carry resp's real
+    # cost/token/provider data, not schema defaults.
+    assert result.tokens_in == 100
+    assert result.tokens_out == 5
+    assert result.cost_usd == 0.0006
+    assert result.provider == "zai"
+    assert result.model == "glm-5.2"
+    assert result.runtime_version == "1.0.0"
 
 
 @pytest.mark.asyncio
@@ -88,3 +97,7 @@ async def test_technical_returns_failed_on_client_exception(tmp_path):
     result = await technical.run(candidate, fake_client, str(db))
     assert result.status == "failed"
     assert "network down" in result.error
+    # generate() itself raised — no response was ever received, so defaults hold.
+    assert result.tokens_in == 0
+    assert result.cost_usd == 0.0
+    assert result.provider == ""

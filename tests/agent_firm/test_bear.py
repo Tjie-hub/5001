@@ -65,6 +65,13 @@ async def test_bear_returns_failed_on_invalid_json():
     fake_client.generate.return_value = _response("nope", tokens_in=50, tokens_out=3)
     result = await bear.run(_make_candidate(), _make_analysts(), _make_bull(), fake_client)
     assert result.status == "failed"
+    # generate() succeeded (real call happened) before the JSON parse failed —
+    # the failed result must still carry resp's real cost/token/provider data.
+    assert result.tokens_in == 50
+    assert result.tokens_out == 3
+    assert result.cost_usd == 0.0006
+    assert result.provider == "zai"
+    assert result.model == "glm-5.2"
 
 
 @pytest.mark.asyncio

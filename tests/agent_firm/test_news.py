@@ -57,6 +57,13 @@ async def test_news_returns_failed_on_invalid_json(monkeypatch):
     fake_client.generate.return_value = _response("not json", tokens_in=50, tokens_out=3)
     result = await news.run(_make_candidate(), fake_client, _make_context())
     assert result.status == "failed"
+    # generate() succeeded (real call happened) before the JSON parse failed —
+    # the failed result must still carry resp's real cost/token/provider data.
+    assert result.tokens_in == 50
+    assert result.tokens_out == 3
+    assert result.cost_usd == 0.0005
+    assert result.provider == "zai"
+    assert result.model == "glm-5.2"
 
 
 @pytest.mark.asyncio

@@ -18,6 +18,7 @@ async def run(
     context: dict[str, Any],
 ) -> AgentResult:
     start = time.monotonic()
+    resp = None
     try:
         user_msg = json.dumps({
             "candidate": candidate.model_dump(),
@@ -46,4 +47,11 @@ async def run(
             prompt_version=PROMPT_VERSION,
             error=str(err),
             duration_s=time.monotonic() - start,
+            tokens_in=resp.tokens_in if resp is not None else 0,
+            tokens_out=resp.tokens_out if resp is not None else 0,
+            cost_usd=resp.cost_usd if resp is not None else 0.0,
+            provider=resp.provider if resp is not None else "",
+            model=resp.model if resp is not None else "",
+            runtime_version=resp.runtime_version if resp is not None else "",
+            failover=resp.failover if resp is not None else False,
         )
