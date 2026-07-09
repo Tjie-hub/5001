@@ -82,3 +82,34 @@ def test_rationale_truncated_to_140_chars():
     msg = _build_premarket_firm_message(decisions, rows, HEADER)
     assert "x" * 140 in msg
     assert "x" * 141 not in msg
+
+
+def test_premarket_message_includes_provider_line():
+    class _D:
+        def __init__(self, ticker, decision, confidence, providers_used):
+            self.ticker = ticker
+            self.decision = decision
+            self.confidence = confidence
+            self.rationale = None
+            self.size_hint = None
+            self.providers_used = providers_used
+
+    from scheduler.jobs import _build_premarket_firm_message
+    decisions = [_D("BBRI", "approve", 0.8, ["claude"])]
+    msg = _build_premarket_firm_message(decisions, [], "08/07 08:35")
+    assert "Firm Provider:\nClaude" in msg
+
+
+def test_premarket_message_omits_provider_line_when_no_providers_used():
+    class _D:
+        def __init__(self, ticker, decision):
+            self.ticker = ticker
+            self.decision = decision
+            self.confidence = None
+            self.rationale = None
+            self.providers_used = []
+
+    from scheduler.jobs import _build_premarket_firm_message
+    decisions = [_D("BBRI", "bypassed")]
+    msg = _build_premarket_firm_message(decisions, [], "08/07 08:35")
+    assert "Firm Provider" not in msg

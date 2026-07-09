@@ -591,6 +591,8 @@ def _build_premarket_firm_message(decisions: list, rows: list, header: str) -> s
     header: pre-formatted "dd/mm HH:MM" string.
     Kept import-free (no langgraph) so it's unit-testable on the Windows venv.
     """
+    from engine import trade_plan as tp
+
     by_ticker = {r["ticker"]: r for r in rows}
     approved = sorted(
         [d for d in decisions if d.decision == "approve"],
@@ -622,6 +624,10 @@ def _build_premarket_firm_message(decisions: list, rows: list, header: str) -> s
 
     if vetoed:
         msg += f"\n<b>⛔ Vetoed ({len(vetoed)}):</b> " + ", ".join(d.ticker for d in vetoed) + "\n"
+
+    p_line = tp.provider_line(decisions)
+    if p_line:
+        msg += "\n" + p_line + "\n"
 
     return msg
 
@@ -843,9 +849,11 @@ def run_eod_trade_plan():
         logging.error(f"[eod_trade_plan] firm eval error (fail-open): {e}")
         ranked, degraded = tp.fallback_rank(top), True
 
+    p_line = None if degraded else tp.provider_line(decisions)
     try:
         send_telegram(tp.build_message(ranked, regime, now.strftime('%d/%m'),
-                                       degraded=degraded, vpin_summary=vpin_summary))
+                                       degraded=degraded, vpin_summary=vpin_summary,
+                                       provider_line=p_line))
     except Exception as e:
         print(f"[eod_trade_plan] Telegram error: {e}")
 
