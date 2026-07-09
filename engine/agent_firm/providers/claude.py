@@ -14,7 +14,7 @@ import subprocess
 import time
 from datetime import datetime, timezone
 
-from .base import ProviderCapabilities, ProviderResponse
+from .base import ProviderCapabilities, ProviderResponse, strip_fences
 from .errors import (
     ProviderQuotaExceeded, ProviderRateLimited, ProviderTimeout, ProviderUnavailable,
 )
@@ -106,7 +106,7 @@ class ClaudeProvider:
 
         usage = result.get("usage") or {}
         return ProviderResponse(
-            content=result.get("result", ""),
+            content=strip_fences(result.get("result", "")),
             provider="claude",
             model=self._model,
             runtime_version=self._runtime_version,

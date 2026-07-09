@@ -9,7 +9,6 @@ failover.
 """
 
 import asyncio
-import re
 import time
 from datetime import datetime, timezone
 
@@ -17,17 +16,11 @@ import openai
 from openai import AsyncOpenAI, APIError, APIStatusError, APITimeoutError, RateLimitError
 
 from .. import config
-from .base import ProviderCapabilities, ProviderResponse
+from .base import ProviderCapabilities, ProviderResponse, strip_fences
 from .errors import (
     ProviderQuotaExceeded, ProviderRateLimited, ProviderTimeout, ProviderUnavailable,
 )
 from .registry import register
-
-
-def _strip_fences(text: str) -> str:
-    """Strip markdown code fences the model sometimes wraps around JSON."""
-    m = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
-    return m.group(1).strip() if m else text.strip()
 
 
 def _classify(err: Exception) -> ProviderQuotaExceeded | ProviderRateLimited | ProviderTimeout | ProviderUnavailable:
@@ -72,7 +65,7 @@ class ZAIProvider:
                     model=self._model, messages=messages, timeout=timeout,
                     response_format={"type": "json_object"},
                 )
-                content = _strip_fences(resp.choices[0].message.content or "")
+                content = strip_fences(resp.choices[0].message.content or "")
                 usage = resp.usage
                 tokens_in = getattr(usage, "prompt_tokens", 0) if usage else 0
                 tokens_out = getattr(usage, "completion_tokens", 0) if usage else 0

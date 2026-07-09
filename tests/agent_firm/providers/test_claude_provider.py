@@ -51,6 +51,18 @@ async def test_generate_returns_provider_response():
 
 
 @pytest.mark.asyncio
+async def test_generate_strips_markdown_fences_from_result():
+    provider = ClaudeProvider(model="sonnet", max_concurrent=4, overall_timeout=5.0)
+    fenced_result = '```json\n{"verdict": "approve"}\n```'
+    with patch("asyncio.create_subprocess_exec",
+               AsyncMock(return_value=_fake_proc(_cli_json(result=fenced_result), b"", 0))):
+        resp = await provider.generate([
+            {"role": "system", "content": "sys"}, {"role": "user", "content": "usr"},
+        ])
+    assert resp.content == '{"verdict": "approve"}'
+
+
+@pytest.mark.asyncio
 async def test_generate_raises_provider_timeout_on_wait_for_timeout():
     provider = ClaudeProvider(overall_timeout=0.01)
 

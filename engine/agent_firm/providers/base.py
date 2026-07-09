@@ -2,10 +2,22 @@
 design doc §1: generate(), health(), model(), name, capabilities. No
 availability() (§2) and no retry() (failover is the Router's job, §4)."""
 
+import re
 from datetime import datetime
 from typing import Optional, Protocol, runtime_checkable
 
 from pydantic import BaseModel
+
+
+def strip_fences(text: str) -> str:
+    """Strip markdown code fences the model sometimes wraps around JSON.
+
+    Shared by ZAIProvider and ClaudeProvider — both models have been
+    observed, in production, wrapping JSON output in ```json fences despite
+    prompt instructions not to.
+    """
+    m = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
+    return m.group(1).strip() if m else text.strip()
 
 
 class ProviderCapabilities(BaseModel):
