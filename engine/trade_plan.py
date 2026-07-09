@@ -250,11 +250,32 @@ _VPIN_LABEL_EMOJI = {'CRITICAL': '🔴', 'RED': '🟠', 'ORANGE': '🟡',
                      'YELLOW': '🟡', 'GREEN': '🟢'}
 
 
+def provider_line(decisions: list) -> Optional[str]:
+    """Firm-provider summary line for the Telegram footer, derived from the
+    batch's AgentDecision.providers_used. Duck-typed (no agent_firm import)
+    to preserve this module's lean-venv, LLM-import-free contract. None
+    when the firm didn't actually run — callers should pass provider_line=
+    None for degraded/bypassed batches rather than calling this at all."""
+    used: set[str] = set()
+    for d in decisions:
+        used.update(getattr(d, "providers_used", None) or [])
+    if not used:
+        return None
+    if used == {"claude"}:
+        return "Firm Provider:\nClaude"
+    if used == {"zai"}:
+        return "Firm Provider:\nZ.ai"
+    if "claude" in used and "zai" in used:
+        return "Firm Provider:\nClaude → Z.ai (Auto Failover)"
+    return "Firm Provider:\n" + ", ".join(sorted(used))
+
+
 def build_message(ranked: list[dict[str, Any]],
                   regime: tuple[str, Optional[float]],
                   date_str: str,
                   degraded: bool = False,
-                  vpin_summary: Optional[dict] = None) -> str:
+                  vpin_summary: Optional[dict] = None,
+                  provider_line: Optional[str] = None) -> str:
     """Single Telegram HTML message. No raw <,>,& in dynamic text (tickers/numbers
     only), so HTML parse_mode is safe.
 
@@ -286,6 +307,9 @@ def build_message(ranked: list[dict[str, Any]],
         L.append("No firm-approved long setups today.")
         L.append("")
         L.append("<i>broker_flow/VPIN settle ~20:15; flow on last settled day.</i>")
+        if provider_line:
+            L.append("")
+            L.append(provider_line)
         return "\n".join(L)
 
     L.append("<b>🏆 TOP LONGS</b>")
@@ -300,4 +324,7 @@ def build_message(ranked: list[dict[str, Any]],
     L.append("")
     L.append("<i>R=reversal S=screen V=volume P=premarket · "
              "broker_flow/VPIN settle ~20:15.</i>")
+    if provider_line:
+        L.append("")
+        L.append(provider_line)
     return "\n".join(L)

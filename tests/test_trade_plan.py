@@ -15,6 +15,7 @@ from engine.trade_plan import (
     gather_long_candidates,
     get_regime,
     get_vpin_gate,
+    provider_line,
     rank_approved,
     select_top,
 )
@@ -278,3 +279,40 @@ class TestVpinGate:
         msg = build_message([], ("YELLOW", 45.0), DATE, vpin_summary=None)
         # only VPIN reference is the footer note
         assert msg.count("VPIN") == 1 and "settle" in msg
+
+
+class _FakeDecision:
+    def __init__(self, decision, providers_used):
+        self.decision = decision
+        self.providers_used = providers_used
+
+
+def test_provider_line_all_claude():
+    decisions = [_FakeDecision("approve", ["claude"]), _FakeDecision("veto", ["claude"])]
+    assert provider_line(decisions) == "Firm Provider:\nClaude"
+
+
+def test_provider_line_all_zai():
+    decisions = [_FakeDecision("approve", ["zai"])]
+    assert provider_line(decisions) == "Firm Provider:\nZ.ai"
+
+
+def test_provider_line_mixed_is_failover():
+    decisions = [_FakeDecision("approve", ["claude"]), _FakeDecision("approve", ["zai"])]
+    assert provider_line(decisions) == "Firm Provider:\nClaude → Z.ai (Auto Failover)"
+
+
+def test_provider_line_empty_returns_none():
+    assert provider_line([]) is None
+    assert provider_line([_FakeDecision("bypassed", [])]) is None
+
+
+def test_build_message_appends_provider_line_when_given():
+    msg = build_message([], ("BULL", 70.0), "08/07", degraded=False,
+                        provider_line="Firm Provider:\nClaude")
+    assert msg.endswith("Firm Provider:\nClaude")
+
+
+def test_build_message_omits_provider_line_when_none():
+    msg = build_message([], ("BULL", 70.0), "08/07", degraded=False, provider_line=None)
+    assert "Firm Provider" not in msg
