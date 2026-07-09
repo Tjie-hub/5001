@@ -849,6 +849,9 @@ def run_eod_trade_plan():
         logging.error(f"[eod_trade_plan] firm eval error (fail-open): {e}")
         ranked, degraded = tp.fallback_rank(top), True
 
+    # `degraded=True` on every path where `decisions` could be unbound (the
+    # except block above never assigns it) — this guard also avoids
+    # UnboundLocalError, not just suppressing a stale provider line.
     p_line = None if degraded else tp.provider_line(decisions)
     try:
         send_telegram(tp.build_message(ranked, regime, now.strftime('%d/%m'),
