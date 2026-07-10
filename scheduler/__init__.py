@@ -8,6 +8,7 @@ import logging
 
 
 WIB = pytz.timezone("Asia/Jakarta")
+logger = logging.getLogger(__name__)
 from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, Phase 5)
 DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN")
@@ -80,14 +81,14 @@ def start_scheduler():
         _ensure_watchlist(_wl_conn)
         _wl_conn.close()
     except Exception as _e:
-        print(f"[scheduler] watchlist table init error: {_e}")
+        logger.warning(f"[scheduler] watchlist table init error: {_e}")
 
     # Phase 2A: market-data schema (is_final / calendar / corporate_actions)
     try:
         from data.market_schema import ensure_market_data_schema
         ensure_market_data_schema(DB_PATH)
     except Exception as _e:
-        print(f"[scheduler] market schema init error: {_e}")
+        logger.warning(f"[scheduler] market schema init error: {_e}")
 
     scheduler = BackgroundScheduler(timezone=WIB)
 
@@ -113,7 +114,7 @@ def start_scheduler():
         scheduler.add_job(scheduled_multi_strategy_scan, CronTrigger(
             hour=hour, minute=minute, timezone=WIB, day_of_week="mon-fri"),
             id=f"multi_strategy_scan_{hour:02d}{minute:02d}", name=f"Multi-Strategy Scan {label}")
-        print(f"  ✓ Multi-strategy scan @ {hour:02d}:{minute:02d} ({label})")
+        logger.info(f"  ✓ Multi-strategy scan @ {hour:02d}:{minute:02d} ({label})")
 
     # Screener intraday — registered at the same times as multi-strategy scan so they run in parallel
     for hour, minute, label in scan_times:
@@ -218,35 +219,35 @@ def start_scheduler():
         name="Scheduler Heartbeat", replace_existing=True)
 
     scheduler.start()
-    print("Scheduler started:")
-    print("  💓 SCHEDULER HEARTBEAT: every 5 min (dead-man's-switch)")
-    print("  📡 PHASE 5 BULL-WATCH: 17:10 (NR7 universe band transitions)")
+    logger.info("Scheduler started:")
+    logger.info("  💓 SCHEDULER HEARTBEAT: every 5 min (dead-man's-switch)")
+    logger.info("  📡 PHASE 5 BULL-WATCH: 17:10 (NR7 universe band transitions)")
     # Edge Registry (M1 inversion): load once, announce what production runs on.
     from engine.registry_loader import announce_registry
     announce_registry()
-    print("  📊 SIGNAL REPORT: 16:00")
-    print("  📰 NEWS FETCH: 08:00 pre-market, 17:00 EOD")
-    print("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
-    print("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
-    print("  🏥 MARKET HEALTH: 08:45 pre-market")
-    print("  🌅 PREMARKET FIRM: 08:35 pre-market (unified watchlist → agent firm)")
-    print("  📋 EOD TRADE PLAN: 16:40 (all long sources → agent firm → 1 ranked msg)")
-    print("  🧪 FORWARD-TEST CYCLE: 18:30 (ingest signals → open/exit shadow positions)")
+    logger.info("  📊 SIGNAL REPORT: 16:00")
+    logger.info("  📰 NEWS FETCH: 08:00 pre-market, 17:00 EOD")
+    logger.info("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
+    logger.info("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
+    logger.info("  🏥 MARKET HEALTH: 08:45 pre-market")
+    logger.info("  🌅 PREMARKET FIRM: 08:35 pre-market (unified watchlist → agent firm)")
+    logger.info("  📋 EOD TRADE PLAN: 16:40 (all long sources → agent firm → 1 ranked msg)")
+    logger.info("  🧪 FORWARD-TEST CYCLE: 18:30 (ingest signals → open/exit shadow positions)")
     return scheduler
 
 
 if __name__ == "__main__":
     import sys
     if "--once" in sys.argv:
-        print("Running daily_signal_scan once...")
+        logger.info("Running daily_signal_scan once...")
         daily_signal_scan()
     else:
         sched = start_scheduler()
         import time
-        print("Scheduler running. Press Ctrl+C to stop.")
+        logger.info("Scheduler running. Press Ctrl+C to stop.")
         try:
             while True:
                 time.sleep(60)
         except KeyboardInterrupt:
             sched.shutdown()
-            print("Scheduler stopped.")
+            logger.info("Scheduler stopped.")

@@ -40,9 +40,8 @@ def test_cycle_is_idempotent(ft_db, repo):
     assert len(repo.get_open_shadow_positions()) == 1
 
 
-def test_cycle_failsoft_on_bad_db(capsys):
+def test_cycle_failsoft_on_bad_db(caplog):
     """A broken db_path must not raise -- the scheduler must survive."""
     from scheduler.jobs import run_forward_test_cycle
     run_forward_test_cycle(db_path="/nonexistent/dir/x.db", run_date="2026-06-26")
-    out = capsys.readouterr().out
-    assert "Forward-test cycle error" in out
+    assert "Forward-test cycle error" in caplog.text

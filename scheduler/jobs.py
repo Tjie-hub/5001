@@ -7,6 +7,7 @@ import pytz
 
 
 WIB = pytz.timezone("Asia/Jakarta")
+logger = logging.getLogger(__name__)
 from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, Phase 5)
 DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 
@@ -70,7 +71,7 @@ def run_flow_fetch():
     now_str = dt.now(WIB).strftime('%H:%M')
     is_first_session = dt.now(WIB).hour == 9
     today_str = str(date.today())
-    print(f"[{now_str}] Flow fetch dimulai...")
+    logger.info(f"[{now_str}] Flow fetch dimulai...")
     try:
         from flow_filter import main as flow_main
         import sys as _sys
@@ -84,7 +85,7 @@ def run_flow_fetch():
             "SELECT COUNT(*) FROM stockbit_flow WHERE trade_date=?", (today_str,)
         ).fetchone()[0]
         conn.close()
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] Flow fetch selesai. {count} tickers tersimpan.")
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Flow fetch selesai. {count} tickers tersimpan.")
         if is_first_session and count == 0:
             send_telegram(
                 f"⚠️ <b>Flow Fetch WARNING</b>\n\n"
@@ -93,7 +94,7 @@ def run_flow_fetch():
                 f"Cek: <code>cat .stockbit_token</code>"
             )
     except Exception as e:
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] Flow fetch error: {e}")
+        logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] Flow fetch error: {e}")
         if is_first_session:
             send_telegram(
                 f"🔴 <b>Flow Fetch GAGAL</b>\n\n"
@@ -164,7 +165,7 @@ def run_broker_flow_fetch():
     import sqlite3
     now_str = dt.now(WIB).strftime('%H:%M')
     today_str = str(date.today())
-    print(f"[{now_str}] Broker flow fetch dimulai...")
+    logger.info(f"[{now_str}] Broker flow fetch dimulai...")
     try:
         from stockbit_fetcher import extract_token_from_chrome, verify_token, run_flow, get_tickers
         token = extract_token_from_chrome()
@@ -180,7 +181,7 @@ def run_broker_flow_fetch():
         conn_pt.close()
         extra_new = [t for t in extra if t not in tickers]
         if extra_new:
-            print(f"[{now_str}] + {len(extra_new)} extra tickers from paper trades: {extra_new}")
+            logger.info(f"[{now_str}] + {len(extra_new)} extra tickers from paper trades: {extra_new}")
             tickers = tickers + extra_new
         run_flow(token, tickers)
         conn = db_connect(DB_PATH)
@@ -188,12 +189,12 @@ def run_broker_flow_fetch():
             "SELECT COUNT(DISTINCT ticker) FROM broker_flow WHERE trade_date=?", (today_str,)
         ).fetchone()[0]
         conn.close()
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow selesai. {count} tickers untuk {today_str}.")
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow selesai. {count} tickers untuk {today_str}.")
 
         # Coverage monitor: alert on a stockbit_flow outage while it can still be
         # re-fetched today (a past session cannot be backfilled later).
         cov = check_flow_coverage(DB_PATH, today_str)
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] Flow coverage {today_str}: "
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Flow coverage {today_str}: "
               f"{cov['count']} tickers (baseline {cov['baseline']}) → {cov['severity']}")
         if not cov["healthy"]:
             icon = "🔴" if cov["severity"] == "critical" else "⚠️"
@@ -206,7 +207,7 @@ def run_broker_flow_fetch():
                 f"re-run <code>run_broker_flow_fetch</code> hari ini."
             )
     except Exception as e:
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow fetch error: {e}")
+        logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow fetch error: {e}")
         send_telegram(f"🔴 <b>Broker Flow Fetch Error</b>\n<code>{str(e)[:200]}</code>")
 
 
@@ -220,7 +221,7 @@ def run_ohlcv_reconciliation():
     try:
         rep = reconcile_ohlcv(today)
         n = len(rep["mismatches"])
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] OHLCV reconcile {today}: "
+        logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] OHLCV reconcile {today}: "
               f"{rep['compared']} compared, {rep['missing_yf']} missing on yf, {n} mismatches")
         if n:
             top = "\n".join(
@@ -232,7 +233,7 @@ def run_ohlcv_reconciliation():
                 f"(alert-only; scraper is authority):\n{top}"
             )
     except Exception as e:
-        print(f"[scheduler] OHLCV reconcile error: {e}")
+        logger.warning(f"[scheduler] OHLCV reconcile error: {e}")
 
 
 def run_token_health_check(token_file: str = None):
@@ -252,7 +253,7 @@ def run_token_health_check(token_file: str = None):
         tok = ""
     s = token_status(tok)
     if s["healthy"]:
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Token health OK "
+        logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Token health OK "
               f"({s['hours_left']:.1f}h left)")
         return
     hl = s["hours_left"]
@@ -263,7 +264,7 @@ def run_token_health_check(token_file: str = None):
         f"Token: {left}. Fetching/backfill will 401 until refreshed.\n"
         f"Refresh: <code>python3 auto_token.py</code>"
     )
-    print(f"[{datetime.now(WIB).strftime('%H:%M')}] Token health ALERT: {s['status']} ({left})")
+    logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Token health ALERT: {s['status']} ({left})")
 
 
 def run_ohlcv_coverage_check(date_str: str = None):
@@ -283,10 +284,10 @@ def run_ohlcv_coverage_check(date_str: str = None):
             (day,)).fetchone()[0]
         conn.close()
     except Exception as e:
-        print(f"[coverage] DB error: {e}")
+        logger.warning(f"[coverage] DB error: {e}")
         return
     s = ohlcv_coverage(count, universe)
-    print(f"[{datetime.now(WIB).strftime('%H:%M')}] OHLCV coverage {day}: "
+    logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] OHLCV coverage {day}: "
           f"{count}/{universe} ({s['pct']*100:.0f}%) — {s['severity']}")
     if not s["healthy"]:
         icon = "🔴" if s["severity"] == "critical" else "⚠️"
@@ -308,7 +309,7 @@ def run_foreign_snapshot():
         return
     from datetime import datetime as dt
     now_str = dt.now(WIB).strftime('%H:%M')
-    print(f"[{now_str}] Foreign snapshot dimulai...")
+    logger.info(f"[{now_str}] Foreign snapshot dimulai...")
     try:
         from flow_filter import get_top_foreign_accumulation
         all_results = get_top_foreign_accumulation(top_n=9999)
@@ -334,7 +335,7 @@ def run_foreign_snapshot():
         else:
             msg += "\n<b>🔴 No significant foreign selling</b>\n"
 
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] Foreign snapshot computed ({len(top_buy)} buy, {len(top_sell)} sell) — no alert")
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Foreign snapshot computed ({len(top_buy)} buy, {len(top_sell)} sell) — no alert")
     except Exception as e:
         logging.error(f"run_foreign_snapshot error: {e}")
 
@@ -348,13 +349,13 @@ def run_news_fetch():
         return
     from datetime import datetime as dt
     now_str = dt.now(WIB).strftime('%H:%M')
-    print(f"[{now_str}] News fetch dimulai...")
+    logger.info(f"[{now_str}] News fetch dimulai...")
     try:
         from news_filter import run_news_batch
         saved = run_news_batch()
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] News fetch selesai. {saved} tickers tersimpan.")
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] News fetch selesai. {saved} tickers tersimpan.")
     except Exception as e:
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] News fetch error: {e}")
+        logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] News fetch error: {e}")
         send_telegram(
             f"🔴 <b>News Fetch GAGAL</b>\n\n"
             f"<code>{str(e)[:200]}</code>"
@@ -366,13 +367,13 @@ def _run_open_trade_monitor():
         from monitor import check_all_open_trades
         check_all_open_trades()
     except Exception as e:
-        print(f"[scheduler] Monitor error: {e}")
+        logger.warning(f"[scheduler] Monitor error: {e}")
     # DD circuit breaker check — cheap, runs each monitor cycle (every 5 min during trading)
     try:
         from paper_trade import check_dd_circuit_breaker
         check_dd_circuit_breaker()
     except Exception as e:
-        print(f"[scheduler] DD circuit breaker error: {e}")
+        logger.warning(f"[scheduler] DD circuit breaker error: {e}")
 
 
 def _run_screener_intraday():
@@ -380,7 +381,7 @@ def _run_screener_intraday():
         from screener.screener_jobs import run_intraday
         run_intraday(send_telegram=send_telegram)
     except Exception as e:
-        print(f"[scheduler] Screener intraday error: {e}")
+        logger.warning(f"[scheduler] Screener intraday error: {e}")
 
 
 def _run_screener_eod():
@@ -388,7 +389,7 @@ def _run_screener_eod():
         from screener.screener_jobs import run_eod
         run_eod(send_telegram=send_telegram)
     except Exception as e:
-        print(f"[scheduler] Screener EOD error: {e}")
+        logger.warning(f"[scheduler] Screener EOD error: {e}")
 
 
 # _refresh_backtest_cache moved to research/jobs.py in M3 (spec §10-M3)
@@ -411,7 +412,7 @@ def _send_premover_auto_summary(rows: list, mode: str, send_fn) -> None:
     try:
         send_fn(msg)
     except Exception as e:
-        print(f"[premover auto] Telegram summary error: {e}")
+        logger.warning(f"[premover auto] Telegram summary error: {e}")
 
 
 def get_market_risk_for_circuit_breaker() -> dict:
@@ -453,17 +454,17 @@ def run_premover_eod():
     _risk = get_market_risk_for_circuit_breaker()
     _cb_state, _cb_reason = check_circuit_breaker(_risk)
     if _cb_state == CircuitBreakerState.OPEN:
-        print(f"[{now_str}] Circuit breaker OPEN: {_cb_reason} — premover EOD paused")
+        logger.info(f"[{now_str}] Circuit breaker OPEN: {_cb_reason} — premover EOD paused")
         send_telegram(f"⛔ <b>Circuit Breaker Active</b>\n\n{_cb_reason}\n\nAuto-trading paused. Manual override required.")
         return
 
-    print(f"[{now_str}] Pre-mover EOD scan dimulai...")
+    logger.info(f"[{now_str}] Pre-mover EOD scan dimulai...")
     try:
         new_setups = run_scan(DB_PATH, send_alert_fn=None)
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan selesai. "
+        logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan selesai. "
               f"{len(new_setups)} new setups.")
     except Exception as e:
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan error: {e}")
+        logger.warning(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan error: {e}")
         send_telegram(f"🔴 <b>Pre-mover Scan Error</b>\n<code>{str(e)[:200]}</code>")
         return
 
@@ -488,7 +489,7 @@ def run_premover_eod():
             summary_rows.append({'ticker': ticker, 'score': score,
                                   'pattern': pattern, **ev})
         except Exception as exc:
-            print(f"[premover auto] {ticker} error: {exc}")
+            logger.warning(f"[premover auto] {ticker} error: {exc}")
             summary_rows.append({'ticker': ticker, 'score': score,
                                   'pattern': pattern,
                                   'would_trade': False,
@@ -574,10 +575,10 @@ def run_market_health_report():
 
         msg = ext_block + health + news_block
         send_telegram(msg)
-        print(f"[{now.strftime('%H:%M')}] Premarket briefing sent (tier={risk['tier']})")
+        logger.info(f"[{now.strftime('%H:%M')}] Premarket briefing sent (tier={risk['tier']})")
     except Exception as e:
         logging.error(f"[market_health_report] {e}")
-        print(f"[{now.strftime('%H:%M')}] Health report error: {e}")
+        logger.warning(f"[{now.strftime('%H:%M')}] Health report error: {e}")
     finally:
         conn.close()
 
@@ -661,16 +662,16 @@ def run_premarket_firm_scan():
         try:
             _g.execute("INSERT INTO _job_sentinel VALUES ('premarket_firm', ?)", (date_str,))
         except sqlite3.IntegrityError:
-            print(f"[{now_str}] Premarket firm: already sent today — skipped (duplicate guard)")
+            logger.info(f"[{now_str}] Premarket firm: already sent today — skipped (duplicate guard)")
             return
 
-    print(f"[{now_str}] Premarket agent-firm scan dimulai...")
+    logger.info(f"[{now_str}] Premarket agent-firm scan dimulai...")
 
     try:
         rows = build_unified_watchlist(DB_PATH)
     except Exception as e:
         logging.error(f"[premarket_firm] watchlist build error: {e}")
-        print(f"[{now_str}] Premarket firm: watchlist build error: {e}")
+        logger.warning(f"[{now_str}] Premarket firm: watchlist build error: {e}")
         return
 
     # Value-base liquidity: keep the 3 best long-only setups whose 30d avg daily
@@ -682,7 +683,7 @@ def run_premarket_firm_scan():
     finally:
         conn.close()
     if not longs:
-        print(f"[{now_str}] Premarket firm: no liquid long setups from unified watchlist — skipped")
+        logger.info(f"[{now_str}] Premarket firm: no liquid long setups from unified watchlist — skipped")
         return
 
     # ── Pre-LLM edge veto (Phase 3, gated by EDGE_SCORE_MODE) ─────────────────
@@ -739,17 +740,17 @@ def run_premarket_firm_scan():
         decisions = _firm.evaluate_staged(candidates)
     except Exception as e:
         logging.error(f"[premarket_firm] firm eval error: {e}")
-        print(f"[{now_str}] Premarket firm eval error: {e}")
+        logger.warning(f"[{now_str}] Premarket firm eval error: {e}")
         return
 
     try:
         send_telegram(_build_premarket_firm_message(decisions, longs, now.strftime('%d/%m %H:%M')))
     except Exception as e:
-        print(f"[premarket firm] Telegram error: {e}")
+        logger.warning(f"[premarket firm] Telegram error: {e}")
 
     n_app = sum(1 for d in decisions if d.decision == "approve")
     n_veto = sum(1 for d in decisions if d.decision == "veto")
-    print(f"[{now_str}] Premarket firm: {len(decisions)} evaluated "
+    logger.info(f"[{now_str}] Premarket firm: {len(decisions)} evaluated "
           f"({n_app} approve, {n_veto} veto)")
 
 
@@ -784,7 +785,7 @@ def run_eod_trade_plan():
         try:
             _g.execute("INSERT INTO _job_sentinel VALUES ('eod_trade_plan', ?)", (date_str,))
         except sqlite3.IntegrityError:
-            print(f"[{now_str}] EOD trade plan: already sent today — skipped (dup guard)")
+            logger.info(f"[{now_str}] EOD trade plan: already sent today — skipped (dup guard)")
             return
 
     from config import edge_mode
@@ -817,14 +818,14 @@ def run_eod_trade_plan():
         conn.close()
 
     if not cands:
-        print(f"[{now_str}] EOD trade plan: no long candidates — skipped")
+        logger.info(f"[{now_str}] EOD trade plan: no long candidates — skipped")
         return
 
     if not top:
         # every candidate failed the directional pre-screen — ship an empty plan
         send_telegram(tp.build_message([], regime, now.strftime('%d/%m'), degraded=False,
                                        vpin_summary=vpin_summary))
-        print(f"[{now_str}] EOD trade plan: all candidates vetoed by edge pre-screen — empty plan sent")
+        logger.info(f"[{now_str}] EOD trade plan: all candidates vetoed by edge pre-screen — empty plan sent")
         return
 
     candidates = [
@@ -857,9 +858,9 @@ def run_eod_trade_plan():
                                        degraded=degraded, vpin_summary=vpin_summary,
                                        provider_line=p_line))
     except Exception as e:
-        print(f"[eod_trade_plan] Telegram error: {e}")
+        logger.warning(f"[eod_trade_plan] Telegram error: {e}")
 
-    print(f"[{now_str}] EOD trade plan: {len(cands)} candidates, top {len(top)} vetted, "
+    logger.info(f"[{now_str}] EOD trade plan: {len(cands)} candidates, top {len(top)} vetted, "
           f"{len(ranked)} approved{' (degraded)' if degraded else ''}")
 
 
@@ -892,7 +893,7 @@ def run_vpin_daily_batch(date_str=None):
         date_str = datetime.now(WIB).strftime('%Y-%m-%d')
 
     now_str = datetime.now(WIB).strftime('%H:%M')
-    print(f"[{now_str}] VPIN batch compute starting for {date_str}...")
+    logger.info(f"[{now_str}] VPIN batch compute starting for {date_str}...")
 
     tickers = get_all_tickers()
     computed = 0
@@ -927,7 +928,7 @@ def run_vpin_daily_batch(date_str=None):
     conn.commit()
     conn.close()
 
-    print(f"[{now_str}] VPIN batch done: {computed} computed, {errors} errors")
+    logger.warning(f"[{now_str}] VPIN batch done: {computed} computed, {errors} errors")
     return {'computed': computed, 'errors': errors, 'date': date_str}
 
 
@@ -939,7 +940,7 @@ def run_vpin_backfill(days=90):
     """
     from engine.vpin import calc_vpin as _calc_vpin
     now_str = datetime.now(WIB).strftime('%H:%M')
-    print(f"[{now_str}] VPIN backfill starting ({days} days)...")
+    logger.info(f"[{now_str}] VPIN backfill starting ({days} days)...")
 
     try:
         conn = db_connect(DB_PATH)
@@ -983,7 +984,7 @@ def run_vpin_backfill(days=90):
             conn.commit()
 
         conn.close()
-        print(f"[{now_str}] VPIN backfill done: {total_computed} computed, {total_errors} errors")
+        logger.warning(f"[{now_str}] VPIN backfill done: {total_computed} computed, {total_errors} errors")
         return {'computed': total_computed, 'errors': total_errors, 'dates': len(dates)}
     except Exception as _e:
         logging.error(f"[vpin_backfill] error: {_e}")
@@ -1029,10 +1030,10 @@ def run_forward_test_cycle(db_path=None, run_date=None):
         open_after = len(repo.get_open_shadow_positions())
         closed = _trade_count() - trades_before
         opened = (open_after - open_before) + closed
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Forward-test cycle {rd}: "
+        logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Forward-test cycle {rd}: "
               f"ingested={n_ingested} opened={opened} closed={closed} open_now={open_after}")
     except Exception as e:
-        print(f"[scheduler] Forward-test cycle error: {e}")
+        logger.warning(f"[scheduler] Forward-test cycle error: {e}")
 
 
 def run_phase5_bull_watch():
