@@ -35,6 +35,13 @@ app.register_blueprint(backtest_bp)
 app.register_blueprint(portfolio_bp)
 app.register_blueprint(chart_bp)
 
+# Security hardening: auth endpoints + authorization middleware. AUTH_MODE=off
+# (the default) keeps behavior identical to the pre-hardening app.
+from security.routes import auth_bp
+from security.middleware import init_security
+app.register_blueprint(auth_bp)
+init_security(app)
+
 @app.before_request
 def _assign_correlation_id():
     g.correlation_id = request.headers.get('X-Request-ID') or str(uuid.uuid4())
