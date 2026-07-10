@@ -61,3 +61,4 @@ memory/
 
 # git worktrees (superpowers:using-git-worktrees)
 .worktrees/
+data/reports/
