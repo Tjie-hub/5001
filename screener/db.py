@@ -4,10 +4,11 @@ screener/db.py — Screener DB helpers using the shared walkforward.db
 import sqlite3
 
 from config import DB_PATH
+from data.db import connect as db_connect
 
 
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")

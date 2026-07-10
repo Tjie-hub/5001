@@ -28,6 +28,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
 
 from config import DB_PATH
+from data.db import connect as db_connect
 
 # sectors.app sector label → internal sector_rotation label
 SECTORS_APP_TO_INTERNAL: Dict[str, str] = {
@@ -54,7 +55,7 @@ EX_DIV_AFTER      = 1      # days after ex-date to flag
 # ── DB helpers ─────────────────────────────────────────────────────────
 
 def _conn() -> sqlite3.Connection:
-    return sqlite3.connect(DB_PATH)
+    return db_connect(DB_PATH)
 
 
 def _latest_fetch_date(conn: sqlite3.Connection, table: str) -> Optional[str]:

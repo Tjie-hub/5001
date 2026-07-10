@@ -38,6 +38,7 @@ import csv
 import math
 from datetime import date as dt_date
 from typing import Optional
+from data.db import connect as db_connect
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -89,7 +90,7 @@ W_ADX_PROFILE = 0.15
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def _get_conn():
-    conn = sqlite3.connect(_DB_PATH)
+    conn = db_connect(_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 

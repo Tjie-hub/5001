@@ -2,6 +2,7 @@
 
 import sqlite3
 from typing import Any
+from data.db import connect as db_connect
 
 
 def get_risk_dashboard(db_path: str, date: str) -> dict[str, Any]:
@@ -20,7 +21,7 @@ def get_risk_dashboard(db_path: str, date: str) -> dict[str, Any]:
     from engine.risk_score import compute_market_risk_score
     from flow_filter import get_market_accdist_summary
 
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     try:
         vpin_s = _safe(get_market_vpin_summary, conn, date) or _empty_vpin()
         accdist_s = _safe_noconn(get_market_accdist_summary, date) or _empty_accdist(date)
@@ -129,7 +130,7 @@ def get_signals_dashboard(db_path: str, date: str) -> dict[str, Any]:
         date, recent_decisions (last 20, newest first),
         signals_today (total, by_verdict, by_direction).
     """
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     try:
         # Last 20 agent_decisions, newest first
         decisions = []
@@ -185,7 +186,7 @@ def get_strategy_pnl(db_path: str) -> dict[str, Any]:
     Catches regime breaks in days instead of months: each strategy's closed
     trades, win rate, total/average P&L, plus a rolling last-10-trade window.
     """
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     try:
         strategies: list[dict] = []
         for row in conn.execute(
@@ -234,7 +235,7 @@ def get_watchlist(db_path: str, date: str) -> dict[str, Any]:
     AVOID:     foreign net sell in 3d > 100B AND YTD drop >20%
     WAIT:      intraday bounce >3% + volume >50M + foreign net sell today
     """
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     try:
         year = date[:4]
         jan_start = f'{year}-01-01'
@@ -360,7 +361,7 @@ def get_dashboard_checklist(db_path: str, date: str) -> dict[str, Any]:
         date, items (list of {name, done, count, detail}),
         last_scan, all_done (OHLCV + signals both present).
     """
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     try:
         def _count(sql: str, *params) -> int:
             try:

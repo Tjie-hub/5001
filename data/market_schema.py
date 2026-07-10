@@ -11,6 +11,7 @@
 import sqlite3
 
 from config import DB_PATH
+from data.db import connect as db_connect
 
 _DDL = """
 CREATE TABLE IF NOT EXISTS trading_calendar (
@@ -32,7 +33,7 @@ CREATE TABLE IF NOT EXISTS corporate_actions (
 
 def ensure_market_data_schema(db_path: str = DB_PATH) -> None:
     """Idempotent. Adds ohlcv.is_final (legacy rows -> 1) + the two tables."""
-    conn = sqlite3.connect(db_path, timeout=30)
+    conn = db_connect(db_path, timeout=30)
     try:
         conn.execute("PRAGMA busy_timeout=30000")
         cols = {r[1] for r in conn.execute("PRAGMA table_info(ohlcv)")}

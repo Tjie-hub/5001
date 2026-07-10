@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import sqlite3
 from config import DB_PATH
+from data.db import connect as db_connect
 
 # ── R16: Session-level indicator cache ───────────────────────────────────────
 # Keyed by (func_name, _df_key(df), *params). id(df) alone is NOT a safe key:
@@ -225,7 +226,7 @@ class IndicatorCache:
         self._init_table()
 
     def _init_table(self):
-        conn = sqlite3.connect(self._db)
+        conn = db_connect(self._db)
         try:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS indicator_cache (
@@ -242,7 +243,7 @@ class IndicatorCache:
             conn.close()
 
     def put(self, ticker: str, indicator: str, period: int, series: pd.Series):
-        conn = sqlite3.connect(self._db)
+        conn = db_connect(self._db)
         try:
             rows = [
                 (ticker, str(date), indicator, period,
@@ -260,7 +261,7 @@ class IndicatorCache:
 
     def get(self, ticker: str, indicator: str, period: int,
             dates: list) -> 'pd.Series | None':
-        conn = sqlite3.connect(self._db)
+        conn = db_connect(self._db)
         try:
             placeholders = ','.join('?' * len(dates))
             rows = conn.execute(
@@ -275,7 +276,7 @@ class IndicatorCache:
         return pd.Series({r[0]: r[1] for r in rows})
 
     def clear(self, ticker: str):
-        conn = sqlite3.connect(self._db)
+        conn = db_connect(self._db)
         try:
             conn.execute("DELETE FROM indicator_cache WHERE ticker=?", (ticker,))
             conn.commit()

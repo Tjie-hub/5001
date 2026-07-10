@@ -13,6 +13,7 @@ L2 — Value composite score (0–100, higher = better value):
 
 import sqlite3
 from typing import Optional
+from data.db import connect as db_connect
 
 # ── Thresholds ────────────────────────────────────────────────────────────────
 
@@ -161,7 +162,7 @@ def get_liquidity_value(db_path: str, ticker: str, date: str) -> dict:
         adv_30d, market_cap, value_score, is_liquid, has_value,
         pe_ttm, pbv, div_yield, ev_ebitda, peg_ratio.
     """
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     try:
         adv = get_adv_30d(conn, ticker, date)
         ks  = get_keystats(conn, ticker)
@@ -238,7 +239,7 @@ def compute_filter_impact(db_path: str, date: str) -> dict:
     (avg_win_rate, avg_return) for liquid_valued, liquid_only,
     value_only, and neither populations.
     """
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     try:
         rows = conn.execute(
             "SELECT ticker, win_rate, best_return FROM backtest_cache "

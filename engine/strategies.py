@@ -23,6 +23,7 @@ from engine.indicators import (
 # CONFIG — cost values live in engine/exits/costs.py (single authority, plan 1C)
 # ─────────────────────────────────────────────
 from engine.exits.costs import COMMISSION_BUY, COMMISSION_SELL, SLIPPAGE
+from data.db import connect as db_connect
 
 @dataclass
 class Trade:
@@ -1112,7 +1113,7 @@ def calc_opening_range_from_ticks(ticker: str, trade_date: str,
     end_time = (datetime.strptime('09:00:00', '%H:%M:%S')
                 + timedelta(minutes=opening_minutes)).strftime('%H:%M:%S')
     try:
-        conn = sqlite3.connect(db_path)
+        conn = db_connect(db_path)
         rows = conn.execute("""
             SELECT price, volume FROM ticks
             WHERE ticker=? AND date=?
@@ -1182,7 +1183,7 @@ def check_orb_intraday_signal(ticker: str, opening_minutes: int = 30,
                 'details': {'or_today': or_today}}
 
     try:
-        conn = sqlite3.connect(db_path)
+        conn = db_connect(db_path)
         past_dates = [r[0] for r in conn.execute("""
             SELECT DISTINCT date FROM ticks
             WHERE ticker=? AND date < ?
@@ -1542,7 +1543,7 @@ def get_ticker_data(ticker: str) -> pd.DataFrame:
     db_path = 'data/walkforward.db'
     
     try:
-        conn = sqlite3.connect(db_path)
+        conn = db_connect(db_path)
         query = f"""
             SELECT date, open, high, low, close, volume
             FROM ohlcv
@@ -2253,7 +2254,7 @@ def check_crash_recovery_signal(ticker: str, df: pd.DataFrame,
     earliest = min(last_5_dates)
 
     try:
-        conn = _sqlite3.connect(db_path)
+        conn = db_connect(db_path)
         row = conn.execute(
             "SELECT resume_date, gap_pct, last_normal_date, missing_td "
             "FROM suspension_events "

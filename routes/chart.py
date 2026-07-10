@@ -14,12 +14,13 @@ from engine import delta_flow
 from engine import tv_bridge
 from engine.indicators import calc_vwap, calc_vwma
 from engine.timeframe import aggregate_ohlcv
+from data.db import connect as db_connect
 
 chart_bp = Blueprint('chart', __name__)
 
 
 def _load_ohlcv(ticker: str, freq: str) -> pd.DataFrame:
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     try:
         df = pd.read_sql_query(
             "SELECT date, open, high, low, close, volume FROM ohlcv "

@@ -8,6 +8,7 @@ import logging
 import requests
 from flask import Blueprint, jsonify, request
 
+from data.db import connect as db_connect
 from config import (
     DB_PATH,
     TELEGRAM_TOKEN,
@@ -83,7 +84,7 @@ def handle_status_command(chat_id):
     """Get current trading status."""
     try:
         import sqlite3
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
 
         # Get recent trades
         recent = conn.execute(
@@ -108,7 +109,7 @@ def handle_signals_command(chat_id):
         import sqlite3, pandas as pd
         from datetime import datetime, timedelta
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
 
         # Get tickers with recent data
         tickers = [r[0] for r in conn.execute(
@@ -126,7 +127,7 @@ def handle_flow_command(chat_id):
     """Get flow confirmation status."""
     try:
         import sqlite3
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
 
         # Get any flow data available
         flow_count = conn.execute(

@@ -23,6 +23,7 @@ try:
 except ImportError:
     _YF_AVAILABLE = False
 
+from data.db import connect as db_connect
 from engine.indicators import (
     calc_adx,
     calc_close_vs_ma,
@@ -347,7 +348,7 @@ if __name__ == "__main__":
     from config import DB_PATH
     ticker = sys.argv[1] if len(sys.argv) > 1 else "BRPT"
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     df = pd.read_sql(
         f'SELECT * FROM ohlcv WHERE ticker="{ticker}" ORDER BY date ASC', conn)
     conn.close()

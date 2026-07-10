@@ -6,6 +6,7 @@ Used by: screener/routes.py (Flask API) and screener_clone.py (CLI)
 import sqlite3
 
 from config import DB_PATH
+from data.db import connect as db_connect
 
 COLUMNS = {
     "ticker":        ("k", "ticker",       "text",     "Ticker"),
@@ -64,7 +65,7 @@ def run_query(columns, universe="ALL", filters="", sort="ticker", sort_dir="ASC"
     if db_path is None:
         db_path = DB_PATH
 
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     conn.row_factory = sqlite3.Row
 
     # Validate columns

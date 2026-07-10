@@ -6,6 +6,7 @@ open across long computation. WAL is persistent on the db file (set by
 init_ft_tables via _ensure_wal); busy_timeout is set per-connection.
 """
 import sqlite3
+from data.db import connect as db_connect
 
 
 def _default_db_path():
@@ -20,7 +21,7 @@ def ft_get_db(db_path=None):
 
     Caller is responsible for closing promptly (use `with ft_get_db(...) as c:`).
     """
-    conn = sqlite3.connect(db_path or _default_db_path(), timeout=30)
+    conn = db_connect(db_path or _default_db_path(), timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout=30000")
     conn.execute("PRAGMA foreign_keys=ON")  # enforce REFERENCES (off by default in sqlite)
@@ -28,7 +29,7 @@ def ft_get_db(db_path=None):
 
 
 def _ensure_wal(db_path):
-    conn = sqlite3.connect(db_path, timeout=30)
+    conn = db_connect(db_path, timeout=30)
     try:
         conn.execute("PRAGMA busy_timeout=30000")
         conn.execute("PRAGMA journal_mode=WAL")

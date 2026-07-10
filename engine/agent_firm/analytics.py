@@ -5,6 +5,7 @@ import logging
 import sqlite3
 import statistics
 from typing import Any
+from data.db import connect as db_connect
 
 
 def cohort_summary(db_path: str) -> dict[str, Any]:
@@ -12,7 +13,7 @@ def cohort_summary(db_path: str) -> dict[str, Any]:
     empty = lambda: {"n": 0, "win_rate": 0.0, "avg_return_pct": 0.0, "sharpe": 0.0}
     result = {"approve": empty(), "veto": empty(), "baseline": empty()}
     try:
-        with sqlite3.connect(db_path) as conn:
+        with db_connect(db_path) as conn:
             approve_pnls = [r[0] for r in conn.execute("""
                 SELECT pt.pnl_pct FROM agent_decisions ad
                 JOIN paper_trades pt
@@ -60,7 +61,7 @@ def _stats(pnls: list[float]) -> dict[str, Any]:
 def agent_agreement(db_path: str) -> list[dict[str, Any]]:
     """Per-agent directional alignment with the final risk decision."""
     try:
-        with sqlite3.connect(db_path) as conn:
+        with db_connect(db_path) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute("""
                 SELECT at.role, at.output, ad.decision
@@ -120,7 +121,7 @@ def _is_aligned(role: str, output: dict, decision: str) -> bool:
 def decision_log(db_path: str, limit: int = 100) -> list[dict[str, Any]]:
     """Chronological log of decisions with matched paper trade outcomes."""
     try:
-        with sqlite3.connect(db_path) as conn:
+        with db_connect(db_path) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute("""
                 SELECT

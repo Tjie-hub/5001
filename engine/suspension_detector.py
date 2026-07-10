@@ -16,6 +16,7 @@ from typing import List, Optional
 import pandas as pd
 
 from engine.calendar_filter import is_trading_day
+from data.db import connect as db_connect
 
 
 @dataclass
@@ -131,7 +132,7 @@ def scan_all(
     """Scan every ticker's OHLCV for gap events and persist them. Returns rows written."""
     own_conn = conn is None
     if own_conn:
-        conn = sqlite3.connect(db_path or _DEFAULT_DB_PATH)
+        conn = db_connect(db_path or _DEFAULT_DB_PATH)
     try:
         _ensure_schema(conn)
         if ohlcv_map is None:
@@ -195,7 +196,7 @@ def get_status(
 
     own_conn = conn is None
     if own_conn:
-        conn = sqlite3.connect(db_path or _DEFAULT_DB_PATH)
+        conn = db_connect(db_path or _DEFAULT_DB_PATH)
     try:
         _ensure_schema(conn)
         row = conn.execute(

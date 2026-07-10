@@ -16,6 +16,7 @@ from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, 
 DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 
 from utils.telegram import send_telegram
+from data.db import connect as db_connect
 
 _TIER_EMOJI = {
     'CRITICAL': '🚨', 'RED': '🔴', 'ORANGE': '🟠', 'YELLOW': '🟡', 'GREEN': '🟢',
@@ -122,7 +123,7 @@ def build_risk_summary_message(alerts: list, date_str: str) -> str:
 
 def send_hourly_risk_bundle(date_str: str, time_str: str):
     """Send bundled RED alerts for the current hour. Called by scheduler."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     pending = [a for a in get_pending_risk_alerts(conn, date_str) if a['tier'] == 'RED']
     if pending:
         msg = build_risk_summary_message(pending, date_str)
@@ -135,7 +136,7 @@ def send_hourly_risk_bundle(date_str: str, time_str: str):
 
 def send_eod_risk_summary(date_str: str):
     """Send ORANGE/YELLOW EOD summary. Called by end-of-day scheduler."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     pending = [
         a for a in get_pending_risk_alerts(conn, date_str)
         if a['tier'] in ('ORANGE', 'YELLOW')

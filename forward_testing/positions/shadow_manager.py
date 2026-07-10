@@ -7,6 +7,7 @@ All writes are short compute-then-write transactions via FTRepo (DB-lock discipl
 from forward_testing.positions.costs import Costs, apply_costs
 from forward_testing.positions.exit_evaluator import PositionView, evaluate_exit
 from forward_testing.lifecycle.states import SignalState
+from data.db import connect as db_connect
 
 
 def _days_between(date_a, date_b):
@@ -46,7 +47,7 @@ def _default_suspension_checker(db_path):
     import sqlite3
 
     def check(ticker, on_date):
-        conn = sqlite3.connect(db_path, timeout=30)
+        conn = db_connect(db_path, timeout=30)
         try:
             row = conn.execute(
                 "SELECT 1 FROM suspension_events WHERE ticker=? AND classification='suspension' "

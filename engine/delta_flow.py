@@ -8,6 +8,7 @@ import sqlite3
 import numpy as np
 import pandas as pd
 from config import DB_PATH
+from data.db import connect as db_connect
 
 EARLIEST_DATE = '2026-04-20'
 
@@ -15,7 +16,7 @@ EARLIEST_DATE = '2026-04-20'
 def load_bars(ticker: str, date: str, db_path: str = DB_PATH) -> pd.DataFrame:
     """Return the session's 1-min bars for ticker/date, ordered by bar_time.
     Empty DataFrame if none."""
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     try:
         df = pd.read_sql_query(
             "SELECT bar_time, buy_lot, sell_lot, buy_freq, sell_freq, "
