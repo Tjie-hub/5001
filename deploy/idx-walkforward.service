@@ -1,10 +1,18 @@
-# IDX Walkforward Strategy Suite — user systemd unit (audit P-5).
+# IDX Walkforward Strategy Suite — user systemd unit (audit P-5; release-based
+# deployment, security hardening Phase 4).
 #
-# Install (as user tjiesar; linger is already enabled so it survives logout
-# and starts at boot):
-#   cp deploy/idx-walkforward.service ~/.config/systemd/user/
-#   systemctl --user daemon-reload
-#   systemctl --user enable --now idx-walkforward
+# The service runs from /home/tjiesar/idx-walkforward-current, a symlink that
+# scripts/release.sh points at an immutable, versioned release directory
+# (~/releases/idx-walkforward/<version>). Rollback = scripts/rollback.sh +
+# restart. Production never executes from a mutable working tree.
+#
+# CUTOVER (manual operator steps — installing this file changes what prod runs):
+#   1. scripts/release.sh                    # build a release, set `current`
+#   2. cp deploy/idx-walkforward.service ~/.config/systemd/user/
+#   3. systemctl --user daemon-reload
+#   4. systemctl --user restart idx-walkforward
+# Legacy note: until cutover the installed unit still points at
+# /home/tjiesar/idx-walkforward-5001 (a symlink into the working tree).
 #
 # Ops:
 #   systemctl --user status|restart|stop idx-walkforward
@@ -17,12 +25,12 @@ After=network-online.target
 Type=exec
 # no-space symlink path — the venv console-script shebangs break on the real
 # "10 Projects" path, hence `python -m gunicorn`.
-WorkingDirectory=/home/tjiesar/idx-walkforward-5001
+WorkingDirectory=/home/tjiesar/idx-walkforward-current
 Environment=SECTORS_APP_MODE=shadow
-ExecStart=/home/tjiesar/idx-walkforward-5001/venv/bin/python -m gunicorn -c gunicorn.conf.py wsgi:app
+ExecStart=/home/tjiesar/idx-walkforward-current/venv/bin/python -m gunicorn -c gunicorn.conf.py wsgi:app
 # Startup verification: unit only reaches 'active' once /health answers.
 # If it never does, the start FAILS and Restart=always retries.
-ExecStartPost=/home/tjiesar/idx-walkforward-5001/scripts/wait_for_health.sh
+ExecStartPost=/home/tjiesar/idx-walkforward-current/scripts/wait_for_health.sh
 Restart=always
 RestartSec=5
 TimeoutStartSec=180
