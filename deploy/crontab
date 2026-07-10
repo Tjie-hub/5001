@@ -1,0 +1,44 @@
+# IDX Walkforward — canonical crontab (hardening Phase 4).
+# THIS FILE IS THE SOURCE OF TRUTH — edit here, then install with:
+#   crontab deploy/crontab
+#
+# Every job runs through scripts/cron_wrap.sh: per-job log in logs/cron_<job>.log
+# plus a Telegram alert on ANY nonzero exit (missing script included).
+# All paths use the no-space symlink /home/tjiesar/idx-walkforward-5001
+# (the venv console-script shebangs break on the real "10 Projects" path).
+#
+# Removed 2026-07-10 (audit P-4 — scripts never existed in git, failing every
+# run for weeks):
+#   0 19 * * 1-5  sectors_fetcher.py   (sectors_* tables are stale since removal
+#                                       of the script; sectors.app overlay is
+#                                       shadow-only so no trade impact)
+#   0  9 * * 1-5  audit_signals.py
+#
+# m h dom mon dow  command
+D=/home/tjiesar/idx-walkforward-5001
+W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
+
+# Stockbit token refresh (24h JWT) — pre-market
+40 8 * * 1-5 cd $D && $W auto_token venv/bin/python3 auto_token.py
+
+# OHLCV fetch — pre-market
+50 8 * * 1-5 cd $D && $W stockbit_ohlcv sh -c 'venv/bin/python3 stockbit_fetcher.py --token "$(cat .stockbit_token)"'
+
+# Flow fetch (EOD) — 18:30, after the APScheduler 16:05 run finishes (~16:25)
+30 18 * * 1-5 cd $D && $W stockbit_flow sh -c 'venv/bin/python3 stockbit_fetcher.py flow --token "$(cat .stockbit_token)"'
+
+# Scheduler heartbeat watchdog (dead-man's-switch, audit 3.7)
+*/10 * * * * cd $D && $W heartbeat_check venv/bin/python3 scripts/check_scheduler_heartbeat.py
+
+# Research (M3: off the production scheduler)
+5 16 * * 5   cd $D && $W research_wf_refresh venv/bin/python3 -m research.cli wf-refresh
+15 8 * * 1-5 cd $D && $W research_backtest_cache venv/bin/python3 -m research.cli backtest-cache
+0 10 1-7 * 0 cd $D && $W research_roller venv/bin/python3 -m research.cli roller
+
+# Nightly DB backup + verification + retention prune (audit P-3) — 21:30,
+# after the 21:00 OHLCV reconciliation. Runs daily incl. weekends (cheap).
+30 21 * * * cd $D && $W db_backup venv/bin/python3 -m scripts.db_backup
+
+# Weekly restore drill (audit P-3: "a backup is not complete unless a restore
+# has been verified") — Sunday 09:00 on the newest backup.
+0 9 * * 0 cd $D && $W db_restore_drill sh -c 'venv/bin/python3 -m scripts.db_restore "$(ls -t ~/backups/idx-walkforward-5001/*.db.zst | head -1)"'
