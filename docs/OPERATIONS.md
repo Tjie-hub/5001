@@ -23,28 +23,75 @@ writer; a second worker would double-run every job. Guard-tested in
 `config.validate_config()` runs at startup and refuses to boot when
 mandatory config is missing (DB_PATH, Telegram creds, ZAI key if firm on).
 
-## Deployment
+## Deployment (release-based)
+
+Production runs an **immutable, versioned release**, never the working tree.
+`scripts/release.sh` builds `~/releases/idx-walkforward/<timestamp>-<sha>`
+from `git archive HEAD` (code chmod'd read-only, `release.json` manifest
+with version/git_sha/branch/built_at, shared mutable state — `.env`, `venv`,
+`logs`, root DBs — symlinked in) and atomically flips the
+`~/idx-walkforward-current` symlink. The DB is reached via the absolute
+`DB_PATH` in `.env`.
 
 ```bash
-# code update (working tree is prod — keep master clean):
+# release procedure
 git -C ~/idx-walkforward-5001 pull            # or merge the reviewed branch
-systemctl --user restart idx-walkforward
-scripts/wait_for_health.sh                     # explicit post-deploy check
+scripts/release.sh                            # build + switch `current`
+systemctl --user restart idx-walkforward      # activate (operator action)
+scripts/wait_for_health.sh                    # explicit post-deploy check
+curl -s localhost:5001/health | jq .version   # confirm the running version
 
 # service management
 systemctl --user status idx-walkforward
 journalctl --user -u idx-walkforward -f       # live logs (gunicorn + app)
 ```
 
-Unit file source of truth: `deploy/idx-walkforward.service` → copy to
-`~/.config/systemd/user/` + `systemctl --user daemon-reload` when it changes.
+**Rollback**
 
-Rollback = `git checkout <last-good>` + restart. The service is
-health-gated: a start where `/health` never answers is marked failed and
-retried (`Restart=always`, `RestartSec=5`).
+```bash
+scripts/rollback.sh --list      # releases, '*' marks current
+scripts/rollback.sh             # previous release
+scripts/rollback.sh <version>   # a specific release
+systemctl --user restart idx-walkforward
+```
+
+Unit file source of truth: `deploy/idx-walkforward.service` (targets
+`~/idx-walkforward-current`) → copy to `~/.config/systemd/user/` +
+`systemctl --user daemon-reload` when it changes. **Cutover note:** until the
+updated unit is installed, the installed service still runs from the legacy
+working-tree symlink `~/idx-walkforward-5001`; the cutover steps are in the
+unit file header.
+
+The service is health-gated: a start where `/health` never answers is marked
+failed and retried (`Restart=always`, `RestartSec=5`).
 
 Manual fallbacks: `./start.sh` (same gunicorn runtime, foreground),
 `./start.sh dev` (Flask dev server).
+
+## Startup validation
+
+`config.validate_config()` runs before the scheduler starts and **aborts
+startup** (ConfigError listing every problem at once) on: missing
+DB_PATH/Telegram config; a non-empty DB missing core tables (wrong DB_PATH);
+provider order including `claude` without the CLI on PATH; missing ZAI key;
+invalid `AUTH_MODE`; `AUTH_MODE=enforce` with no tokens (lockout guard);
+tokens shorter than 16 chars; `.env`/`.stockbit_token` not mode 600; a
+malformed `release.json`. A brand-new empty DB is allowed (first-boot
+bootstrap). On abort, the health gate keeps the unit failed — read the
+ConfigError list in `journalctl --user -u idx-walkforward`.
+
+## Authentication & audit trail
+
+Route auth (viewer/operator/scheduler/admin roles, `AUTH_MODE`
+off/shadow/enforce) and the `audit_events` trail are documented in
+[SECURITY.md](SECURITY.md), including the shadow→enforce migration runbook.
+Quick queries:
+
+```sql
+-- recent operational actions & auth failures
+SELECT ts, action, actor_role, resource, outcome FROM audit_events
+ORDER BY ts DESC LIMIT 20;
+```
 
 ## Backup & restore
 
@@ -89,6 +136,65 @@ WHERE created_at >= date('now', '-7 days') GROUP BY 1, 2;
 
 Startup logs the router composition; a single-provider router logs a loud
 WARNING (that state means failover is off — fix `.env`).
+
+### Session limits & quota-aware routing (RCA 2026-07-10)
+
+Both providers run on subscription plans with **5-hour usage windows**:
+Claude ("You've hit your session limit · resets 6:20pm (Asia/Jakarta)",
+exit 1 with the message on **stdout**) and Z.ai (HTTP 429 code 1308
+"Usage limit reached for 5 hour"). The Claude window is **shared with any
+interactive Claude Code session on this account** — heavy interactive use
+drains the same quota the failover leg depends on.
+
+Behavior (`Audit/CLAUDE_PROVIDER_RCA_2026-07-10.md` is the source of truth):
+
+- Failed CLI invocations are classified from **both stdout and stderr**
+  into explicit categories (`session_limit_exceeded`, `rate_limited`,
+  `authentication_failed`, `timeout`, `network_failure`,
+  `provider_unavailable`, `unexpected_error`, `unknown`).
+- On a session limit the Router **holds the provider out of rotation**
+  until the advertised reset time + `AGENT_FIRM_QUOTA_RESET_BUFFER`
+  (fallback `AGENT_FIRM_QUOTA_FALLBACK_HOLD` when no reset was parseable;
+  capped at `AGENT_FIRM_QUOTA_MAX_HOLD`). No CLI process is spawned for a
+  held provider. Recovery is automatic: after the hold expires the next
+  request tries the provider again; the first success emits
+  `provider_restored` and re-enables normal rotation. The Circuit Breaker
+  is unchanged and operates in parallel.
+- Events: `provider_session_limit` (with `reset_time`), `provider_skipped`
+  (hold active), `provider_restored`. Telegram alerts fire on transitions
+  only (one per reset window; escalation after
+  `AGENT_FIRM_QUOTA_REPEAT_THRESHOLD` hits without recovery; one
+  "all providers down" alert per `AGENT_FIRM_ALERT_MIN_INTERVAL`).
+
+Check current availability and why:
+
+```sql
+SELECT provider, event_type, reason, reset_time, created_at
+FROM provider_events
+WHERE event_type IN ('provider_session_limit','provider_restored')
+ORDER BY id DESC LIMIT 10;
+```
+
+Operator actions when quota alarms fire:
+
+1. Session limit on **claude**: expected on heavy interactive-use days —
+   nothing to fix; routing already skips it until the reset shown in the
+   alert. Reduce interactive Claude Code load or wait for the window.
+2. Repeated-exhaustion alert: firm volume is chewing whole windows —
+   lower burst size / call volume, or consider a metered API key for the
+   firm (structural fix, out of scope of quota-aware routing).
+3. All-providers-down alert: firm requests are failing; the agent-firm
+   gate falls back per the flow-gate fail-open policy. Check both
+   providers' reset times; nothing to restart — recovery is time-based.
+4. Kill switch for the hold behavior: `AGENT_FIRM_QUOTA_HOLD=false`
+   (reverts to pre-2026-07-10 retry-every-cooldown behavior).
+
+Known limitations: holds are **process-local** (an app restart forgets
+them — worst case the provider is re-probed once and re-held); reset-time
+parsing covers Claude's "resets H:MMam/pm (Zone)" phrasing — anything else
+degrades to the fallback hold; Z.ai's 1308 carries no reset timestamp, so
+it always uses the fallback hold; quota stays shared with interactive
+Claude Code use — routing can route around exhaustion, not create capacity.
 
 ## Cron
 
