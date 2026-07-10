@@ -79,6 +79,31 @@ class CorrelationFilter(logging.Filter):
         return True
 
 
+_SECRET_VARS = ("TELEGRAM_TOKEN", "ZAI_API_KEY", "DEEPSEEK_API_KEY",
+                "TAVILY_API_KEY", "FLASK_SECRET_KEY", "STOCKBIT_PASSWORD",
+                "AUTH_TOKEN_ADMIN", "AUTH_TOKEN_OPERATOR", "AUTH_TOKEN_VIEWER",
+                "AUTH_TOKEN_SCHEDULER", "TELEGRAM_WEBHOOK_SECRET")
+
+
+class SecretRedactionFilter(logging.Filter):
+    """Mask configured secret values if they ever reach a log line
+    (security hardening Phase 3). Values are read from env at filter time so
+    rotation needs no restart of the logging stack."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        dirty = False
+        for var in _SECRET_VARS:
+            for val in (v.strip() for v in os.getenv(var, "").split(",")):
+                if len(val) >= 8 and val in msg:
+                    msg = msg.replace(val, "[REDACTED]")
+                    dirty = True
+        if dirty:
+            record.msg = msg
+            record.args = ()
+        return True
+
+
 def set_correlation_id(cid: str | None = None) -> str:
     """Set a correlation ID for the current thread (used by scheduler jobs)."""
     cid = cid or str(uuid.uuid4())
@@ -97,6 +122,7 @@ def setup_logging(log_dir: str = 'logs', level: int = logging.INFO) -> None:
     root.handlers.clear()
 
     correlation_filter = CorrelationFilter()
+    redaction_filter = SecretRedactionFilter()
     json_fmt = JSONFormatter()
 
     # Rotating file handler: logs/app.log, 10 MB × 5 backups
@@ -108,6 +134,7 @@ def setup_logging(log_dir: str = 'logs', level: int = logging.INFO) -> None:
     )
     file_handler.setFormatter(json_fmt)
     file_handler.addFilter(correlation_filter)
+    file_handler.addFilter(redaction_filter)
     root.addHandler(file_handler)
 
     # Console handler (human-readable for dev; structlog-style prefix)
@@ -118,6 +145,7 @@ def setup_logging(log_dir: str = 'logs', level: int = logging.INFO) -> None:
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(console_fmt)
     console_handler.addFilter(correlation_filter)
+    console_handler.addFilter(redaction_filter)
     root.addHandler(console_handler)
 
     logging.getLogger('werkzeug').setLevel(logging.WARNING)

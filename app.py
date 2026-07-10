@@ -64,6 +64,17 @@ def set_security_headers(response):
     return response
 
 
+@app.errorhandler(500)
+def _internal_error(e):
+    """Generic 500: no traceback or exception detail crosses the HTTP
+    boundary (security hardening Phase 3); full detail goes to the log with
+    the request's correlation id."""
+    logging.getLogger("app").exception("unhandled error (request_id=%s)",
+                                       g.get("correlation_id", ""))
+    return jsonify({"error": "internal server error",
+                    "request_id": g.get("correlation_id", "")}), 500
+
+
 @app.route("/health")
 def health():
     import sqlite3
