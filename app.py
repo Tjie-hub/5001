@@ -78,7 +78,9 @@ def _internal_error(e):
 @app.route("/health")
 def health():
     import sqlite3
-    result = {"status": "ok", "db": "ok", "last_scan": None, "open_trades": 0}
+    from utils.release import release_info
+    result = {"status": "ok", "db": "ok", "last_scan": None, "open_trades": 0,
+              "version": release_info().get("version")}
     try:
         conn = db_connect(DB_PATH)
         result["last_scan"] = conn.execute(
@@ -213,7 +215,11 @@ def init_runtime():
     scheduler = start_scheduler()
     poller_thread = threading.Thread(target=telegram_poller_loop, daemon=True)
     poller_thread.start()
-    logging.getLogger("app").info("runtime initialized (scheduler + telegram poller)")
+    from utils.release import release_info
+    _rel = release_info()
+    logging.getLogger("app").info(
+        "runtime initialized (scheduler + telegram poller) version=%s source=%s",
+        _rel.get("version"), _rel.get("source"))
     return scheduler
 
 
