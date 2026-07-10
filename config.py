@@ -32,3 +32,39 @@ EDGE_SCORE_MODE = os.getenv("EDGE_SCORE_MODE", "off").strip().lower()
 def edge_mode() -> str:
     """Current edge-score mode (re-read from env each call)."""
     return os.getenv("EDGE_SCORE_MODE", EDGE_SCORE_MODE).strip().lower()
+
+
+class ConfigError(RuntimeError):
+    """Mandatory configuration is missing or invalid — refuse to start."""
+
+
+def validate_config() -> None:
+    """Fail fast at startup when mandatory configuration is missing
+    (audit §5 / hardening Phase 5). Reads the environment fresh so tests can
+    monkeypatch. Raises ConfigError listing every problem at once."""
+    problems: list[str] = []
+
+    db_path = os.getenv("DB_PATH", DB_PATH)
+    if not Path(db_path).exists():
+        problems.append(f"DB_PATH does not exist: {db_path}")
+
+    # Telegram is the alerting safety net — a prod process without it fails
+    # silently, which is exactly what this phase exists to prevent.
+    if not os.getenv("TELEGRAM_TOKEN", TELEGRAM_TOKEN):
+        problems.append("TELEGRAM_TOKEN is not set")
+    if not os.getenv("TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID):
+        problems.append("TELEGRAM_CHAT_ID is not set")
+
+    if os.getenv("AGENT_FIRM_ENABLED", "").strip().lower() in ("1", "true", "yes"):
+        mode = os.getenv("AGENT_FIRM_PROVIDER", "zai").strip().lower()
+        order = ([p.strip() for p in
+                  os.getenv("AGENT_FIRM_PROVIDER_ORDER", "claude,zai").split(",")]
+                 if mode == "auto" else [mode])
+        if "zai" in order and not (os.getenv("ZAI_API_KEY")
+                                   or os.getenv("DEEPSEEK_API_KEY")):
+            problems.append("agent firm enabled with zai provider but no "
+                            "ZAI_API_KEY (or legacy DEEPSEEK_API_KEY) set")
+
+    if problems:
+        raise ConfigError("startup config validation failed:\n  - "
+                          + "\n  - ".join(problems))

@@ -54,6 +54,10 @@ def snapshot(db_path: Path, dest_dir: Path, now: datetime.datetime | None = None
     finally:
         src.close()
         dst.close()
+    for ext in ("-wal", "-shm"):  # empty side files inherited from WAL source
+        side = out.with_name(out.name + ext)
+        if side.exists():
+            side.unlink()
     logger.info("snapshot written: %s (%.1f MB)", out, out.stat().st_size / 1e6)
     return out
 

@@ -1,0 +1,33 @@
+# IDX Walkforward Strategy Suite — user systemd unit (audit P-5).
+#
+# Install (as user tjiesar; linger is already enabled so it survives logout
+# and starts at boot):
+#   cp deploy/idx-walkforward.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now idx-walkforward
+#
+# Ops:
+#   systemctl --user status|restart|stop idx-walkforward
+#   journalctl --user -u idx-walkforward -f
+[Unit]
+Description=IDX Walkforward Strategy Suite (gunicorn, port 5001)
+After=network-online.target
+
+[Service]
+Type=exec
+# no-space symlink path — the venv console-script shebangs break on the real
+# "10 Projects" path, hence `python -m gunicorn`.
+WorkingDirectory=/home/tjiesar/idx-walkforward-5001
+Environment=SECTORS_APP_MODE=shadow
+ExecStart=/home/tjiesar/idx-walkforward-5001/venv/bin/python -m gunicorn -c gunicorn.conf.py wsgi:app
+# Startup verification: unit only reaches 'active' once /health answers.
+# If it never does, the start FAILS and Restart=always retries.
+ExecStartPost=/home/tjiesar/idx-walkforward-5001/scripts/wait_for_health.sh
+Restart=always
+RestartSec=5
+TimeoutStartSec=180
+TimeoutStopSec=45
+KillMode=mixed
+
+[Install]
+WantedBy=default.target

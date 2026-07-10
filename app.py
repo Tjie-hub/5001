@@ -182,11 +182,24 @@ def prometheus_metrics():
     return body, 200, {'Content-Type': 'text/plain; charset=utf-8; version=0.0.4'}
 
 
-if __name__ == "__main__":
+def init_runtime():
+    """One-time process initialization: idempotent table migrations, the
+    APScheduler, and the Telegram poller thread. Called from __main__ (dev,
+    Flask server) and from gunicorn's post_worker_init hook (production,
+    see gunicorn.conf.py) — extracted so both runtimes share exactly the
+    same startup path (audit P-5)."""
+    from config import validate_config
+    validate_config()
     init_screener_tables()
     init_flow_db()
     init_agent_firm_tables()
-    start_scheduler()
+    scheduler = start_scheduler()
     poller_thread = threading.Thread(target=telegram_poller_loop, daemon=True)
     poller_thread.start()
+    logging.getLogger("app").info("runtime initialized (scheduler + telegram poller)")
+    return scheduler
+
+
+if __name__ == "__main__":
+    init_runtime()
     app.run(host="0.0.0.0", port=5001, debug=False)
