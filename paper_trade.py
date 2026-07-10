@@ -1,16 +1,15 @@
 
 import os
-from dotenv import load_dotenv
 import sqlite3
 from data.db import connect as db_connect
 import json
 from datetime import datetime
 import pytz
 
-load_dotenv()
 
 WIB     = pytz.timezone("Asia/Jakarta")
-DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
+from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, Phase 5)
+DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 
 def calc_swing_tp(ticker: str, entry_price: float, lookback: int = 20) -> float:
     """

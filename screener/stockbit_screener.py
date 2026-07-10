@@ -13,7 +13,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 # DS state is reliable — the walkforward state failed token capture previously
-DS_STATE_DIR = Path("/home/tjiesar/DS/.browser_agent_state")
+DS_STATE_DIR = Path(os.getenv("DS_STATE_DIR", str(Path.home() / "DS" / ".browser_agent_state")))
 TOKEN_FILE    = BASE_DIR / ".stockbit_token"
 
 STOCKBIT_BASE = "https://exodus.stockbit.com"

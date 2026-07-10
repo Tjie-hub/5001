@@ -19,7 +19,7 @@ Usage:
   python3 stockbit_fetcher.py flow --cat IDX30    # flow fetch IDX30 only
 
 Cron (setiap hari 08:50 WIB sebelum market):
-  50 8 * * 1-5 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python3 stockbit_fetcher.py >> logs/stockbit.log 2>&1
+  See deploy/crontab (cron_wrap-ed OHLCV fetch at 08:50 Mon-Fri).
 """
 
 import os

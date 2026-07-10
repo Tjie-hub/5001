@@ -3,7 +3,6 @@ import logging
 import sqlite3
 import time
 import uuid
-from dotenv import load_dotenv
 from flask import Flask, render_template, jsonify, request, g
 from scheduler import start_scheduler
 from routes_backtest_multi import backtest_multi_bp
@@ -21,9 +20,9 @@ from routes.chart import chart_bp
 from utils.logging_config import setup_logging
 import threading
 
-load_dotenv()
 setup_logging()
-DB_PATH = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
+from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, Phase 5)
+DB_PATH = os.getenv('DB_PATH', _DEFAULT_DB_PATH)
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.urandom(32)

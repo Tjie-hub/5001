@@ -3,14 +3,13 @@ import os
 import sqlite3
 import logging
 import pandas as pd
-from dotenv import load_dotenv
 from datetime import datetime
 import pytz
 
-load_dotenv()
 
 WIB = pytz.timezone("Asia/Jakarta")
-DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
+from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, Phase 5)
+DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 
 from utils.telegram import send_telegram  # noqa: E402
 from data.db import connect as db_connect  # noqa: E402
