@@ -78,3 +78,76 @@ def test_systemd_unit_matches_runtime_contract():
     assert "Restart=always" in unit
     assert "wait_for_health.sh" in unit
     assert "-m gunicorn" in unit
+
+
+# --- security & release hardening: auth / DB / provider / manifest checks ---
+
+def test_enforce_without_tokens_aborts(good_env, monkeypatch):
+    monkeypatch.setenv("AUTH_MODE", "enforce")
+    for v in ("AUTH_TOKEN_ADMIN", "AUTH_TOKEN_OPERATOR", "AUTH_TOKEN_VIEWER",
+              "AUTH_TOKEN_SCHEDULER"):
+        monkeypatch.delenv(v, raising=False)
+    with pytest.raises(cfg.ConfigError, match="AUTH_MODE=enforce"):
+        cfg.validate_config()
+
+
+def test_short_token_rejected(good_env, monkeypatch):
+    monkeypatch.setenv("AUTH_MODE", "enforce")
+    monkeypatch.setenv("AUTH_TOKEN_ADMIN", "short")
+    with pytest.raises(cfg.ConfigError, match="16"):
+        cfg.validate_config()
+
+
+def test_unknown_auth_mode_rejected(good_env, monkeypatch):
+    monkeypatch.setenv("AUTH_MODE", "banana")
+    with pytest.raises(cfg.ConfigError, match="AUTH_MODE"):
+        cfg.validate_config()
+
+
+def test_enforce_with_good_tokens_passes(good_env, monkeypatch):
+    monkeypatch.setenv("AUTH_MODE", "enforce")
+    monkeypatch.setenv("AUTH_TOKEN_ADMIN", "an-admin-token-of-decent-length")
+    cfg.validate_config()  # must not raise
+
+
+def test_db_with_wrong_tables_aborts(monkeypatch, tmp_path):
+    import sqlite3
+    db = tmp_path / "foreign.db"
+    conn = sqlite3.connect(str(db))
+    conn.execute("CREATE TABLE unrelated (x INT)")
+    conn.commit(); conn.close()
+    monkeypatch.setenv("DB_PATH", str(db))
+    monkeypatch.setenv("TELEGRAM_TOKEN", "t")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "c")
+    monkeypatch.delenv("AGENT_FIRM_ENABLED", raising=False)
+    with pytest.raises(cfg.ConfigError, match="required table"):
+        cfg.validate_config()
+
+
+def test_empty_db_allowed_for_bootstrap(good_env):
+    # fresh DB (no tables at all) is created/migrated by init_runtime AFTER
+    # validation — must not abort first boot
+    cfg.validate_config()
+
+
+def test_claude_in_order_requires_cli(good_env, monkeypatch):
+    monkeypatch.setenv("AGENT_FIRM_ENABLED", "true")
+    monkeypatch.setenv("AGENT_FIRM_PROVIDER", "claude")
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    with pytest.raises(cfg.ConfigError, match="claude CLI"):
+        cfg.validate_config()
+
+
+def test_invalid_release_manifest_aborts(good_env, monkeypatch, tmp_path):
+    bad = tmp_path / "release.json"
+    bad.write_text('{"git_sha": "abc"}')   # missing version/built_at
+    monkeypatch.setattr(cfg, "_RELEASE_MANIFEST", bad)
+    with pytest.raises(cfg.ConfigError, match="release.json"):
+        cfg.validate_config()
+
+
+def test_valid_release_manifest_passes(good_env, monkeypatch, tmp_path):
+    ok = tmp_path / "release.json"
+    ok.write_text('{"version": "v", "git_sha": "s", "built_at": "t"}')
+    monkeypatch.setattr(cfg, "_RELEASE_MANIFEST", ok)
+    cfg.validate_config()
