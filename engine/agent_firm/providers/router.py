@@ -52,7 +52,7 @@ class ProviderRouter:
                 log_provider_event(ProviderEvent(
                     event_type="provider_failover", timestamp=_now(),
                     provider=provider.name, reason="circuit open",
-                ))
+                ), db_path=self._db_path)
                 continue
 
             if provider.name == "claude" and self._db_path is not None:
@@ -61,13 +61,14 @@ class ProviderRouter:
                     log_provider_event(ProviderEvent(
                         event_type="provider_quota_exceeded", timestamp=_now(),
                         provider=provider.name, reason="daily call cap reached",
-                    ))
+                    ), db_path=self._db_path)
                     continue
 
             try:
                 resp = await provider.generate(messages, timeout=timeout)
             except ProviderException as err:
                 just_opened = breaker.record_failure()
+                err.provider = provider.name  # trace attribution (audit P-2)
                 last_err = err
                 event_type = (
                     "provider_timeout" if type(err).__name__ == "ProviderTimeout"
@@ -76,12 +77,12 @@ class ProviderRouter:
                 log_provider_event(ProviderEvent(
                     event_type=event_type, timestamp=_now(),
                     provider=provider.name, reason=str(err),
-                ))
+                ), db_path=self._db_path)
                 if just_opened:
                     log_provider_event(ProviderEvent(
                         event_type="provider_circuit_open", timestamp=_now(),
                         provider=provider.name, reason=str(err),
-                    ))
+                    ), db_path=self._db_path)
                 continue
             else:
                 just_closed = breaker.record_success()
@@ -89,13 +90,13 @@ class ProviderRouter:
                     log_provider_event(ProviderEvent(
                         event_type="provider_circuit_closed", timestamp=_now(),
                         provider=provider.name,
-                    ))
+                    ), db_path=self._db_path)
                 resp.failover = i > 0
                 log_provider_event(ProviderEvent(
                     event_type="provider_failover" if resp.failover else "provider_selected",
                     timestamp=_now(), provider=provider.name, model=resp.model,
                     duration_s=resp.duration_s, request_id=resp.request_id,
                     failover=resp.failover,
-                ))
+                ), db_path=self._db_path)
                 return resp
         raise last_err or ProviderUnavailable("no providers available")
