@@ -225,7 +225,9 @@ def roll_all(tickers: list = None, include_partial: bool = True,
     if tickers is None:
         tickers = get_all_tickers()
 
-    ohlcv_map = _load_ohlcv_bulk()
+    # Keep partial-bar semantics (roller tracks in-progress windows) but take
+    # the split-adjusted basis (audit R-1).
+    ohlcv_map = _load_ohlcv_bulk(adjusted=True)
     conn = sqlite3.connect(db_path)
     _init_table(conn)
 

@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 import pandas as pd
 
 from data.db import connect as db_connect
+from data.loaders import load_ohlcv_df
 from engine.liquidity import get_adv_value_30d, VALUE_LIQ_MIN_IDR
 from engine.strategies import strategy_nr7_breakout
 from research.walkforward_multi import walk_forward_split
@@ -90,9 +91,7 @@ def run():
     universe = liquid_universe(conn, as_of)
     all_trades = []
     for t in universe:
-        df = pd.read_sql(
-            "SELECT date, open, high, low, close, volume FROM ohlcv "
-            "WHERE ticker=? ORDER BY date", conn, params=(t,))
+        df = load_ohlcv_df(conn, t)   # settled + split-adjusted (audit R-1)
         if len(df) < 300:
             continue
         all_trades.extend(collect_trades_for_ticker(t, df))

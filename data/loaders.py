@@ -34,7 +34,38 @@ def get_all_tickers():
     return tickers
 
 
-def _load_ohlcv_bulk(final_only: bool = False) -> dict:
+def load_ohlcv_df(conn, ticker: str, final_only: bool = True,
+                  adjusted: bool = None) -> pd.DataFrame:
+    """Per-ticker research loader: settled bars, split-adjusted (audit R-1).
+
+    Studies must use this instead of hand-rolled `SELECT ... FROM ohlcv`
+    (guard: tests/test_corporate_adjustments.py). Same flag semantics as
+    _load_ohlcv_bulk; the caller owns `conn`.
+    """
+    from data.adjustments import load_split_factors, adjust_ohlcv
+
+    if adjusted is None:
+        adjusted = final_only
+    where = "WHERE ticker=?"
+    if final_only:
+        where += " AND COALESCE(is_final, 1) = 1"
+    try:
+        df = pd.read_sql(
+            f"SELECT date, open, high, low, close, volume FROM ohlcv "
+            f"{where} ORDER BY date ASC", conn, params=(ticker,))
+    except Exception:
+        df = pd.read_sql(
+            "SELECT date, open, high, low, close, volume FROM ohlcv "
+            "WHERE ticker=? ORDER BY date ASC", conn, params=(ticker,))
+    for c in ["open", "high", "low", "close", "volume"]:
+        df[c] = df[c].astype(float)
+    if adjusted:
+        splits = load_split_factors(conn).get(ticker, [])
+        df = adjust_ohlcv(df, splits)
+    return df
+
+
+def _load_ohlcv_bulk(final_only: bool = False, adjusted: bool = None) -> dict:
     """Load all OHLCV in one query. Returns {ticker: DataFrame}.
 
     final_only=True excludes provisional intraday bars (is_final=0) — required
@@ -42,7 +73,16 @@ def _load_ohlcv_bulk(final_only: bool = False) -> dict:
     contaminates scores (Phase 2A item 2.1). Live scans keep the default:
     partial bars ARE their signal input. COALESCE keeps pre-migration DBs and
     test fixtures without the column working.
+
+    adjusted=None follows final_only: the research path (final_only=True) is
+    back-adjusted through splits from corporate_actions (audit R-1) while live
+    scans stay on the raw basis. Storage is never modified — adjustment applies
+    to the loaded frames only (data/adjustments.py).
     """
+    from data.adjustments import load_split_factors, adjust_ohlcv
+
+    if adjusted is None:
+        adjusted = final_only
     conn = db_connect(DB_PATH)
     if final_only:
         try:
@@ -53,7 +93,12 @@ def _load_ohlcv_bulk(final_only: bool = False) -> dict:
             all_df = pd.read_sql('SELECT * FROM ohlcv ORDER BY ticker, date ASC', conn)
     else:
         all_df = pd.read_sql('SELECT * FROM ohlcv ORDER BY ticker, date ASC', conn)
+    split_factors = load_split_factors(conn) if adjusted else {}
     conn.close()
     for c in ["open", "high", "low", "close", "volume"]:
         all_df[c] = all_df[c].astype(float)
-    return {t: grp.reset_index(drop=True) for t, grp in all_df.groupby("ticker")}
+    out = {t: grp.reset_index(drop=True) for t, grp in all_df.groupby("ticker")}
+    for ticker, splits in split_factors.items():
+        if ticker in out:
+            out[ticker] = adjust_ohlcv(out[ticker], splits)
+    return out

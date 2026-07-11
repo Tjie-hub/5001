@@ -9,15 +9,11 @@ from research.walkforward_multi import STRATEGY_FUNCS, compute_metrics
 
 
 def _load_ohlcv(ticker: str, db_path: str) -> pd.DataFrame:
-    conn = sqlite3.connect(db_path)
-    df = pd.read_sql(
-        'SELECT date, open, high, low, close, volume FROM ohlcv '
-        'WHERE ticker=? ORDER BY date ASC',
-        conn, params=(ticker,)
-    )
+    from data.db import connect as db_connect
+    from data.loaders import load_ohlcv_df
+    conn = db_connect(db_path)
+    df = load_ohlcv_df(conn, ticker)   # settled + split-adjusted (audit R-1)
     conn.close()
-    for c in ['open', 'high', 'low', 'close', 'volume']:
-        df[c] = df[c].astype(float)
     return df
 
 

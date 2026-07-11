@@ -215,15 +215,10 @@ def run_study(db_path: str, min_move_pct: float = MOVE_THRESHOLD,
         if progress_cb:
             progress_cb(ticker, i, len(tickers))
 
-        df = pd.read_sql(
-            'SELECT date, open, high, low, close, volume FROM ohlcv '
-            'WHERE ticker=? ORDER BY date ASC',
-            conn, params=(ticker,)
-        )
+        from data.loaders import load_ohlcv_df
+        df = load_ohlcv_df(conn, ticker)   # settled + split-adjusted (audit R-1)
         if len(df) < MIN_SETUP_BARS + 5:
             continue
-        for c in ['open', 'high', 'low', 'close', 'volume']:
-            df[c] = df[c].astype(float)
 
         df['ret'] = df['close'].pct_change()
         big_idx = df.index[df['ret'] >= min_move_pct].tolist()
