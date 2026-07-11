@@ -3,6 +3,13 @@ optimizer.py — Strategy Parameter Optimizer
 
 Grid search + walk-forward validation for tuning VR thresholds,
 ATR multipliers, and MA/period params per-ticker.
+
+Every runner delegates to the CANONICAL engine implementation (shared exit
+kernel included) — the optimizer only maps a param dict onto the canonical
+function's search kwargs. It re-implements no entries, no stops (audit R-3:
+the previous hand-rolled TFB copy still carried the C-8 intrabar look-ahead
+that was fixed in the engine on 2026-06-30). Parity is CI-enforced by
+tests/test_optimizer_parity.py.
 """
 from __future__ import annotations
 
@@ -10,13 +17,12 @@ from typing import Any
 
 import pandas as pd
 
-from engine.indicators import calc_atr, calc_delta, calc_vol_ratio, calc_vwap
 from engine.strategies import (
-    Trade,
-    apply_costs,
-    lot_size,
-    run_strategy,
-    _watch_signal_block,
+    strategy_conservative,
+    strategy_momentum,
+    strategy_trend_following_breakout,
+    strategy_vol_weighted,
+    strategy_vwap_reversion,
 )
 
 # ─── Param grids ────────────────────────────────────────────────────────────
@@ -52,162 +58,53 @@ PARAM_GRIDS: dict[str, dict[str, list]] = {
 }
 
 
-# ─── Parameterized runners ────────────────────────────────────────────────────
+# ─── Parameterized runners (thin canonical wrappers) ─────────────────────────
 
 def _run_vol_weighted(df: pd.DataFrame, capital: float, params: dict) -> dict:
-    vr_threshold = params.get('vr_threshold', 1.8)
-    atr_sl_mult  = params.get('atr_sl_mult', 1.0)
-    atr_tp_mult  = params.get('atr_tp_mult', 2.0)
-    vr    = calc_vol_ratio(df, 20)
-    delta = calc_delta(df)
-    sig   = (vr > vr_threshold) & (delta > 0) & (df['close'] > df['open'])
-    return run_strategy(df, sig, atr_sl_mult=atr_sl_mult, atr_tp_mult=atr_tp_mult,
-                        min_rr=2.0, strategy_name='vol_weighted',
-                        initial_capital=capital)
+    return strategy_vol_weighted(
+        df, capital=capital,
+        vr_threshold=params.get('vr_threshold', 1.8),
+        atr_sl_mult=params.get('atr_sl_mult', 1.0),
+        atr_tp_mult=params.get('atr_tp_mult', 2.0))
 
 
 def _run_momentum(df: pd.DataFrame, capital: float, params: dict) -> dict:
-    vr_threshold = params.get('vr_threshold', 1.3)
-    atr_sl_mult  = params.get('atr_sl_mult', 1.2)
-    atr_tp_mult  = params.get('atr_tp_mult', 2.4)
-    vr      = calc_vol_ratio(df, 20)
-    streak2 = (
-        (df['close'] > df['close'].shift(1)) &
-        (df['close'].shift(1) > df['close'].shift(2))
-    )
-    watch_block = _watch_signal_block(df)
-    sig = streak2 & (vr > vr_threshold) & (vr <= 5.0) & ~watch_block
-    return run_strategy(df, sig, atr_sl_mult=atr_sl_mult, atr_tp_mult=atr_tp_mult,
-                        min_rr=2.0, strategy_name='momentum',
-                        initial_capital=capital, trail_sl=True)
+    return strategy_momentum(
+        df, capital=capital,
+        vr_threshold=params.get('vr_threshold', 1.3),
+        atr_sl_mult=params.get('atr_sl_mult', 1.2),
+        atr_tp_mult=params.get('atr_tp_mult', 2.4))
 
 
 def _run_vwap_reversion(df: pd.DataFrame, capital: float, params: dict) -> dict:
-    dist_threshold = params.get('dist_threshold', -0.010)
-    vr_threshold   = params.get('vr_threshold', 1.3)
-    atr_sl_mult    = params.get('atr_sl_mult', 0.8)
-    atr_tp_mult    = params.get('atr_tp_mult', 1.6)
-    vwap = calc_vwap(df)
-    vr   = calc_vol_ratio(df, 20)
-    dist = (df['close'] - vwap) / vwap
-    sig  = (dist < dist_threshold) & (vr > vr_threshold)
-    return run_strategy(df, sig, atr_sl_mult=atr_sl_mult, atr_tp_mult=atr_tp_mult,
-                        min_rr=2.0, strategy_name='vwap_reversion',
-                        initial_capital=capital)
+    return strategy_vwap_reversion(
+        df, capital=capital,
+        dist_threshold=params.get('dist_threshold', -0.010),
+        vr_threshold=params.get('vr_threshold', 1.3),
+        atr_sl_mult=params.get('atr_sl_mult', 0.8),
+        atr_tp_mult=params.get('atr_tp_mult', 1.6))
 
 
 def _run_conservative(df: pd.DataFrame, capital: float, params: dict) -> dict:
-    vr_threshold = params.get('vr_threshold', 1.3)
-    atr_sl_mult  = params.get('atr_sl_mult', 0.7)
-    atr_tp_mult  = params.get('atr_tp_mult', 1.4)
-    vr       = calc_vol_ratio(df, 20)
-    ma20     = df['close'].rolling(20).mean()
-    atr      = calc_atr(df, 14)
-    atr_ma   = atr.rolling(10).mean()
-    bullish  = df['close'] > df['open']
-    above_ma = df['close'] > ma20
-    atr_ok   = atr < atr_ma * 1.5
-    sig = (vr > vr_threshold) & bullish & above_ma & atr_ok
-    return run_strategy(df, sig, atr_sl_mult=atr_sl_mult, atr_tp_mult=atr_tp_mult,
-                        min_rr=2.0, strategy_name='conservative',
-                        initial_capital=capital)
+    return strategy_conservative(
+        df, capital=capital,
+        vr_threshold=params.get('vr_threshold', 1.3),
+        atr_sl_mult=params.get('atr_sl_mult', 0.7),
+        atr_tp_mult=params.get('atr_tp_mult', 1.4))
 
 
 def _run_tfb(df: pd.DataFrame, capital: float, params: dict) -> dict:
-    donchian_period = int(params.get('donchian_period', 20))
-    vol_mult        = params.get('vol_mult', 1.8)
-    atr_trail_mult  = params.get('atr_trail_mult', 2.5)
-    atr_expand_mult = params.get('atr_expand_mult', 0.5)
-    strategy_name   = 'trend_following_breakout'
-    initial_capital = capital
-
-    min_bars = donchian_period + 65
-    if len(df) < min_bars:
-        return {
-            'strategy': strategy_name, 'trades': [],
-            'equity': [capital] * len(df),
-            'final_capital': capital, 'initial_capital': initial_capital,
-        }
-
-    ma20      = df['close'].rolling(20).mean()
-    ma50      = df['close'].rolling(50).mean()
-    atr       = calc_atr(df, 14)
-    avg_vol   = df['volume'].rolling(20).mean()
-    donchian  = df['high'].rolling(donchian_period).max().shift(1)
-    atr60_med = atr.rolling(60).median()
-
-    signal = (
-        (df['close']  > donchian) &
-        (df['volume'] > vol_mult * avg_vol) &
-        (atr          > atr_expand_mult * atr60_med) &
-        (df['close']  > ma50)
-    )
-
-    equity      = [capital]
-    trades      = []
-    in_trade    = False
-    entry_price = 0.0
-    trail_stop  = 0.0
-    lots        = 0
-    entry_date  = ''
-
-    start_bar = 65
-    for i in range(start_bar, len(df)):
-        row      = df.iloc[i]
-        date     = str(row['date'])[:10]
-        cur_atr  = atr.iloc[i]
-        cur_ma20 = ma20.iloc[i]
-
-        if in_trade:
-            new_stop   = row['close'] - atr_trail_mult * cur_atr
-            trail_stop = max(trail_stop, new_stop)
-            exit_reason = None
-            exit_price  = None
-            if row['low'] <= trail_stop:
-                exit_price  = apply_costs(trail_stop, 'SELL')
-                exit_reason = 'TRAIL_SL'
-            elif row['close'] < cur_ma20:
-                exit_price  = apply_costs(row['close'], 'SELL')
-                exit_reason = 'MA20_BREAK'
-            elif i == len(df) - 1:
-                exit_price  = apply_costs(row['close'], 'SELL')
-                exit_reason = 'EOD'
-            if exit_reason:
-                gross   = (exit_price - entry_price) * lots * 100
-                pnl_pct = (exit_price - entry_price) / entry_price
-                capital += gross
-                trades.append(Trade(
-                    entry_date=entry_date, exit_date=date,
-                    entry_price=entry_price, exit_price=exit_price,
-                    lots=lots, direction='BUY', exit_reason=exit_reason,
-                    pnl_rp=gross, pnl_pct=pnl_pct * 100,
-                    strategy=strategy_name,
-                ))
-                in_trade = False
-        elif signal.iloc[i - 1]:
-            sig_atr = atr.iloc[i - 1]
-            if pd.isna(sig_atr) or sig_atr <= 0:
-                equity.append(capital)
-                continue
-            entry_price = apply_costs(row['open'], 'BUY')
-            sl_dist     = atr_trail_mult * sig_atr
-            sl_pct      = sl_dist / entry_price
-            if sl_pct <= 0.001:
-                equity.append(capital)
-                continue
-            lots = lot_size(capital, entry_price, 0.005, sl_pct)
-            cost = entry_price * lots * 100
-            if cost <= capital and lots > 0:
-                trail_stop = entry_price - sl_dist
-                in_trade   = True
-                entry_date = date
-
-        equity.append(capital)
-
-    return {
-        'strategy': strategy_name, 'trades': trades, 'equity': equity,
-        'final_capital': capital, 'initial_capital': initial_capital,
-    }
+    # NOTE (audit R-3): the canonical TFB carries two entry gates the old
+    # hand-rolled copy lacked (MA20 slope > 0.5, volume < 4x climax filter)
+    # and the C-8-fixed prior-bar Chandelier trail. Optimizer results for TFB
+    # therefore changed when this wrapper replaced the duplicate: they now
+    # measure the strategy that actually trades.
+    return strategy_trend_following_breakout(
+        df, capital=capital,
+        atr_mult=params.get('atr_trail_mult', 3.0),
+        donchian_period=int(params.get('donchian_period', 20)),
+        vol_mult=params.get('vol_mult', 1.8),
+        atr_expand_mult=params.get('atr_expand_mult', 0.5))
 
 
 STRATEGY_RUNNERS: dict[str, Any] = {
@@ -381,10 +278,10 @@ def save_optimizer_result(
 ) -> None:
     """Upsert optimizer result for (ticker, strategy) into optimizer_results table."""
     import json
-    import sqlite3
     from datetime import datetime
+    from data.db import connect as db_connect
     oos  = result['oos_metrics']
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     try:
         conn.execute(_CREATE_TABLE_SQL)
         conn.execute(
@@ -416,8 +313,8 @@ def get_optimizer_result(
 ) -> dict | None:
     """Fetch cached optimizer result for (ticker, strategy). Returns None if missing."""
     import json
-    import sqlite3
-    conn = sqlite3.connect(db_path)
+    from data.db import connect as db_connect
+    conn = db_connect(db_path)
     try:
         conn.execute(_CREATE_TABLE_SQL)
         row = conn.execute(
