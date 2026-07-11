@@ -74,7 +74,10 @@ def dataset_fingerprint(conn) -> dict:
         rows = conn.execute(per_ticker.format(
             where="WHERE COALESCE(is_final, 1) = 1 ")).fetchall()
     except Exception:   # pre-migration DB without is_final
-        rows = conn.execute(per_ticker.format(where="")).fetchall()
+        try:
+            rows = conn.execute(per_ticker.format(where="")).fetchall()
+        except Exception:   # no ohlcv at all (fixtures) — sentinel fingerprint
+            rows = []
     try:
         ca = conn.execute(
             "SELECT COUNT(*), COALESCE(MAX(date), ''), "

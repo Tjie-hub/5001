@@ -83,6 +83,17 @@ def test_fingerprint_covers_corporate_actions():
     assert fp1["sha256"] != fp2["sha256"]
 
 
+def test_fingerprint_fail_soft_without_ohlcv_table():
+    """Tracking must never kill a research job — a fixture/pre-migration DB
+    without ohlcv still yields a (sentinel) fingerprint."""
+    conn = sqlite3.connect(":memory:")
+    fp = dataset_fingerprint(conn)
+    conn.close()
+    assert fp["total_rows"] == 0
+    assert fp["max_date"] is None
+    assert len(fp["sha256"]) == 64
+
+
 def test_fingerprint_fail_soft_without_corporate_actions_table():
     conn = sqlite3.connect(":memory:")
     conn.execute("CREATE TABLE ohlcv (ticker TEXT, date TEXT, open REAL, "
