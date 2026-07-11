@@ -61,6 +61,82 @@ def test_no_splits_returns_frame_unchanged():
     pd.testing.assert_frame_equal(out, df)
 
 
+def test_already_adjusted_series_is_not_double_adjusted():
+    """REGRESSION (Phase A validation incident 2026-07-11): the corpus is
+    split-adjusted at the source (yfinance adjusts OHLC for splits even with
+    auto_adjust=False; the 2026-07-03 rebuild inherited that basis). A split
+    factor may only be applied when the series actually shows the gap —
+    blindly dividing an already-continuous series fabricates a rally
+    (CUAN momentum printed +39%/trade before this guard)."""
+    df = _df([
+        ("2025-01-01", 1000, 1010, 990, 1000, 10_000),
+        ("2025-01-02", 1010, 1020, 1000, 1010, 10_000),   # continuous: no gap
+    ])
+    out = adjust_ohlcv(df, [("2025-01-02", 2.0)])
+    assert out.loc[0, "close"] == pytest.approx(1000)   # untouched
+    assert out.loc[0, "volume"] == pytest.approx(10_000)
+
+
+def test_small_ratios_below_verifiability_floor_are_skipped():
+    """A 1.05 bonus-issue ratio is indistinguishable from a normal daily move —
+    it can't be gap-verified, and its impact is immaterial. Skip."""
+    df = _df([
+        ("2025-01-01", 1000, 1010, 990, 1000, 10_000),
+        ("2025-01-02", 952, 962, 942, 952, 10_500),   # ~5% drop, matches 1.05
+    ])
+    out = adjust_ohlcv(df, [("2025-01-02", 1.05)])
+    assert out.loc[0, "close"] == pytest.approx(1000)
+
+
+def test_reverse_split_on_continuous_series_is_skipped():
+    """BBRM case: declared 2:3 reverse split, series dead flat — observed
+    ratio 1.0 sits inside a naive [0.6r, 1.6r] band for r=0.667. The gap test
+    must prefer 'already adjusted' (~1.0) over the declared ratio."""
+    df = _df([
+        ("2021-08-12", 67.77, 67.77, 67.77, 67.77, 1_000),
+        ("2021-08-13", 67.77, 67.77, 67.77, 67.77, 1_000),
+        ("2021-08-16", 67.77, 67.77, 67.77, 67.77, 1_000),
+    ])
+    out = adjust_ohlcv(df, [("2021-08-13", 2.0 / 3.0)])
+    assert out.loc[0, "close"] == pytest.approx(67.77)
+
+
+def test_single_bar_anomaly_is_not_a_split_gap():
+    """TMAS case: one bad tick at the ex-date (298 -> 43 -> 286) mimics a 10:1
+    gap but the price bounces straight back — a real basis change persists.
+    Verification must look past the first post bar."""
+    df = _df([
+        ("2023-05-22", 298, 300, 296, 298, 1_000),
+        ("2023-05-23", 43.3, 44, 43, 43.3, 1_000),    # bad tick
+        ("2023-05-24", 286, 290, 284, 286, 1_000),
+        ("2023-05-25", 296, 298, 294, 296, 1_000),
+    ])
+    out = adjust_ohlcv(df, [("2023-05-23", 10.0)])
+    assert out.loc[0, "close"] == pytest.approx(298)   # untouched
+
+
+def test_real_persistent_gap_still_adjusts():
+    """A genuine split gap persists across post bars — must still apply."""
+    df = _df([
+        ("2025-01-02", 1000, 1010, 990, 1000, 1_000),
+        ("2025-01-03", 102, 103, 101, 102, 10_000),
+        ("2025-01-06", 99, 100, 98, 99, 10_000),
+        ("2025-01-07", 101, 102, 100, 101, 10_000),
+    ])
+    out = adjust_ohlcv(df, [("2025-01-03", 10.0)])
+    assert out.loc[0, "close"] == pytest.approx(100)
+    assert out.loc[1, "close"] == pytest.approx(102)
+
+
+def test_unverifiable_split_outside_history_is_skipped():
+    df = _df([("2025-06-01", 100, 110, 90, 100, 1_000)])
+    # ex-date before all bars: nothing to adjust; after all bars: no post bar
+    out1 = adjust_ohlcv(df, [("2025-01-01", 2.0)])
+    out2 = adjust_ohlcv(df, [("2025-12-01", 2.0)])
+    assert out1.loc[0, "close"] == pytest.approx(100)
+    assert out2.loc[0, "close"] == pytest.approx(100)
+
+
 def test_invalid_ratios_are_skipped():
     df = _df([
         ("2025-01-01", 100, 100, 100, 100, 1_000),
