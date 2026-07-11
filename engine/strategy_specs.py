@@ -16,8 +16,9 @@ ensure_entry_price). Two responsibilities:
 
 NOTE: 'Regime Adaptive' is intentionally absent — whole-window look-ahead
 (audit C-7); it is removed from STRATEGY_FUNCS in this same plan.
-NOTE: engine/strategy_registry/ is an unrelated dead-code package; do not
-confuse the two.
+NOTE: the unrelated dead-code package engine/strategy_registry/ was deleted
+2026-07-11 (audit R-11); STRATEGY_FUNCS in engine/strategies.py is the sole
+authoritative strategy registry.
 """
 from dataclasses import dataclass
 
