@@ -8,10 +8,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Same scope convention as tests/test_architecture_boundary.py.
-PRODUCTION_SCOPES = ["scheduler", "engine", "forward_testing", "data", "screener"]
+# Same scope convention as tests/test_architecture_boundary.py (Phase A /
+# audit R-2 widened both to routes/).
+PRODUCTION_SCOPES = ["scheduler", "engine", "forward_testing", "data",
+                     "screener", "routes"]
 PRODUCTION_FILES = ["monitor.py", "paper_trade.py", "app.py",
-                    "news_filter.py", "flow_filter.py", "stockbit_fetcher.py"]
+                    "news_filter.py", "flow_filter.py", "stockbit_fetcher.py",
+                    "routes_backtest_multi.py"]
 
 RESEARCH_TABLES = ("wf_scores", "wf_edge", "backtest_cache")
 # Data-writes only. CREATE TABLE IF NOT EXISTS (ensure-schema by readers) is
@@ -22,6 +25,12 @@ WRITE_SQL = re.compile(
 
 # DAO exception — shrink-only, never grow silently.
 DAO_ALLOWLIST = {"engine/wf_edge.py"}
+
+# Pre-existing write debt surfaced when the scan widened to routes/ (Phase A,
+# audit R-2): the backtest UI's cache-refresh endpoint writes backtest_cache
+# from the production process. Retirement belongs to the deferred routing
+# redesign; shrink-only, new violations still fail CI.
+_ROUTES_WRITE_DEBT = {"routes/backtest.py"}
 
 
 def _py_files():
@@ -37,12 +46,16 @@ def test_w1_no_research_table_writes_in_production():
     offenders = []
     for p in _py_files():
         rel = str(p.relative_to(ROOT))
-        if rel in DAO_ALLOWLIST:
+        if rel in DAO_ALLOWLIST or rel in _ROUTES_WRITE_DEBT:
             continue
         if WRITE_SQL.search(p.read_text(encoding="utf-8")):
             offenders.append(rel)
     assert not offenders, (
         "production writes research tables (only research/ may): %s" % offenders)
+
+
+def test_w1_routes_write_debt_shrinks_only():
+    assert _ROUTES_WRITE_DEBT <= {"routes/backtest.py"}
 
 
 def test_w2_save_wf_edge_only_called_from_research():
