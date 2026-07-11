@@ -33,7 +33,13 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # Research (M3: off the production scheduler)
 5 16 * * 5   cd $D && $W research_wf_refresh venv/bin/python3 -m research.cli wf-refresh
 15 8 * * 1-5 cd $D && $W research_backtest_cache venv/bin/python3 -m research.cli backtest-cache
-0 10 1-7 * 0 cd $D && $W research_roller venv/bin/python3 -m research.cli roller
+# Monthly window roller — FIRST SUNDAY only (audit R-9). Vanilla cron ORs dom+dow,
+# so the old "0 10 1-7 * 0" fired every day 1-7 AND every Sunday (~11x/month).
+# Fix: restrict day-of-month to the first week (1-7) with dow=* (single field
+# restricted => no OR), then guard to Sunday via date +%u == 7 => exactly the
+# first Sunday. Roller only appends windows, so the old over-firing was wasteful
+# not harmful; this makes cadence match the documented monthly intent.
+0 10 1-7 * * [ "$(date +\%u)" = "7" ] && cd $D && $W research_roller venv/bin/python3 -m research.cli roller
 
 # Nightly DB backup + verification + retention prune (audit P-3) — 21:30,
 # after the 21:00 OHLCV reconciliation. Runs daily incl. weekends (cheap).
