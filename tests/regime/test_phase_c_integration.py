@@ -33,3 +33,22 @@ def test_declared_label_widens_the_family():
     assert "BULL::HIGH_VOL" in ctx["family_labels"]
     # one p-value per label, aligned
     assert len(ctx["family_pvalues"]) == len(ctx["family_labels"])
+
+
+def test_nr7_multiplicity_family_shrank_to_three_and_still_passes():
+    """v1→v2: the empty vol/liq placeholders leave the family. NR7 already PASSED
+    multiplicity at 7 labels; at 3 it must still PASS (fewer tests = not stricter).
+    DSR n_trials is derived from non-empty scan cells, so it is unaffected."""
+    from research.gatekeeper.stages import stage_multiplicity
+
+    cfg = load_gate_config()
+    assert cfg.multiplicity["family"]["regimes"] == ["BULL", "BEAR", "SIDEWAYS"]
+
+    # NR7 BULL is the strongly-significant governing cell (p ~ 0); BEAR/SIDEWAYS weak.
+    ctx = {
+        "family_labels": ["BULL", "BEAR", "SIDEWAYS"],
+        "family_pvalues": [0.0005, 0.40, 0.30],
+        "governing_index": 0,
+    }
+    res = stage_multiplicity(ctx, cfg)
+    assert res.verdict == "PASS"

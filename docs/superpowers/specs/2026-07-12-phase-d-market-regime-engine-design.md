@@ -170,16 +170,25 @@ Completion criterion: *"the taxonomy is the canonical input to C's multiplicity 
    evidence; it can **never silently loosen** the gate.
 
 **Effect on NR7's committed Phase C decision (pre-registered, honest):**
-NR7 → BULL cell `PRESENT`, **no axis declared**. NR7's final verdict is **REJECT at
-`walk_forward`** (BULL consistency 46.8% < 50%), and walk-forward consistency is
-independent of the multiplicity family — so **the REJECT verdict is unchanged**. The
-only intermediate change: `stage_multiplicity`'s denominator drops from **7 tests to 3**
-(the empty vol/liq placeholders removed), which makes Bonferroni/BH *less* strict — and
-NR7 already **PASSED** multiplicity at 7, so it still passes at 3. **DSR is unaffected**
-(its `n_trials` already derives from the 3 non-empty scan cells, not from this list).
-This family change is enacted via a `gate_config.yaml` **version bump** (new `config_hash`,
-new decision lineage) — the exact discipline the config's own comments require. The golden
-regression (§10) pins: verdict stays REJECT-at-walk_forward; multiplicity stays PASS.
+NR7 → BULL cell `PRESENT`. NR7's final verdict is **REJECT at `walk_forward`** (BULL
+consistency 46.8% < 50%), and walk-forward consistency is independent of the multiplicity
+family — so **the REJECT verdict is unchanged**. The only intermediate change:
+`stage_multiplicity`'s denominator drops from **7 tests to 3** (the empty vol/liq
+placeholders removed), which makes Bonferroni/BH *less* strict — and NR7 already **PASSED**
+multiplicity at 7, so it still passes at 3. **DSR is unaffected** (its `n_trials` already
+derives from the 3 non-empty scan cells, not from this list). This family change is enacted
+via a `gate_config.yaml` **version bump** (new `config_hash`, new decision lineage) — the
+exact discipline the config's own comments require. The golden regression (§10) pins:
+verdict stays REJECT-at-walk_forward; multiplicity stays PASS.
+
+> **Prediction corrected by the live run (2026-07-12).** The design originally predicted
+> NR7 would declare **no** conditioning axis. The live build (§10) falsified that: NR7's
+> BULL cell **declares the liquidity axis** (its edge is liquidity-conditional). This does
+> **not** change the committed Phase C decision, because the live `build_candidate →
+> profile lookup → sub-cell population` path is deferred (see §10 note + §12); the widening
+> hook is wired and unit-tested but not fed by a live profile this session. When that
+> wiring lands, NR7's BULL family would widen to `BULL::HIGH_LIQ` / `BULL::LOW_LIQ` —
+> making multiplicity **stricter**, never looser (the direction guarantee holds).
 
 ## 10. Testing (TDD)
 
@@ -193,10 +202,11 @@ Suite under `tests/regime/`, mirroring `tests/gatekeeper/`.
 - `storage.py` — write/read round-trip; append-only (re-write ⇒ new row, never mutate); fingerprint determinism.
 
 **Integration:**
-- **Golden regression (linchpin):** NR7 profile → BULL `PRESENT`, zero axes declared →
-  Phase C v2 family `[BULL,BEAR,SIDEWAYS]` → Phase C verdict **REJECT at `walk_forward`
-  unchanged**; assert `stage_multiplicity`'s family dropped from 7 labels to 3 and its
-  verdict stays PASS (DSR `n_trials` already 3, unchanged).
+- **Golden regression (linchpin):** on the Phase C v2 family `[BULL,BEAR,SIDEWAYS]`,
+  `stage_multiplicity` with NR7's BULL-significant p-values stays **PASS** (family dropped
+  from 7 labels to 3; DSR `n_trials` already 3, unchanged) — so NR7's verdict remains
+  **REJECT at `walk_forward`**. (This test drives the stage directly and does not depend on
+  NR7's live axis declarations.)
 - Phase C candidate build reads a **synthetic** profile with a DECLARED vol axis → its
   multiplicity family widens to include the vol sub-cells.
 - Write-fence: add `regime_profiles`, `regime_profile_cells` to `RESEARCH_TABLES` in
@@ -208,6 +218,39 @@ Suite under `tests/regime/`, mirroring `tests/gatekeeper/`.
 - Assert full `pytest` green and **no production code path changed** (Phase C held the same
   bar: 1433 passed, prod untouched).
 
+**Recorded live NR7 golden reference (2026-07-12, `DB_PATH` = copy of prod `walkforward.db`,
+as_of 2026-07-10, canonical 187-ticker `liquid_universe`, 1108 trades):**
+
+| Regime | Verdict | n | CI (net %/trade) | mean | vol axis | liq axis |
+|---|---|---|---|---|---|---|
+| BULL | **PRESENT** | 333 | [+0.324, +2.056] | +1.197 | — | **DECLARED** |
+| BEAR | ABSENT | 156 | [−1.066, +2.051] | +0.432 | — | — |
+| SIDEWAYS | REVERSED | 619 | [−1.352, −0.447] | −0.905 | — | — |
+
+- **Fidelity check PASSED:** the BULL cell (n=333, CI [+0.324, +2.056], +1.197%) reproduces
+  Phase C's committed live run **exactly** — the collector uses the same canonical corpus.
+- **Finding — NR7's BULL edge is liquidity-conditional (pre-registered declaration):**
+  splitting the BULL cell by liq-tier gives **LOW_LIQ** (ADV Rp 5–10bn) n=201 **+2.29%** vs
+  **HIGH_LIQ** (ADV ≥ Rp 10bn) n=132 **−0.47%**; gap 2.76%, **disjoint CIs**. The edge lives
+  in smaller liquidity-floor-passing names and *reverses* on mega-caps — pooling both tiers
+  dilutes a real +2.29% edge to +1.20%. This is a genuine Phase D discovery, not an
+  artifact; the design's original "no axis declared" prediction is corrected (§9). The
+  conditioning bar (`min_gap_pct=0.50`, disjoint-CI) was pre-registered *before* this run —
+  it was **not** tuned to this result. Follow-up in §12.
+- **A collector fidelity bug was found and fixed during this validation:** the default
+  universe must be the 187-ticker `liquid_universe` (Phase B/C corpus), **not** the full
+  958-ticker `ohlcv` set. An unfiltered universe inflated the corpus to 6107 trades and
+  corrupted the regime cells; regression test
+  `test_collect_defaults_to_liquid_universe_not_all_tickers` locks the correct universe.
+- Full suite **1464 passed** (Phase C baseline 1433 + 31 new regime tests); no production
+  code path changed.
+
+> **Live-wiring scope note:** the golden regression tests `stage_multiplicity` on the v2
+> 3-regime family directly; it does **not** depend on NR7 declaring zero axes. The live
+> `build_candidate → profile lookup → sub-cell population` path that would feed the declared
+> liq axis into Phase C is **deferred** (§12) — so the recorded declaration does not alter
+> the committed NR7 REJECT this session.
+
 ## 11. Non-goals
 
 - No promotion decisions (Phase C owns those).
@@ -217,6 +260,15 @@ Suite under `tests/regime/`, mirroring `tests/gatekeeper/`.
 
 ## 12. Open follow-ups (post-build)
 
+- **NR7 BULL `LOW_LIQ` refinement (from the live finding, §10):** evaluate whether the
+  `BULL::LOW_LIQ` sub-cell (+2.29%, n=201) clears the full Phase C gate on its own
+  (CI / PSR / DSR / WF / OOS) — i.e. whether the *real* NR7 edge should be re-specified as
+  BULL ∧ LOW_LIQ rather than pooled BULL. Pre-register the sub-cell as a hypothesis before
+  running (it was discovered post-hoc, so it needs its own out-of-sample confirmation).
+- **Wire the live Phase C consumption of profiles:** `build_candidate` looks up a strategy's
+  latest `regime_profile` and populates `meta["declared_labels"]` + splits the governing
+  regime cell into `regime::tier` sub-cells, so the declared-axis widening (already hooked +
+  unit-tested) actually fires in the live gate.
 - Batch-populate regime profiles for the full 14-strategy roster (the literal Phase D
   completion criterion) via a `cli.py` scan run.
 - Feed transition-sensitivity into Phase C as an optional evidence stage (deferred; Phase D

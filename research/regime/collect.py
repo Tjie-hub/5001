@@ -12,6 +12,7 @@ import json
 from data.loaders import load_ohlcv_df
 from engine.liquidity import get_adv_value_30d
 from research.studies.regime_edge_scan import _regime_at
+from research.studies.nr7_generalization_study import liquid_universe
 from research.regime.conditioners import vol_tier, liq_tier
 
 
@@ -31,12 +32,18 @@ def tag_trade(conn, trade: dict, full_df, config) -> dict:
 def collect_tagged_trades(conn, strategy_fn, config, *, universe=None) -> list:
     """Collect OOS trades for a strategy across the liquid universe and tag each.
 
+    The default universe is the CANONICAL 187-ticker liquidity-filtered set
+    (`liquid_universe`, ADV>=VALUE_LIQ_MIN_IDR as-of the latest bar) — the exact
+    Phase B/C NR7 corpus. NOT the full ~958-ticker ohlcv universe: an unfiltered
+    universe silently inflates the trade set and corrupts the regime cells.
+
     NR7 uses the gatekeeper's exact collector (preserving the validated trade set);
     other strategies are the documented extension point (Task 13 follow-up)."""
     from research.gatekeeper.candidate import _default_collect
-    from research.gatekeeper.cli import _default_universe  # existing universe helper
 
-    universe = universe if universe is not None else _default_universe(conn)
+    if universe is None:
+        as_of = conn.execute("SELECT MAX(date) FROM ohlcv").fetchone()[0]
+        universe = liquid_universe(conn, as_of)
     tagged = []
     for ticker in universe:
         df = load_ohlcv_df(conn, ticker)

@@ -28,3 +28,30 @@ def test_corpus_fingerprint_is_stable_and_order_independent():
          {"ticker": "B", "entry_date": "2024-02-01"}]
     b = list(reversed(a))
     assert corpus_fingerprint(a) == corpus_fingerprint(b)
+
+
+class _AsOfConn:
+    def execute(self, *a):
+        class _Cur:
+            def fetchone(self_inner):
+                return ("2026-07-10",)
+        return _Cur()
+
+
+def test_collect_defaults_to_liquid_universe_not_all_tickers(monkeypatch):
+    """Regression: the canonical NR7 corpus is the 187 liquidity-filtered tickers
+    (Phase B/C baseline), NOT the full ~958-ticker ohlcv universe. Using the wrong
+    universe silently inflates the trade set and corrupts the regime cells."""
+    import research.regime.collect as col
+    from research.regime.config import load_config
+
+    calls = {}
+
+    def fake_liquid(conn, as_of):
+        calls["as_of"] = as_of
+        return []                      # empty universe -> short-circuits the loop
+
+    monkeypatch.setattr(col, "liquid_universe", fake_liquid)
+    out = col.collect_tagged_trades(_AsOfConn(), "nr7_breakout", load_config())
+    assert out == []
+    assert calls["as_of"] == "2026-07-10"   # liquidity filter applied as-of latest bar
