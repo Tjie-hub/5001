@@ -16,7 +16,10 @@ PRODUCTION_FILES = ["monitor.py", "paper_trade.py", "app.py",
                     "news_filter.py", "flow_filter.py", "stockbit_fetcher.py",
                     "routes_backtest_multi.py"]
 
-RESEARCH_TABLES = ("wf_scores", "wf_edge", "backtest_cache")
+# Phase C gate_decisions / gate_evidence are research products too — only
+# research/gatekeeper writes them; production may read (dashboards) but not write.
+RESEARCH_TABLES = ("wf_scores", "wf_edge", "backtest_cache",
+                   "gate_decisions", "gate_evidence")
 # Data-writes only. CREATE TABLE IF NOT EXISTS (ensure-schema by readers) is
 # deliberately allowed — schema-safety, not a data write.
 WRITE_SQL = re.compile(

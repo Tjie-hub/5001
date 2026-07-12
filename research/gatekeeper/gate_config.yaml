@@ -1,0 +1,39 @@
+# research/gatekeeper/gate_config.yaml — Phase C gate config (spec §8).
+# Versioned + hashed per decision. Defaults equal existing frozen constants
+# (nr7_study.THRESHOLDS, phase5_tracker.RULE, statistics.SEED) so the gate starts
+# consistent with today's discipline. Never edit silently after a candidate is
+# evaluated against it — bump `version` (that changes config_hash and starts a new
+# decision lineage).
+version: 1
+promotion_bar_pct: 0.50        # = nr7_study THRESHOLDS.min_net_exp  (Stage 2/6/7 bar)
+min_n_overall: 300             # = THRESHOLDS.t1_min_n               (Stage 1)
+min_n_cell: 100                # = THRESHOLDS.t3_min_n               (Stage 1)
+ci:
+  level: 0.95                  # bootstrap_ci ci=
+  n_boot: 10000                # bootstrap_ci n_boot=
+multiplicity:
+  alpha: 0.05                  # BH / Bonferroni level
+  require_both: true           # must clear BH AND Bonferroni
+  family:                      # PRE-REGISTERED — defines n_trials for DSR + the p-value set
+    regimes: [BULL, BEAR, SIDEWAYS, HIGH_VOL, LOW_VOL, HIGH_LIQ, LOW_LIQ]
+    parameter_axes: []         # named scan axes, if any (explicit to prevent denominator-hacking)
+psr:
+  min: 0.95                    # Stage 4
+deflated_sharpe:
+  min: 0.90                    # Stage 5 PASS bar
+  watch_floor: 0.50            # Stage 5 WATCH band lower edge
+walk_forward:
+  train_months: 12             # walk_forward_split
+  test_months: 3
+  min_consistency_pct: 50      # Stage 6 — pre-registered = the scanner's strict WF gate
+                               # (walk_forward_split docstring: 33%/50% gates). A
+                               # promotion gate is >= the live-selection gate.
+out_of_sample:
+  holdout_months: 6            # reserved BEFORE the WF windows (distinct segment)
+  min_retention: 0.50          # = THRESHOLDS.t2_min_retention       (Stage 7)
+forward_test_rule:             # = phase5_tracker.RULE (frozen; attached on PROMOTE)
+  min_n: 15
+  go_exp: 0.50
+  nogo_exp: 0.0
+  timebox_months: 6
+seed: 20260711                 # = statistics.SEED
