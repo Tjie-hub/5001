@@ -34,6 +34,18 @@ _LIFECYCLE = ('CANDIDATE', 'SUSPENDED', 'RETIRED', 'SUPERSEDED')
 # tests/test_registry_lifecycle.py::test_forward_bar_matches_phase5_rule.
 _FORWARD_BAR = {'min_n': 15, 'go_exp': 0.50}
 
+# Shrink-only lifecycle debt (like tests/test_research_data_fence._ROUTES_WRITE_DEBT).
+# Pre-existing APPROVED/SHADOW entries that predate R-10 enforcement. NEW violations are
+# NOT added here — they fail CI. Entries are removed as they remediate, never added.
+_LIFECYCLE_DEBT = {
+    ("NR7_BULL", 1): {
+        "reason": "APPROVED 2026-07-04 under the pre-Phase-C generalization bar; "
+                  "Phase C gate=REJECT and shadow N=0. Governs on legacy grounds.",
+        "remediation": "Phase 5 forward test (phase5_tracker); deadline 2027-01-08.",
+        "deadline": "2027-01-08",
+    },
+}
+
 _cache = None
 
 
@@ -80,6 +92,7 @@ def load_registry(path=None, engine_versions=None):
     with open(path, 'r') as f:
         raw = yaml.safe_load(f) or []
     entries, skipped = [], []
+    violations, debt = [], []
     for e in raw:
         ident = f"{e.get('id', '?')}_v{e.get('version', '?')}"
         status = e.get('status')
@@ -110,8 +123,30 @@ def load_registry(path=None, engine_versions=None):
             fail_open_alarm("edge_registry", f"{ident} artifact unreadable: {ex}",
                             count=1, notify=False)
             continue
+        manifest = {}
+        if e.get('manifest'):
+            man_path = os.path.join(os.path.dirname(path), e['manifest'])
+            try:
+                with open(man_path, 'r') as f:
+                    manifest = yaml.safe_load(f) or {}
+            except Exception:
+                manifest = {}
+        # else: no manifest -> empty -> validate_evidence flags the missing receipt
+        reasons = validate_evidence(e, manifest, _FORWARD_BAR)
+        if reasons:
+            key = (e['id'], e['version'])
+            if key in _LIFECYCLE_DEBT:
+                debt.append((ident, _LIFECYCLE_DEBT[key]['reason']))
+                logger.info("edge_registry %s — known lifecycle debt (%s)",
+                            ident, _LIFECYCLE_DEBT[key]['remediation'])
+            else:
+                violations.append((ident, "; ".join(reasons)))
+                fail_open_alarm("edge_registry",
+                                f"{ident} lifecycle-unverified — {'; '.join(reasons)}",
+                                count=1, notify=False)
         entries.append(e)
-    return {'entries': entries, 'skipped': skipped, 'hash': _registry_hash(path)}
+    return {'entries': entries, 'skipped': skipped,
+            'violations': violations, 'debt': debt, 'hash': _registry_hash(path)}
 
 
 def get_registry():

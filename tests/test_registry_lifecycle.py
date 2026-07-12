@@ -37,3 +37,22 @@ def test_forward_bar_matches_phase5_rule():
     from research.studies.phase5_tracker import RULE
     assert _FORWARD_BAR['min_n'] == RULE['min_n']
     assert _FORWARD_BAR['go_exp'] == RULE['go_exp']
+
+
+from engine.registry_loader import load_registry, _LIFECYCLE_DEBT
+
+
+def test_real_registry_loads_with_nr7_as_debt_not_violation():
+    r = load_registry()
+    # governance unchanged: NR7_BULL still loads
+    assert any(e['id'] == 'NR7_BULL' for e in r['entries'])
+    # it is classified as known debt, NOT a live violation
+    debt_ids = {d[0] for d in r['debt']}
+    viol_ids = {v[0] for v in r['violations']}
+    assert 'NR7_BULL_v1' in debt_ids
+    assert 'NR7_BULL_v1' not in viol_ids
+    assert r['violations'] == []          # no un-grandfathered violations today
+
+
+def test_nr7_bull_is_the_only_grandfathered_entry():
+    assert set(_LIFECYCLE_DEBT) == {("NR7_BULL", 1)}
