@@ -1,4 +1,5 @@
-from research.regime.profile import cell_verdict, axis_declaration
+from research.regime.profile import cell_verdict, axis_declaration, build_profile
+from research.regime.config import load_config
 
 
 def _trades_with_net(mean_net, n, spread=0.0):
@@ -69,3 +70,23 @@ def test_axis_not_declared_when_a_tier_is_empty():
                            min_gap_pct=0.50, require_disjoint_ci=True,
                            ci_level=0.95, n_boot=2000, seed=1)
     assert res["declared"] is False
+
+
+def test_build_profile_assembles_cells_and_declares_declared_axis():
+    cfg = load_config()
+    # Two regimes; BULL edge depends on vol (big HIGH/LOW gap), BEAR is flat
+    # (net alternates -2/+2 -> mean ~0, CI straddles zero -> ABSENT).
+    bear = [{"net": v, "regime": "BEAR", "vol_tier": "HIGH_VOL", "liq_tier": "LOW_LIQ"}
+            for v in ([-2.0, 2.0] * 75)]
+    trades = (
+        [{"net": 2.0, "regime": "BULL", "vol_tier": "HIGH_VOL", "liq_tier": "HIGH_LIQ"}] * 150 +
+        [{"net": 0.0, "regime": "BULL", "vol_tier": "LOW_VOL", "liq_tier": "HIGH_LIQ"}] * 150 +
+        bear
+    )
+    prof = build_profile("demo_strategy", trades, cfg,
+                         corpus_fingerprint="fp", n_boot=2000)
+    cells = {c["regime"]: c for c in prof["cells"]}
+    assert cells["BULL"]["verdict"] == "PRESENT"
+    assert cells["BULL"]["vol_axis_declared"] is True
+    assert cells["BEAR"]["verdict"] == "ABSENT"
+    assert prof["taxonomy_version"] == cfg.taxonomy_version
