@@ -4,7 +4,9 @@
 # consistent with today's discipline. Never edit silently after a candidate is
 # evaluated against it — bump `version` (that changes config_hash and starts a new
 # decision lineage).
-version: 1
+version: 2                     # v2: hierarchical family (Phase D). v1 had flat
+                               # vol/liq placeholders that never carried trades and
+                               # inflated the Stage-3 multiplicity denominator (7→3).
 promotion_bar_pct: 0.50        # = nr7_study THRESHOLDS.min_net_exp  (Stage 2/6/7 bar)
 min_n_overall: 300             # = THRESHOLDS.t1_min_n               (Stage 1)
 min_n_cell: 100                # = THRESHOLDS.t3_min_n               (Stage 1)
@@ -14,8 +16,10 @@ ci:
 multiplicity:
   alpha: 0.05                  # BH / Bonferroni level
   require_both: true           # must clear BH AND Bonferroni
-  family:                      # PRE-REGISTERED — defines n_trials for DSR + the p-value set
-    regimes: [BULL, BEAR, SIDEWAYS, HIGH_VOL, LOW_VOL, HIGH_LIQ, LOW_LIQ]
+  family:                      # PRE-REGISTERED — primary partition only. vol/liq are
+                               # declarable sub-cells added per-strategy by Phase D
+                               # (research/regime) when a cell's edge depends on them.
+    regimes: [BULL, BEAR, SIDEWAYS]
     parameter_axes: []         # named scan axes, if any (explicit to prevent denominator-hacking)
 psr:
   min: 0.95                    # Stage 4

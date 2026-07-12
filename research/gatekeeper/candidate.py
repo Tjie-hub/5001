@@ -58,6 +58,11 @@ def build_ctx(candidate: Candidate, config) -> dict:
     labels = list(config.multiplicity["family"]["regimes"])
     if governing not in labels:
         labels.append(governing)
+    # Phase D: a strategy's profile may DECLARE vol/liq sub-cells for its governing
+    # regime; those widen this strategy's multiplicity family (never silently loosen).
+    for extra in candidate.meta.get("declared_labels", []):
+        if extra not in labels:
+            labels.append(extra)
     pvalues = []
     for r in labels:
         cell = candidate.trades if r == "OVERALL" else candidate.regime_cells.get(r, [])
