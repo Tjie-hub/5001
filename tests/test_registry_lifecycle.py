@@ -29,3 +29,11 @@ def test_approved_forward_below_bar_fails():
           forward={"verdict": "GO", "n": 10, "exp_pct": 0.63})}   # n < 15
     reasons = validate_evidence({"status": "APPROVED"}, ev, BAR)
     assert reasons and any("below bar" in r for r in reasons)
+
+
+def test_forward_bar_matches_phase5_rule():
+    # Tests may import research/; engine/ may not. Lock the mirrored bar so it can
+    # never drift from the canonical Phase 5 rule.
+    from research.studies.phase5_tracker import RULE
+    assert _FORWARD_BAR['min_n'] == RULE['min_n']
+    assert _FORWARD_BAR['go_exp'] == RULE['go_exp']
