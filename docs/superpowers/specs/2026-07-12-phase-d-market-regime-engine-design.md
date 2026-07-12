@@ -157,9 +157,14 @@ a re-run inserts a new `profile_id` (full lineage preserved), exactly like `gate
 
 Completion criterion: *"the taxonomy is the canonical input to C's multiplicity correction."*
 
-1. **`taxonomy.py` becomes the single source** of the primary regime list. `gate_config.yaml`
+1. **`taxonomy.py` is the single source** of the primary regime list. `gate_config.yaml`
    is bumped to **v2**: its `family.regimes` becomes `[BULL, BEAR, SIDEWAYS]` (the flat
-   vol/liq placeholders removed — §3), and it references the taxonomy for the label set.
+   vol/liq placeholders removed — §3). Because the config file *is* the pre-registration
+   (its literal values feed `config_hash`), it stays a frozen literal rather than importing
+   the taxonomy at load time; a consistency test
+   (`test_gate_config_family_is_the_taxonomy_primary_regimes`) asserts the frozen literal
+   equals `taxonomy.PRIMARY_REGIMES`, so any drift between the two fails CI. Likewise
+   `regime_config.taxonomy_version` is pinned to `taxonomy.TAXONOMY_VERSION` by test.
 2. **Per-candidate widening.** When Phase C builds a candidate for strategy *S* with
    governing regime *R*, it queries *S*'s latest `regime_profile`. If `vol` (or `liq`) is
    `DECLARED` for cell *R*, Phase C widens **that strategy's** family to include the

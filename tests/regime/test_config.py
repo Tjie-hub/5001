@@ -10,6 +10,13 @@ def test_defaults_match_pre_registered_constants():
     assert c.seed == 20260711
 
 
+def test_taxonomy_version_matches_the_taxonomy_module():
+    # taxonomy.py is the source of truth for the taxonomy lineage; the frozen
+    # regime_config literal must track it (bumping one without the other = CI fail).
+    from research.regime import taxonomy
+    assert load_config().taxonomy_version == taxonomy.TAXONOMY_VERSION
+
+
 def test_config_hash_is_deterministic_and_path_independent():
     c1 = load_config()
     c2 = load_config()

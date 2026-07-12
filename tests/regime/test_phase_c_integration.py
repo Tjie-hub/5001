@@ -8,6 +8,15 @@ def test_gate_config_v2_family_is_three_regimes_only():
     assert cfg.multiplicity["family"]["regimes"] == ["BULL", "BEAR", "SIDEWAYS"]
 
 
+def test_gate_config_family_is_the_taxonomy_primary_regimes():
+    """Spec §9.1: taxonomy.PRIMARY_REGIMES is the canonical source for Phase C's
+    pre-registered family. The frozen gate_config literal must equal it, so adding a
+    primary regime to the taxonomy without updating the (hashed) config fails CI."""
+    from research.regime.taxonomy import PRIMARY_REGIMES
+    fam = load_gate_config().multiplicity["family"]["regimes"]
+    assert fam == list(PRIMARY_REGIMES)
+
+
 def _candidate(regime_cells, declared_labels):
     trades = [t for cell in regime_cells.values() for t in cell]
     meta = {"target_regime": "BULL", "declared_labels": declared_labels,
