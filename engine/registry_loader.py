@@ -29,7 +29,36 @@ _REQUIRED = ('id', 'version', 'status', 'strategy_fn', 'regimes',
 _LOADABLE = ('APPROVED', 'SHADOW')
 _LIFECYCLE = ('CANDIDATE', 'SUSPENDED', 'RETIRED', 'SUPERSEDED')
 
+# Forward-test bar for APPROVED. Mirrors research.studies.phase5_tracker.RULE;
+# engine/ must not import research/, so it is pinned here and asserted equal by
+# tests/test_registry_lifecycle.py::test_forward_bar_matches_phase5_rule.
+_FORWARD_BAR = {'min_n': 15, 'go_exp': 0.50}
+
 _cache = None
+
+
+def validate_evidence(entry, manifest, bar):
+    """Return a list of reasons a SHADOW/APPROVED entry fails its evidence receipt.
+
+    Pure. Empty list == compliant (or a non-loadable status that needs no receipt).
+    SHADOW needs a Phase C PROMOTE gate_decision; APPROVED also needs a Phase 5
+    forward GO clearing `bar`."""
+    status = entry.get('status')
+    if status not in ('SHADOW', 'APPROVED'):
+        return []
+    ev = (manifest or {}).get('evidence') or {}
+    reasons = []
+    gd = ev.get('gate_decision') or {}
+    if gd.get('final_state') != 'PROMOTE_TO_FORWARD_TEST':
+        reasons.append('no PROMOTE gate_decision')
+    if status == 'APPROVED':
+        fw = ev.get('forward') or {}
+        if fw.get('verdict') != 'GO':
+            reasons.append('forward verdict != GO')
+        elif fw.get('n', 0) < bar['min_n'] or fw.get('exp_pct', -1.0) < bar['go_exp']:
+            reasons.append(
+                f"forward below bar (n={fw.get('n')}, exp={fw.get('exp_pct')})")
+    return reasons
 
 
 def _registry_hash(path):
