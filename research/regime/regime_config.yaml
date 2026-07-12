@@ -1,0 +1,21 @@
+# research/regime/regime_config.yaml — Phase D pre-registration (spec §5–§7).
+# Versioned + hashed per profile. Never edit silently after a profile is built
+# against it — bump `version` (new config_hash → new profile lineage).
+version: 1
+taxonomy_version: 1
+conditioning:
+  vol:
+    window: 20            # trailing bars for realized volatility at entry
+    median_lookback: 120  # bars to compute the ticker's own median vol (self-relative split)
+  liq:
+    high_multiple: 2.0    # HIGH_LIQ if ADV30 >= high_multiple * VALUE_LIQ_MIN_IDR, else LOW_LIQ
+cell:
+  min_n: 100              # = gatekeeper min_n_cell / nr7_study t3_min_n
+  ci_level: 0.95
+  n_boot: 10000
+conditioning_bar:
+  min_gap_pct: 0.50       # |exp(HIGH_tier) - exp(LOW_tier)| must exceed this to declare an axis
+  require_disjoint_ci: true
+transitions:
+  k_bars: 5               # an IHSG regime change within the last K bars = TRANSITION
+seed: 20260711            # = statistics.SEED (reproducible bootstrap)
