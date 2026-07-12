@@ -83,3 +83,13 @@ def test_grandfathered_debt_not_past_deadline():
     overdue = [k for k, v in _LIFECYCLE_DEBT.items()
                if _dt.date.fromisoformat(v['deadline']) < today]
     assert overdue == [], f"lifecycle debt past remediation deadline: {overdue}"
+
+
+from engine.registry_loader import startup_summary, _reset_cache
+
+
+def test_startup_summary_reports_debt_and_violations():
+    _reset_cache()
+    s = startup_summary()
+    assert "1 debt" in s          # NR7_BULL
+    assert "0 unverified" in s     # no live violations

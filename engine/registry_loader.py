@@ -156,7 +156,8 @@ def get_registry():
             _cache = load_registry()
         except Exception as ex:
             fail_open_alarm("edge_registry", f"registry load failed: {ex}", count=1)
-            _cache = {'entries': [], 'skipped': [('*', str(ex))], 'hash': 'load-failed'}
+            _cache = {'entries': [], 'skipped': [('*', str(ex))],
+                      'violations': [], 'debt': [], 'hash': 'load-failed'}
     return _cache
 
 
@@ -178,7 +179,8 @@ def startup_summary():
     n_app = sum(1 for e in r['entries'] if e['status'] == 'APPROVED')
     n_sh = sum(1 for e in r['entries'] if e['status'] == 'SHADOW')
     return (f"registry @{r['hash']}: {n_app} approved, {n_sh} shadow, "
-            f"{len(r['skipped'])} skipped")
+            f"{len(r['skipped'])} skipped, {len(r.get('debt', []))} debt, "
+            f"{len(r.get('violations', []))} unverified")
 
 
 def announce_registry(telegram_fn=None):
