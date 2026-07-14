@@ -102,3 +102,58 @@ def set_status(conn, hypothesis_id, status) -> None:
     conn.execute("UPDATE hypotheses SET status=? WHERE hypothesis_id=?",
                  (value, hypothesis_id))
     conn.commit()
+
+
+def _link_exists(conn, hypothesis_id, source_table, source_id) -> bool:
+    return conn.execute(
+        "SELECT 1 FROM hypothesis_links WHERE hypothesis_id=? AND source_table=? "
+        "AND source_id=? LIMIT 1",
+        (hypothesis_id, source_table, source_id)).fetchone() is not None
+
+
+def add_link(conn, hypothesis_id, source_table, source_id, source_fingerprint=None):
+    """Append one hypothesis_links row unless (hypothesis_id, source_table,
+    source_id) already exists. Returns the new link_id, or None if it was a dedup
+    no-op — keeps the table append-only while making re-linking safe to re-run."""
+    if _link_exists(conn, hypothesis_id, source_table, source_id):
+        return None
+    link_id = uuid.uuid4().hex
+    conn.execute(
+        "INSERT INTO hypothesis_links (link_id, hypothesis_id, source_table, "
+        "source_id, source_fingerprint, linked_at) VALUES (?,?,?,?,?,?)",
+        (link_id, hypothesis_id, source_table, source_id, source_fingerprint, _now()))
+    conn.commit()
+    return link_id
+
+
+def _failure_exists(conn, f) -> bool:
+    if f.source == "gate":
+        return conn.execute(
+            "SELECT 1 FROM failure_registry WHERE source='gate' AND fingerprint=? "
+            "AND IFNULL(failing_stage,'')=IFNULL(?,'') LIMIT 1",
+            (f.fingerprint, f.failing_stage)).fetchone() is not None
+    # manual: dedupe on (hypothesis_id, reject_reason) unless a fingerprint is given
+    if f.fingerprint:
+        return conn.execute(
+            "SELECT 1 FROM failure_registry WHERE fingerprint=? LIMIT 1",
+            (f.fingerprint,)).fetchone() is not None
+    return conn.execute(
+        "SELECT 1 FROM failure_registry WHERE IFNULL(hypothesis_id,'')=IFNULL(?,'') "
+        "AND reject_reason=? LIMIT 1",
+        (f.hypothesis_id, f.reject_reason)).fetchone() is not None
+
+
+def insert_failure(conn, f):
+    """Append one failure_registry row unless a matching one exists (dedup rule in
+    _failure_exists). Returns the new failure_id, or None on a dedup no-op."""
+    if _failure_exists(conn, f):
+        return None
+    failure_id = uuid.uuid4().hex
+    conn.execute(
+        "INSERT INTO failure_registry (failure_id, hypothesis_id, reject_reason, "
+        "failing_stage, source, evidence_ref, fingerprint, recorded_at) "
+        "VALUES (?,?,?,?,?,?,?,?)",
+        (failure_id, f.hypothesis_id, f.reject_reason, f.failing_stage, f.source,
+         f.evidence_ref, f.fingerprint, _now()))
+    conn.commit()
+    return failure_id
