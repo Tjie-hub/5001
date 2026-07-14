@@ -18,10 +18,11 @@ PRODUCTION_FILES = ["monitor.py", "paper_trade.py", "app.py",
 
 # Phase C gate_decisions / gate_evidence and Phase D regime profiles are research
 # products too — only research/ writes them; production may read (dashboards) but
-# not write.
+# not write. Phase E knowledge base extends this.
 RESEARCH_TABLES = ("wf_scores", "wf_edge", "backtest_cache",
                    "gate_decisions", "gate_evidence",
-                   "regime_profiles", "regime_profile_cells")
+                   "regime_profiles", "regime_profile_cells",
+                   "hypotheses", "hypothesis_links", "failure_registry")
 # Data-writes only. CREATE TABLE IF NOT EXISTS (ensure-schema by readers) is
 # deliberately allowed — schema-safety, not a data write.
 WRITE_SQL = re.compile(
@@ -77,3 +78,9 @@ def test_w2_save_wf_edge_only_called_from_research():
 
 def test_dao_allowlist_shrinks_only():
     assert len(DAO_ALLOWLIST) == 1
+
+
+def test_phase_e_tables_are_fenced():
+    """Guard the guard: the Phase E knowledge tables must be in RESEARCH_TABLES so
+    a stray production write to them fails CI."""
+    assert {"hypotheses", "hypothesis_links", "failure_registry"} <= set(RESEARCH_TABLES)
