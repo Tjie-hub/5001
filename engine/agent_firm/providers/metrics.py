@@ -27,6 +27,13 @@ class ProviderStats(BaseModel):
     cost_usd: Optional[float] = None
     tokens_in: Optional[int] = None
     tokens_out: Optional[int] = None
+    # RCA 2026-07-10: availability must explain WHY (session limit vs circuit).
+    available: bool = True
+    unavailable_reason: Optional[str] = None
+    estimated_next_reset: Optional[str] = None
+    session_limit_events: int = 0
+    quota_skips: int = 0
+    fallback_count: int = 0
 
 
 def _percentile(sorted_vals: list[float], pct: float) -> float:
@@ -75,6 +82,36 @@ def provider_stats(db_path: str, provider: str, since: str) -> ProviderStats:
     if circuit_rows and circuit_rows[0]["event_type"] == "provider_circuit_open":
         circuit_state = "OPEN"
 
+    # Session-limit observability (RCA 2026-07-10): events written by the
+    # Router; reset_time is a UTC "%Y-%m-%d %H:%M:%S" string comparable with
+    # created_at. A future reset marks the provider unavailable and says why.
+    limit_rows = query(
+        db_path,
+        "SELECT reset_time FROM provider_events WHERE provider = ? "
+        "AND event_type = 'provider_session_limit' AND created_at >= ? "
+        "ORDER BY created_at DESC",
+        (provider, since),
+    )
+    session_limit_events = len(limit_rows)
+    latest_reset = limit_rows[0]["reset_time"] if limit_rows else None
+    now_utc = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+    available, unavailable_reason = True, None
+    if latest_reset is not None and latest_reset > now_utc:
+        available = False
+        unavailable_reason = f"session limit (resets ~{latest_reset} UTC)"
+    elif circuit_state == "OPEN":
+        available = False
+        unavailable_reason = "circuit open"
+
+    skip_rows = query(
+        db_path,
+        "SELECT COUNT(*) AS c FROM provider_events WHERE provider = ? "
+        "AND event_type = 'provider_skipped' AND created_at >= ?",
+        (provider, since),
+    )
+    quota_skips = int(skip_rows[0]["c"]) if skip_rows else 0
+
     is_zai = provider == "zai"
     cost_usd = sum(float(r["cost_usd"] or 0.0) for r in rows) if is_zai else None
     tokens_in = sum(int(r["tokens_in"] or 0) for r in rows) if is_zai else None
@@ -94,4 +131,8 @@ def provider_stats(db_path: str, provider: str, since: str) -> ProviderStats:
         p95_latency_s=_percentile(durations, 0.95),
         circuit_state=circuit_state,
         cost_usd=cost_usd, tokens_in=tokens_in, tokens_out=tokens_out,
+        available=available, unavailable_reason=unavailable_reason,
+        estimated_next_reset=latest_reset,
+        session_limit_events=session_limit_events,
+        quota_skips=quota_skips, fallback_count=failovers,
     )

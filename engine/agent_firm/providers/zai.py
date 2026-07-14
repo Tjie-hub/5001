@@ -18,15 +18,23 @@ from openai import AsyncOpenAI, APIError, APIStatusError, APITimeoutError, RateL
 from .. import config
 from .base import ProviderCapabilities, ProviderResponse, strip_fences
 from .errors import (
-    ProviderQuotaExceeded, ProviderRateLimited, ProviderTimeout, ProviderUnavailable,
+    ProviderException, ProviderQuotaExceeded, ProviderRateLimited,
+    ProviderSessionLimit, ProviderTimeout, ProviderUnavailable,
 )
 from .registry import register
 
+# Z.ai error 1308: "Usage limit reached for 5 hour" — a subscription usage
+# window, not a transient burst limit (RCA 2026-07-10). No reset timestamp
+# is provided, so the Router falls back to its configured hold duration.
+_SESSION_LIMIT_MSG = "usage limit reached"
 
-def _classify(err: Exception) -> ProviderQuotaExceeded | ProviderRateLimited | ProviderTimeout | ProviderUnavailable:
+
+def _classify(err: Exception) -> ProviderException:
     if isinstance(err, APITimeoutError):
         return ProviderTimeout(str(err))
     if isinstance(err, RateLimitError):
+        if _SESSION_LIMIT_MSG in str(err).lower():
+            return ProviderSessionLimit(str(err), reset_time=None)
         return ProviderRateLimited(str(err))
     if isinstance(err, APIStatusError) and err.status_code in (402, 403):
         return ProviderQuotaExceeded(str(err))
@@ -42,13 +50,21 @@ class ZAIProvider:
     )
 
     def __init__(self, api_key: str | None = None, base_url: str | None = None,
-                 model: str | None = None) -> None:
+                 model: str | None = None, max_concurrent: int | None = None) -> None:
         self._client = AsyncOpenAI(
             api_key=api_key or config.ZAI_API_KEY or "missing",
             base_url=base_url or config.ZAI_BASE_URL,
             max_retries=0,
         )
         self._model = model or config.MODEL_ID
+        # Concurrency cap (RCA 2026-07-13): the firm fans out candidates with
+        # unbounded asyncio.gather(); without a throttle the ZAI endpoint sees
+        # 50+ req/s bursts and returns 429 code 1302 (per-minute rate limit),
+        # which opens the circuit and feeds the "all providers down" alert.
+        # Mirrors ClaudeProvider's semaphore.
+        self._semaphore = asyncio.Semaphore(
+            max_concurrent if max_concurrent is not None else config.ZAI_MAX_CONCURRENT
+        )
 
     def model(self) -> str:
         return self._model
@@ -61,10 +77,13 @@ class ZAIProvider:
         last_err: Exception | None = None
         for attempt in range(max_retries + 1):
             try:
-                resp = await self._client.chat.completions.create(
-                    model=self._model, messages=messages, timeout=timeout,
-                    response_format={"type": "json_object"},
-                )
+                # Acquire the semaphore only around the HTTP call so pending
+                # tasks don't hold a slot while waiting on their retry backoff.
+                async with self._semaphore:
+                    resp = await self._client.chat.completions.create(
+                        model=self._model, messages=messages, timeout=timeout,
+                        response_format={"type": "json_object"},
+                    )
                 content = strip_fences(resp.choices[0].message.content or "")
                 usage = resp.usage
                 tokens_in = getattr(usage, "prompt_tokens", 0) if usage else 0

@@ -10,6 +10,17 @@ def reload_config():
     return importlib.reload(config)
 
 
+@pytest.fixture(autouse=True)
+def _isolate_env(monkeypatch, tmp_path):
+    """Point the firm config at an empty temp .env for every test in this
+    file, so "default" assertions aren't polluted by the real repo .env
+    (the module loads .env on import since RCA 2026-07-13). Individual
+    tests that WANT a .env value set it explicitly via monkeypatch.setenv
+    or by writing to tmp_path and reloading."""
+    monkeypatch.setenv("AGENT_FIRM_ENV_PATH", str(tmp_path / "absent.env"))
+    yield
+
+
 def test_default_disabled(monkeypatch):
     monkeypatch.delenv("AGENT_FIRM_ENABLED", raising=False)
     cfg = reload_config()
@@ -103,3 +114,60 @@ def test_claude_config_defaults(monkeypatch):
     assert cfg.CLAUDE_MODEL == "sonnet"
     assert cfg.CLAUDE_MAX_CONCURRENT == 4
     assert cfg.CLAUDE_MAX_CALLS_PER_DAY == 200
+
+
+def test_quota_hold_defaults(monkeypatch):
+    """RCA 2026-07-10: quota-aware routing knobs, sensible defaults."""
+    for var in ("AGENT_FIRM_QUOTA_HOLD", "AGENT_FIRM_QUOTA_RESET_BUFFER",
+                "AGENT_FIRM_QUOTA_FALLBACK_HOLD", "AGENT_FIRM_QUOTA_MAX_HOLD"):
+        monkeypatch.delenv(var, raising=False)
+    cfg = reload_config()
+    assert cfg.QUOTA_HOLD_ENABLED is True
+    assert cfg.QUOTA_RESET_BUFFER_S == pytest.approx(60.0)
+    assert cfg.QUOTA_FALLBACK_HOLD_S == pytest.approx(900.0)
+    assert cfg.QUOTA_MAX_HOLD_S == pytest.approx(6 * 3600.0)
+
+
+def test_quota_hold_env_overrides(monkeypatch):
+    monkeypatch.setenv("AGENT_FIRM_QUOTA_HOLD", "false")
+    monkeypatch.setenv("AGENT_FIRM_QUOTA_FALLBACK_HOLD", "120")
+    cfg = reload_config()
+    assert cfg.QUOTA_HOLD_ENABLED is False
+    assert cfg.QUOTA_FALLBACK_HOLD_S == pytest.approx(120.0)
+
+
+def test_quota_alert_defaults(monkeypatch):
+    for var in ("AGENT_FIRM_QUOTA_ALERTS", "AGENT_FIRM_ALERT_MIN_INTERVAL",
+                "AGENT_FIRM_QUOTA_REPEAT_THRESHOLD"):
+        monkeypatch.delenv(var, raising=False)
+    cfg = reload_config()
+    assert cfg.QUOTA_ALERTS_ENABLED is True
+    assert cfg.ALERT_MIN_INTERVAL_S == pytest.approx(1800.0)
+    assert cfg.QUOTA_REPEAT_THRESHOLD == 3
+
+
+# --- RCA 2026-07-13: standalone import must load .env ------------------------
+
+def test_dotenv_values_loaded_on_import(monkeypatch, tmp_path):
+    """Importing this module without the app's root config.py having run
+    first must still load .env, so a standalone smoke/CLI run sees
+    ZAI_API_KEY etc. Previously the key read as empty and every provider
+    call failed with a spurious 401."""
+    env_file = tmp_path / "firm.env"
+    env_file.write_text("AGENT_FIRM_MODEL=from-dotenv-file\n")
+    monkeypatch.setenv("AGENT_FIRM_ENV_PATH", str(env_file))
+    monkeypatch.delenv("AGENT_FIRM_MODEL", raising=False)
+    cfg = reload_config()
+    assert cfg.MODEL_ID == "from-dotenv-file"
+
+
+def test_explicit_env_var_wins_over_dotenv(monkeypatch, tmp_path):
+    """Explicitly-set env vars (CI, systemd Environment=, monkeypatched tests)
+    must override .env — load_dotenv is called with override=False, so a value
+    already in os.environ is preserved."""
+    env_file = tmp_path / "firm.env"
+    env_file.write_text("AGENT_FIRM_MODEL=from-dotenv-file\n")
+    monkeypatch.setenv("AGENT_FIRM_ENV_PATH", str(env_file))
+    monkeypatch.setenv("AGENT_FIRM_MODEL", "from-real-env")
+    cfg = reload_config()
+    assert cfg.MODEL_ID == "from-real-env"

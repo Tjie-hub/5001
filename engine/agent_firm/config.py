@@ -8,7 +8,27 @@ import logging
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 _log = logging.getLogger(__name__)
+
+# Ensure .env is populated before the os.getenv() calls below run. The app's
+# root config.py also calls load_dotenv(), but when this module is imported
+# standalone (smoke test, CLI tool, ad-hoc script) nothing else loads .env
+# first — so ZAI_API_KEY and friends read as empty and every provider call
+# fails with a spurious 401. load_dotenv defaults to override=False, so
+# explicitly-set env vars (CI, tests via monkeypatch, systemd Environment=)
+# still win. (RCA 2026-07-13: standalone smoke run returned `degraded` with
+# "token expired" purely because the key was never loaded into the process.)
+#
+# The path is overridable via AGENT_FIRM_ENV_PATH so tests can point at an
+# empty temp file (or /dev/null) to exercise pure defaults in isolation from
+# the real repo .env.
+_ENV_PATH = Path(
+    os.getenv("AGENT_FIRM_ENV_PATH")
+    or (Path(__file__).resolve().parents[2] / ".env")
+)
+load_dotenv(_ENV_PATH)
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -52,8 +72,32 @@ CLAUDE_MODEL = os.getenv("AGENT_FIRM_CLAUDE_MODEL", "sonnet")
 CLAUDE_MAX_CONCURRENT = int(os.getenv("AGENT_FIRM_CLAUDE_MAX_CONCURRENT", "4"))
 CLAUDE_MAX_CALLS_PER_DAY = int(os.getenv("AGENT_FIRM_CLAUDE_MAX_CALLS_PER_DAY", "200"))
 
+# ZAI concurrency cap (RCA 2026-07-13): the firm fans out with unbounded
+# asyncio.gather(), and ZAI has no client-side throttle — under a 50+ req/s
+# burst it trips 429 code 1302 ("Rate limit reached for requests"), opening
+# the circuit and contributing to spurious "all providers down" alerts.
+# Mirrors CLAUDE_MAX_CONCURRENT's role for the Claude CLI semaphore.
+ZAI_MAX_CONCURRENT = int(os.getenv("AGENT_FIRM_ZAI_MAX_CONCURRENT", "4"))
+
 CIRCUIT_FAILURES = int(os.getenv("AGENT_FIRM_CIRCUIT_FAILURES", "3"))
 CIRCUIT_COOLDOWN_S = float(os.getenv("AGENT_FIRM_CIRCUIT_COOLDOWN", "30"))
+
+# --- Quota-aware routing (RCA 2026-07-10) -----------------------------------
+# When a provider reports a session/usage-window limit, the Router holds it
+# out of rotation until the advertised reset time (+ buffer) instead of
+# rediscovering the exhaustion on every circuit-breaker cooldown.
+QUOTA_HOLD_ENABLED = _env_bool("AGENT_FIRM_QUOTA_HOLD", True)
+QUOTA_RESET_BUFFER_S = float(os.getenv("AGENT_FIRM_QUOTA_RESET_BUFFER", "60"))
+# Hold applied when the limit message carries no parseable reset time.
+QUOTA_FALLBACK_HOLD_S = float(os.getenv("AGENT_FIRM_QUOTA_FALLBACK_HOLD", "900"))
+# Safety cap: never hold a provider longer than this, however far away the
+# parsed reset claims to be.
+QUOTA_MAX_HOLD_S = float(os.getenv("AGENT_FIRM_QUOTA_MAX_HOLD", str(6 * 3600)))
+
+QUOTA_ALERTS_ENABLED = _env_bool("AGENT_FIRM_QUOTA_ALERTS", True)
+ALERT_MIN_INTERVAL_S = float(os.getenv("AGENT_FIRM_ALERT_MIN_INTERVAL", "1800"))
+# Alert escalation after this many session-limit hits without a recovery.
+QUOTA_REPEAT_THRESHOLD = int(os.getenv("AGENT_FIRM_QUOTA_REPEAT_THRESHOLD", "3"))
 
 CONNECTION_TIMEOUT_S = float(os.getenv("AGENT_FIRM_CONNECTION_TIMEOUT", "10"))
 READ_TIMEOUT_S = float(os.getenv("AGENT_FIRM_READ_TIMEOUT", "60"))

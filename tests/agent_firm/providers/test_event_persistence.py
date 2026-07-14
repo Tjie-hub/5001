@@ -164,3 +164,62 @@ async def test_metrics_read_real_failover_data(events_db):
     n = conn.execute("SELECT COUNT(*) FROM provider_events").fetchone()[0]
     conn.close()
     assert n == 2, "metrics now have real rows to read (was permanently 0)"
+
+
+# --- RCA 2026-07-10: session-limit events carry the advertised reset time ----
+
+def test_session_limit_event_persists_reset_time(events_db):
+    reset = datetime(2026, 7, 10, 11, 20, tzinfo=timezone.utc)
+    log_provider_event(
+        _event(event_type="provider_session_limit", provider="claude",
+               model="sonnet", reason="session limit", reset_time=reset),
+        db_path=str(events_db))
+    conn = sqlite3.connect(events_db)
+    row = conn.execute(
+        "SELECT event_type, provider, reset_time FROM provider_events").fetchone()
+    conn.close()
+    assert row == ("provider_session_limit", "claude", "2026-07-10 11:20:00")
+
+
+def test_persist_self_heals_missing_reset_time_column(tmp_path):
+    """Prod DBs created before this change lack the column; the writer must
+    add it on first use instead of silently dropping telemetry."""
+    db = tmp_path / "old_schema.db"
+    conn = sqlite3.connect(db)
+    conn.execute("""
+        CREATE TABLE provider_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type TEXT NOT NULL, provider TEXT NOT NULL,
+            model TEXT, reason TEXT, duration_s REAL, request_id TEXT,
+            failover INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    conn.commit(); conn.close()
+
+    log_provider_event(
+        _event(event_type="provider_session_limit", provider="claude",
+               reset_time=datetime(2026, 7, 10, 11, 20, tzinfo=timezone.utc)),
+        db_path=str(db))
+    conn = sqlite3.connect(db)
+    row = conn.execute("SELECT event_type, reset_time FROM provider_events").fetchone()
+    conn.close()
+    assert row == ("provider_session_limit", "2026-07-10 11:20:00")
+
+
+def test_skip_and_restore_event_types_accepted(events_db):
+    log_provider_event(_event(event_type="provider_skipped", provider="claude",
+                              reason="session limit hold"), db_path=str(events_db))
+    log_provider_event(_event(event_type="provider_restored", provider="claude"),
+                       db_path=str(events_db))
+    assert [r[0] for r in _rows(events_db)] == ["provider_skipped", "provider_restored"]
+
+
+def test_init_agent_firm_tables_adds_reset_time_column(tmp_path, monkeypatch):
+    import importlib
+    from data import db as data_db
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "fresh.db"))
+    importlib.reload(data_db)
+    data_db.init_agent_firm_tables()
+    conn = sqlite3.connect(tmp_path / "fresh.db")
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(provider_events)")}
+    conn.close()
+    assert "reset_time" in cols

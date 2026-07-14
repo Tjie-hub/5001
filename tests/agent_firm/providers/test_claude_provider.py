@@ -141,3 +141,52 @@ async def test_health_returns_false_on_exception():
     provider = ClaudeProvider()
     with patch("asyncio.create_subprocess_exec", AsyncMock(side_effect=OSError("no such file"))):
         assert await provider.health() is False
+
+
+# --- RCA 2026-07-10: classification from BOTH streams ------------------------
+
+_LIMIT_MSG = b"You've hit your session limit \xc2\xb7 resets 6:20pm (Asia/Jakarta)"
+
+
+@pytest.mark.asyncio
+async def test_session_limit_on_stdout_raises_session_limit_with_reset():
+    """The exact incident shape: exit 1, diagnosis on stdout, stderr EMPTY."""
+    from engine.agent_firm.providers.errors import ProviderSessionLimit
+    provider = ClaudeProvider()
+    proc = _fake_proc(_LIMIT_MSG, b"", 1)
+    with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=proc)):
+        with pytest.raises(ProviderSessionLimit) as exc_info:
+            await provider.generate([{"role": "user", "content": "x"}])
+    assert exc_info.value.reset_time is not None
+    assert exc_info.value.category == "session_limit_exceeded"
+    assert "session limit" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_auth_failure_classified():
+    from engine.agent_firm.providers.errors import ProviderAuthFailed
+    provider = ClaudeProvider()
+    proc = _fake_proc(b"", b"Invalid API key. Please run /login", 1)
+    with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=proc)):
+        with pytest.raises(ProviderAuthFailed):
+            await provider.generate([{"role": "user", "content": "x"}])
+
+
+@pytest.mark.asyncio
+async def test_no_output_failure_has_unknown_category():
+    provider = ClaudeProvider()
+    proc = _fake_proc(b"", b"", 1)
+    with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=proc)):
+        with pytest.raises(ProviderUnavailable) as exc_info:
+            await provider.generate([{"role": "user", "content": "x"}])
+    assert exc_info.value.category == "unknown"
+
+
+@pytest.mark.asyncio
+async def test_stdout_excerpt_included_in_error_message():
+    provider = ClaudeProvider()
+    proc = _fake_proc(b"diagnostic on stdout", b"", 1)
+    with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=proc)):
+        with pytest.raises(ProviderUnavailable) as exc_info:
+            await provider.generate([{"role": "user", "content": "x"}])
+    assert "diagnostic on stdout" in str(exc_info.value)

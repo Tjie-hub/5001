@@ -17,7 +17,11 @@ DOTENV_CALL = re.compile(r"^\s*load_dotenv\(", re.M)
 
 # config.py is the single dotenv authority. auto_token.py is a standalone
 # cron script that does not import config — allowed until it does.
-DOTENV_ALLOWED = {"config.py"}
+# engine/agent_firm/config.py loads .env too (RCA 2026-07-13): when this
+# module is imported standalone (smoke test, CLI, ad-hoc script) nothing
+# else loads .env first, so provider API keys read empty. override=False
+# means it never clobbers whatever root config.py already loaded.
+DOTENV_ALLOWED = {"config.py", "engine/agent_firm/config.py"}
 
 
 def _py_files():
