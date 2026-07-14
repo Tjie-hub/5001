@@ -1,0 +1,14 @@
+# Pre-registered knowledge-base configuration (Phase E).
+# version bumps whenever the status vocabulary or orphan scope changes.
+version: 1
+statuses:
+  - PROPOSED
+  - UNDER_TEST
+  - WATCHLIST
+  - FORWARD_TESTING
+  - REJECTED
+  - VALIDATED
+# Tables an experiment must be linked into to avoid being an "orphan".
+orphan_scope:
+  - research_runs
+  - gate_decisions
