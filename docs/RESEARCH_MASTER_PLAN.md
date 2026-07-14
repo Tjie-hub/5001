@@ -33,9 +33,9 @@ built, R-10 is closed, Phase E is in flight; (2) an adversarial design review
 |---|---|---|---|
 | **A** | Research Foundation | ✅ Completed | ✅ Completed |
 | **B** | Statistical Validation & Audit Resolution | ✅ Completed | ✅ Completed |
-| **C** | Statistical Gatekeeper | 🔒 not started | 🟢 **IMPLEMENTED** 2026-07-12 — `research/gatekeeper/`, 8-stage pipeline, REJECT/WATCHLIST/PROMOTE, **exact DSR from the real scan distribution (Phase B proxy retired)**, golden NR7→WATCHLIST, 43 tests. ⏳ Live end-to-end corpus run pending → completion criteria not yet fully verified. |
+| **C** | Statistical Gatekeeper | 🔒 not started | 🟢 **IMPLEMENTED** 2026-07-12 — `research/gatekeeper/`, 8-stage pipeline, REJECT/WATCHLIST/PROMOTE, **exact DSR from the real scan distribution (Phase B proxy retired)**, golden NR7→WATCHLIST, 43 tests. ✅ **Live end-to-end run verified at HEAD (`9db223e`) 2026-07-14** — NR7 Breakout on the 186-ticker liquid corpus (1127 trades) → REJECT at `walk_forward` (BULL consistency 47.96% < 50%), reproducing the 2026-07-12 verdict on refreshed data; decision + 8 stage-evidence rows persisted append-only (run `c967502e`). Completion criteria met. |
 | **D** | Market Regime Engine | 🔒 planned | 🟢 **BUILT** 2026-07-12 — `research/regime/`, hierarchical taxonomy (3-regime primary + declarable vol/liq axes), append-only `regime_profiles`, gate_config v2 + widen-only hook. **Key empirical finding: NR7 BULL edge is liquidity-conditional (LOW_LIQ +2.29% vs HIGH_LIQ −0.47%)** — the flat-taxonomy assumption was falsified by data. |
-| **E** | Research Knowledge Base | 🔒 planned | 🟡 **IN FLIGHT** 2026-07-14 — plan `2026-07-14-phase-e-research-knowledge-base.md`; tasks 1–7 of 10 done/dispatched (config, models, storage, links/failures, ingest, trace, registries). |
+| **E** | Research Knowledge Base | 🔒 planned | ✅ **COMPLETED** 2026-07-14 — plan `2026-07-14-phase-e-research-knowledge-base.md`; all 11 tasks done (config, models, storage, links/failures, ingest, trace, registries, backfill, CLI, fence, receipt-bound `set_status`), committed `fffa6f7`; v3 amendment A1 (Task 11) ratified. |
 | **F** | Edge Discovery Framework | 🔒 planned | 🔒 planned — **new hard prerequisite: R-5 physical DB split (§3.3)** |
 | **G** | Portfolio Intelligence | 🔒 planned | 🔒 planned |
 | **H** | Adaptive Edge Lifecycle | 🔒 planned | 🔒 planned — R-10 prerequisite now **closed** (§2); new prerequisite: signed receipts (§3.4) |
@@ -52,9 +52,13 @@ Recorded per v2 §13 (no silent divergence — every post-freeze fact is logged 
 1. **Phase C implemented** (2026-07-12, TDD, on `ops/hardening-2026-07-10`).
    The v2 §8 mandate is satisfied in code: DSR is computed from the complete
    distribution of actual scan Sharpes; the 42-cell proxy is retired. DSR is
-   PASS/WATCH-only (never hard-fails a candidate on its own). **Open:** the
-   gate has not yet run end-to-end on the live corpus; Phase C's completion
-   checklist stays unchecked until it has.
+   PASS/WATCH-only (never hard-fails a candidate on its own). **Closed
+   (2026-07-14):** the gate ran end-to-end on the live corpus at HEAD
+   (`9db223e`) — NR7 Breakout, 186 liquid tickers, 1127 trades → REJECT at
+   `walk_forward` (BULL consistency 47.96% < 50%), reproducing the 2026-07-12
+   verdict on refreshed data (dataset_fingerprint `fcc867cb…`); the decision +
+   8 stage-evidence rows are persisted append-only (run `c967502e`). Phase C's
+   completion checklist is satisfied.
 2. **Phase D built** (2026-07-12). The regime taxonomy is hierarchical rather
    than the v2-sketched flat 3×2×2 grid: a 3-class primary (BULL/BEAR/SIDEWAYS)
    with volatility/liquidity axes *declared per-strategy* rather than imposed
