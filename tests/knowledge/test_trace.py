@@ -46,8 +46,11 @@ def test_orphan_report_flags_unlinked_then_clears(tmp_path):
 def test_check_status_consistency_flags_validated_over_reject(tmp_path):
     conn = connect(str(tmp_path / "t.db"))
     storage.ensure_knowledge_tables(conn)
-    storage.record_hypothesis(conn, Hypothesis(hypothesis_id="H1", title="a",
-                                               status=Status.VALIDATED))
+    storage.record_hypothesis(conn, Hypothesis(hypothesis_id="H1", title="a"))
+    # Simulate a legacy/corrupt VALIDATED label (Task 11 forbids seeding it via
+    # record_hypothesis) — exactly the state the advisory checker exists to catch.
+    conn.execute("UPDATE hypotheses SET status='VALIDATED' WHERE hypothesis_id='H1'")
+    conn.commit()
     dec_id = _reject_decision(conn)
     storage.add_link(conn, "H1", "gate_decisions", dec_id)
     warnings = trace.check_status_consistency(conn, "H1")

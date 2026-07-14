@@ -53,6 +53,13 @@ CREATE TABLE IF NOT EXISTS failure_registry (
 
 _VALID_STATUSES = {s.value for s in Status}
 
+# Task 11 (v3 §3.4a): promotion-track labels are receipt-bound.
+_GATED_STATUSES = {"FORWARD_TESTING", "VALIDATED"}
+# Shrink-only grandfather list — hypotheses that may be *seeded* directly at
+# FORWARD_TESTING under a pre-registration that predates Task 11 (mirrors the
+# R-10 _LIFECYCLE_DEBT pattern). Never add entries; VALIDATED is never seedable.
+_STATUS_DEBT = {"NR7_BULL_LOWLIQ_v1"}
+
 
 def _now():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -71,6 +78,11 @@ def record_hypothesis(conn, hyp) -> str:
     status = hyp.status.value if isinstance(hyp.status, Status) else str(hyp.status)
     if status not in _VALID_STATUSES:
         raise ValueError(f"invalid status {status!r}; allowed {_VALID_STATUSES}")
+    if status in _GATED_STATUSES and not (
+            status == "FORWARD_TESTING" and hyp.hypothesis_id in _STATUS_DEBT):
+        raise ValueError(
+            f"initial status {status!r} requires a gate receipt — record as "
+            f"PROPOSED and transition via set_status(evidence_decision_id=...)")
     conn.execute(
         "INSERT INTO hypotheses (hypothesis_id, title, rationale, origin, status, "
         "dataset_fingerprint, config_hash, git_commit, prereg_ref, proposed_at, "
@@ -94,11 +106,40 @@ def get_hypothesis(conn, hypothesis_id):
     return dict(zip(cols, row))
 
 
-def set_status(conn, hypothesis_id, status) -> None:
-    """The one sanctioned mutation (spec §4.1/§7): update a hypothesis's label."""
+def set_status(conn, hypothesis_id, status, evidence_decision_id=None,
+               forward_receipt=None) -> None:
+    """The one sanctioned mutation (spec §4.1/§7): update a hypothesis's label.
+    Task 11 (v3 §3.4a): FORWARD_TESTING requires a linked gate PROMOTE receipt;
+    VALIDATED additionally requires a forward-test receipt ref. The binding is
+    recorded as a hypothesis_links row + notes_json entry."""
+    from research.gatekeeper.models import FinalState
+
     value = status.value if isinstance(status, Status) else str(status)
     if value not in _VALID_STATUSES:
         raise ValueError(f"invalid status {value!r}; allowed {_VALID_STATUSES}")
+    if value in _GATED_STATUSES:
+        if not evidence_decision_id:
+            raise ValueError(f"status {value!r} requires evidence_decision_id "
+                             f"(gate PROMOTE receipt)")
+        row = conn.execute(
+            "SELECT final_state FROM gate_decisions WHERE decision_id=?",
+            (evidence_decision_id,)).fetchone()
+        if row is None:
+            raise ValueError(f"unknown gate decision {evidence_decision_id!r}")
+        if row[0] != FinalState.PROMOTE:
+            raise ValueError(f"status {value!r} requires final_state="
+                             f"{FinalState.PROMOTE!r}, got {row[0]!r}")
+        if value == "VALIDATED" and not forward_receipt:
+            raise ValueError("status 'VALIDATED' additionally requires "
+                             "forward_receipt (forward-test evidence ref)")
+        add_link(conn, hypothesis_id, "gate_decisions", evidence_decision_id)
+        hyp = get_hypothesis(conn, hypothesis_id)
+        notes = json.loads(hyp["notes_json"]) if hyp and hyp["notes_json"] else {}
+        notes[f"receipt_{value.lower()}"] = {
+            "decision_id": evidence_decision_id, "forward_receipt": forward_receipt,
+            "bound_at": _now()}
+        conn.execute("UPDATE hypotheses SET notes_json=? WHERE hypothesis_id=?",
+                     (json.dumps(notes), hypothesis_id))
     conn.execute("UPDATE hypotheses SET status=? WHERE hypothesis_id=?",
                  (value, hypothesis_id))
     conn.commit()
