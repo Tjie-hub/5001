@@ -12,6 +12,11 @@
 
 **Baseline:** full suite 1464 passed (Phase D). Branch `ops/hardening-2026-07-10`. No production change; commit per task.
 
+> **Amendment A1 (2026-07-14):** Task 11 added per Research Master Plan v3 DRAFT
+> §3.4a (adversarial finding V3-4 — receipt-bound status transitions). Tasks 1–10
+> are unchanged. Task 11 runs **after** Task 10. See
+> `docs/RESEARCH_MASTER_PLAN_V3_DRAFT.md`.
+
 ---
 
 ## File Structure
@@ -1328,10 +1333,255 @@ git commit -m "test(knowledge): fence hypotheses/hypothesis_links/failure_regist
 
 ---
 
+## Task 11 (Amendment A1): Receipt-bound status transitions
+
+> Added 2026-07-14 per Master Plan v3 DRAFT §3.4a. Runs after Task 10. Closes the
+> `set_status("MY_PET_PROJECT", "VALIDATED")` executive-override hole: promotion-track
+> labels must carry a gate receipt, structurally verified — not just vocabulary-checked.
+
+**Design:**
+- Gated statuses: `FORWARD_TESTING` and `VALIDATED`.
+- `set_status(conn, hid, FORWARD_TESTING, evidence_decision_id=...)` — requires an
+  existing `gate_decisions` row with `final_state = FinalState.PROMOTE`
+  (`"PROMOTE_TO_FORWARD_TEST"`); raises `ValueError` otherwise.
+- `set_status(conn, hid, VALIDATED, evidence_decision_id=..., forward_receipt=...)` —
+  requires the PROMOTE receipt **plus** a non-empty forward-test receipt ref.
+- On success the receipt is bound: `add_link(hid, "gate_decisions", decision_id)` +
+  receipt merged into `notes_json`.
+- `record_hypothesis` rejects gated **initial** statuses (no back door via insert),
+  except a shrink-only `_STATUS_DEBT = {"NR7_BULL_LOWLIQ_v1"}` grandfather list
+  (seeded FORWARD_TESTING by Task 8 backfill under its 2026-07-12 pre-registration;
+  mirrors the R-10 `_LIFECYCLE_DEBT` pattern; FORWARD_TESTING only — VALIDATED is
+  never seedable).
+- `check_status_consistency` (trace.py) stays advisory for legacy rows; the hard
+  gate lives at the mutation gateway.
+
+**Files:**
+- Modify: `research/knowledge/storage.py` (`set_status` signature + guards; `record_hypothesis` initial-status guard; `_STATUS_DEBT`)
+- Modify: `tests/knowledge/test_trace.py` (one test — see step 2)
+- Test: `tests/knowledge/test_status_receipts.py`
+
+- [ ] **Step 1: Write the failing test**
+
+`tests/knowledge/test_status_receipts.py`:
+
+```python
+"""Phase E Task 11 (v3 amendment V3-4): receipt-bound status transitions.
+Promotion-track labels are structurally gated on gate_decisions receipts."""
+import pytest
+
+from data.db import connect
+from research.gatekeeper import storage as gk
+from research.gatekeeper.models import (FinalState, GateDecision, StageResult,
+                                        Verdict)
+from research.knowledge import storage
+from research.knowledge.models import Hypothesis, Status
+
+
+def _decision(conn, final_state, run_id="run1"):
+    gk.ensure_gate_tables(conn)
+    d = GateDecision(final_state=final_state, failing_stage=None,
+                     stage_results=[StageResult("min_sample", Verdict.PASS, {}, {})],
+                     candidate_hash="c", config_hash="cfg", dataset_fingerprint="fp",
+                     git_commit="g", seed=1, forward_test_rule=None, run_id=run_id,
+                     strategy_fn="NR7 Breakout")
+    return gk.persist_decision(conn, d)
+
+
+def _seed(tmp_path):
+    conn = connect(str(tmp_path / "t.db"))
+    storage.ensure_knowledge_tables(conn)
+    storage.record_hypothesis(conn, Hypothesis(hypothesis_id="H1", title="a"))
+    return conn
+
+
+def test_forward_testing_requires_receipt(tmp_path):
+    conn = _seed(tmp_path)
+    with pytest.raises(ValueError):
+        storage.set_status(conn, "H1", Status.FORWARD_TESTING)
+    conn.close()
+
+
+def test_forward_testing_accepts_promote_receipt_and_links_it(tmp_path):
+    conn = _seed(tmp_path)
+    dec_id = _decision(conn, FinalState.PROMOTE)
+    storage.set_status(conn, "H1", Status.FORWARD_TESTING,
+                       evidence_decision_id=dec_id)
+    assert storage.get_hypothesis(conn, "H1")["status"] == "FORWARD_TESTING"
+    row = conn.execute(
+        "SELECT 1 FROM hypothesis_links WHERE hypothesis_id='H1' AND "
+        "source_table='gate_decisions' AND source_id=?", (dec_id,)).fetchone()
+    assert row is not None
+    conn.close()
+
+
+def test_forward_testing_rejects_non_promote_receipt(tmp_path):
+    conn = _seed(tmp_path)
+    dec_id = _decision(conn, FinalState.WATCHLIST)
+    with pytest.raises(ValueError):
+        storage.set_status(conn, "H1", Status.FORWARD_TESTING,
+                           evidence_decision_id=dec_id)
+    conn.close()
+
+
+def test_validated_requires_promote_receipt_plus_forward_receipt(tmp_path):
+    conn = _seed(tmp_path)
+    dec_id = _decision(conn, FinalState.PROMOTE)
+    with pytest.raises(ValueError):                     # no forward receipt
+        storage.set_status(conn, "H1", Status.VALIDATED,
+                           evidence_decision_id=dec_id)
+    storage.set_status(conn, "H1", Status.VALIDATED, evidence_decision_id=dec_id,
+                       forward_receipt="ft_go_2026-07-14")
+    assert storage.get_hypothesis(conn, "H1")["status"] == "VALIDATED"
+    conn.close()
+
+
+def test_gated_status_rejects_unknown_decision_id(tmp_path):
+    conn = _seed(tmp_path)
+    with pytest.raises(ValueError):
+        storage.set_status(conn, "H1", Status.VALIDATED,
+                           evidence_decision_id="nope", forward_receipt="ft")
+    conn.close()
+
+
+def test_record_hypothesis_rejects_gated_initial_status(tmp_path):
+    conn = connect(str(tmp_path / "t.db"))
+    storage.ensure_knowledge_tables(conn)
+    with pytest.raises(ValueError):
+        storage.record_hypothesis(conn, Hypothesis(
+            hypothesis_id="X", title="x", status=Status.VALIDATED))
+    with pytest.raises(ValueError):
+        storage.record_hypothesis(conn, Hypothesis(
+            hypothesis_id="Y", title="y", status=Status.FORWARD_TESTING))
+    conn.close()
+
+
+def test_status_debt_grandfather_allows_seeded_forward_testing(tmp_path):
+    conn = connect(str(tmp_path / "t.db"))
+    storage.ensure_knowledge_tables(conn)
+    storage.record_hypothesis(conn, Hypothesis(
+        hypothesis_id="NR7_BULL_LOWLIQ_v1", title="grandfathered",
+        status=Status.FORWARD_TESTING))                 # in _STATUS_DEBT
+    assert (storage.get_hypothesis(conn, "NR7_BULL_LOWLIQ_v1")["status"]
+            == "FORWARD_TESTING")
+    conn.close()
+```
+
+- [ ] **Step 2: Adjust the one now-invalid trace test**
+
+`tests/knowledge/test_trace.py::test_check_status_consistency_flags_validated_over_reject`
+seeds a hypothesis directly at `Status.VALIDATED`, which Task 11 forbids. The test's
+*intent* is to exercise the advisory checker on an inconsistent (legacy/corrupt)
+state — so simulate that state honestly with a raw UPDATE instead:
+
+```python
+    storage.record_hypothesis(conn, Hypothesis(hypothesis_id="H1", title="a"))
+    conn.execute("UPDATE hypotheses SET status='VALIDATED' WHERE hypothesis_id='H1'")
+    conn.commit()
+```
+
+(replacing the `record_hypothesis(... status=Status.VALIDATED)` call; the rest of
+the test is unchanged.)
+
+- [ ] **Step 3: Run tests to verify red**
+
+Run: `pytest tests/knowledge/test_status_receipts.py -v`
+Expected: FAIL — `set_status` takes no `evidence_decision_id` kwarg; the two
+`record_hypothesis` guard tests fail because no ValueError is raised.
+
+- [ ] **Step 4: Implement in `research/knowledge/storage.py`**
+
+Add near `_VALID_STATUSES`:
+
+```python
+# Task 11 (v3 §3.4a): promotion-track labels are receipt-bound.
+_GATED_STATUSES = {"FORWARD_TESTING", "VALIDATED"}
+# Shrink-only grandfather list — hypotheses that may be *seeded* directly at
+# FORWARD_TESTING under a pre-registration that predates Task 11 (mirrors the
+# R-10 _LIFECYCLE_DEBT pattern). Never add entries; VALIDATED is never seedable.
+_STATUS_DEBT = {"NR7_BULL_LOWLIQ_v1"}
+```
+
+In `record_hypothesis`, after the vocabulary check:
+
+```python
+    if status in _GATED_STATUSES and not (
+            status == "FORWARD_TESTING" and hyp.hypothesis_id in _STATUS_DEBT):
+        raise ValueError(
+            f"initial status {status!r} requires a gate receipt — record as "
+            f"PROPOSED and transition via set_status(evidence_decision_id=...)")
+```
+
+Replace `set_status` with:
+
+```python
+def set_status(conn, hypothesis_id, status, evidence_decision_id=None,
+               forward_receipt=None) -> None:
+    """The one sanctioned mutation (spec §4.1/§7): update a hypothesis's label.
+    Task 11 (v3 §3.4a): FORWARD_TESTING requires a linked gate PROMOTE receipt;
+    VALIDATED additionally requires a forward-test receipt ref. The binding is
+    recorded as a hypothesis_links row + notes_json entry."""
+    from research.gatekeeper.models import FinalState
+
+    value = status.value if isinstance(status, Status) else str(status)
+    if value not in _VALID_STATUSES:
+        raise ValueError(f"invalid status {value!r}; allowed {_VALID_STATUSES}")
+    if value in _GATED_STATUSES:
+        if not evidence_decision_id:
+            raise ValueError(f"status {value!r} requires evidence_decision_id "
+                             f"(gate PROMOTE receipt)")
+        row = conn.execute(
+            "SELECT final_state FROM gate_decisions WHERE decision_id=?",
+            (evidence_decision_id,)).fetchone()
+        if row is None:
+            raise ValueError(f"unknown gate decision {evidence_decision_id!r}")
+        if row[0] != FinalState.PROMOTE:
+            raise ValueError(f"status {value!r} requires final_state="
+                             f"{FinalState.PROMOTE!r}, got {row[0]!r}")
+        if value == "VALIDATED" and not forward_receipt:
+            raise ValueError("status 'VALIDATED' additionally requires "
+                             "forward_receipt (forward-test evidence ref)")
+        add_link(conn, hypothesis_id, "gate_decisions", evidence_decision_id)
+        hyp = get_hypothesis(conn, hypothesis_id)
+        notes = json.loads(hyp["notes_json"]) if hyp and hyp["notes_json"] else {}
+        notes[f"receipt_{value.lower()}"] = {
+            "decision_id": evidence_decision_id, "forward_receipt": forward_receipt,
+            "bound_at": _now()}
+        conn.execute("UPDATE hypotheses SET notes_json=? WHERE hypothesis_id=?",
+                     (json.dumps(notes), hypothesis_id))
+    conn.execute("UPDATE hypotheses SET status=? WHERE hypothesis_id=?",
+                 (value, hypothesis_id))
+    conn.commit()
+```
+
+(The `FinalState` import is local to keep module import cost flat; gatekeeper is a
+sibling research package, so no boundary is crossed.)
+
+- [ ] **Step 5: Run tests to verify green**
+
+Run: `pytest tests/knowledge/test_status_receipts.py tests/knowledge/test_trace.py tests/knowledge/test_storage_hypotheses.py tests/knowledge/test_backfill.py -v`
+Expected: all PASS (7 new + adjusted trace test + existing hypotheses/backfill tests
+— backfill's `NR7_BULL_LOWLIQ_v1` FORWARD_TESTING seed passes via `_STATUS_DEBT`).
+
+- [ ] **Step 6: Run the full knowledge suite + fence**
+
+Run: `pytest tests/knowledge/ tests/test_research_data_fence.py -q`
+Expected: all PASS.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add research/knowledge/storage.py tests/knowledge/test_status_receipts.py tests/knowledge/test_trace.py
+git commit -m "feat(knowledge): receipt-bound status transitions — gate PROMOTE receipt required for FORWARD_TESTING/VALIDATED (v3 A1)"
+```
+
+---
+
 ## Done criteria
 
 - `research/knowledge/` package complete: config, models, storage, ingest, trace, registries, backfill, cli.
 - Three tables live; evidence append-only, `hypotheses.status`/`notes` the only mutable surface.
+- **(A1)** Promotion-track statuses receipt-bound: no FORWARD_TESTING/VALIDATED without a verifiable gate PROMOTE receipt; `_STATUS_DEBT` shrink-only.
 - Gate REJECTs auto-ingest (idempotent) + manual failure channel; hybrid feed working.
 - `trace(hypothesis_id)` assembles the full bundle; `orphan_report` operational (advisory); backfilled corpus orphan-free.
 - The three query-view registries expose a stable read API for Phase F/G.
