@@ -97,20 +97,19 @@ Phase A (L0+L1+L2) is **frozen** only when all are true. ✅ = done this revisio
 - [x] **Worked end-to-end example** proves the object model composes on Available-Today data. ✅
 - [x] **Programs classified** Current vs Future (nothing deleted). ✅
 - [x] **Object model** split into Core vs Extension. ✅
-- [ ] **Folder structure** migrated to concern-based hybrid layout. **Decided ([[DECISION_LOG]] D-008), NOT executed** — the 7 canonical docs remain in `docs/Institutional_Research_Architecture/`. *(This box was checked in error; corrected 2026-07-15 — [[DECISION_LOG]] C-3. [[REVISION_IMPACT_ASSESSMENT]] §2 always said the migration was planned, not executed; the two documents contradicted each other.)* Blocked on the baseline commit — D-014.
+- [x] **Folder structure** migrated to concern-based hybrid layout. ✅ **Executed 2026-07-15 at `f5a017c`** — renames only, no content diffs; `docs/Institutional_Research_Architecture/` retired. *(This box was checked in error at the prior revision when the migration was still unexecuted — C-3; it is now checked on evidence.)*
+- [x] **Repository baseline commit** — corpus tracked at `222d57f`; the freeze has a durable referent. ✅ D-014
 - [x] **Future governance** (DB, metadata, versioning, knowledge lifecycle, prioritization) outlined. ✅
 - [x] **L1 domain de-overlap** — six exclusive domains D1–D6 with an adjudication rule; Microstructure+Price-Formation merged (D2); Market-Design(IDX) (D1) and Limits-to-Arbitrage (D3) added; Cost/Impact promoted to a domain (D4). ✅ [[01_SCIENTIFIC_FOUNDATION]] §3.5, ADR-L1-004
 - [x] **Architecture rationale recorded** (ISO 42010 §5.7) — [[DECISION_LOG]] + 8 ADRs. ✅ *Partial by design: closes AQ-7 for L0/L1; the L2 rationale debt is itemized as RD-1…RD-7 and is closable only by its original decider.*
-- [ ] **7 canonical docs cross-referenced** to their v3 mechanisms ([[RESEARCH_OS_RECONCILIATION]] §6) — a one-line reference **inside each document**. [[01_SCIENTIFIC_FOUNDATION]] §11 maps them centrally to L1, which is a *different* artifact and does not discharge this ([[DECISION_LOG]] C-8).
-- [ ] **Repository baseline commit** — the corpus is untracked; a frozen phase cannot rest on an untracked repository ([[DECISION_LOG]] D-014).
-- [ ] **Independent adversarial sign-off** on this checklist (Validation Reviewer, not the author). Undischargeable by the author by construction — [[01_SCIENTIFIC_FOUNDATION]] LIM6, ADR-L1-007.
+- [x] **Canonical docs cross-referenced** to their v3 mechanisms ([[RESEARCH_OS_RECONCILIATION]] §6) — discharged via the `Realized in v3` header field on all six L2 docs at `de98c17`. Where no v3 component realizes the doc (FCG), the header states so rather than implying coverage. ✅
+- [x] **AQ-1 resolved** — Object Model exemplars reconciled with the binding scope constraint at `de98c17`. Illustrative text only; ontology, schema, and rules unchanged and backwards-compatible. ✅ ADR-L1-006
+- [x] **Version headers** on all canonical documents — mandatory per [[TAXONOMY_AND_NAMING_STANDARD]] §7. ✅ `de98c17`
+- [ ] **Independent adversarial sign-off** on this checklist (Validation Reviewer, **not the author**). Undischargeable by the author by construction — [[01_SCIENTIFIC_FOUNDATION]] LIM6, ADR-L1-007. Package ready: [[PHASE_A_REVIEW_PACKAGE]].
 
-- [ ] **AQ-1 resolved** — Object Model exemplars reconciled with the binding scope constraint. **Blocking:** a freeze ratifies, and the present exemplars teach unfalsifiable hypotheses ([[PHASE_A_FREEZE_CERTIFICATE]] §3; ADR-L1-006).
-- [ ] **Version headers** on the six L2 canonical documents — mandatory per [[TAXONOMY_AND_NAMING_STANDARD]] §7; six documents currently have no version for a freeze to name.
+**Remaining to freeze: 1 item — one independent signature.** It is not work; it is a second signature on completed work.
 
-**Remaining to freeze:** 6 items. **None is scientific redesign** — one commit, three lines of exemplar text, six headers, one file move, seven one-line annotations, one signature.
-
-> **Phase-gate status: NO-GO for Phase A Freeze** ([[PHASE_A_FREEZE_CERTIFICATE]] v1.0, [[DECISION_LOG]] **D-017**). Not a rejection: the architecture is approved and the science is complete. The corpus is **untracked**, so no revision exists to freeze. Audited against [[PHASE_A_FREEZE_CHECKLIST]] — 12 items, 5 PASS / 7 FAIL (5 BLOCKING, 2 MAJOR). **GO WITH CONDITIONS was considered and rejected**: all five blocking conditions are preconditions of the state transition, not parallel work.
+> **Phase-gate status: GO WITH CONDITIONS** ([[PHASE_A_FREEZE_CERTIFICATE]] v2.0 @ `de98c17`, [[DECISION_LOG]] **D-018**). Audited against [[PHASE_A_FREEZE_CHECKLIST]] v2.0 — 12 items, 10 PASS / 2 FAIL (1 BLOCKING = sign-off; 1 MAJOR = §5.7 L2 rationale debt). **Phase A is certified-ready but NOT FROZEN.** No document may describe it as frozen until sign-off is recorded and certificate v3.0 issues naming the reviewer, date, and revision frozen.
 
 ## 8. Folder architecture (canonical)
 

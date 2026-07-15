@@ -140,8 +140,17 @@
 **Consequences:** Freeze is one commit and one review away. All five open findings (AQ-1..AQ-4, AQ-7) are small edits to existing documents.
 **Related:** [[RESEARCH_OS_MASTER_ROADMAP]] §7 · [[01_SCIENTIFIC_FOUNDATION]] §16
 
+### D-018 · Phase A Freeze certified GO WITH CONDITIONS at `de98c17`
+**Status:** ACCEPTED · **Date:** 2026-07-15 · **Type:** Governance · **Supersedes:** D-017
+**Decision:** **GO WITH CONDITIONS**, one condition: independent adversarial sign-off by a Validation Reviewer who is not the author. **The freeze does not take effect until that is recorded.** Certificate: [[PHASE_A_FREEZE_CERTIFICATE]] v2.0 against [[PHASE_A_FREEZE_CHECKLIST]] v2.0 (12 items, 10 PASS / 2 FAIL).
+**Context:** Four of D-017's five blocking grounds resolved by evidence at `de98c17` — corpus tracked (`222d57f`), migration executed as renames (`f5a017c`), version headers added, AQ-1 exemplars reconciled (`de98c17`).
+**Alternatives considered:** **GO — rejected**: this authority authored the corpus and cannot satisfy a criterion whose text reads *"not the author."* Certifying it would delete the criterion rather than meet it (R7.4). **NO-GO — rejected**: it would imply outstanding work, and none remains within this authority's power.
+**Rationale — and why this does not contradict D-017.** D-017 rejected GO WITH CONDITIONS on the reasoning that *a conditional GO on a transition whose conditions must precede it is a NO-GO in softer wording.* **That reasoning still holds; the facts changed.** At D-017, four of five conditions were work the author had not done — a conditions list there would have offloaded the author's own undone work, which is exactly how conditions decay into intentions. Those four are done. The remaining condition is **not work**: it is a second signature on completed work, by a party this authority cannot be. Different object, different instrument.
+**Consequences:** Phase A is **certified-ready but NOT FROZEN**. No document may describe it as frozen until sign-off is recorded and v3.0 of the certificate issues naming the reviewer, date, and revision. The live risk is no longer corpus loss but **self-certification under closure pressure** (LIM8) — refused here by mechanism rather than by discipline.
+**Related:** [[PHASE_A_FREEZE_CERTIFICATE]] v2.0 · [[PHASE_A_REVIEW_PACKAGE]] · [[01_SCIENTIFIC_FOUNDATION]] LIM6, LIM8, ADR-L1-006/007
+
 ### D-017 · Phase A Freeze certified NO-GO; GO WITH CONDITIONS explicitly rejected
-**Status:** ACCEPTED · **Date:** 2026-07-15 · **Type:** Governance · **Supersedes:** D-016
+**Status:** **SUPERSEDED by D-018** (four of five blockers resolved at `de98c17`) · **Date:** 2026-07-15 · **Type:** Governance · **Supersedes:** D-016
 **Decision:** **NO-GO for Phase A Freeze.** Formal certificate issued: [[PHASE_A_FREEZE_CERTIFICATE]], against [[PHASE_A_FREEZE_CHECKLIST]] (12 items, 5 PASS / 7 FAIL, 5 BLOCKING).
 **Context:** A dedicated freeze audit found two blocking grounds beyond D-016's three. Both are **freeze-specific defects invisible during authoring**, which is why four prior reviews did not surface them:
 - **Version headers absent from all six L2 canonical documents**, though [[TAXONOMY_AND_NAMING_STANDARD]] §7 makes them mandatory. A freeze declares *"version X of document Y is frozen"*; six documents cannot complete that sentence. It also silently voids non-retroactive amendment, which needs a predecessor version to be non-retroactive *against*.
