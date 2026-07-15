@@ -182,6 +182,144 @@
 
 **Related:** [[PHASE_A_FREEZE_CERTIFICATE]] v2.1 · [[PHASE_A_FREEZE_CHECKLIST]] v2.1 · [[PHASE_A_REVIEW_PACKAGE]] v1.1 · [[01_SCIENTIFIC_FOUNDATION]] LIM5, LIM6, LIM8, R7.4, ADR-L1-007 · D-018
 
+### D-020 · The Research Knowledge Corpus extends L0/L1/L2; it is not a new layer and not a "Phase B"
+**Status:** ACCEPTED · **Date:** 2026-07-15 · **Type:** Governance / Architectural
+
+**Background.** The owner commissioned a "Phase B — Research Knowledge Layer" of seven canonical documents: `MARKET_INEFFICIENCY_TAXONOMY`, `ECONOMIC_MECHANISM_TAXONOMY`, `RESEARCH_OBJECT_SCHEMA`, `EVIDENCE_MODEL`, `LITERATURE_RESEARCH_STANDARD`, `HYPOTHESIS_LIFECYCLE`, `RESEARCH_PROGRAM_STANDARD`, under the binding constraint *"do not duplicate their contents; only extend them."* Audit against the certified corpus found three conflicts:
+
+1. **"Phase A is complete" is contradicted by the corpus.** Phase A is **GO WITH CONDITIONS, NOT FROZEN** (D-018/D-019); the roadmap states no document may describe it as frozen until sign-off is recorded.
+2. **"Phase" is retired from structural use** (**D-003**), and the seven deliverables do not form one layer regardless: they span L0 (program standard), L1 (taxonomies, evidence, literature), and L2 (object schema, lifecycle).
+3. **Five of seven collide with canonical documents.** `ECONOMIC_MECHANISM_TAXONOMY` vs [[01_SCIENTIFIC_FOUNDATION]] §3.4 (**M1–M6, declared a closed set at class level, amendable only by CRO**); `RESEARCH_OBJECT_SCHEMA` vs [[RESEARCH_OBJECT_MODEL]] v1.0; `MARKET_INEFFICIENCY_TAXONOMY` vs §3.5/§6; `EVIDENCE_MODEL` vs §4.2 (E0–E7); `HYPOTHESIS_LIFECYCLE` vs [[TAXONOMY_AND_NAMING_STANDARD]] §6 and [[RESEARCH_OPERATING_MODEL]] §6–§7. Authored as declared, they would create **two authorities for the same content** — the AQ-1-class defect the corpus had just closed at `de98c17`.
+
+**Decision:** The corpus is authored as a **strict extension**, filed by owning layer, under three binding rules:
+
+- **R-a · Classes are L1's; instances are the corpus's.** L1 retains the closed sets **M1–M6, D1–D6, E0–E7, F1–F9**. The new documents populate *instances* and *sub-classes* beneath them and specify the rules L1 deliberately omits. **No new document may grow its own class set** — there is no `M7.x`, no `E8`, no `D7` reachable from here.
+- **R-b · Extend, never restate.** Where a field, scale, or rule exists upstream, the new document **cites** it. Where a facet is *absent* upstream, the new document specifies it and **flags the delta as a gap**, never as an amendment.
+- **R-c · File by owning layer, not by delivery batch.** `governance/` ← L0 (Program Standard); `research_os/` ← L1 (three taxonomies + literature standard) and L2 (object schema + lifecycle). Status lives in the roadmap, never in a folder name (**D-008**).
+
+**Alternatives considered:**
+- **A — Author as specified; supersede the colliding L1/L2 sections.** **REJECTED.** Requires amending a document whose independent certification is *pending* (D-019), reopening exactly the content the sign-off is over. It would also transfer the mechanism-class set out of L1, where §3.4 places its amendment authority with the CRO — a governance change disguised as a documentation task.
+- **B — Block until Phase A sign-off.** **REJECTED by the owner.** Strictly correct under the gate, but the External Validation Reviewer does not yet exist (D-019), so it stalls indefinitely. The open condition is a **signature on completed work, not missing content**; rework risk is real and bounded, and each new document declares its inheritance of an unsigned baseline in its own header (**R-d**).
+- **C — Drop the two directly-colliding documents.** **REJECTED.** Leaves the mechanism-instance catalogue and the object-schema facets unwritten while the collision was resolvable by subordination.
+- **D — Amend [[TAXONOMY_AND_NAMING_STANDARD]] to readmit "Phase" as a structural axis.** **REJECTED.** Reverses **D-003** and the reason it was written; the seven deliverables are not one layer under any naming.
+
+**Rejected:** A, B, C, D.
+
+**Consequences.**
+- Seven documents authored at `research_os/` (6) and `governance/` (1), each carrying a **baseline-inheritance clause (R-d)**: authored against an unsigned L1; **void pending re-derivation, not grandfathered**, if review alters the class sets they subordinate to ([[01_SCIENTIFIC_FOUNDATION]] §0.4).
+- **Six gaps recorded, not resolved** — per **ADR-L1-008** — in [[KNOWLEDGE_CORPUS_DELIVERY]] §5. Two require amendments this decision withholds authority for: **G-1** (five proposed objects need a **D-005** amendment) and **G-2** (the 4-state `status` enumeration in [[TAXONOMY_AND_NAMING_STANDARD]] §6 and [[RESEARCH_OBJECT_MODEL]] under-specifies a 12-state machine).
+- **G-3 is a real cost of R-b**: [[RESEARCH_OBJECT_MODEL]] declares fields, [[RESEARCH_OBJECT_SCHEMA]] declares facets, **and neither is complete alone.** Accepted deliberately — the alternative was amending a pending-certification document. Revisit once L1 is signed.
+- **G-4 is the finding that matters most.** [[HYPOTHESIS_LIFECYCLE]] T9 (VALIDATED → ACCEPTED) requires adversarial review by a non-author. Per **LIM6/LIM8** and **EV-9**, a single-researcher institution cannot supply it: **C2 is the ceiling and T9 requires C3.** **The institution cannot currently promote any hypothesis to Accepted Knowledge** — blocked by the identical constraint that leaves this corpus's own foundation at GO WITH CONDITIONS. The pipeline and the certificate stand at the same wall.
+- **G-6** ([[RESEARCH_PROGRAM_STANDARD]] §9): three of four Current Programs have mandatory or probable family merges on the confound structure of [[MARKET_INEFFICIENCY_TAXONOMY]] §4. **The roadmap's program decomposition is organizational; the family decomposition is scientific, and they do not coincide.**
+- **D-009 is not reopened.** [[RESEARCH_PROGRAM_STANDARD]] defines the family **boundary** (a governance structure: which claims are one family); the family **policy** (the statistical correction) remains a P1 deliverable.
+- Phase A's status is **unchanged**: GO WITH CONDITIONS, one open condition, external signature.
+
+**Why this entry exists.** Per **LIM8**, a corpus that quietly duplicated its own foundation and one that extended it are indistinguishable by inspecting the result — the reader sees seven plausible documents either way. The subordination rules R-a/R-b are the only difference, and they leave no trace unless recorded. This entry is that trace.
+
+**Related:** [[KNOWLEDGE_CORPUS_DELIVERY]] · [[MARKET_INEFFICIENCY_TAXONOMY]] · [[ECONOMIC_MECHANISM_TAXONOMY]] · [[EVIDENCE_MODEL]] · [[LITERATURE_RESEARCH_STANDARD]] · [[RESEARCH_OBJECT_SCHEMA]] · [[HYPOTHESIS_LIFECYCLE]] · [[RESEARCH_PROGRAM_STANDARD]] · [[01_SCIENTIFIC_FOUNDATION]] §0.4, §3.4, LIM6, LIM8, ADR-L1-008 · D-003, D-005, D-008, D-009, D-018, D-019
+
+### D-021 · The Institutional Research Protocol is procedure, not specification; and it precedes L3
+**Status:** ACCEPTED · **Date:** 2026-07-15 · **Type:** Governance / Architectural
+
+**Background.** The owner directed that the **operational research methodology** be completed *before* L3 Data Ontology, commissioning six documents — `RESEARCH_PROTOCOL`, `EXPERIMENT_STANDARD`, `REPLICATION_STANDARD`, `PEER_REVIEW_STANDARD`, `RESEARCH_QUALITY_STANDARD`, `RESEARCH_PROGRAM_PLAYBOOK` — against one question: *"if a researcher joins tomorrow, what do they follow to produce research consistent with the Scientific Foundation?"* The sequencing argument offered was that one cannot know what data must represent until the methodology that consumes it exists.
+
+The six deliverables collide with [[RESEARCH_OPERATING_MODEL]] (roles, G1–G4), [[MARKET_INEFFICIENCY_RESEARCH_PIPELINE]] (S1–S10), [[HYPOTHESIS_LIFECYCLE]], [[EVIDENCE_MODEL]], and [[RESEARCH_PROGRAM_STANDARD]] — the same collision class **D-020** resolved. **D-020's rules are applied by precedent; the owner is not re-consulted on a question already decided.**
+
+**Decision:** The IRP is authored as a **strict procedural layer** under three rules:
+
+- **R-a · Specification vs procedure (PR-1).** **A specification states what must be true. A protocol states what you do, in what order, and what to do when you cannot.** Where a specification exists, the protocol **cites and sequences** it; it never restates it. This is D-020's seam moved: D-020 separated *classes from instances*; D-021 separates *specification from procedure*.
+- **R-b · Procedures legislate nothing.** No IRP document may add a rule, gate, stage, state, or object. The dependency graph is **bipartite and one-directional** ([[PROTOCOL_LAYER_DELIVERY]] §2) — nothing flows back from procedure to specification.
+- **R-c · IRP is not a layer.** It is **the procedural face of L2**. There is no L2.5. Five documents file at `research_os/` (L2), one at `governance/` (L0). Status lives in the roadmap, never a folder name (**D-008**).
+
+**Alternatives considered:**
+- **A — Proceed to L3 first, per [[KNOWLEDGE_CORPUS_DELIVERY]] §6.3's recommendation.** **REJECTED, and the owner's argument is upheld with a concrete instance.** Authoring [[EXPERIMENT_STANDARD]] §3 produced a requirement L3 could not otherwise have derived: **a Dataset must carry a custody partition whose state is a recorded fact, not an attribute** — because per §2.4 a contaminated OOS window is *indistinguishable from a clean one by inspection*, so the partition's **history** is the only evidence of its state. An L3 designed first would have modelled custody as a field, and that model is unfixable later. **The procedural layer told the data layer what to represent.**
+- **B — Declare IRP a new layer between L2 and L3.** **REJECTED.** It adds a structural axis to a scheme **D-003** exists to keep singular, and the content is L2's procedural face, not a distinct stratum.
+- **C — Weaken G4 so the pipeline completes at N=1.** **REJECTED on ADR-L1-007** — *declare the single-researcher review deficit; do not absorb it.* Weakening G4 *"would not make the institution able to accept knowledge; it would make it unable to tell whether it should."*
+- **D — Extend the chain to a trading system, as the brief's sequence implies.** **REJECTED on §0.1 / ADR-L1-001.** Production trading is a **consumer**, explicitly outside this architecture description. Making it a downstream *layer* would let capital outcomes determine what counts as knowledge — **prohibited by §2.5**, and per **EV-5** the most dangerous inversion the evidence model names. **The chain terminates at L6/L7.**
+
+**Rejected:** A, B, C, D.
+
+**Consequences.**
+- Six documents authored (~1,900 lines) with **zero new rules, gates, stages, or states.** [[RESEARCH_PROTOCOL]] is the single entry point; the other five are invoked from it.
+- **The N-dependency is made explicit and is the layer's spine.** At **N=1**: C2 ceiling, T9 unreachable, [[PEER_REVIEW_STANDARD]] **inert**. At **N=2**: one researcher may review the other → C3 reachable → **G-4 closes**. At **N≥3**: **ADR-L1-002** mandates revisiting the epistemology itself. **The owner's framing question — "if a researcher joins tomorrow" — names the event that relieves the corpus's binding constraint.** Not a tool, not a document. A person.
+- **Seven new gaps recorded, not resolved** (ADR-L1-008): **G-9, G-13, G-10, G-11, G-12, G-14, G-15** — [[PROTOCOL_LAYER_DELIVERY]] §5.
+- **██ G-9 is the finding, and it outranks G-4. ██** Writing the procedures down forced the question *"what actually stops a researcher from looking at out-of-sample data?"* **The answer is nothing.** **§2.4** makes OOS non-renewable and states that *"every unlogged glance silently converts it into in-sample data while leaving its appearance unchanged — this invisibility is precisely why it requires a mechanism."* **R6** requires enforcement, not request. The roadmap §5 lists OOS-custody enforcement as a *planned* enhancement. **It is still policy.** L1's verdict on exactly this state (§2.4): *"the policy formulation is **epistemologically void**, because unenforced custody produces a system whose evidential state cannot be known even by its own operators."*
+  > **Every E3+ claim this institution produces rests on a control that does not exist, and the breach is invisible by construction. G-4 is a wall the institution can see and has declared. G-9 is a floor it cannot.** G-9 is also **the only blocking gap the institution can close by itself** — by mechanism rather than by hiring.
+- **G-13 generalises G-9:** blindness (`authored_at`/`blind_to`, **OS-6**) and reviewer independence (**O18**) are likewise **attestations, not controls**. Per §7.3 and LIM8 respectively, **neither violation is detectable by inspecting the product.** The pattern across G-9/G-10/G-13 is one finding: *every rule whose violation is invisible is currently enforced by the discipline of the person whose violation it would be* — **the exact configuration R6 exists to prohibit.**
+- **Readiness for L3: GO WITH CONDITIONS**, with **U17/G-9 now ahead of G-1** — custody is a property of how data is partitioned and accessed, so it must be decided **before** L3 is designed.
+- Phase A's status is **unchanged**: GO WITH CONDITIONS, one open condition, external signature.
+
+**Why this entry exists.** Per **LIM8**, a procedural layer that quietly re-legislated its own specification and one that faithfully sequenced it are indistinguishable by reading the result — six plausible documents either way. **PR-1 and the bipartite graph are the only difference**, and they leave no trace unless recorded. This entry is that trace.
+
+**Related:** [[PROTOCOL_LAYER_DELIVERY]] · [[RESEARCH_PROTOCOL]] · [[EXPERIMENT_STANDARD]] · [[REPLICATION_STANDARD]] · [[PEER_REVIEW_STANDARD]] · [[RESEARCH_QUALITY_STANDARD]] · [[RESEARCH_PROGRAM_PLAYBOOK]] · [[01_SCIENTIFIC_FOUNDATION]] §0.1, §2.4, §7.3, R6, LIM6, LIM8, ADR-L1-001, ADR-L1-002, ADR-L1-007, ADR-L1-008 · D-003, D-008, D-018, D-019, **D-020**
+
+### D-022 · Custody becomes foundational: modelled at L2, amended into the Research Object Model, L1 untouched
+**Status:** ACCEPTED · **Date:** 2026-07-15 · **Type:** Architectural
+
+**Background.** [[CUSTODY_PROPAGATION_AUDIT]] found that `custody` appears **zero times in the entire codebase** and is absent from five of nine canonical layers — including [[RESEARCH_OBJECT_MODEL]] and [[RESEARCH_VALIDATION_FRAMEWORK]]. The owner authorized a canonical architectural amendment, requiring: exactly one definition of Custody; **Custody inside the Research Object Model itself, not an extension layer**; backward compatibility; and *"do NOT redesign — only formalize"* the existing Evidence Custody.
+
+**The premise was half wrong, and the correction shaped the amendment.** [[01_SCIENTIFIC_FOUNDATION]] **§2.4 already declares three epistemic custody states, and R6 already supplies all five of the brief's "define why" requirements verbatim** — OOS non-renewable, policy insufficient, mechanism required, the epistemological rationale, and why the invisibility is decisive. **Custody's epistemology was never missing. The *object* was.** L1 §0.5 excludes objects by design (*"those are L2+ concerns"*), so L1 declared custody and correctly could not model it — and nothing beneath L1 ever did.
+
+**Decision:** Custody is made foundational under four rules:
+
+- **R-a · One definition, layered.** [[CUSTODY_MODEL]] (**L2**) is the single canonical model. It **cites L1 §2.4/R6 and does not restate them** — restating would create the parallel authority the brief forbids.
+- **R-b · Two orthogonal axes (CU-1).** L1 owns the **three epistemic states** (Discovery/Confirmation/Accepted) as a **closed set** — what the institution is licensed to do with a *claim*. [[CUSTODY_MODEL]] §4 owns the **eight asset states** (Created…Archived) — what state an *asset* is in. **Neither may absorb the other.**
+- **R-c · Custody enters the ROM itself.** [[RESEARCH_OBJECT_MODEL]] **v1.0 → v2.0**: §3 declares the mandatory custody facet and a class per object; §4 adds **Dataset Partition, Candidate, Evidence, Publication, Custody Event/Receipt**. **v1.0's eight objects are byte-identical.** Custody is not an extension.
+- **R-d · Formalize, never redesign.** `gate_evidence` + `gate_decisions` **already implement Evidence Custody correctly** — append-only, no UPDATE, no DELETE, *"a superseding evaluation is a new decision_id."* [[CUSTODY_MODEL]] §7 contains **a citation and a verdict, not a design.**
+
+**Alternatives considered:**
+- **A — Put CUSTODY_MODEL at L1.** **REJECTED, decisively.** L1 is under **pending certification**; its independent adversarial sign-off is the single open condition of the Phase-A gate (**D-018/D-019**). **Amending L1 would invalidate the review package and reopen a gate that is one signature from closing** — to say something L1 already says (§2.4/R6) and that may be said beneath it. **We do not touch a document under review to restate it.**
+- **B — Four custody documents, per the brief's shape.** **REJECTED on the brief's own constraint:** *"there must be exactly one canonical definition of Custody."* Four documents would be four authorities. Consolidated into one, with the four domains as §5–§8.
+- **C — Make `wf_scores`/`backtest_cache` immutable.** **REJECTED.** They are **caches**; overwriting a cache is correct. **The defect was never the overwrite — it was that a cache is read as a publication.** Declared **C-DERIVED** with **CU-18** (a Publication may be materialized from a cache; it may never be one). This is what keeps the amendment at **zero code changes**; the alternative would rewrite `jobs.py`, `optimizer.py`, `backtest_roller.py`, `screener/`, `routes/` for no epistemic gain.
+- **D — Conscript `security/audit_trail.py` as the custody log.** **REJECTED (CU-7).** It is RBAC/security — it records *who called an endpoint*. Custody records *what happened to a research asset*. Merging would subordinate an epistemic control to an access-control table with different authority, retention, and consumers.
+
+**Rejected:** A, B, C, D.
+
+**Consequences.**
+- **Delivered:** [[CUSTODY_MODEL]] (new, L2) · [[RESEARCH_OBJECT_MODEL]] v2.0 (major) · [[RESEARCH_VALIDATION_FRAMEWORK]] v1.1 (minor) · [[CUSTODY_AMENDMENT]] (propagation, compatibility, audit, migration, RFCs, freeze). **Zero code changes** — every existing implementation remains valid ([[CUSTODY_AMENDMENT]] §4).
+- **The one structural change: Dataset Partition is promoted from attribute to object** (**CU-11**). A Dataset is Locked while its train partition is Consumed a hundred times and its OOS partition is Released once — **one object cannot hold four states.** And custody is a **history** (**CU-2**), which attaches to the thing accessed: *the window is accessed; the dataset is not.* Objection answered: **determinism is not custody** — `walk_forward_split` yields identical windows on every call, which is precisely why anyone can materialize the test window with no record. **Reproducibility is what makes a window dangerous, not what makes it safe.**
+- **Institutional audit: 1 of 6 defects eliminated, 3 modelled, 1 narrowed, 1 explicitly not** ([[CUSTODY_AMENDMENT]] §5). **Evidence ambiguity is genuinely closed** — it was a *naming* gap, and naming is what an architecture does. **Policy-only enforcement is NOT closed**: per **R6** the gap between *modelled* and *eliminated* is exactly the gap between a statement of intent and a control. **A model of a control is not a control.** Claiming otherwise would be indistinguishable, per **LIM8**, from having built one.
+- **8 RFCs. RFC-1 (Dataset Custody mechanism = G-9) is the only P0** and the only one that converts intent into control. **RFC-8 (Blind partition) is small and is the only route to E7 forward evidence without waiting in wall-clock time.**
+- **The owner's priority ordering — P0 G-9 · P1 G-4 · P2 governance — is upheld with the corpus's own argument: G-4 is *partially void* until G-9 closes.** A reviewer cannot attack a claim whose custody state is unknowable; per §8.2 a claim that cannot be attacked has *structural immunity from criticism*, and per **P3** that is not a knowledge claim. **Hiring a second researcher to review an unknowable substrate buys the appearance of independent review — and per LIM8 the appearance is indistinguishable from the real thing, which makes it worse than no review, because it would be recorded as one.**
+- **FREEZE: NO — and custody was never the reason.** The architecture is now **complete** ([[CUSTODY_AMENDMENT]] §9.1); the freeze remains blocked by **G-8** (L1 unsigned), unchanged since D-018. **New binding condition: v1.0 must not be frozen while G-9 is open, even if D-019 is signed tomorrow** — freezing a baseline in which custody is modelled but unenforced would make *"custody exists"* a **true statement about the corpus and a false statement about the institution**, and per **LIM8** those are indistinguishable to any future reader of a frozen baseline.
+
+**Why this entry exists.** Per **LIM8**, an amendment that faithfully subordinated itself to L1 §2.4 and one that quietly re-legislated custody at L2 are indistinguishable by reading the result. **R-a and R-b are the only difference.** This entry is that trace.
+
+**Related:** [[CUSTODY_MODEL]] · [[CUSTODY_AMENDMENT]] · [[CUSTODY_PROPAGATION_AUDIT]] · [[RESEARCH_OBJECT_MODEL]] v2.0 · [[RESEARCH_VALIDATION_FRAMEWORK]] v1.1 · [[01_SCIENTIFIC_FOUNDATION]] §0.1, §0.5, §2.4, §4.2, R6, R12, LIM8, ADR-L1-008 · D-005, D-018, D-019, **D-020**, **D-021**
+
+### D-023 · RT-4 resolved — a Blind partition yields E6 + maximal custody, never E7
+**Status:** ACCEPTED · **Date:** 2026-07-15 · **Type:** Architectural (terminology correction)
+
+**Background.** An adversarial review ([[RED_TEAM_REVIEW_2026-07-15]]) raised five findings; the Board ([[ARB_ADJUDICATION_2026-07-15]]) upheld exactly one — **RT-4**: CU-13 claims a Blind partition *"makes E7 available without waiting in wall-clock time"*, while [[01_SCIENTIFIC_FOUNDATION]] §4.2 defines E7 as requiring **data that did not exist at registration** and states it *"accrues in wall-clock time and **cannot be accelerated**."* The Resolution Board was asked to determine whether this is a genuine contradiction, a terminology conflict, a governance conflict, or a misinterpretation — **by proof, not assumption** ([[RT4_RESOLUTION_2026-07-15]]).
+
+**Finding: RT-4 SURVIVES formalization. It is a genuine architectural contradiction with two independent proofs.**
+
+- **D-leg.** Suppose *"did not exist"* is **epistemic** (unavailable to the institution) — then a sealed existing partition qualifies as E7. But its corpus was universe-selected, corporate-action-adjusted and vendor-cleaned **with knowledge of its period** — retrospective biases (**A3**, **LIM1**), of which **this institution has two realized instances** (the P0 collector bug, `liquid_universe` 187 vs `_default_universe` 958; and the P0 audit's finding that corporate actions were never applied to the raw corpus). **∴ ¬"immune to every retrospective bias" — contradicting §4.2's own justification clause. The epistemic reading is refuted by L1, not by the Custody Model.** ∴ *"did not exist"* is **metaphysical**. And **every registrable partition contains existing data**, because **T-C2 requires a fingerprint at REGISTERED and you cannot fingerprint what does not exist.** ∴ ¬E7. ∎
+- **W-leg, independent of the D-leg.** §4.2: E7 **cannot be accelerated**. CU-13/M5/RFC-8: *"without waiting in wall-clock time"*. **Contradiction under every reading.** ∎
+- **Truth table:** of four (reading × content) combinations, **exactly one is possible — and CU-13 is false in it.** CU-13's only true row requires the refuted epistemic reading; the charitable "reservation for future data" reading is **not constructible in the object model at all** (no fingerprint ⇒ no REGISTERED) *and still* requires waiting.
+
+**Decision:** **Category A — terminology correction. Four sentences, two documents.** A Blind partition yields **E6-equivalent evidence with maximal custody assurance**, never E7. The acceleration claim is deleted at all three sites (CU-13, M5, RFC-8).
+
+**Alternatives considered:**
+- **B — amend L1 to disambiguate *"did not exist."*** **REJECTED: L1 is not ambiguous.** Two independent clauses — *"immune to every retrospective bias"* and *"cannot be accelerated"* — each force the metaphysical reading. **The ambiguity was in the author, not the text.** ⇒ **L1 untouched; D-019's review package undisturbed.**
+- **C — cross-reference correction.** **REJECTED.** CU-13 cites §4.2 **correctly** (for the timebox) and then contradicts it. The reference is right; the claim is wrong.
+- **D — architectural correction.** **REJECTED.** Nothing structural changes: the Blind partition object, C-SEALED, `release_date`, the state machine, T-C2/T-C5, CU-14, and §5.4's release policy all stand. **RFC-8 survives.**
+- **Deleting the Blind partition.** **REJECTED.** Its custody value is real and was obscured by the mislabel — see below.
+
+**Rejected:** B, C, D, deletion.
+
+**Consequences.**
+- **Severity was overstated and is now bounded.** The contradiction is **inert**: [[EVIDENCE_MODEL]] restates the nonexistence criterion **three times independently** — K6, C4, and the **E6→E7 promotion guard** — so the promotion path never reads CU-13 and would refuse a Blind partition on its own criterion. The corpus additionally voids CU-13 by **§5.4** (*on scientific method, L1 wins*) and **§0.4** (*a rule whose justifying proposition is refuted is void, not grandfathered*). **It could not have promoted anything.** The red-team's *"licenses capital at scale"* was wrong.
+- **But inert ≠ absent.** Per **ISO 42010 §5.6** and L1 **§15**, an *unrecorded* inconsistency between canonical documents is a conformance defect, and **a frozen baseline is the artifact future readers trust without re-deriving.**
+- **What the Blind partition actually is, recovered:** an ordinary OOS partition is C-SEALED but **releasable** — per **G-9** nothing mechanically prevents it being read, and per **R6** an unenforced seal *"is a statement of intent, not a control."* **A Blind partition has no release path at all**, so its window is **provably unspent** rather than *supposed* to be. **Its value is on the custody axis, not the evidence axis.** It strengthens an **E3** pre-registered OOS test; it creates no new tier.
+- **Root cause, recorded because it will recur:** the architecture **had no name for the thing the author had built** — a window whose custody state is provable rather than asserted — **so the author took the nearest impressive label.** The correction names the thing and keeps the thing.
+- **Zero impact** on L1, [[EVIDENCE_MODEL]], [[RESEARCH_OBJECT_MODEL]], [[RESEARCH_VALIDATION_FRAMEWORK]], [[EXPERIMENT_STANDARD]], the roadmap, or any object/state/class/rule.
+- **RT-4 is RESOLVED and no longer blocks freeze. Remaining blockers: G-8 (L1 unsigned, D-019) and G-9 (Dataset Custody unmechanised) — neither architectural.**
+
+**Why this entry exists.** Per **LIM8**, a corpus that quietly deleted an embarrassing claim and one that proved the claim false before removing it are indistinguishable by reading the result. **The proof at [[RT4_RESOLUTION_2026-07-15]] §5.1 is the only difference.** This entry is that trace.
+
+**Related:** [[RT4_RESOLUTION_2026-07-15]] · [[ARB_ADJUDICATION_2026-07-15]] · [[RED_TEAM_REVIEW_2026-07-15]] · [[CUSTODY_MODEL]] CU-13 · [[CUSTODY_AMENDMENT]] M5/RFC-8 · [[01_SCIENTIFIC_FOUNDATION]] §0.4, §4.2, §15, A3, LIM1 · **D-022**
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
