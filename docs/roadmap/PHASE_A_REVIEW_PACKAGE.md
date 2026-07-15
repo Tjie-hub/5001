@@ -1,11 +1,17 @@
 # Phase A — Independent Review Package
 
-**Version:** 1.0 · **Status:** Canonical · **Canonical Status:** Permanent repository document · **Layer:** L0 — Governance & Scope
-**Owner:** Chief Scientific Architect · **Last Updated:** 2026-07-15 · **Supersedes:** — (initial version)
+**Version:** 1.1 · **Status:** Canonical · **Canonical Status:** Permanent repository document · **Layer:** L0 — Governance & Scope
+**Owner:** Chief Scientific Architect · **Last Updated:** 2026-07-15 · **Supersedes:** v1.0 (`a6ba77d`) — external-reviewer note added per [[DECISION_LOG]] D-019; contents unchanged
 
 **Purpose:** enable an independent Validation Reviewer to certify Phase A **without performing or requiring any architectural work.** Everything needed to reach a verdict is here or one command away. This package does not argue for a verdict; it supplies the evidence for one.
 
-**Addressed to:** the Validation Reviewer — **anyone other than the author of this corpus.** This is the one Phase A exit criterion that exists precisely because the author cannot discharge it ([[01_SCIENTIFIC_FOUNDATION]] LIM6, ADR-L1-007).
+> ### ▶ This package is intended for an EXTERNAL reviewer
+>
+> **Addressed to:** a Validation Reviewer who is **not the architecture author** and did not produce this corpus.
+>
+> Author validation was requested and **declined** ([[DECISION_LOG]] **D-019**). Two candidate substitutes were considered and rejected as failing the independence requirement: **author self-certification** (it would delete the criterion rather than meet it — R7.4) and **fresh-context LLM review** (a fresh context is not a fresh mind; per **LIM5** it tests specification completeness, not reviewer-independence).
+>
+> **No action by the author can advance this condition.** Phase A carries no outstanding architectural work. What remains is a second reading by a party who is not the first.
 
 ---
 

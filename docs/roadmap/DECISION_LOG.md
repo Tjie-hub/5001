@@ -160,6 +160,28 @@
 **Consequences:** Distance to GO is **one commit, three lines, six headers, one signature**. Condition 5 (adversarial sign-off) is undischargeable by the certificate's author by construction. Corpus loss before the baseline commit is now the largest live risk in the program.
 **Related:** [[PHASE_A_FREEZE_CERTIFICATE]] · [[PHASE_A_FREEZE_CHECKLIST]] · [[01_SCIENTIFIC_FOUNDATION]] LIM6, LIM8, ADR-L1-006/007
 
+### D-019 · Author validation declined — independent validation requirement remains open
+**Status:** ACCEPTED · **Date:** 2026-07-15 · **Type:** Governance
+
+**Background.** After completion of Phase A, the architecture author was requested to perform the final independent validation required for Phase A Freeze. **The author declined.** The Scientific Foundation itself requires that independent validation be performed by a reviewer who is not the author; performing both roles would violate **LIM6** (sequential performance by one mind is not independent validation) and **LIM8** (self-certification is epistemically indistinguishable from genuine independent certification). The requirement therefore cannot honestly be declared satisfied.
+
+**Decision:** The author declines to perform the independent validation.
+
+**Rationale:** Independent validation requires a reviewer who is not the author.
+
+**Alternatives considered:**
+- **A — Author self-certification.** **REJECTED.** The criterion reads *"Validation Reviewer, not the author"* ([[RESEARCH_OS_MASTER_ROADMAP]] §7). Certifying under it would not satisfy the criterion but delete it — R7.4 (threshold migration) applied to governance.
+- **B — Fresh-context LLM review.** **REJECTED.** A fresh context is not a fresh mind: same model, same priors, same blind spots. Per **LIM5** it would test *specification completeness* — genuinely valuable — but would be *specification-reproducible, not independently replicated*. It does not satisfy independence and may not be recorded as if it did.
+- **C — Human independent reviewer.** **The only alternative that satisfies the requirement.** Not yet performed.
+
+**Rejected:** A and B. **Reason:** neither satisfies the independence requirement defined by the Scientific Foundation.
+
+**Consequences:** Phase A remains **GO WITH CONDITIONS**. The **only** remaining condition is independent adversarial review, and it is now formally attributed to an **External Validation Reviewer** rather than left implicitly pending on the author. Phase A is **certified-ready but NOT FROZEN**; no document may describe it as frozen until sign-off is recorded and certificate v3.0 issues. Per **LIM6**, the institution retains a second legitimate path: formally declare the requirement unmet and mark affected claims accordingly. That is a governance choice reserved to the owner and is **not** equivalent to freezing.
+
+**Why this entry exists.** **LIM8** holds that the institution's true epistemic state is not verifiable from its outputs alone: a self-certified corpus and an independently certified one are indistinguishable on inspection. A request for author self-certification, and its refusal, leaves no trace in any artifact unless it is recorded here. This entry is that trace. It is a record, not a reproach.
+
+**Related:** [[PHASE_A_FREEZE_CERTIFICATE]] v2.1 · [[PHASE_A_FREEZE_CHECKLIST]] v2.1 · [[PHASE_A_REVIEW_PACKAGE]] v1.1 · [[01_SCIENTIFIC_FOUNDATION]] LIM5, LIM6, LIM8, R7.4, ADR-L1-007 · D-018
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)

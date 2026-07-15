@@ -1,7 +1,7 @@
 # Phase A — Freeze Certificate
 
-**Version:** 2.0 · **Status:** Canonical · **Canonical Status:** Permanent repository document · **Layer:** L0 — Governance & Scope
-**Owner:** Chief Scientific Architect · **Last Updated:** 2026-07-15 · **Supersedes:** v1.0 — NO-GO (recoverable at `222d57f`)
+**Version:** 2.1 · **Status:** Canonical · **Canonical Status:** Permanent repository document · **Layer:** L0 — Governance & Scope
+**Owner:** Chief Scientific Architect · **Last Updated:** 2026-07-15 · **Supersedes:** v2.0 (`a6ba77d`) — condition re-attributed to an External Validation Reviewer per [[DECISION_LOG]] D-019; decision unchanged. v1.0 — NO-GO (recoverable at `222d57f`)
 **Issuing authority:** Chief Scientific Architect / ISO 42010 Architecture Editor / Repository Authority / Phase-Gate Certification Authority
 **Revision certified:** `de98c17` · **Basis:** [[PHASE_A_FREEZE_CHECKLIST]] v2.0 — 12 items, 10 PASS / 2 FAIL (1 BLOCKING, 1 MAJOR)
 **Subject:** Institutional Research OS — Phase A (Layers L0 + L1 + L2)
@@ -114,6 +114,10 @@ No Phase B work appears. No item is speculative; each is an exit criterion or an
 **Condition — exactly one, objectively unavoidable:**
 
 > **Independent adversarial sign-off by a Validation Reviewer who is not the author of this corpus** ([[RESEARCH_OS_MASTER_ROADMAP]] §7). **The freeze does not take effect until this is recorded.** Review package: [[PHASE_A_REVIEW_PACKAGE]].
+>
+> **The remaining condition cannot be satisfied by the architecture author.** Completion requires an independent Validation Reviewer.
+>
+> **Owner of the condition: External Validation Reviewer — not the architecture author.** Author validation was requested and declined ([[DECISION_LOG]] **D-019**); author self-certification and fresh-context LLM review were both considered and rejected as failing the independence requirement (LIM5, LIM6, LIM8). **No action by the author can advance this condition** — it is not pending work, and no further architectural work exists to be done.
 
 ### Why this differs from v1.0's NO-GO, and why the distinction is principled rather than convenient
 
@@ -135,7 +139,7 @@ AQ-2, the §5.7 L2 gap, and D-015 do **not** block. Each is recorded, traceable,
 
 Every result in [[PHASE_A_FREEZE_CHECKLIST]] v2.0 cites a command or line reference a third party can re-execute. No item rests on the issuer's judgement.
 
-**Issued:** 2026-07-15 · **Revision:** `de98c17` · **Decision:** **GO WITH CONDITIONS** · **Distance to freeze:** one independent signature.
+**Issued:** 2026-07-15 · **Revision:** `de98c17` · **Decision:** **GO WITH CONDITIONS** · **Distance to freeze:** one independent signature, **obtainable only from a party other than the author** ([[DECISION_LOG]] D-019).
 
 > **Re-issue rule.** This certificate is superseded, never edited — v1.0 remains recoverable at `222d57f`, which is now true *because* the repository is tracked. A **v3.0** issues upon recorded sign-off, naming the reviewer, the date, and the revision frozen. **Until that entry exists, Phase A is certified-ready but NOT FROZEN**, and no document may describe it as frozen.
 

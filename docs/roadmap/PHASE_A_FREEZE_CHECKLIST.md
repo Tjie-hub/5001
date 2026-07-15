@@ -1,7 +1,7 @@
 # Phase A — Freeze Checklist
 
-**Version:** 2.0 · **Status:** Canonical · **Canonical Status:** Permanent repository document · **Layer:** L0 — Governance & Scope
-**Owner:** Chief Scientific Architect · **Last Updated:** 2026-07-15 · **Supersedes:** v1.0 (recoverable at `222d57f`)
+**Version:** 2.1 · **Status:** Canonical · **Canonical Status:** Permanent repository document · **Layer:** L0 — Governance & Scope
+**Owner:** Chief Scientific Architect · **Last Updated:** 2026-07-15 · **Supersedes:** v2.0 (`a6ba77d`) — §12 owner set to External Validation Reviewer per [[DECISION_LOG]] D-019; results unchanged. v1.0 (recoverable at `222d57f`)
 **Revision audited:** `de98c17` · **Companion:** [[PHASE_A_FREEZE_CERTIFICATE]] v2.0
 
 **Evidence rule:** every result cites a command whose output can be re-obtained, or a line reference in a canonical document. A check that cannot be reproduced by a third party is not a finding and has been struck. No scores, no partial credit.
@@ -121,13 +121,21 @@ Single canonical roadmap (D-004); status claims verifiable (C-3, C-4); dependenc
 
 ## 12. Phase gate approval — **FAIL** · BLOCKING
 
+> ### Independent Validation
+> **Status:** **OPEN**
+> **Owner:** **External Validation Reviewer — NOT the architecture author**
+> **Author action available:** **none.** This condition cannot be advanced by the author under any circumstances ([[DECISION_LOG]] **D-019**).
+
 | Check | Result | Evidence |
 |---|---|---|
 | Independent adversarial sign-off | **FAIL** | Unmet. Required by [[RESEARCH_OS_MASTER_ROADMAP]] §7: *"Validation Reviewer, **not the author**"* |
 | Reviewer can certify without further architectural work | **PASS** | [[PHASE_A_REVIEW_PACKAGE]] — revision, inventory, decision log, checklist, traceability map, risks |
-| Sign-off dischargeable by the current author | **FAIL — structurally, and permanently** | LIM6 / ADR-L1-007. The author cannot review the author |
+| Sign-off dischargeable by the current author | **FAIL — structurally, and permanently** | LIM6 / ADR-L1-007. The author cannot review the author. Author validation was requested and declined — **D-019** |
+| Fresh-context LLM review would discharge it | **FAIL** | Rejected at **D-019**. A fresh context is not a fresh mind: same model, same priors, same blind spots. Per **LIM5** it tests specification completeness, not reviewer-independence |
 
 **This is the sole remaining blocker, and it is the one that must not be waived.** Its entire purpose is that the author cannot self-certify. An author who declares their own work adversarially reviewed has not satisfied the criterion — they have deleted it. Waiving it would be the governance analogue of **R7.4 (threshold migration)**: moving a criterion after seeing it fail.
+
+**Per LIM6 a second legitimate path exists** — formally declare the requirement unmet and mark affected claims accordingly. That is a governance choice reserved to the owner. It is **not** equivalent to freezing, and it is not a waiver: it substitutes a visible, recorded deficit for a concealed one.
 
 ---
 
