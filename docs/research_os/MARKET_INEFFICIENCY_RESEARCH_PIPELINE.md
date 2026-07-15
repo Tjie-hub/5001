@@ -1,5 +1,10 @@
 # Market Inefficiency Research Pipeline
 
+**Version:** 1.0 · **Status:** Canonical · **Canonical Status:** Supporting reference — canonical logic lives in [[RESEARCH_OPERATING_MODEL]] ([[PHASE_A_ARCHITECTURE_REVIEW]] R7) · **Layer:** L2
+**Owner:** Research Architect · **Last Updated:** 2026-07-15 · **Supersedes:** — (initial version)
+**Realized in v3:** partial — `research/gatekeeper` realizes S7–S8 ([[RESEARCH_OS_RECONCILIATION]] §4). Stages S1–S2, S9–S10 have no v3 realization
+**Scientific basis:** [[01_SCIENTIFIC_FOUNDATION]] §7.3 — the S2→S3→S6 ordering *is* the mechanism-first argument made procedural: the mechanism must be authored blind to the result. S2's micro-economics gate is falsification mode F1 (§5.3)
+
 ## 1. Flow Diagram
 
 Literature Discovery

@@ -1,5 +1,10 @@
 # Research Operating Model
 
+**Version:** 1.0 · **Status:** Canonical · **Canonical Status:** Permanent repository document · **Layer:** L2 — Research Architecture
+**Owner:** Chief Research Officer · **Last Updated:** 2026-07-15 · **Supersedes:** — (initial version)
+**Realized in v3:** partial — research/production data fence (`tests/test_research_data_fence.py`); R-10 receipt-bound lifecycle enforcement. No single v3 component realizes the roles/gates model ([[RESEARCH_OS_RECONCILIATION]] §4)
+**Scientific basis:** [[01_SCIENTIFIC_FOUNDATION]] §2.4 (custody states), §2.2 (asymmetric burden), §5.2 (G1 admissibility). **Known limitation:** LIM6 / ADR-L1-007 — §5–§6 presuppose ≥3 distinct humans; the institution has one
+
 ## 1. Purpose
 This document defines the operationalization of the Market Microstructure & Market Inefficiency Research Charter. It establishes the governing system that ensures all research activities remain aligned with the core tenets: mechanism discovery over signal mining, scientific validation over performance chasing, and reproducibility over complexity.
 

@@ -1,5 +1,10 @@
 # Feature Computation Graph (FCG)
 
+**Version:** 1.0 · **Status:** Canonical · **Canonical Status:** Permanent repository document · **Layer:** L2 / L5 — Feature Computation
+**Owner:** Research Architect · **Last Updated:** 2026-07-15 · **Supersedes:** — (initial version)
+**Realized in v3:** none — no v3 component realizes the FCG. Provenance envelope only: `research.tracking` (`run_id`, `dataset_fingerprint`, `git_commit`) ([[RESEARCH_OS_RECONCILIATION]] §4)
+**Scientific basis:** [[01_SCIENTIFIC_FOUNDATION]] §4.3 (immutability-on-use), §8 (reproducibility). **Known inconsistency:** L1 §15.5 / ADR-L1-005 — L1 requires conclusion-invariance, not the bit-identity asserted at §5 here
+
 ## 1. Feature as Scientific Object
 A feature in the FCG is not merely a variable; it is an immutable, mathematically rigorous scientific object. It represents a specific, isolated measurement of a market microstructure phenomenon.
 

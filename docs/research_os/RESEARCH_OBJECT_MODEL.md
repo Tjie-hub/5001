@@ -1,5 +1,10 @@
 # Research Object Model
 
+**Version:** 1.0 · **Status:** Canonical · **Canonical Status:** Permanent repository document · **Layer:** L2 — Research Architecture
+**Owner:** Research Architect · **Last Updated:** 2026-07-15 · **Supersedes:** — (initial version)
+**Realized in v3:** `research/knowledge` (hypotheses, `hypothesis_links`, receipt-bound `set_status`) · `research/regime` (`regime_profiles`) · edge registry ([[RESEARCH_OS_RECONCILIATION]] §4)
+**Scientific basis:** [[01_SCIENTIFIC_FOUNDATION]] §3 (world ontology — distinct from this artifact ontology), §5.2 (hypothesis admissibility)
+
 ## 1. Definition
 The Research Object Model establishes the strict schemas for all scientific entities within the institution. 
 
@@ -12,7 +17,7 @@ The Research Object Model establishes the strict schemas for all scientific enti
 - **prediction**: The expected empirical observation if the mechanism is active.
 - **null_hypothesis**: The baseline state if the market is perfectly efficient with respect to the mechanism.
 - **alternative_hypothesis**: The statistically measurable deviation from efficiency.
-- **required_data**: Array of dataset references (e.g., L3 Order Book, Trades, BBO).
+- **required_data**: Array of dataset references (e.g., Daily OHLCV, Intraday Signed Flow, Broker Summary, Trade Prints). Dataset authority is [[DATA_FEASIBILITY_STUDY]] §4 — the binding scope constraint; `required_data` must resolve to capabilities classified there as *Available Today* or *Obtainable Later*.
 - **validation_criteria**: Pre-registered thresholds for significance and effect size.
 - **status**: Current state (e.g., REGISTERED, IN_TESTING, VALIDATED, FAILED).
 
@@ -25,14 +30,14 @@ The Research Object Model establishes the strict schemas for all scientific enti
 
 ### Economic Mechanism
 - **mechanism_id**: Unique identifier.
-- **classification**: Taxonomy category (e.g., Latency Arbitrage, Inventory Risk, Asymmetric Information).
+- **classification**: Taxonomy category (e.g., Inventory Risk, Asymmetric Information, Liquidity/Price-Impact Compensation). The taxonomy is [[01_SCIENTIFIC_FOUNDATION]] §3.4 (classes M1–M6).
 - **causal_graph**: DAG representing the interaction of market participants.
 - **half_life_estimate**: Theoretical duration of the inefficiency before arbitrage correction.
 
 ### Dataset Object
 - **dataset_id**: Unique identifier.
 - **asset_class**: Target universe.
-- **resolution**: Granularity (e.g., Nanosecond, Tick, Millisecond).
+- **resolution**: Granularity (e.g., Daily bar, 1-minute bar, Tick). Attainable resolutions are enumerated in [[DATA_FEASIBILITY_STUDY]] §3–§4.
 - **regime_classification**: Market conditions during the sample period.
 - **provenance_hash**: Cryptographic hash of the raw data files for reproducibility.
 
