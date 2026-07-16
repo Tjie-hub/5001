@@ -320,6 +320,28 @@ The six deliverables collide with [[RESEARCH_OPERATING_MODEL]] (roles, G1–G4),
 
 **Related:** [[RT4_RESOLUTION_2026-07-15]] · [[ARB_ADJUDICATION_2026-07-15]] · [[RED_TEAM_REVIEW_2026-07-15]] · [[CUSTODY_MODEL]] CU-13 · [[CUSTODY_AMENDMENT]] M5/RFC-8 · [[01_SCIENTIFIC_FOUNDATION]] §0.4, §4.2, §15, A3, LIM1 · **D-022**
 
+### D-024 · Phase A Exit Gate — GO WITH CONDITIONS; G-8 is the sole exit blocker
+**Status:** ACCEPTED · **Date:** 2026-07-16 · **Type:** Governance
+**Recorded in full:** [[PHASE_A_EXIT_GATE_DECISION]] — not duplicated here.
+
+**Decision:** **GO WITH CONDITIONS.** Phase A architecture is **COMPLETE** (zero open contradictions: five raised adversarially, four disproven, RT-4 proven and corrected at D-023). **Phase A exit is gated by G-8 alone.** Phase B may proceed. Assessed at `069afc3`.
+
+**Two corrections to prior interpretation — both from reading the canonical text, neither changing the architecture:**
+- **A · G-9 is not a Phase A exit gate.** [[RESEARCH_OS_MASTER_ROADMAP]] §7 lists **fifteen** exit items; **fourteen are ✅ and the one open item is G-8. G-9 appears nowhere on the checklist.** G-9 blocks the **Research OS v1.0 freeze** (**D-022 §9.3** — *"even if D-019 is signed tomorrow"*) and every claim above **E3** (§2.4). **Both gates are open; they are not open on the same door.**
+- **B · The reviewer criterion is *"not the author"*, not *"external"*.** §7 item 15 verbatim: *"Independent adversarial sign-off … (Validation Reviewer, **not the author**)."* **D-019 assigned an *owner* ("External Validation Reviewer"); §7 states the *criterion*.** "External" was doing the work of *"not the author"* — its stated purpose was *"rather than left implicitly pending on the author"* — and D-019's own alternative C reads *"**Human independent reviewer.** The only alternative that satisfies the requirement."* **Consequence: a second researcher satisfies criterion 15 (they did not author the corpus) and independently closes G-4 ([[RESEARCH_PROTOCOL]] §7.3). One person, two blocking gates.** *This reads the criterion; it does not relax it. Residual recorded: per **LIM6** an employed reviewer carries an institutional stake the text does not address, even though their authorship stake is nil — and per **§144** the certificate already must name the reviewer.*
+
+**Sequencing requirement (not a new gate — a constraint on Condition 1).** **The gates are not additive: G-8's remedy is headcount and G-9's risk driver is headcount.** A second researcher doubles the hands that can read an unsealed OOS window, and has no institutional habit to restrain them. Per §2.4 contamination *"leaves its appearance unchanged"* and is unrecoverable after the fact. **∴ RFC-1 (or equivalent) lands before or with the hire** — the unblocked work precedes the blocked work because **the blocked work is the trigger for the risk the unblocked work removes.**
+
+**Scope boundary formalized.** Per [[TAXONOMY_AND_NAMING_STANDARD]] §3, **Phase A = L0 + L1 + L2. L3 is outside the review boundary** — so Phase B work does not enlarge what the reviewer must read. L0/L1/L2 amendment **before** sign-off moves the review target; **after** sign-off it reopens governance.
+
+**Decision vs build.** The Dataset Custody **Model** is **decided and closed** (D-022; [[CUSTODY_MODEL]] §5). The Dataset Custody **Mechanism** is **unbuilt** (RFC-1 = G-9). The earlier *"decide custody before designing L3"* condition is **discharged** — L3 specifies against a model that exists. **G-9 is engineering debt against a closed architectural decision, not a Phase A architecture defect:** per **R6** an unenforced rule reports on the institution's compliance, not the architecture's correctness.
+
+**Conditions:** (1) **Complete G-8** — one independent adversarial sign-off; certificate **v3.0** issues naming reviewer, date, and revision frozen. (2) **Preserve Phase A artifacts** — L1 unmodified since `222d57f`; [[PHASE_A_REVIEW_PACKAGE]] v1.1 intact. (3) **No L0/L1/L2 modification without reopening governance.** (4) **G-9 proceeds independently as implementation work; not a prerequisite for entering Phase B.**
+
+**Consequences.** Closure requires **zero new documents** — the review package exists and RFC-1 is scoped. **Phase A remains *certified-ready but NOT FROZEN*** (§144, roadmap §112); nothing here describes it as frozen. **Phase A freezes when someone who is not the author reads the checklist and signs it.**
+
+**Related:** [[PHASE_A_EXIT_GATE_DECISION]] · [[PHASE_A_FINAL_GATE_REVIEW]] · [[PHASE_A_FREEZE_CERTIFICATE]] §144 · [[PHASE_A_REVIEW_PACKAGE]] · [[RESEARCH_OS_MASTER_ROADMAP]] §7 · [[TAXONOMY_AND_NAMING_STANDARD]] §3 · [[01_SCIENTIFIC_FOUNDATION]] §2.2, §2.4, R6, LIM6, LIM8, ADR-L1-007 · D-018, D-019, **D-020** R-d, **D-022**, **D-023**
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
