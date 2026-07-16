@@ -27,6 +27,19 @@ built, R-10 is closed, Phase E is in flight; (2) an adversarial design review
 
 ---
 
+## Position in the Research OS
+
+This plan is **Program P0** ("v3 Edge Pipeline") inside the Research OS institutional roadmap.
+See [[RESEARCH_OS_MASTER_ROADMAP]] for the institutional roadmap (Layers L0–L8, Programs P0–P6)
+and [[RESEARCH_OS_RECONCILIATION]] for the authority rule between this document and that one:
+this plan remains canonical and frozen for its own scope — the executed v3 pipeline and its
+invariants (§5) — while the Research OS is canonical for institutional and scientific-method
+scope. On any conflict about a mechanism already built here, this plan wins; on any conflict
+about scientific method or institutional governance, the Research OS wins
+([[RESEARCH_OS_RECONCILIATION]] §5).
+
+---
+
 ## 1. Roadmap at a glance (status updated 2026-07-14)
 
 | Phase | Name | Status v2 (2026-07-12) | Status v3 (2026-07-14) |

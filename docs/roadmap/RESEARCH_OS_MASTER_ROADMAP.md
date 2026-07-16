@@ -87,7 +87,7 @@ graph TD
 
 **Edges added 2026-07-15** ([[DECISION_LOG]] C-5): `SCOPE→L6` — the Hypothesis Engine enforces the Data Capability Matrix at registration, so it depends on the constraint directly, not only transitively through L2; `L3→L6` — a hypothesis binds Dataset Objects, so registration depends on the Data Ontology; `L3→L4` — infrastructure must store what the ontology declares, so it cannot be specified before it.
 
-## 7. Phase A Exit Checklist
+## 7. L0+L1+L2 Exit Checklist (legacy name: "Phase A")
 
 Phase A (L0+L1+L2) is **frozen** only when all are true. ✅ = done this revision.
 
@@ -115,6 +115,9 @@ Phase A (L0+L1+L2) is **frozen** only when all are true. ✅ = done this revisio
 
 ```
 docs/
+  RESEARCH_MASTER_PLAN.md  ← Program P0 spec, root-level by design: predates this concern-based
+                              layout and is frozen under its own change control, not relocated.
+                              See [[DOCUMENTATION_HIERARCHY_AUDIT]] §7.
   roadmap/           ← this file, revision impact, migration plan, DECISION_LOG
   governance/        ← L0: feasibility, reconciliation, taxonomy, future outlines
   research_os/       ← L1+L2: Scientific Foundation + the 6 canonical docs + worked example (post-migration)
