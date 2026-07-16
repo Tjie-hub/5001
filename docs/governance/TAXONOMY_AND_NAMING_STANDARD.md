@@ -65,6 +65,12 @@ State transitions that touch capital-facing status inherit v3's **receipt-bindin
 - **Programs:** `P<n>_<slug>` → folder `research_programs/p<n>_<slug>/`.
 - **Objects:** `snake_case` schema fields; object types `PascalCase` in prose (Hypothesis, CostModel).
 - **Cross-references:** `[[DOCUMENT_NAME]]` wikilinks.
+- **Header field, canonical vs. record documents (codified by [[GOVERNANCE_DEBT_CLOSURE]] — an
+  observed, pre-existing corpus pattern, not a new rule):** a canonical architecture/standard
+  document (owned, living, amendable) carries **`**Owner:**`** — a named steward role. A governance
+  record (a decision, review, audit, or certificate — point-in-time, superseded rather than edited)
+  carries **`**Authority:**`** — a statement of what the document settles, not who maintains it.
+  A document should carry one or the other, not neither.
 
 ## 8. Deprecated terms — do not use
 | Deprecated | Use instead |

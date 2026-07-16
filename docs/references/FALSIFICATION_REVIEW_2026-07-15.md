@@ -1,3 +1,15 @@
+# Falsification Review — 2026-07-15
+
+**Layer:** — (not layer-scoped; pre-taxonomy artifact) · **Status:** Review record, non-canonical · **Date:** 2026-07-15
+**Nature:** Raw pasted review transcript, preserved verbatim below. Renamed from the original
+`I withdraw the code mapping.md` per [[MIGRATION_PLAN]] §3 (commit `f5a017c`) — content unchanged
+by that move or by this header. It is a point-in-time review record, not architecture; the AQ-1…AQ-8
+findings it raised are recorded canonically at [[01_SCIENTIFIC_FOUNDATION]] §15. This header was
+added by [[GOVERNANCE_DEBT_CLOSURE]] (repository hygiene only — zero words of the transcript below
+are altered).
+
+---
+
 I withdraw the code-mapping premise entirely. Your catatan is correct: I could not have justified it, and neither TOGAF nor ISO/IEC/IEEE 42010 
 
   supports it.

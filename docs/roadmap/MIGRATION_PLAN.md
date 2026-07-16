@@ -86,11 +86,11 @@ rmdir docs/Institutional_Research_Architecture 2>/dev/null || true
 **Not moved by this plan:** `docs/Institutional_Research_Architecture/I withdraw the code mapping.md` — a 1,579-line pasted review transcript carrying the AQ-1…AQ-8 findings. It is a review record, not architecture, and its filename is not a document name. Recommend `git mv` to `references/FALSIFICATION_REVIEW_2026-07-15.md` as part of the annotation commit; the AQ findings it contains are already recorded canonically at [[01_SCIENTIFIC_FOUNDATION]] §15.
 
 ## 4. Post-migration validation
-- [ ] **Empty declared folders survive.** `docs/research_programs/` and `docs/references/` contain **0 files**, and git does not track empty directories — both vanish at Step 0 unless given a `.gitkeep` or created at move time. Roadmap §8 declares both ([[PHASE_A_FREEZE_CHECKLIST]] §11).
-- [ ] `git status` shows only renames (R), no content diffs → confirms non-destructive.
-- [ ] Wikilinks `[[NAME]]` still resolve (they are name-based, path-independent).
-- [ ] Each canonical doc gets its layer tag + v3 cross-reference (a *content* follow-up, separate commit).
-- [ ] Add a `SCOPE_FILE` note where the pasted Master Research Plan v1.0 text should be saved (it currently exists only in chat history — recommend `references/DRAFT_MASTER_PLAN_v1.0_ARCHIVED.md`).
+- [x] **Empty declared folders survive.** `docs/research_programs/` carries a `.gitkeep` (1 file); `docs/references/` holds 2 files. Both non-empty/tracked as declared. **Verified 2026-07-16** by [[GOVERNANCE_DEBT_CLOSURE]] filesystem check.
+- [x] `git status` shows only renames (R), no content diffs → confirms non-destructive. **Verified 2026-07-16**: `git diff-tree --name-status f5a017c` shows 9 renamed files with **zero content diff** each, plus the one disclosed exception (`research_programs/.gitkeep`, a new 1-line file, exactly as the commit message states). No undisclosed content change.
+- [x] Wikilinks `[[NAME]]` still resolve (they are name-based, path-independent). **Verified 2026-07-16** by an automated corpus-wide resolver in [[GOVERNANCE_AUDIT_REPORT]] §1 (category 3): 49 distinct targets, 1 pre-declared exception (`[[RESEARCH_DATABASE_CONCEPT]]`, already triaged elsewhere as "reserved, not phantom"), zero undocumented breaks.
+- [x] Each canonical doc gets its layer tag + v3 cross-reference (a *content* follow-up, separate commit). **Verified 2026-07-16**: all six L2 docs carry a `Realized in v3:` field ([[GOVERNANCE_AUDIT_REPORT]] §1, category 8).
+- [ ] Add a `SCOPE_FILE` note where the pasted Master Research Plan v1.0 text should be saved (it currently exists only in chat history — recommend `references/DRAFT_MASTER_PLAN_v1.0_ARCHIVED.md`). **Still open — deferred, not resolved by [[GOVERNANCE_DEBT_CLOSURE]].** No content-authority decision is needed to close it (it is a pure archival copy of already-superseded draft text), but locating and transcribing chat-history text is not a hygiene action this pass performs; low priority, since v1.0 was fully superseded by the ratified v3 baseline.
 
 ## 5. Rollback
 Every step is `git mv`; `git checkout <branch>~1 -- docs/` or reverse-`git mv` restores. No data touched.
