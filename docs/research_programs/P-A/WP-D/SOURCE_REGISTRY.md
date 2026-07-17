@@ -25,6 +25,7 @@ The `cadence` field and the semiannual→quarterly transition are sourced from `
 | 2024-Q3 | bisnis 20240725/1785558 | kalderanews (LQ45) | `SECONDARY_CROSSCHECKED` |
 | 2024-Q4 | bisnis 20241027/1810909 | — | `SECONDARY_SINGLE` |
 | 2025-Q1 | bisnis 20250123/1834176 | theeconopost | `SECONDARY_CROSSCHECKED` |
+| 2025-Q2 | kompas 2025/04/26/222019126 | — | `SECONDARY_SINGLE` (LQ45 verified no-change) |
 | 2025-Q3 | bisnis 20250728/1896891 | kontan, rivankurniawan | `SECONDARY_CROSSCHECKED` |
 | 2025-Q4 | bisnis 20251028/1923846 | search-corroborated list | `SECONDARY_CROSSCHECKED` |
 | 2026-Q1 | bisnis 20260126/1947363 | RRI, ugems, investortrust | `SECONDARY_CROSSCHECKED` |

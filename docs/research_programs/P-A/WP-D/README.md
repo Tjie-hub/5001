@@ -23,4 +23,4 @@
 
 ## Headline numbers
 
-188 ticker-events (94 ADD / 94 DELETE) across 11 reviews · 172 distinct `(ticker, effective_date, direction)` economic events · window **2022-08-01 → 2026-05-04** · 6 of 11 reviews cross-corroborated. Consistency audit: **PASS** (no ADD/DELETE collisions, all provenance present, all within the OHLCV window). Full 5-year coverage **not** achieved — 2021-H2, 2022-H1, and the May-2024/May-2025 minor-evaluations remain documented gaps; primary (IDX) verification is **0** (Cloudflare-blocked, [[COVERAGE_REPORT]] §5).
+194 ticker-events (97 ADD / 97 DELETE) across **12 reviews (= 12 P-A clusters)** · 178 distinct `(ticker, effective_date, direction)` economic events · window **2022-08-01 → 2026-05-04** · 6 of 12 reviews cross-corroborated. Consistency audit: **PASS** (no ADD/DELETE collisions, all provenance present, all within the OHLCV window). Full 5-year coverage **not** achieved — 2021-H2, 2022-H1, and the May-2024 minor-evaluation remain documented gaps; primary (IDX) verification is **0** (Cloudflare-blocked, [[COVERAGE_REPORT]] §5).

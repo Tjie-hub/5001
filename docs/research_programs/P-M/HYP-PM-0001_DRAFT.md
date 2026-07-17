@@ -1,6 +1,9 @@
 # HYP-PM-0001 — Order-Flow-Imbalance Inventory Reversal (DRAFT)
 
-> **Status: DRAFT — held at G1. NOT registered. No family slot consumed.**
+> **⛔ TRANSITIONED — this free-era draft was registered on 2026-07-17T07:15:03Z.**
+> The frozen, immutable record is **[[HYP-PM-0001_REGISTERED]]** (sha256 `540c2d52…`), which governs. HYP-PM-0001 is now REGISTERED and is the first member of the P-M family {I5,I6,I7,I12} (PG-3). This draft is **retained as free-era history only** ([[HYPOTHESIS_LIFECYCLE]] §2) — it is not the record of truth and must not be edited to change the claim (R15).
+>
+> **Original draft status (historical): DRAFT — held at G1. NOT registered. No family slot consumed.**
 > Free-era candidate ([[HYPOTHESIS_LIFECYCLE]] §2–§3): refine freely; nothing risked until the irreversible `DRAFT → REGISTERED` (T4/G1). Registration is blocked only on fixing the ex-ante MDE from a power calc (deferred by instruction) and CRO sign-off — see §5.
 >
 > **Update 2026-07-17:** power analysis complete ([[HYP-PM-0001_POWER]]) — **statistical power is abundant (sub-bp MDE over 12.7M bars); the binding constraint is friction (F4), not detectability.** The ex-ante MDE should therefore be **friction-anchored**, not statistical. B-1 closed as a computation; registration awaits **CRO ratification of a friction-based MDE + k** (R5). Family slot still unconsumed.

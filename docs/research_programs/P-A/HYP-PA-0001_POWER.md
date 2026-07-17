@@ -17,17 +17,17 @@ Measured: **median daily σ = 2.80%** (mean 3.09%) — high, as expected for the
 
 | N (events) | k=3d | k=5d | k=10d |
 |---|---|---|---|
-| **188** (pooled, all signed events) | 0.99% / 0.84% | **1.28% / 1.09%** | 1.81% / 1.54% |
-| **94** (adds-only) | 1.40% / 1.19% | 1.81% / 1.54% | 2.56% / 2.18% |
-| **11** (cluster-limited — see §3) | 4.10% / 3.49% | 5.29% / 4.50% | 7.49% / 6.36% |
+| **194** (pooled, all signed events) | 0.98% / 0.83% | **1.26% / 1.07%** | 1.78% / 1.52% |
+| **97** (adds-only) | 1.38% / 1.17% | 1.78% / 1.52% | 2.52% / 2.14% |
+| **12** (cluster-limited — see §3) | 3.93% / 3.34% | 5.07% / 4.31% | 7.17% / 6.09% |
 
-*(raw / abnormal-haircut)*
+*(raw / abnormal-haircut · dataset: 194 events / 12 review-date clusters, WP-D 2026-07-17)*
 
 ## 3. Interpretation — the binding constraint is N, via clustering
 
 - **Pooled (N=188):** the study can detect a reversal of **~1.1–1.3%/event at k=3–5d**. If the true IDX reconstitution reversal is ≥~1.5% (plausible for a less-liquid market with a forced-flow M6 barrier), the pooled test is **adequately powered**. If it is sub-1%, it is **underpowered**.
-- **The fragility (decisive):** reconstitution reversals have a **common component per review date** (the whole cohort rebalances on the same day). If that component dominates, the *effective* N is closer to the **number of review dates (11)**, where MDE balloons to **~4–5%** — badly underpowered. The truth sits between the N=188 and N=11 rows.
-- **Consequence:** inference **must be cluster-robust by review date**, and the honest power statement is *"powered for a ~1.3% idiosyncratic reversal; fragile to the review-date-common component."* **Closing WP-D gaps G-WPD-1/2 raises the number of review-date clusters** (2021-H2, 2022-H1, the two May evals = up to +4 clusters, ~+36%), which is the single most effective way to improve real power here.
+- **The fragility (decisive):** reconstitution reversals have a **common component per review date** (the whole cohort rebalances on the same day). If that component dominates, the *effective* N is closer to the **number of review-date clusters (now 12)**, where MDE balloons to **~5%** — badly underpowered. The truth sits between the N=194 and N=12 rows.
+- **Consequence:** inference **must be cluster-robust by review date**, and the honest power statement is *"powered for a ~1.3% idiosyncratic reversal; fragile to the review-date-common component."* **Closing the remaining WP-D gaps raises the cluster count** (2021-H2, 2022-H1, May-2024 = **+3 clusters → 15, ~+25%**), which is the single most effective way to improve real power here.
 
 ## 4. Recommended ex-ante criteria (for CRO ratification — R5)
 
@@ -39,6 +39,18 @@ Measured: **median daily σ = 2.80%** (mean 3.09%) — high, as expected for the
 | N posture | register on N=188 **or** first close G-WPD-1/2 for +clusters | CRO trade-off: speed vs robustness |
 
 > **R2 verdict:** the test **can fail** at a plausible effect size (MDE ≈ 1.3% < a plausible ~1.5–2% reversal), so R2 is satisfiable — **conditional on cluster-robust inference and the CRO accepting the clustering fragility.** This closes the last open G1 item for HYP-PA-0001 *as a computation*; **registration still requires the CRO to fix `k`/`MDE` ex ante (R5).**
+
+## 4a. Readiness tracking (owner status: **HOLD**)
+
+Updated after each WP-D improvement (WP-3). HYP-PA-0001 is **owner-held**; do **not** register without explicit owner approval.
+
+| Date | Clusters | Pooled N | Cluster-limited MDE (k=5) | Remaining blockers | Recommendation |
+|---|---|---|---|---|---|
+| 2026-07-17 (a) | 9 | 154 | ~5.3% | 2021-H2, 2022, May-evals, IDX80 gaps | compute power |
+| 2026-07-17 (b) | 11 | 188 | ~5.3% | 2021-H2, 2022-H1, May-2024/25, IDX80 | close gaps for clusters |
+| **2026-07-17 (c)** | **12** | **194** | **~5.1%** | **2021-H2, 2022-H1, May-2024**; IDX80(2022-H2/2023-H1); primary-verify (Cloudflare) | **HOLD — keep expanding WP-D** |
+
+**Effective power read:** pooled MDE ≈1.3% is stable; the binding cluster-limited MDE improved only marginally (5.3%→5.1%) because each pass added ~1 cluster. **Registration remains not recommended** until the cluster count is materially higher (closing 2021-H2/2022-H1/May-2024 → 15 clusters) — consistent with the owner's HOLD.
 
 ## 5. What this does and does not do
 - ✅ Computes N, σ, and MDE; states registration-readiness.
