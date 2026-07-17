@@ -6,22 +6,22 @@
 
 | Metric | Value (this pass) | Prior pass |
 |---|---|---|
-| Reviews covered (**= P-A clusters**) | **12** | 11 |
+| Reviews covered (**= P-A clusters**) | **13** | 12 |
 | Window | **2022-08-01 → 2026-05-04** (~3.75 yr) | 2022-08 → 2026-05 |
-| Total ticker-events | **194** (97 ADD / 97 DELETE) | 188 |
-| Distinct `(ticker, effective_date, direction)` events | **178** | 172 |
-| Cross-corroborated reviews | 6 of 12 | 6 of 11 |
+| Total ticker-events | **210** (105 ADD / 105 DELETE) | 194 |
+| Distinct `(ticker, effective_date, direction)` events | **192** | 178 |
+| Cross-corroborated reviews | 6 of 13 | 6 of 12 |
 | Primary-verified events | **0** (idx.co.id Cloudflare-blocked — §5) | 0 |
 
 ### Events by index
 
 | Index | ADD | DELETE | Total |
 |---|---|---|---|
-| LQ45 | 34 | 34 | 68 |
+| LQ45 | 36 | 36 | 72 |
 | IDX30 | 23 | 23 | 46 |
-| IDX80 | 40 | 40 | 80 |
+| IDX80 | 46 | 46 | 92 |
 
-*New this pass:* 2025-Q2 (May 2025) added — IDX30 (BBTN/ARTO), IDX80 (BUKA,DSNG/BMTR,MIDI); **LQ45 verified NO CHANGE** (recorded as a fact, distinct from "not retrieved").
+*New this pass:* 2024-Q2 (May 2024) added — LQ45 (AMMN,ISAT/PTMP,EMTK), IDX80 (6 in/6 out); **IDX30 verified NO CHANGE**. (2025-Q2 added the previous pass.)
 
 ## 2. Review-by-review coverage grid
 
@@ -29,13 +29,13 @@ Cadence rule ([[SOURCE_REGISTRY]]): semiannual (Feb/Aug) before Apr 2024, quarte
 
 | Review (effective) | Cadence | Status | Note |
 |---|---|---|---|
-| 2021-H2 (Aug 2021) | semiannual | ❌ **MISSING** | earliest usable review; not retrieved |
-| 2022-H1 (Feb 2022) | semiannual | ❌ **MISSING** | only commentary sources found — no clean per-index list |
+| 2021-H2 (Aug 2021) | semiannual | ❌ **MISSING** | retrieval attempted; candidate source resolved to an **Aug 2020** article (misattribution) — not recorded |
+| 2022-H1 (Feb 2022) | semiannual | ❌ **MISSING** | repeated attempts return only commentary — no clean per-index list |
 | 2022-H2 (Aug 2022) | semiannual | ⚠️ **PARTIAL** ✅*new* | LQ45 + IDX30 verified; **IDX80 not covered by source** |
 | 2023-H1 (Feb 2023) | semiannual | ⚠️ **PARTIAL** | LQ45 + IDX30; **IDX80 not covered** |
 | 2023-H2 (Aug 2023) | semiannual | ✅ covered | effective day month-precision |
 | 2024-H1 (Feb 2024) | semiannual | ✅ covered | last semiannual review |
-| 2024-Q2 (May 2024) | quarterly | ❌ **MISSING** | first quarterly minor-eval; not retrieved |
+| 2024-Q2 (May 2024) | quarterly | ✅ covered ✅*new* | bisnis; **IDX30 verified no-change**, LQ45/IDX80 changed |
 | 2024-Q3 (Aug 2024) | quarterly | ✅ covered | IDX30 no constituent change |
 | 2024-Q4 (Nov 2024) | quarterly | ✅ covered | |
 | 2025-Q1 (Feb 2025) | quarterly | ✅ covered | |
@@ -45,7 +45,7 @@ Cadence rule ([[SOURCE_REGISTRY]]): semiannual (Feb/Aug) before Apr 2024, quarte
 | 2026-Q1 (Feb 2026) | quarterly | ✅ covered | |
 | 2026-Q2 (May 2026) | quarterly | ✅ covered ✅*new* | first eval under new HSC/free-float criteria |
 
-**Coverage:** 12 of ~15 expected reviews (~80%), 2 of them partial (IDX80 gaps). The window spans the **2022 bear regime through 2026**. Crucially for P-A power, **12 review-date clusters** are now covered (up from 11).
+**Coverage:** 13 of ~15 expected reviews (~87%), 2 of them partial (IDX80 gaps). The window spans the **2022 bear regime through 2026**, and the **entire quarterly era (2024-Q2 → 2026-Q2) is now complete**. Crucially for P-A power, **13 review-date clusters** are now covered. Only two pre-2023 semiannual reviews (2021-H2, 2022-H1) remain uncovered.
 
 ## 3. Confidence
 
@@ -60,15 +60,15 @@ Cadence rule ([[SOURCE_REGISTRY]]): semiannual (Feb/Aug) before Apr 2024, quarte
 
 | ID | Gap | Status this pass | Path to close |
 |---|---|---|---|
-| **G-WPD-1** | Early history 2021-H2, 2022-H1, 2022-H2 | **Partially closed** — 2022-H2 added; **2021-H2 & 2022-H1 remain** | 2022-H1: only commentary sources found (inconsistent counts) — needs a clean per-index source. 2021-H2: not yet located |
-| **G-WPD-2** | May minor-evals 2024-Q2, 2025-Q2, 2026-Q2 | **Mostly closed** — 2026-Q2 and 2025-Q2 added; **only 2024-Q2 (May 2024) remains** | Retrieve + verify a clean per-index source for May 2024 |
+| **G-WPD-1** | Early history 2021-H2, 2022-H1 (+2022-H2 now covered) | **Partially closed** — 2022-H2 added; **2021-H2 & 2022-H1 remain** | 2022-H1: only commentary sources (inconsistent) — needs a clean per-index source. 2021-H2: candidate resolved to a 2020 article — needs a correctly-dated source |
+| **G-WPD-2** | May minor-evals 2024-Q2, 2025-Q2, 2026-Q2 | ✅ **CLOSED** — all three May evals now covered | — |
 | **G-WPD-3** | IDX80 constituents for **2023-H1 and 2022-H2** | Open | Find an IDX80-inclusive source for both |
 | **G-WPD-4** | 0 `PRIMARY_VERIFIED` — all events secondary | **Attempted, blocked** — see §5 | Manual/human download of IDX PDFs past Cloudflare |
 | **G-WPD-5** | month-precision effective dates (2023-H2, 2025-Q4) | Open | Confirm exact first-trading-day from primary or `ohlcv` |
 
 ## 5. Retrieval status & primary-verification progress
 
-**Secondary retrieval (cumulative):** 2022-H2 (kompas), 2026-Q2 (bisnis), and **2025-Q2 (kompas — this pass)** verify-fetched first-hand. Method: targeted search → fetch of dedicated per-index "daftar" articles; recorded only what the article states (incl. verified *no-change* for LQ45 2025-Q2). May 2024 (2024-Q2) attempted again — no clean per-index source surfaced; remains a gap.
+**Secondary retrieval (cumulative):** 2022-H2 (kompas), 2026-Q2 (bisnis), 2025-Q2 (kompas), and **2024-Q2 (bisnis — this pass)** verify-fetched first-hand. Method: targeted search → fetch of dedicated per-index "daftar" articles; recorded only what the article states (incl. verified *no-change* for LQ45 2025-Q2 and IDX30 2024-Q2). **Integrity note:** an "Aug 2021" candidate link resolved on fetch to an **Aug 2020** article — it was **rejected, not recorded** (wrong year, and outside the OHLCV window). This is why every event is verified by fetch, not by search summary.
 
 **Primary retrieval attempt (idx.co.id):**
 - **Method 1 — WebFetch** of the official announcement PDF (`Peng-00067/BEI.POP/04-2026`) → **HTTP 403**.
@@ -80,4 +80,4 @@ Cadence rule ([[SOURCE_REGISTRY]]): semiannual (Feb/Aug) before Apr 2024, quarte
 
 ## 6. Impact on statistical power (qualitative — no power computed)
 
-Per instruction, no power analysis is run. Qualitatively, coverage now stands at **194 events (178 distinct) across 12 review-date clusters** (from 154/9 originally). Because P-A power is **cluster-limited** ([[HYP-PA-0001_POWER]] §3), the clusters count is the binding quantity: 12 vs 11 modestly lifts the cluster-robust floor. The residual gaps (2021-H2, 2022-H1, May-2024) would each add **one more cluster**; closing them is the highest-value power lever. Whether 12 clusters suffice is the CRO's call — HYP-PA-0001 remains **owner-held**.
+Coverage now stands at **210 events (192 distinct) across 13 review-date clusters** (from 154/9 originally). Because P-A power is **cluster-limited** ([[HYP-PA-0001_POWER]] §3), the cluster count is the binding quantity: the cluster-limited MDE (k=5) is now ~5.0% (13 clusters). Only **two** review-date gaps remain (2021-H2, 2022-H1) — each would add one more cluster but both are pre-OHLCV-friendly (2021-H2 sits at the very start of the price history, giving a truncated estimation window). HYP-PA-0001 remains **owner-held**.
