@@ -18,6 +18,7 @@ The `cadence` field and the semiannual→quarterly transition are sourced from `
 
 | Review | Source of record (Rank 2) | Corroboration (Rank 3) | Status |
 |---|---|---|---|
+| 2022-H2 | kompas 2022/07/27/063500726 | kontan insight (Aug2022-Jan2023) | `SECONDARY_SINGLE` (IDX80 not covered) |
 | 2023-H1 | bisnis 20230126/1621746 | — | `SECONDARY_SINGLE` (IDX80 not covered) |
 | 2023-H2 | bisnis 20230726/1678262 | — | `SECONDARY_SINGLE` |
 | 2024-H1 | bisnis 20240126/1735652 | — | `SECONDARY_SINGLE` |
@@ -27,6 +28,7 @@ The `cadence` field and the semiannual→quarterly transition are sourced from `
 | 2025-Q3 | bisnis 20250728/1896891 | kontan, rivankurniawan | `SECONDARY_CROSSCHECKED` |
 | 2025-Q4 | bisnis 20251028/1923846 | search-corroborated list | `SECONDARY_CROSSCHECKED` |
 | 2026-Q1 | bisnis 20260126/1947363 | RRI, ugems, investortrust | `SECONDARY_CROSSCHECKED` |
+| 2026-Q2 | bisnis 20260424/1969174 | ajaib, asatunews | `SECONDARY_CROSSCHECKED` |
 
 ## Conflict-resolution policy
 
@@ -37,4 +39,5 @@ The `cadence` field and the semiannual→quarterly transition are sourced from `
 
 ## Outstanding source work (to reach `PRIMARY_VERIFIED`)
 
-- The IDX announcement PDFs are the gold standard but are 403-blocked to the current tool. Retrieving them (authenticated/browser path, or an alternate mirror) would upgrade every row from secondary to primary. This is the single largest quality upgrade available and is recorded as a blocker in [[READINESS_ASSESSMENT]].
+- **Primary retrieval was attempted and blocked** (2026-07-17): WebFetch of the official PDF → 403; headless-browser (Playwright) of the PDF and of the HTML announcements listing → 403 "Attention Required! | Cloudflare". idx.co.id enforces **domain-wide Cloudflare bot protection**; automated primary retrieval is not possible here ([[COVERAGE_REPORT]] §5).
+- Upgrading rows to `PRIMARY_VERIFIED` therefore requires a **manual/human download** of the IDX announcement PDFs (a normal browser session, or the owner supplying the files). This is the single largest quality upgrade available and remains the recorded blocker G-WPD-4.

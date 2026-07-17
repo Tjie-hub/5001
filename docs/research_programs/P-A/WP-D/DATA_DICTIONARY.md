@@ -25,9 +25,9 @@
 
 | Value | Meaning | Present in this dataset? |
 |---|---|---|
-| `PRIMARY_VERIFIED` | Confirmed against the official IDX announcement document | **No** — IDX PDFs returned HTTP 403 to the retrieval tool ([[SOURCE_REGISTRY]]) |
-| `SECONDARY_CROSSCHECKED` | Stated identically by ≥2 independent secondary sources | 5 of 9 reviews |
-| `SECONDARY_SINGLE` | Stated by one fetched secondary source, not yet cross-corroborated | 4 of 9 reviews |
+| `PRIMARY_VERIFIED` | Confirmed against the official IDX announcement document | **No** — idx.co.id is Cloudflare-blocked to WebFetch **and** headless browser ([[SOURCE_REGISTRY]], [[COVERAGE_REPORT]] §5) |
+| `SECONDARY_CROSSCHECKED` | Stated identically by ≥2 independent secondary sources | 6 of 11 reviews |
+| `SECONDARY_SINGLE` | Stated by one fetched secondary source, not yet cross-corroborated | 5 of 11 reviews |
 
 ## Validation rules (enforced by the builder; audit result in [[COVERAGE_REPORT]])
 
