@@ -2,6 +2,8 @@
 
 > **Status: DRAFT — held at G1. NOT registered. No family slot consumed.**
 > Free-era candidate ([[HYPOTHESIS_LIFECYCLE]] §2–§3): refine freely; nothing risked until the irreversible `DRAFT → REGISTERED` (T4/G1). Registration is blocked only on fixing the ex-ante MDE from a power calc (deferred by instruction) and CRO sign-off — see §5.
+>
+> **Update 2026-07-17:** power analysis complete ([[HYP-PM-0001_POWER]]) — **statistical power is abundant (sub-bp MDE over 12.7M bars); the binding constraint is friction (F4), not detectability.** The ex-ante MDE should therefore be **friction-anchored**, not statistical. B-1 closed as a computation; registration awaits **CRO ratification of a friction-based MDE + k** (R5). Family slot still unconsumed.
 
 **Program:** P-M · Microstructure Flow · **Family:** P-M {I5, I6, I7, I12} ([[DECISION_LOG]] D-028) — this would be the **first member**
 **Mechanism (I5 = M1.1):** order-flow imbalance → inventory-risk price pressure → **reversion**

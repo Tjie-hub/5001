@@ -2,6 +2,8 @@
 
 > **Status: DRAFT — held at G1. NOT registered. No family slot consumed.**
 > This is a free-era candidate ([[HYPOTHESIS_LIFECYCLE]] §2–§3): refinement is unlimited and nothing has been risked. It becomes a risked claim only at the irreversible `DRAFT → REGISTERED` transition (T4/G1), which is deferred pending the data work package in §5.
+>
+> **Update 2026-07-17:** WP-D delivered (188 events, [[COVERAGE_REPORT]]) and the power analysis is complete ([[HYP-PA-0001_POWER]]) — **MDE ≈ 1.3%/event at k=5d, pooled; fragile to review-date clustering.** The two §4 held items (R5 effect-size, R2 power) are now **computed**; registration awaits **CRO ex-ante ratification of k/MDE** and a register-now-vs-close-gaps decision. Family slot still unconsumed.
 
 **Program:** P-A · Auction Dislocation · **Family:** P-A {I2, I3, I8} ([[DECISION_LOG]] D-028) — this would be the **first member**
 **Mechanism (I8 → I2):** index-reconstitution forced flow → closing-auction price displacement
