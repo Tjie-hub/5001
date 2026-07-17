@@ -344,6 +344,36 @@ The six deliverables collide with [[RESEARCH_OPERATING_MODEL]] (roles, G1–G4),
 
 ---
 
+## 2b. Phase B governance decisions — Owner-ratified 2026-07-17
+
+These three were proposed by the Phase B Governance Remediation ([[GOVERNANCE_REMEDIATION_REPORT]] §4) as D-025-P / D-026-P / D-027-P, prepared for ratification in [[OWNER_RATIFICATION_PACKAGE]], and **ratified by the Owner on 2026-07-17**. The `-P` (proposed) suffix is retired; they are recorded decisions. Ratification followed the Independent Review (GLM 5.2 — **APPROVE WITH MINOR OBSERVATIONS**) and the closure of its sole accepted defect ([[F1_CLOSURE_REPORT]]). They govern the L3–L5 corpus and the layer scheme; they do **not** alter Phase A's frozen scientific content (L1) or its exit-gate standing (G-8).
+
+### D-025 · Layer scheme ratified — transcript scheme adopted
+**Status:** ACCEPTED · **Date:** 2026-07-17 · **Type:** Governance · **Approval authority:** Owner (ratification) · **Supersedes proposal:** D-025-P
+**Decision:** Option (a) adopted. The transcript layer scheme is ratified as repository-canonical: **L0 Governance & Scope · L1 Scientific Foundation · L2 Research Architecture · L3 Data Ontology · L4 Runtime Architecture · L5 Reference Architecture · L6 Technology Profiles.** [[REFERENCE_ARCHITECTURE]] receives a defined L5 slot; [[RUNTIME_ARCHITECTURE]]'s L4 name is adjudicated (Runtime Architecture); the three ingested headers move contested → final.
+**Rationale:** The owner's own transcript decision favored option (a); ratification transacts a decision already made but never recorded (RN-3 / RN-8). Recorded per ISO 42010 §5.7.
+**Affected documents:** [[DATA_ONTOLOGY]] (L3 confirmed) · [[RUNTIME_ARCHITECTURE]] (L4 name final) · [[REFERENCE_ARCHITECTURE]] (L5 slot final) · [[LAYER_MAPPING_TABLE]] · [[TAXONOMY_AND_NAMING_STANDARD]] §3 (amendment authorized — see Consequences).
+**Consequences:** The consequential amendment of [[TAXONOMY_AND_NAMING_STANDARD]] §3 to v2.0 and the five Phase A layer-label updates ([[LAYER_MAPPING_TABLE]] §3) are **owner-authorized but deferred to the Phase A formal-amendment path** — not executed in this closure, because Phase A must remain undisturbed (per D-024 condition 3, an L0/L1/L2 edit reopens Phase A governance; a Phase A file is not edited inside a Phase B status-closure). Until that amendment is transacted, cite L4/L5 by the ratified names alongside the document name for clarity. RN-9 (fence naming) may be folded into that amendment at the owner's discretion.
+**Related:** [[GOVERNANCE_REMEDIATION_REPORT]] §4 · [[LAYER_MAPPING_TABLE]] · [[OWNER_RATIFICATION_PACKAGE]] · D-003, D-024
+
+### D-026 · L4.5 Execution Semantics withdrawal ratified
+**Status:** ACCEPTED · **Date:** 2026-07-17 · **Type:** Governance · **Approval authority:** Owner · **Supersedes proposal:** D-026-P
+**Decision:** The L4.5 Execution Semantics specification is ratified as **Withdrawn** (owner rationale quoted verbatim in [[EXECUTION_SEMANTICS]]). The L4 owner is directed to confirm that [[RUNTIME_ARCHITECTURE]] (L4) subsumes the Execution Identity / Execution Context definitions, or to amend L4 accordingly — closing the RN-10 orphan flag.
+**Rationale:** The withdrawal was decided by the owner in the source transcript; ratification records it (RN-10). L4.5 exists in neither layer scheme.
+**Affected documents:** [[EXECUTION_SEMANTICS]] (Withdrawn — ratified) · [[RUNTIME_ARCHITECTURE]] (subsumption confirmation directed).
+**Consequences:** [[EXECUTION_SEMANTICS]] remains preserved in `docs/archive/` as history — never deleted, never cited as a layer. The orphaned-definition confirmation is assigned to the L4 owner as a discrete follow-on (architecture judgment, tracked, not performed in this closure).
+**Related:** [[GOVERNANCE_REMEDIATION_REPORT]] §4 · [[EXECUTION_SEMANTICS]] · D-025
+
+### D-027 · Ingested L3–L5 corpus ratified as canonical
+**Status:** ACCEPTED · **Date:** 2026-07-17 · **Type:** Governance · **Approval authority:** Owner · **Supersedes proposal:** D-027-P
+**Decision:** [[DATA_ONTOLOGY]], [[RUNTIME_ARCHITECTURE]], [[REFERENCE_ARCHITECTURE]] are accepted as **Canonical** layer specifications (the "candidate / unratified" qualifier is retired). The L3 owner assignment (Research Architect, assigned at ingestion) is **confirmed**. Independent reviews of all three are **commissioned** (RN-4).
+**Rationale:** The three were ingested with full metadata, wording preserved, provenance retained; ratification accepts them into the canon and opens the review track. Records RN-2 / RN-3 / RN-4 / RN-6 closure at the governance level.
+**Affected documents:** [[DATA_ONTOLOGY]], [[RUNTIME_ARCHITECTURE]], [[REFERENCE_ARCHITECTURE]] (status → Canonical) · [[DOCUMENT_REGISTRY_UPDATE]] · [[HEADER_CHANGE_LOG]].
+**Consequences:** Canonical status is of the *specifications as ratified*; it is **not** a freeze. Independent review (RN-4) remains pending and the three inherit Phase A's still-open G-8 sign-off — they are **Canonical but not frozen**. Independent review and the RN-7 leakage-cleanup passes proceed as downstream work, outside this closure.
+**Related:** [[GOVERNANCE_REMEDIATION_REPORT]] §4 · [[DOCUMENT_REGISTRY_UPDATE]] · [[F1_CLOSURE_REPORT]] · D-025, D-026
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
