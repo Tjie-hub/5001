@@ -374,6 +374,25 @@ These three were proposed by the Phase B Governance Remediation ([[GOVERNANCE_RE
 
 ---
 
+## 2c. Research Program operating decisions — Owner-ratified 2026-07-17
+
+Decisions taken by the Owner acting as Research Director / CRO in operating the Research OS. They instantiate the frozen standards; they do **not** amend them. This subsection is the authoritative governance record for such rulings — the operating documents in `docs/research_programs/` cite it and do not carry the decision themselves (SSOT).
+
+### D-028 · G-6 family merge — P-M and P-A hypothesis families declared before first registration
+**Status:** ACCEPTED · **Date:** 2026-07-17 · **Type:** Research Program governance · **Approval authority:** Owner (Research Director / CRO)
+**Decision:** The **G-6** family-merge question ([[RESEARCH_PROGRAM_PLAYBOOK]] §6, §4) is resolved by owner ruling **before any hypothesis registration**. Two active programs are declared with the following **multiplicity families**, which are append-only and monotonic from this decision (PG-3):
+
+- **P-M · Microstructure Flow** = merged **P1 + P2** · Family: **I5, I6, I7, I12**
+- **P-A · Auction Dislocation** = **P3** · Family: **I2, I3, I8**
+
+These are the statistical hypothesis families that govern **admissibility, multiplicity control, denominator accounting, and experiment registration** for all work in the two programs. Program status is *Ready for Hypothesis Registration*; formal initiation occurs at the first registration (G1 / T4), at which point the first hypothesis joins its declared family permanently.
+**Rationale:** The merge pays the correct statistical cost rather than understating multiplicity (Option A, [[RESEARCH_PROGRAM_PLAYBOOK]] §4.3 — *"the correct cost, not an objection"*). (1) The in-scope entries share causal mechanisms — I5↔I7 *confound*, I6↔I12 *near-inseparable* (LIM2), I8→I2 *upstream* ([[MARKET_INEFFICIENCY_TAXONOMY]] §4) — so **ex-ante separation is unreliable at current data fidelity**. (2) Merged, **wider families produce statistically honest denominators**; kept separate they would each understate multiplicity, inflating every result's evidential weight (§4.3) in a direction LIM3 says is unmeasurable. This applies the R7.5 / PG-6 / PG-7 principle at the program boundary.
+**Affected documents:** [[RESEARCH_PROGRAM]] §2 (records the merge; cites this decision) · [[OBJECTIVES_2026H2]] §3 (scored backlog scoped to these families). No frozen standard is edited; [[RESEARCH_OS_MASTER_ROADMAP]] §3 (the P0–P6 register, D-006) is **unaltered** — this is an operating selection over it, not a reclassification of it.
+**Consequences:** Effective immediately and **binding before the first hypothesis registration**. Per **R7.5 / PG-6**, a declared family may never later be narrowed or split. Once a family has an active registration, **any change requires a formal governance amendment** (a superseding decision entry here) and **is permitted only where the governance framework allows** — otherwise the sole remedy is program termination and a new family from zero, forfeiting every survivor ([[RESEARCH_PROGRAM_PLAYBOOK]] §1.2, PB-2). This decision **closes G-6**. P4/P5/P6 remain unaffected (retained, not initiated — D-006).
+**Related:** [[RESEARCH_PROGRAM]] · [[RESEARCH_PROGRAM_STANDARD]] §9 · [[RESEARCH_PROGRAM_PLAYBOOK]] §4 · [[MARKET_INEFFICIENCY_TAXONOMY]] §4 · D-006, D-009, D-020
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

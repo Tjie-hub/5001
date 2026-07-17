@@ -50,7 +50,7 @@ State these first, because every one of them is a failure mode that reads as suc
 
 ## 2. Active Programs
 
-The institutional register is [[RESEARCH_OS_MASTER_ROADMAP]] §3 (canonical, unaltered — D-006). This section records the CRO's **operating selection** and the **G-6 family decision** (owner ruling, 2026-07-17).
+The institutional register is [[RESEARCH_OS_MASTER_ROADMAP]] §3 (canonical, unaltered — D-006). This section records the CRO's **operating selection** and the **G-6 family decision**, whose authoritative governance record is [[DECISION_LOG]] **D-028** (owner ruling, 2026-07-17) — cited here, not restated.
 
 ### 2.1 The G-6 decision — merge into honest wide families
 
@@ -60,7 +60,7 @@ Running the family-drawing procedure ([[RESEARCH_PROGRAM_PLAYBOOK]] §1.2) again
 - **I6 ↔ I12** (illiquidity vs capacity shielding) — *near-inseparable* (LIM2) ⇒ **one family**.
 - **I8 → I2** (reconstitution flow → closing auction) — *upstream*: I8's mechanism produces I2's observations ⇒ evidence not independent ⇒ **one family**.
 
-> **This closed the G-6 window.** Per R7.5 / PG-6 a family may never later be narrowed or split. The merge was available once; it has now been exercised. The only future remedy for a mis-drawn boundary is **termination and a new family from zero, forfeiting every survivor** ([[RESEARCH_PROGRAM_PLAYBOOK]] §1.2, PB-2).
+> **This closed the G-6 window** ([[DECISION_LOG]] D-028). Per R7.5 / PG-6 a family may never later be narrowed or split. The merge was available once; it has now been exercised. The only future remedy for a mis-drawn boundary is **termination and a new family from zero, forfeiting every survivor** ([[RESEARCH_PROGRAM_PLAYBOOK]] §1.2, PB-2).
 
 ### 2.2 The active program table
 
