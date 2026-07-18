@@ -177,7 +177,8 @@ declared_limitations:  DATA PROVENANCE — 112/210 events (53%) are SECONDARY_SI
                           conservative MDE_stat (~5.0%) may exceed plausible literature effect
                           sizes (~1.5–2% gross); the test may be honestly underpowered for a
                           real, modest effect. This is a stated risk, not a resolved one — it is
-                          why the owner HOLD stands ([[HYP-PA-0001_POWER]] §4a).
+                          a declared limitation the Owner accepted when lifting the HOLD to GO
+                          (2026-07-19; [[HYP-PA-0001_POWER]] §4a).
                        EXECUTION ASYMMETRY — the net/capturable claim covers DELETE-side only
                           (A-PA5); ADD-side reversal is a gross/mechanism-only reading.
                        DECAY — the mechanism is expected to weaken as passive AUM and arbitrage
