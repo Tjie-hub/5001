@@ -1,6 +1,9 @@
 # HYP-PA-0001 — Index-Reconstitution Closing-Auction Dislocation (DRAFT)
 
-> **Status: DRAFT — all G1 criteria ratified & recorded (2026-07-19); cleared for T4, NOT yet registered. No family slot consumed.**
+> **⛔ TRANSITIONED — this free-era draft was registered on 2026-07-19T00:19:47Z.**
+> The frozen, immutable record is **[[HYP-PA-0001_REGISTERED]]** (sha256 `3692e69a…`), which governs. HYP-PA-0001 is now REGISTERED and is the first member of the P-A family {I2,I3,I8} (PG-3). This draft is **retained as free-era history only** ([[HYPOTHESIS_LIFECYCLE]] §2) — it is not the record of truth and must not be edited to change the claim (R15).
+>
+> **Original draft status (historical): DRAFT — all G1 criteria ratified & recorded (2026-07-19); cleared for T4, NOT yet registered. No family slot consumed.**
 > This is a free-era candidate ([[HYPOTHESIS_LIFECYCLE]] §2–§3): refinement is unlimited and nothing has been risked. It becomes a risked claim only at the irreversible `DRAFT → REGISTERED` transition (T4/G1), which is now deferred solely to explicit human authorization of that transition (§5 step 4); all G1 admissibility criteria are ratified and recorded.
 >
 > **Update 2026-07-17:** WP-D delivered (210 events, 13 clusters, [[COVERAGE_REPORT]]) and the power analysis is complete ([[HYP-PA-0001_POWER]]) — **MDE ≈ 1.3%/event at k=5d, pooled; fragile to review-date clustering.** The two §4 held items (R5 effect-size, R2 power) are now **computed**; registration awaits **CRO ex-ante ratification of k/MDE** and a register-now-vs-close-gaps decision. Family slot still unconsumed. *(Historical — superseded by the 2026-07-19 ratification update below.)*
