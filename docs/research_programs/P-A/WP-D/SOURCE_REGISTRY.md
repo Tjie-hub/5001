@@ -43,3 +43,9 @@ The `cadence` field and the semiannual→quarterly transition are sourced from `
 
 - **Primary retrieval was attempted and blocked** (2026-07-17): WebFetch of the official PDF → 403; headless-browser (Playwright) of the PDF and of the HTML announcements listing → 403 "Attention Required! | Cloudflare". idx.co.id enforces **domain-wide Cloudflare bot protection**; automated primary retrieval is not possible here ([[COVERAGE_REPORT]] §5).
 - Upgrading rows to `PRIMARY_VERIFIED` therefore requires a **manual/human download** of the IDX announcement PDFs (a normal browser session, or the owner supplying the files). This is the single largest quality upgrade available and remains the recorded blocker G-WPD-4.
+
+## Correction log
+
+| Date | Row | Change | Rationale |
+|---|---|---|---|
+| 2026-07-19 | `PA-RC-0076` | `ticker`: `RKME` → `RMKE` | `RKME` was recorded in this row (`SECONDARY_SINGLE`, bisnis.com 2024-H1 source). Repository-wide search found no evidence that `RKME` is a valid ticker: zero occurrences in `idx_master.csv`, `walkforward.db.ohlcv`, or `news_mentions`. `RMKE` is consistently present across those same independent repository reference datasets (active in `idx_master.csv` row 766, full price history in `walkforward.db.ohlcv`, 49 records in `news_mentions`). The row was corrected to match this repository evidence. The repository does not preserve sufficient evidence to determine whether the incorrect ticker originated in the external source or during transcription. This correction is evidenced independently of the source-hierarchy conflict-resolution policy above, which governs primary-vs-secondary announcement sources, not cross-checks against master ticker/OHLCV/news reference data. No other field on the row was altered; applied pre-execution (HYP-PA-0001 harness S4–S8 not yet run, no OOS spent). Backup of the pre-correction CSV retained at `docs/research_programs/P-A/WP-D/.backups/`. |
