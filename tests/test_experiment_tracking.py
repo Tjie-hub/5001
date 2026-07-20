@@ -6,6 +6,7 @@ metrics. Finalizing a run touches only its own row; previous experiments are
 never overwritten. Research outputs (wf_scores/wf_edge/backtest_cache rows)
 reference the run that produced them via run_id.
 """
+import json
 import os
 import sqlite3
 import tempfile
@@ -15,9 +16,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import research.tracking as tracking
 from research.tracking import (
     dataset_fingerprint,
     ensure_research_runs_table,
+    environment,
     git_commit,
     track_run,
 )
@@ -166,6 +169,122 @@ def test_runs_are_append_only():
 def test_git_commit_returns_hash_or_none():
     c = git_commit()
     assert c is None or (isinstance(c, str) and len(c) >= 7)
+
+
+# ─── Environment capture (Workstream C) ──────────────────────────────────────
+
+_REQUIRED_ENV_FIELDS = (
+    "python_version", "platform", "architecture", "numpy", "pandas", "scipy")
+
+
+def test_environment_capture_has_required_fields():
+    env = environment()
+    for field in _REQUIRED_ENV_FIELDS:
+        assert field in env, f"missing env field: {field}"
+        assert env[field]          # non-empty (value or explicit sentinel)
+
+
+def test_environment_capture_is_deterministic():
+    """Fixed interpreter + package set ⇒ identical capture (no clock/RNG)."""
+    assert environment() == environment()
+
+
+def test_environment_missing_package_fail_soft(monkeypatch):
+    """A failed version lookup must yield the sentinel, never raise."""
+    def _boom(_name):
+        raise RuntimeError("no metadata")
+    monkeypatch.setattr(tracking.metadata, "version", _boom)
+    env = environment()                       # must not raise
+    assert env["numpy"] == tracking._ENV_UNAVAILABLE
+    assert env["pandas"] == tracking._ENV_UNAVAILABLE
+    assert env["scipy"] == tracking._ENV_UNAVAILABLE
+    # interpreter/platform fields are independent of package metadata
+    assert env["python_version"]
+
+
+def test_environment_field_capture_fail_soft(monkeypatch):
+    """A failed introspection field also degrades to the sentinel."""
+    def _boom():
+        raise RuntimeError("no platform")
+    monkeypatch.setattr(tracking.platform, "machine", _boom)
+    env = environment()                       # must not raise
+    assert env["architecture"] == tracking._ENV_UNAVAILABLE
+
+
+def test_track_run_records_environment():
+    with tempfile.TemporaryDirectory() as tmp:
+        db = os.path.join(tmp, "t.db")
+        _mkdb(db).close()
+        with track_run("study", db_path=db):
+            pass
+        conn = sqlite3.connect(db)
+        env_json = conn.execute(
+            "SELECT environment_json FROM research_runs").fetchone()[0]
+        conn.close()
+    assert env_json                            # populated, not NULL
+    env = json.loads(env_json)
+    for field in _REQUIRED_ENV_FIELDS:
+        assert field in env
+
+
+# Pre-Workstream-C schema: research_runs without the environment_json column.
+_OLD_RESEARCH_RUNS_DDL = """
+CREATE TABLE research_runs (
+    run_id TEXT PRIMARY KEY, kind TEXT NOT NULL, git_commit TEXT,
+    dataset_fingerprint TEXT, params_json TEXT, started_at TEXT NOT NULL,
+    finished_at TEXT, duration_s REAL, status TEXT NOT NULL,
+    metrics_json TEXT, error TEXT)
+"""
+
+
+def test_environment_migration_and_historical_null():
+    """Old DB gains the column idempotently; historical rows stay NULL."""
+    with tempfile.TemporaryDirectory() as tmp:
+        db = os.path.join(tmp, "t.db")
+        conn = _mkdb(db)
+        conn.execute(_OLD_RESEARCH_RUNS_DDL)
+        # A historical run recorded before Workstream C existed.
+        conn.execute(
+            "INSERT INTO research_runs (run_id, kind, started_at, status) "
+            "VALUES ('OLD','legacy','2025-01-01 00:00:00','DONE')")
+        conn.commit()
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(research_runs)")}
+        assert "environment_json" not in cols          # genuinely old schema
+        conn.close()
+
+        with track_run("study", db_path=db):            # triggers migration
+            pass
+
+        conn = sqlite3.connect(db)
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(research_runs)")}
+        assert "environment_json" in cols               # column added
+        old = conn.execute(
+            "SELECT environment_json FROM research_runs "
+            "WHERE run_id='OLD'").fetchone()[0]
+        new = conn.execute(
+            "SELECT environment_json FROM research_runs "
+            "WHERE run_id!='OLD'").fetchone()[0]
+        conn.close()
+    assert old is None                                  # no backfill
+    assert new and "python_version" in json.loads(new)  # new run populated
+
+
+def test_environment_is_immutable_after_finalize(monkeypatch):
+    """_finalize() must never modify environment_json captured at INSERT."""
+    sentinel = {"python_version": "X", "platform": "Y", "architecture": "Z",
+                "numpy": "1", "pandas": "2", "scipy": "3"}
+    monkeypatch.setattr(tracking, "environment", lambda: dict(sentinel))
+    with tempfile.TemporaryDirectory() as tmp:
+        db = os.path.join(tmp, "t.db")
+        _mkdb(db).close()
+        with track_run("study", db_path=db) as r:
+            r.metrics["x"] = 1                          # forces a _finalize UPDATE
+        conn = sqlite3.connect(db)
+        env_json, status = conn.execute(
+            "SELECT environment_json, status FROM research_runs").fetchone()
+        conn.close()
+    assert status == "DONE"                             # finalize ran
+    assert json.loads(env_json) == sentinel             # untouched by finalize
 
 
 # ─── Job integration: outputs reference their run ────────────────────────────

@@ -9,15 +9,23 @@ The dataset fingerprint identifies the research input exactly: the settled
 ohlcv corpus AND the corporate_actions table that adjusts it. Integer-sum
 per-ticker checksums keep it order-independent and cheap (~1s on the 1M-row
 corpus).
+
+Environment provenance (Python/platform/arch + key package versions) is
+captured automatically at the initial RUNNING INSERT and stored in the
+environment_json column, so reproducibility no longer depends on a hand-typed
+MANIFEST.md field. Capture is fail-soft (mirrors git_commit): any failure
+degrades to a sentinel, never a raised exception, and never fails a run.
 """
 import hashlib
 import json
 import os
+import platform
 import subprocess
 import time
 import uuid
 from contextlib import contextmanager
 from datetime import datetime
+from importlib import metadata
 
 from data.db import connect as db_connect
 
@@ -36,13 +44,17 @@ CREATE TABLE IF NOT EXISTS research_runs (
     duration_s          REAL,
     status              TEXT NOT NULL,
     metrics_json        TEXT,
-    error               TEXT
+    error               TEXT,
+    environment_json    TEXT
 )
 """
 
 
 def ensure_research_runs_table(conn) -> None:
     conn.execute(RESEARCH_RUNS_DDL)
+    # Backward-compatible migration for DBs created before Workstream C:
+    # adds the nullable environment_json column (idempotent no-op if present).
+    ensure_column(conn, "research_runs", "environment_json")
 
 
 def git_commit():
@@ -57,6 +69,50 @@ def git_commit():
     except Exception:
         pass
     return None
+
+
+# Packages whose versions bound reproducibility of the numeric research path.
+# Minimum capture set per the Workstream C contract (matches the MANIFEST.md
+# "Software versions" field the ledger now supersedes).
+_ENV_PACKAGES = ("numpy", "pandas", "scipy")
+_ENV_UNAVAILABLE = "unavailable"
+
+
+def _safe(fn):
+    """Fail-soft field capture: value on success, sentinel on any failure.
+    Mirrors git_commit's contract — capture must never raise into a run."""
+    try:
+        v = fn()
+        return v if v else _ENV_UNAVAILABLE
+    except Exception:
+        return _ENV_UNAVAILABLE
+
+
+def _pkg_version(name: str) -> str:
+    """Installed distribution version, or sentinel if absent/undeterminable.
+    Uses distribution metadata (no import of the package required)."""
+    try:
+        return metadata.version(name)
+    except Exception:
+        return _ENV_UNAVAILABLE
+
+
+def environment() -> dict:
+    """Structured, machine-readable snapshot of the runtime that produced a run.
+
+    Fail-soft by construction: every field is captured behind a guard, so a
+    missing package or a failed introspection yields an explicit sentinel
+    ('unavailable') rather than aborting the research run. Deterministic for a
+    fixed interpreter + installed package set (no clock, no randomness).
+    """
+    env = {
+        "python_version": _safe(platform.python_version),
+        "platform": _safe(platform.system),
+        "architecture": _safe(platform.machine),
+    }
+    for pkg in _ENV_PACKAGES:
+        env[pkg] = _pkg_version(pkg)
+    return env
 
 
 def dataset_fingerprint(conn) -> dict:
@@ -122,10 +178,11 @@ def track_run(kind: str, params: dict = None, db_path: str = None):
         fp = dataset_fingerprint(conn)
         conn.execute(
             "INSERT INTO research_runs (run_id, kind, git_commit, "
-            "dataset_fingerprint, params_json, started_at, status) "
-            "VALUES (?,?,?,?,?,?, 'RUNNING')",
+            "dataset_fingerprint, params_json, environment_json, "
+            "started_at, status) "
+            "VALUES (?,?,?,?,?,?,?, 'RUNNING')",
             (run.run_id, kind, git_commit(), fp["sha256"],
-             json.dumps(params or {}),
+             json.dumps(params or {}), json.dumps(environment()),
              datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
         conn.commit()
     finally:
