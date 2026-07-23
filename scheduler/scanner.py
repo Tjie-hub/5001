@@ -405,17 +405,26 @@ def scan_momentum_signals():
         _vpin_signal = "N/A"
         if _f_vpin:
             try:
-                import sqlite3 as _sqlite3
                 from engine.vpin import calc_vpin_multi as _calc_vpin_multi
-                _vpin_conn = _db_connect(DB_PATH)
-                _vpin_multi = _calc_vpin_multi(_vpin_conn, ticker, _today_str)
-                _vpin_conn.close()
+                _vpin_conn = db_connect(DB_PATH)
+                try:
+                    _vpin_multi = _calc_vpin_multi(_vpin_conn, ticker, _today_str)
+                finally:
+                    _vpin_conn.close()
                 _vpin_signal = _vpin_multi['signal'] if _vpin_multi else 'NO_SIGNAL'
                 if _vpin_signal not in ('STRONG_BUY', 'BUY', 'ACCUMULATION'):
                     logging.debug(f"[scan_momentum] {ticker} blocked by VPIN: {_vpin_signal}")
                     continue
             except Exception as _ve:
-                logging.warning(f"[scan_momentum] VPIN filter error [{ticker}]: {_ve}")
+                # Fail-closed (AN-5): a gate that cannot evaluate blocks the
+                # candidate and records why — it must not pass silently
+                # (audit H-8: this except-path used to swallow the error and
+                # let the ticker through with no `continue`).
+                from engine.fail_open_alarm import fail_closed_alarm
+                fail_closed_alarm("vpin_gate",
+                                  f"{ticker} gate error, blocked: {str(_ve)[:120]}",
+                                  count=1, notify=False)
+                continue
 
         try:
             if df is None or len(df) < 25:

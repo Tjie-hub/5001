@@ -44,3 +44,17 @@ Format per entry: `{TYPE}-{nnn} — {date} — {one-line summary}` followed by t
 **Reversibility:** script is additive; each placeholder becomes a real check when its owning task lands, no rewrite needed.
 
 ---
+
+## IMPL-DEC-004 — 2026-07-23 — `fail_closed_alarm` as a sibling function, not a reuse of `fail_open_alarm`
+
+**Type:** Implementation decision
+**Context:** P0.E1.S1.T1 (fix VPIN gate `_db_connect` NameError, fail closed with alarm — H-8, AN-5) needs to alarm on a gate that fails closed (blocks a candidate). The existing `engine/fail_open_alarm.py` module has exactly this alerting plumbing (WARNING log + best-effort Telegram, never raises) already used at 3 other sites in `scheduler/scanner.py`, but its message format is hardcoded `"⚠️ FAIL-OPEN [{source}]: ..."`.
+**Options considered:**
+1. Call `fail_open_alarm()` as-is for the VPIN fail-closed case — zero new code, but the alert text would read "FAIL-OPEN" for an event that is actually a block (the opposite polarity) — misleads an operator reading the alert about what the pipeline just did.
+2. Add a generic `polarity` parameter to `fail_open_alarm()` — one function, two behaviors selected by a flag.
+3. Add a sibling `fail_closed_alarm()` / `format_fail_closed_alarm()` in the same module, reusing `send_telegram` and the log-at-WARNING-never-raise contract verbatim.
+**Choice:** Option 3. Matches the existing module's own shape exactly (a `format_*` pure function + a side-effecting wrapper), reads correctly at the call site and in the alert text, and needs no call-site flag to get right. Rejected option 2 as needless indirection for two call sites with fixed, known polarity each — a boolean/enum parameter buys nothing here (ER-12 thinness: prefer the plainer shape).
+**Reversibility:** trivial — an additive pair of functions in an existing module; no call site depends on internal reuse between them.
+**Consequence:** `engine/fail_open_alarm.py` now names two polarities. If a third polarity-adjacent need appears, reconsider consolidating — not before.
+
+---

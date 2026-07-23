@@ -6,9 +6,9 @@
 
 ## Checklist
 
-- [ ] Every P0 task merged with evidence bundle (`docs/evidence/P0/<task-id>/`)
+- [ ] Every P0 task merged with evidence bundle (`docs/evidence/P0/<task-id>/`) — 1/14 (P0.E1.S1.T1)
 - [ ] Zero imported-but-unregistered jobs (grep-audit output filed) `[H-1/H-2/AN-8]` — owning task P0.E1.S2.T4
-- [ ] VPIN block demonstrated (test evidence) `[H-8]` — owning task P0.E1.S1.T2
+- [ ] VPIN block demonstrated (test evidence) `[H-8]` — gate fixed in P0.E1.S1.T1 (`docs/evidence/P0/P0.E1.S1.T1/`); dedicated synthetic-ticker regression still owned by P0.E1.S1.T2
 - [ ] Absolute DB path + identity logging (startup log filed) `[H-7]` — owning task P0.E2.S2
 - [ ] Date guards live (test evidence) `[M-5, H-3-min]` — owning task P0.E2.S1
 - [ ] Legacy baseline declaration written and dated
