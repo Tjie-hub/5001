@@ -693,3 +693,16 @@ No architectural work remains — the ADR froze every structural decision, and e
 ---
 
 *Companion documents: `ADR-001-v2-Frozen-Baseline.md` (authority), `PRODUCTION_ENGINE_AUDIT_2026-07-22.md` (evidence). This plan contains no code and modifies no schema or data.*
+
+---
+
+## 18. Changelog (living — task decomposition & ADR-candidate register only, EXEC-001 §7/§13)
+
+Dated, append-only. Entries record changes routed through EXEC-001 §7 Change Control as "task decomposition refinement, task addition/split within a phase's frozen scope" — never phase scope/sequence/gate changes (those require Arch-lane escalation, not a plan update).
+
+- **2026-07-23 — Added P0.E0 (Protocol bring-up).** EXEC-001 §15/§17 condition 2 require the pre-merge gate script operational, and the EXEC-001/PLAN-001/ADR-001-v2/Audit documents committed together, before any P0.E1/P0.E2 task starts. This was undocumented as a task, so it is added here via change control:
+  - **P0.E0.S1.T1** — commit the four constitutional documents (+ the ADR decision-trail documents that produced the frozen baseline) together; verify authority chain. Evidence: `docs/evidence/P0/P0.E0.S1.T1/`.
+  - **P0.E0.S2.T1** — bring-up scaffolding: `docs/EXEC-DECISIONS.md`, `docs/EXEC-STATUS.md`, `docs/ops/MIGRATIONS.md` + the seven §10 ops checklists, `docs/evidence/P0/` skeleton incl. 14 P0.E1/P0.E2 task cards, and `scripts/pre_merge_gate.py` (the one tooling deliverable EXEC-001 §15 adds). Evidence: `docs/evidence/P0/P0.E0.S2.T1/`.
+
+  Neither task touches a FROZEN surface (ADR §14) or changes phase scope/sequence/gate criteria — pure process/tooling bring-up, hence routed as a plan update, not an ADR-candidate.
+
