@@ -138,6 +138,24 @@ def start_scheduler():
             day_of_week="mon-fri", hour=hour, minute=5, timezone=WIB),
             id=f"trade_monitor_{hour:02d}05")
 
+    # Market-risk RED alert bundle — hourly during session (audit H-1: defined
+    # + imported since design phase, never registered with add_job, so RED
+    # alerts accumulated in market_risk_log with sent=0 and were never
+    # delivered). :10 — 5 min after the :05 multi-strategy-scan/trade-monitor
+    # slot that writes market_risk_log via route_risk_alert, same same-minute-
+    # write-then-read race the EOD screener/trade-plan offsets elsewhere in
+    # this file already avoid.
+    for hour in range(9, 16):
+        scheduler.add_job(run_hourly_risk_bundle, CronTrigger(
+            day_of_week="mon-fri", hour=hour, minute=10, timezone=WIB),
+            id=f"hourly_risk_bundle_{hour:02d}10")
+
+    # Market-risk ORANGE/YELLOW EOD summary — once, after the session's last
+    # risk-scoring pass (14:35 scan / 15:05 trade monitor) has settled. H-1.
+    scheduler.add_job(run_eod_risk_summary, CronTrigger(
+        day_of_week="mon-fri", hour=16, minute=10, timezone=WIB),
+        id="eod_risk_summary", name="EOD Risk Summary (ORANGE/YELLOW) 16:10")
+
     # News mentions fetch — pre-market 08:00 WIB
     scheduler.add_job(run_news_fetch, CronTrigger(
         day_of_week="mon-fri", hour=8, minute=0, timezone=WIB),
@@ -230,6 +248,8 @@ def start_scheduler():
     print("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
     print("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
     print("  🏥 MARKET HEALTH: 08:45 pre-market")
+    print("  🔴 RISK ALERT BUNDLE: hourly :10, 09:10-15:10 (RED, session)")
+    print("  🟠 RISK ALERT EOD SUMMARY: 16:10 (ORANGE/YELLOW)")
     print("  🌅 PREMARKET FIRM: 08:35 pre-market (unified watchlist → agent firm)")
     print("  📋 EOD TRADE PLAN: 16:40 (all long sources → agent firm → 1 ranked msg)")
     print("  🧪 FORWARD-TEST CYCLE: 18:30 (ingest signals → open/exit shadow positions)")

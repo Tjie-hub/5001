@@ -6,8 +6,8 @@
 
 ## Checklist
 
-- [ ] Every P0 task merged with evidence bundle (`docs/evidence/P0/<task-id>/`) — 2/14 (P0.E1.S1.T1, P0.E1.S1.T2)
-- [ ] Zero imported-but-unregistered jobs (grep-audit output filed) `[H-1/H-2/AN-8]` — owning task P0.E1.S2.T4
+- [ ] Every P0 task merged with evidence bundle (`docs/evidence/P0/<task-id>/`) — 3/14 (P0.E1.S1.T1, P0.E1.S1.T2, P0.E1.S2.T1)
+- [ ] Zero imported-but-unregistered jobs (grep-audit output filed) `[H-1/H-2/AN-8]` — owning task P0.E1.S2.T4; P0.E1.S2.T1 registered 2 of the 6 (`run_hourly_risk_bundle`, `run_eod_risk_summary`); `run_foreign_snapshot` (T2) and the 3 dead report functions (T3) still open
 - [x] VPIN block demonstrated (test evidence) `[H-8]` — done: gate fixed in P0.E1.S1.T1, full behaviour matrix proven in P0.E1.S1.T2 (`docs/evidence/P0/P0.E1.S1.T2/`)
 - [ ] Absolute DB path + identity logging (startup log filed) `[H-7]` — owning task P0.E2.S2
 - [ ] Date guards live (test evidence) `[M-5, H-3-min]` — owning task P0.E2.S1
