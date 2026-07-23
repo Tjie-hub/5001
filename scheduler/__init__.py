@@ -45,7 +45,6 @@ from scheduler.jobs import (  # noqa: F401
     run_ohlcv_reconciliation,
     run_token_health_check,
     run_ohlcv_coverage_check,
-    run_foreign_snapshot,
     run_news_fetch,
     run_premover_eod,
     run_hourly_risk_bundle,

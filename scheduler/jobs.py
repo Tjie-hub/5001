@@ -299,47 +299,6 @@ def run_ohlcv_coverage_check(date_str: str = None):
         )
 
 
-def run_foreign_snapshot():
-    """14:30 WIB — Pre-close foreign accumulation watchlist alert.
-
-    Uses the most recently available broker_flow (Asing) data (fetched nightly at 20:15).
-    Sends top 5 buy + top 5 sell tickers ranked by 5-day score_pct.
-    """
-    if _holiday_skip("run_foreign_snapshot"):
-        return
-    from datetime import datetime as dt
-    now_str = dt.now(WIB).strftime('%H:%M')
-    print(f"[{now_str}] Foreign snapshot dimulai...")
-    try:
-        from flow_filter import get_top_foreign_accumulation
-        all_results = get_top_foreign_accumulation(top_n=9999)
-        top_buy = [r for r in all_results if r["score_pct"] > 0][:5]
-        top_sell = sorted(all_results, key=lambda x: x["score_pct"])[:5]
-        top_sell = [r for r in top_sell if r["score_pct"] < 0]
-
-        latest = all_results[0]["latest_date"] if all_results else "N/A"
-        msg = f"🏛️ <b>Foreign Flow Snapshot — {dt.now(WIB).strftime('%d/%m %H:%M')}</b>\n"
-        msg += f"<i>Data: {latest} | 5-day net / avg vol</i>\n\n"
-
-        if top_buy:
-            msg += "<b>🟢 Top Foreign Accumulation:</b>\n"
-            for r in top_buy:
-                msg += f"  {r['ticker']}: {r['score_pct']:+.1f}% ({r['foreign_net_lots']:+,.0f} lots)\n"
-        else:
-            msg += "<b>🟢 No significant foreign buying</b>\n"
-
-        if top_sell:
-            msg += "\n<b>🔴 Top Foreign Distribution:</b>\n"
-            for r in top_sell:
-                msg += f"  {r['ticker']}: {r['score_pct']:+.1f}% ({r['foreign_net_lots']:+,.0f} lots)\n"
-        else:
-            msg += "\n<b>🔴 No significant foreign selling</b>\n"
-
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] Foreign snapshot computed ({len(top_buy)} buy, {len(top_sell)} sell) — no alert")
-    except Exception as e:
-        logging.error(f"run_foreign_snapshot error: {e}")
-
-
 def run_news_fetch():
     """Fetch Google News headlines per ticker, persist to news_mentions table.
 

@@ -99,8 +99,9 @@ def test_risk_bundle_does_not_share_a_minute_with_its_data_source(registered_sch
 
 def test_run_hourly_risk_bundle_and_run_eod_risk_summary_are_imported_and_registered_targets():
     """Sanity: the exact two functions the audit named are the ones wired in
-    (not stand-ins / not the still-out-of-scope run_foreign_snapshot, which
-    P0.E1.S2.T2 owns)."""
+    (not stand-ins). `run_foreign_snapshot`, H-1's third named job, was
+    removed as dead/superseded code in P0.E1.S2.T2 — see
+    test_scheduler_foreign_snapshot_removal.py."""
     assert scheduler_pkg.run_hourly_risk_bundle.__name__ == "run_hourly_risk_bundle"
     assert scheduler_pkg.run_eod_risk_summary.__name__ == "run_eod_risk_summary"
 

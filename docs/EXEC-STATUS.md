@@ -2,7 +2,7 @@
 
 **Owner lane:** QA (EXEC-001 §13, updated daily per §9)
 **Rule:** derivative only — cites manifests, ledger, and evidence paths; never the primary record of anything (EXEC-001 §14).
-**Last updated:** 2026-07-23 (P0.E1.S2.T1 merged)
+**Last updated:** 2026-07-23 (P0.E1.S2.T2 merged)
 
 ---
 
@@ -14,7 +14,7 @@
 
 ## 2. WIP
 
-- **Active task:** none — P0.E1.S2.T1 merged; no P0 task branch open (ER-1: at most one active task)
+- **Active task:** none — P0.E1.S2.T2 merged; no P0 task branch open (ER-1: at most one active task)
 - **Parallel-list tasks in flight:** none
 
 ## 3. Gate progress — Gate 0 (`gate/phase-0`)
@@ -24,8 +24,8 @@ Full checklist: `docs/evidence/P0/GATE.md`. Summary:
 | Item | State |
 |---|---|
 | Bring-up (EXEC-001 §15) | 9/9 done — see `docs/evidence/P0/GATE.md` "Bring-up status" table |
-| P0 tasks merged w/ evidence | 3/14 (P0.E1.S1.T1, P0.E1.S1.T2, P0.E1.S2.T1) |
-| AN-8 grep-audit (zero unregistered jobs) | pending — P0.E1.S2.T4; 2/6 dead jobs now registered (P0.E1.S2.T1) |
+| P0 tasks merged w/ evidence | 4/14 (P0.E1.S1.T1, P0.E1.S1.T2, P0.E1.S2.T1, P0.E1.S2.T2) |
+| AN-8 grep-audit (zero unregistered jobs) | pending — P0.E1.S2.T4; of 6 originally-dead jobs: 2 registered, 1 deleted as superseded (`run_foreign_snapshot`) |
 | VPIN block demonstrated | done — full behaviour matrix proven, `docs/evidence/P0/P0.E1.S1.T2/` |
 | Absolute DB path + identity logging | pending — P0.E2.S2 |
 | Date guards live | pending — P0.E2.S1 |
@@ -33,11 +33,11 @@ Full checklist: `docs/evidence/P0/GATE.md`. Summary:
 | Pre-merge gate script operational | done — `scripts/pre_merge_gate.py` (see gate run below) |
 | Three-lane sign-off | pending |
 
-**Blocking items:** remaining 11 P0 tasks, in order (no forward-phase work smuggled in — ER-2). P0.E1.S1 (VPIN gate integrity) is fully closed.
+**Blocking items:** remaining 10 P0 tasks, in order (no forward-phase work smuggled in — ER-2). P0.E1.S1 (VPIN gate integrity) is fully closed.
 
 ## 4. Quality state
 
-- **Last gate-script run:** 2026-07-23 — `GATE: PASS` (QG-1 full suite 1,216 passed/1 skipped/0 failed; QG-4 N/A; QG-9 PENDING-but-passing; QG-5 5/5 done tasks have evidence)
+- **Last gate-script run:** 2026-07-23 — `GATE: PASS` (QG-1 full suite 1,222 passed/1 skipped/0 failed; QG-4 N/A; QG-9 PENDING-but-passing; QG-5 6/6 done tasks have evidence)
 - **QG stops this week:** 1 (transient — QG-5 caught P0.E1.S1.T1's task card marked done before its evidence bundle existed; fixed same session, not a DEF: no code merged in that state)
 - **Open DEF:** 0 · **Open DEBT:** 0 · **Open ARCH-ISS:** 0 · **Open ADR-CAND:** 0 (register empty at program start, PLAN-001 §16)
 
@@ -53,10 +53,10 @@ N/A — no shadow comparison exists before Phase 2 (WS-I).
 
 ## 7. Next up (critical-path order)
 
-1. `P0.E1.S2.T2` — decide `run_foreign_snapshot` fate; register or delete `[H-1]`
-2. `P0.E1.S2.T3` — register-or-delete the three dead report functions `[H-2, AN-8]`
-3. `P0.E1.S2.T4` — grep-audit: zero imported-but-unregistered jobs remain `[AN-8]`
+1. `P0.E1.S2.T3` — register-or-delete the three dead report functions `[H-2, AN-8]`
+2. `P0.E1.S2.T4` — grep-audit: zero imported-but-unregistered jobs remain `[AN-8]`
+3. `P0.E2.S1.T1` — EOD coverage-fallback date guard `[M-5]`
 
 ---
 
-*Changelog: 2026-07-23 — dashboard initialized at bring-up (EXEC-001 §15 item 8). 2026-07-23 — P0.E1.S1.T1 merged. 2026-07-23 — P0.E1.S1.T2 merged; P0.E1.S1 closed. 2026-07-23 — P0.E1.S2.T1 merged.*
+*Changelog: 2026-07-23 — dashboard initialized at bring-up (EXEC-001 §15 item 8). 2026-07-23 — P0.E1.S1.T1 merged. 2026-07-23 — P0.E1.S1.T2 merged; P0.E1.S1 closed. 2026-07-23 — P0.E1.S2.T1 merged. 2026-07-23 — P0.E1.S2.T2 merged (run_foreign_snapshot deleted as superseded).*
