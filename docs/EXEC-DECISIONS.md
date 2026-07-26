@@ -58,3 +58,40 @@ Format per entry: `{TYPE}-{nnn} — {date} — {one-line summary}` followed by t
 **Consequence:** `engine/fail_open_alarm.py` now names two polarities. If a third polarity-adjacent need appears, reconsider consolidating — not before.
 
 ---
+
+## IMPL-DEC-005 — 2026-07-26 — Registration time for `daily_fetch_report` (P0.E1.S2.T3)
+
+**Type:** Implementation decision
+**Context:** P0.E1.S2.T3 (register-or-delete the three H-2 dead report functions) found `flow_broker_report` and `auto_trade_status_report` each name an explicit intended time in their own docstring ("Report at 17:15", "Report at 09:00") — used verbatim, no decision needed. `daily_fetch_report` names no time; its schedule slot is OPEN latitude (ADR §14: stage micro-order/schedule time is not a frozen surface).
+**Options considered:**
+1. Register right after the day's OHLCV fetch — but the report's `stockbit_flow`/`broker_flow` ticker counts would read as stale/zero, since those fetches (hourly to 16:05, and 20:15) haven't run yet.
+2. Register immediately after `broker_flow_fetch` (20:15) — flow counts complete, but the report's OHLCV latest-date/stale-ticker figures would predate the 21:00 `ohlcv_reconciliation` pass.
+3. Register at 21:05, five minutes after `ohlcv_reconciliation` (21:00) — every data source the report reads (`ohlcv`, `stockbit_flow`, `broker_flow`) has completed its day's fetch/reconciliation pass by this time.
+**Choice:** Option 3 — 21:05 WIB, `mon-fri`, matching this file's existing `id`/`name` convention (`daily_fetch_report`, "Daily Fetch Report 21:05").
+**Reversibility:** trivial — a `CronTrigger` literal in `scheduler/__init__.py`; changing it later is a one-line diff with no data or contract implication.
+
+---
+
+## DEBT-001 — 2026-07-26 — `auto_trade_status_report`'s query is not scoped to auto-trade-originated trades
+
+**Type:** Technical debt
+**What:** `auto_trade_status_report` (`scheduler/reports.py:466-512`, registered this task at 09:00 WIB — P0.E1.S2.T3) queries `SELECT ... FROM paper_trades WHERE entry_date >= yesterday` — every `paper_trades` row opened in the last day, regardless of whether `run_premover_eod`'s enforce-mode auto-trade path (`paper_trade.open_trade`, called from `scheduler/jobs.py`) or a different path (manual, agent-firm) created it. Its Telegram header reads "🤖 Auto-Trade Status", which would misrepresent non-auto-trade entries as auto-trade activity the moment another entry path is active alongside `auto_trade_from_premover`.
+**Why deferred:** T3's scope is register-or-delete (H-2/AN-8), not report-content correctness. Investigation for this task found `auto_trade_from_premover` (`run_premover_eod`, 16:30 WIB) is the only path in the current codebase shown to write `paper_trades`, and the report is not duplicated by any other registered job — so its content is not wrong *today*, only imprecisely scoped for the general case. Correcting the query's scope is a content change to a report body, not a wiring decision; making it inline here would be exactly the "drive-by change — split it into a task" ER-2 / review checklist §5.1 discipline this protocol forbids.
+**Payoff task:** add a `source`/provenance-style column (or equivalent join) distinguishing auto-trade-opened `paper_trades` rows from other entries, and scope this report's `WHERE` clause to it.
+**Payoff task ID:** **not yet assigned.** This is a task-decomposition addition to PLAN-001's living §16/task-decomposition section (EXEC-001 §7 change control: "task addition/split within a phase's frozen scope"), which is an Arch-lane action — flagging here rather than assuming a task ID as Eng-lane. Needs a PLAN-001 task ID (Phase 1 or later; not a Gate-0 blocker, since the report's content is accurate under present conditions) before this entry can be considered closed per protocol ("debt with no payoff task is rejected at review").
+**Deadline phase:** unassigned pending the above.
+
+**Update — 2026-07-26 (appended, entry not edited per §8 rule):** Payoff task assigned — **`P0.E1.S2.T5`** (PLAN-001 §18 changelog, same date). No new schema column needed: `P0.E1.S2.T3`'s cold review found the existing `premover_auto_log` table already records which tickers/dates were auto-trade-evaluated, so `P0.E1.S2.T5` scopes via a join against it rather than the originally-proposed provenance column. Deadline phase: Phase 0 (same story as T3, T4 — not deferred to Phase 1). Entry now meets EXEC-001 §8's payoff-task requirement.
+
+---
+
+## DEBT-002 — 2026-07-26 — `auto_trade_status_report` mixes naive and WIB-aware `datetime.now()`
+
+**Type:** Technical debt
+**What:** `auto_trade_status_report` (`scheduler/reports.py:466-512`) computes its display timestamp with `datetime.now(WIB)` (line 470) but its `yesterday` cutoff with bare, timezone-naive `datetime.now()` (line 475) — inconsistent with every other function in the same file (`daily_fetch_report`, `flow_broker_report`, `open_trades_status_report` all use `datetime.now(WIB)` throughout for date/time reference points) and inconsistent within its own body.
+**Why deferred:** Found during `P0.E1.S2.T3`'s cold review, after T3 registered this function (making a previously-dead code path live for the first time). Pre-existing code T3 did not touch (`scheduler/reports.py` had zero diff in T3) — fixing it inline would itself be the "drive-by change" ER-2 forbids. At the function's registered time (09:00 WIB = 02:00 UTC same calendar date), the inconsistency is dormant regardless of server clock, because 09:00 WIB always falls after the UTC midnight boundary relative to WIB's day — but this is incidental to the chosen hour, not a designed safeguard, and has zero test coverage.
+**Payoff task:** fix the `yesterday` computation to use `datetime.now(WIB)`, matching the file's own convention.
+**Payoff task ID:** **`P0.E1.S2.T5`** (PLAN-001 §18 changelog, 2026-07-26) — same payoff task as `DEBT-001`, since both are in the same function and the same follow-up task fixes both.
+**Deadline phase:** Phase 0 (same story as T3, T4).
+
+---

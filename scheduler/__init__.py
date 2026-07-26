@@ -175,6 +175,15 @@ def start_scheduler():
         day_of_week="mon-fri", hour=21, minute=0, timezone=WIB),
         id="ohlcv_reconciliation", name="OHLCV Reconciliation 21:00")
 
+    # Daily fetch report — 21:05 WIB (audit H-2/P0.E1.S2.T3: imported since
+    # design phase, never registered. Scheduled after 20:15 broker flow fetch
+    # and the 21:00 reconciliation pass so its stockbit_flow/broker_flow
+    # ticker counts and OHLCV stale/latest-date figures reflect the day's
+    # fully-settled fetch state, not a partial one.)
+    scheduler.add_job(daily_fetch_report, CronTrigger(
+        day_of_week="mon-fri", hour=21, minute=5, timezone=WIB),
+        id="daily_fetch_report", name="Daily Fetch Report 21:05")
+
     # Token health — 08:20 (pre-market, before flow jobs) + 12:00 (mid-session).
     # Alerts if the 24h Stockbit JWT is expired/expiring (2026-07-04 silent-death fix).
     for _h, _m in [(8, 20), (12, 0)]:
@@ -186,6 +195,15 @@ def start_scheduler():
     scheduler.add_job(run_ohlcv_coverage_check, CronTrigger(
         day_of_week="mon-fri", hour=17, minute=0, timezone=WIB),
         id="ohlcv_coverage_check", name="OHLCV Coverage Check 17:00")
+
+    # Flow/broker sentiment report — 17:15 WIB (audit H-2/P0.E1.S2.T3: fully
+    # implemented and imported since design phase, never registered. Own
+    # docstring names this exact time; runs after the 17:00 news fetch whose
+    # spike-detection output it consumes, and after 16:15 screener EOD has
+    # populated today's daily_screen signals it reports flow sentiment for.)
+    scheduler.add_job(flow_broker_report, CronTrigger(
+        day_of_week="mon-fri", hour=17, minute=15, timezone=WIB),
+        id="flow_broker_report", name="Flow/Broker Sentiment Report 17:15")
 
     # Pre-mover EOD scan — 16:30 WIB
     scheduler.add_job(run_premover_eod, CronTrigger(
@@ -201,6 +219,15 @@ def start_scheduler():
     scheduler.add_job(run_market_health_report, CronTrigger(
         day_of_week="mon-fri", hour=8, minute=45, timezone=WIB),
         id="market_health_report", name="Market Health Report 08:45")
+
+    # Auto-trade status digest — 09:00 WIB (audit H-2/P0.E1.S2.T3: fully
+    # implemented and imported since design phase, never registered. Own
+    # docstring names this exact time — it is the deferred, next-morning
+    # digest of `run_premover_eod`'s (16:30) auto-trade activity, whose own
+    # per-setup Telegram summary is deliberately suppressed same-day.)
+    scheduler.add_job(auto_trade_status_report, CronTrigger(
+        day_of_week="mon-fri", hour=9, minute=0, timezone=WIB),
+        id="auto_trade_status_report", name="Auto-Trade Status Report 09:00")
 
     # Premarket agent-firm shortlist — 08:35 WIB (vets last night's unified watchlist)
     scheduler.add_job(run_premarket_firm_scan, CronTrigger(
@@ -252,6 +279,9 @@ def start_scheduler():
     print("  🌅 PREMARKET FIRM: 08:35 pre-market (unified watchlist → agent firm)")
     print("  📋 EOD TRADE PLAN: 16:40 (all long sources → agent firm → 1 ranked msg)")
     print("  🧪 FORWARD-TEST CYCLE: 18:30 (ingest signals → open/exit shadow positions)")
+    print("  🤖 AUTO-TRADE STATUS REPORT: 09:00 (yesterday's premover auto-trade digest)")
+    print("  📊 FLOW/BROKER SENTIMENT REPORT: 17:15 (signals + news-spike + foreign flow)")
+    print("  📊 DAILY FETCH REPORT: 21:05 (OHLCV/flow fetch completeness)")
     return scheduler
 
 

@@ -6,8 +6,8 @@
 
 ## Checklist
 
-- [ ] Every P0 task merged with evidence bundle (`docs/evidence/P0/<task-id>/`) — 4/14 (P0.E1.S1.T1, P0.E1.S1.T2, P0.E1.S2.T1, P0.E1.S2.T2)
-- [ ] Zero imported-but-unregistered jobs (grep-audit output filed) `[H-1/H-2/AN-8]` — owning task P0.E1.S2.T4; of the 6 originally-named dead jobs: 2 registered (P0.E1.S2.T1), 1 deleted as superseded (P0.E1.S2.T2, `run_foreign_snapshot`); the 3 dead report functions (T3, incl. `flow_broker_report` which now supersedes the deleted job) still open
+- [ ] Every P0 task merged with evidence bundle (`docs/evidence/P0/<task-id>/`) — 5/15 (P0.E1.S1.T1, P0.E1.S1.T2, P0.E1.S2.T1, P0.E1.S2.T2, P0.E1.S2.T3). Denominator moved 14→15: `P0.E1.S2.T5` added via PLAN-001 §18 change control (T3's cold-review payoff task, DEBT-001/DEBT-002).
+- [ ] Zero imported-but-unregistered jobs (grep-audit output filed) `[H-1/H-2/AN-8]` — owning task P0.E1.S2.T4; of the 6 originally-named dead jobs: **all 6 dispositioned and merged** — 2 registered (P0.E1.S2.T1), 1 deleted as superseded (P0.E1.S2.T2, `run_foreign_snapshot`), 3 registered (P0.E1.S2.T3, `daily_fetch_report`/`flow_broker_report`/`auto_trade_status_report`). Checkbox stays unticked until T4's grep-audit script (`scripts/audits/an8_unregistered_jobs.py`) exists and runs clean — dispositioning the 6 named jobs is not the same as an exhaustive audit that no *other*, unnamed unregistered capability exists.
 - [x] VPIN block demonstrated (test evidence) `[H-8]` — done: gate fixed in P0.E1.S1.T1, full behaviour matrix proven in P0.E1.S1.T2 (`docs/evidence/P0/P0.E1.S1.T2/`)
 - [ ] Absolute DB path + identity logging (startup log filed) `[H-7]` — owning task P0.E2.S2
 - [ ] Date guards live (test evidence) `[M-5, H-3-min]` — owning task P0.E2.S1
