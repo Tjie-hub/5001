@@ -45,7 +45,7 @@ def test_html_formatting_and_newlines_preserved(monkeypatch):
 
 def test_multiple_distinct_secrets_all_redacted(monkeypatch):
     monkeypatch.setenv("ZAI_API_KEY", "zaikeyvalueone")
-    monkeypatch.setenv("STOCKBIT_PASSWORD", "stockbitpassone")
+    monkeypatch.setenv("STOCKBIT_PASS", "stockbitpassone")
     text = _sent_text(monkeypatch, "zaikeyvalueone and stockbitpassone both leaked")
     assert "zaikeyvalueone" not in text and "stockbitpassone" not in text
     assert text.count("[REDACTED]") == 2
