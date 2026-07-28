@@ -187,7 +187,6 @@ def announce_registry(telegram_fn=None):
     """Log + best-effort Telegram the loaded registry state at startup."""
     msg = "📜 " + startup_summary()
     logger.info(msg)
-    print(f"  {msg}")
     if telegram_fn is None:
         try:
             from utils.telegram import send_telegram as telegram_fn
