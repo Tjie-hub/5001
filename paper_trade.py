@@ -1,4 +1,5 @@
 
+import logging
 import os
 import sqlite3
 from data.db import connect as db_connect
@@ -6,6 +7,7 @@ import json
 from datetime import datetime
 import pytz
 
+logger = logging.getLogger(__name__)
 
 WIB     = pytz.timezone("Asia/Jakarta")
 from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, Phase 5)
@@ -62,7 +64,7 @@ def calc_swing_tp(ticker: str, entry_price: float, lookback: int = 20) -> float:
         return tp
 
     except Exception as e:
-        print(f"[swing_tp] Error {ticker}: {e}, fallback ATR 4%")
+        logger.warning(f"[swing_tp] Error {ticker}: {e}, fallback ATR 4%")
         return round(entry_price * 1.04)
 
 def get_db():
@@ -202,7 +204,7 @@ def check_trend(ticker: str) -> str:
             return 'SIDEWAYS'
             
     except Exception as e:
-        print(f"[check_trend] {ticker} error: {e}")
+        logger.warning(f"[check_trend] {ticker} error: {e}")
         return 'UNKNOWN'
 
 
@@ -638,7 +640,7 @@ def check_dd_circuit_breaker(send_alert: bool = True) -> dict:
                     f"New entries blocked. Auto-reset on DD ≤ {recover:.1f}%."
                 )
             except Exception as e:
-                print(f"[circuit_breaker] telegram error: {e}")
+                logger.warning(f"[circuit_breaker] telegram error: {e}")
     elif currently_blocked and dd["dd_pct"] <= recover:
         _set_config("entries_blocked", "0")
         new_blocked = False
@@ -653,7 +655,7 @@ def check_dd_circuit_breaker(send_alert: bool = True) -> dict:
                     f"New entries re-enabled."
                 )
             except Exception as e:
-                print(f"[circuit_breaker] telegram error: {e}")
+                logger.warning(f"[circuit_breaker] telegram error: {e}")
 
     dd["blocked"]       = new_blocked
     dd["state_changed"] = state_changed
