@@ -43,6 +43,12 @@ def test_validate_config_requires_zai_key_when_firm_enabled(good_env, monkeypatc
     monkeypatch.setenv("AGENT_FIRM_PROVIDER_ORDER", "zai,claude")
     monkeypatch.delenv("ZAI_API_KEY", raising=False)
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    # This test is about the ZAI_API_KEY branch, not CLI discovery -- mock
+    # shutil.which so it doesn't depend on whether the claude CLI happens to
+    # be on PATH in whatever environment runs this (same pattern already
+    # used by test_claude_in_order_requires_cli below, just the opposite
+    # return value: CI failure found this test assumed "claude" present).
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/local/bin/claude")
     with pytest.raises(cfg.ConfigError, match="ZAI_API_KEY"):
         cfg.validate_config()
     monkeypatch.setenv("ZAI_API_KEY", "k")
@@ -54,6 +60,12 @@ def test_validate_config_claude_only_needs_no_zai_key(good_env, monkeypatch):
     monkeypatch.setenv("AGENT_FIRM_PROVIDER", "claude")
     monkeypatch.delenv("ZAI_API_KEY", raising=False)
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    # This test is about the ZAI-key skip, not CLI discovery -- mock
+    # shutil.which so it doesn't depend on the claude CLI being on PATH in
+    # whatever environment runs this (see test_claude_in_order_requires_cli
+    # for the mirror case; CI has no claude CLI installed, so this was
+    # failing there for a reason unrelated to what the test asserts).
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/local/bin/claude")
     cfg.validate_config()  # must not raise
 
 
