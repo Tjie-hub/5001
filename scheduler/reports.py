@@ -3,14 +3,14 @@ import os
 import sqlite3
 import logging
 import pandas as pd
-from dotenv import load_dotenv
 from datetime import datetime
 import pytz
 
-load_dotenv()
 
 WIB = pytz.timezone("Asia/Jakarta")
-DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
+logger = logging.getLogger(__name__)
+from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, Phase 5)
+DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 
 from utils.telegram import send_telegram  # noqa: E402
 from data.db import connect as db_connect  # noqa: E402
@@ -122,10 +122,10 @@ def daily_fetch_report():
             msg += "\n"
 
         send_telegram(msg)
-        print(f"[{time_str}] Daily fetch report sent ({total_tickers} tickers, latest: {latest_date})")
+        logger.info(f"[{time_str}] Daily fetch report sent ({total_tickers} tickers, latest: {latest_date})")
 
     except Exception as e:
-        print(f"[daily_fetch_report] Error: {e}")
+        logger.warning(f"[daily_fetch_report] Error: {e}")
         send_telegram(f"🔴 <b>Fetch Report Error</b>\n\n<code>{str(e)[:150]}</code>")
 
 
@@ -153,10 +153,10 @@ def open_trades_status_report():
                 msg = f"📊 <b>Open Trades Report — {time_str}</b>\n\n"
                 msg += "✅ No open trades."
                 send_telegram(msg)
-                print(f"[{time_str}] Open trades report sent (0 trades)")
+                logger.info(f"[{time_str}] Open trades report sent (0 trades)")
                 _state._last_trades_state = {}
             else:
-                print(f"[{time_str}] No trades, no change — report suppressed.")
+                logger.info(f"[{time_str}] No trades, no change — report suppressed.")
             return
 
         # Get current prices
@@ -274,7 +274,7 @@ def open_trades_status_report():
 
         should_send, change_reason = _should_send()
         if not should_send:
-            print(f"[{time_str}] Open trades report suppressed ({change_reason}, {len(trades)} trades)")
+            logger.info(f"[{time_str}] Open trades report suppressed ({change_reason}, {len(trades)} trades)")
             return
 
         # Summary
@@ -293,10 +293,10 @@ def open_trades_status_report():
 
         send_telegram(msg)
         _state._last_trades_state.update(current_state)
-        print(f"[{time_str}] Open trades report sent ({len(trades)} trades, P&L: {total_pnl_rp:+,.0f}, reason: {change_reason})")
+        logger.info(f"[{time_str}] Open trades report sent ({len(trades)} trades, P&L: {total_pnl_rp:+,.0f}, reason: {change_reason})")
 
     except Exception as e:
-        print(f"[open_trades_status_report] Error: {e}")
+        logger.warning(f"[open_trades_status_report] Error: {e}")
         send_telegram(f"🔴 <b>Open Trades Report Error</b>\n\n<code>{str(e)[:150]}</code>")
 
 
@@ -454,7 +454,7 @@ def flow_broker_report():
             pass  # non-critical — don't break the main report
 
         send_telegram(msg)
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Flow report sent "
+        logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Flow report sent "
               f"({len(bullish)} bullish, {len(neutral_buy)} neutral, "
               f"{len(divergence_bullish)+len(divergence_bearish)} divergence, "
               f"{len(spike_map)} news-spike)")
@@ -506,7 +506,7 @@ def auto_trade_status_report():
                 msg += f"{emoji} {ticker}: {status} @ Rp {entry:,.0f}\n"
 
         send_telegram(msg)
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Auto-trade status report sent")
+        logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Auto-trade status report sent")
     except Exception as e:
         logging.error(f"auto_trade_status_report error: {e}")
         send_telegram(f"🔴 <b>Auto-Trade Status Error</b>\n\n<code>{str(e)[:150]}</code>")

@@ -7,6 +7,7 @@ reported, never auto-corrected. Consumed by scheduler.jobs.run_ohlcv_reconciliat
 import sqlite3
 
 from config import DB_PATH
+from data.db import connect as db_connect
 
 TOLERANCE = 0.001   # 0.1% — beyond this, flag
 
@@ -43,7 +44,7 @@ def reconcile_ohlcv(date: str, db_path: str = DB_PATH,
     """Returns {date, compared, missing_yf, mismatches: [{ticker, scraper,
     yfinance, diff_pct}]}. Read-only on ohlcv."""
     fetch = price_fetcher or _yf_closes
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     rows = conn.execute(
         "SELECT ticker, close FROM ohlcv WHERE date=? AND close IS NOT NULL "
         "AND ticker != 'IHSG'", (date,)).fetchall()

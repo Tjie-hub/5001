@@ -97,5 +97,15 @@ def build_router() -> ProviderRouter:
         ))
         for name in order
     ]
+    import logging
+
     import data.db as _db
+    logger = logging.getLogger("agent_firm.providers.factory")
+    logger.info("provider router built: mode=%s order=%s", config.PROVIDER_MODE, order)
+    if len(routed) < 2:
+        # Audit 2026-07-10 P-1: a single-provider router means NO failover --
+        # make that state loud so a config regression can't go unnoticed again.
+        logger.warning(
+            "provider router has a SINGLE provider (%s) -- failover DISABLED; "
+            "set AGENT_FIRM_PROVIDER=auto to enable", order)
     return ProviderRouter(routed, db_path=str(_db.DB_PATH))

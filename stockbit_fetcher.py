@@ -19,7 +19,7 @@ Usage:
   python3 stockbit_fetcher.py flow --cat IDX30    # flow fetch IDX30 only
 
 Cron (setiap hari 08:50 WIB sebelum market):
-  50 8 * * 1-5 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python3 stockbit_fetcher.py >> logs/stockbit.log 2>&1
+  See deploy/crontab (cron_wrap-ed OHLCV fetch at 08:50 Mon-Fri).
 """
 
 import os
@@ -34,6 +34,7 @@ import requests
 import base64
 from datetime import datetime
 from flow_filter import _parse_bars, _analyze
+from utils.logging_config import redact_secrets
 
 # === CONFIG ===
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -99,6 +100,7 @@ def send_telegram(msg):
     if not token or not chat_id:
         log("Telegram not configured")
         return
+    msg = redact_secrets(msg)  # RC1-C2 — same shared rule as utils.telegram.send_telegram
     try:
         requests.post(
             f"https://api.telegram.org/bot{token}/sendMessage",

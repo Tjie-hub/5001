@@ -9,6 +9,7 @@ from config import DB_PATH
 from engine.indicators import calc_adx as _calc_adx
 from flow_filter import get_flow_batch
 from scheduler import send_telegram as _send_telegram
+from data.db import connect as db_connect
 
 screener_main_bp = Blueprint("screener_main", __name__)
 
@@ -45,7 +46,7 @@ def api_swing_onset():
     include_flow = bool(body.get('include_flow', True))
     requested   = body.get('tickers') or []
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     if requested:
         tickers = [t.upper() for t in requested]
     else:
@@ -63,7 +64,7 @@ def api_swing_onset():
     results = []
     for ticker in tickers:
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect(DB_PATH)
             df = pd.read_sql('SELECT date, open, high, low, close, volume FROM ohlcv WHERE ticker=? ORDER BY date ASC',
                              conn, params=(ticker,))
             conn.close()
@@ -181,7 +182,7 @@ def api_ticker_full(ticker):
     from engine.strategies import STRATEGY_FUNCS
 
     ticker = ticker.upper()
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
 
     # ── OHLCV ──────────────────────────────────────────────────────────────
     df = pd.read_sql(
@@ -425,7 +426,7 @@ def api_ticker_full(ticker):
 def api_ticker_broker(ticker):
     import sqlite3
     date = request.args.get('date', '')
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     try:
         if not date:
             row = conn.execute(
@@ -487,7 +488,7 @@ def api_strategy_markers(strategy, ticker):
     if strategy not in STRATEGY_FUNCS:
         return jsonify({'error': f'Unknown strategy: {strategy}'}), 400
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     try:
         df = pd.read_sql(
             'SELECT date, open, high, low, close, volume FROM ohlcv '
@@ -544,7 +545,7 @@ def api_ohlcv_cache(ticker):
     ttl = 900 if tf == '1h' else (14400 if tf == '1d' else 86400)  # 15min / 4h / 24h
     now = time.time()
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     try:
         row = conn.execute(
             'SELECT fetched_at, data FROM ohlcv_cache WHERE ticker=? AND tf=?',
@@ -640,7 +641,7 @@ def api_reversal_watchlist():
         scan_date = date_arg
         results = run_scan(scan_date, DB_PATH)
     else:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         try:
             row = conn.execute(

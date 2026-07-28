@@ -3,7 +3,6 @@ import logging
 import sqlite3
 import time
 import uuid
-from dotenv import load_dotenv
 from flask import Flask, render_template, jsonify, request, g
 from scheduler import start_scheduler
 from routes_backtest_multi import backtest_multi_bp
@@ -11,6 +10,7 @@ from screener.routes import screener_bp
 from screener.db import init_screener_tables
 from stockbit_fetcher import init_flow_db
 from data.db import init_agent_firm_tables
+from paper_trade import init_paper_table
 from data.db import connect as db_connect
 from routes.telegram import telegram_bp, telegram_poller_loop
 from routes.flow import flow_bp
@@ -21,9 +21,9 @@ from routes.chart import chart_bp
 from utils.logging_config import setup_logging
 import threading
 
-load_dotenv()
 setup_logging()
-DB_PATH = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
+from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, Phase 5)
+DB_PATH = os.getenv('DB_PATH', _DEFAULT_DB_PATH)
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.urandom(32)
@@ -35,6 +35,13 @@ app.register_blueprint(screener_main_bp)
 app.register_blueprint(backtest_bp)
 app.register_blueprint(portfolio_bp)
 app.register_blueprint(chart_bp)
+
+# Security hardening: auth endpoints + authorization middleware. AUTH_MODE=off
+# (the default) keeps behavior identical to the pre-hardening app.
+from security.routes import auth_bp
+from security.middleware import init_security
+app.register_blueprint(auth_bp)
+init_security(app)
 
 @app.before_request
 def _assign_correlation_id():
@@ -58,10 +65,23 @@ def set_security_headers(response):
     return response
 
 
+@app.errorhandler(500)
+def _internal_error(e):
+    """Generic 500: no traceback or exception detail crosses the HTTP
+    boundary (security hardening Phase 3); full detail goes to the log with
+    the request's correlation id."""
+    logging.getLogger("app").exception("unhandled error (request_id=%s)",
+                                       g.get("correlation_id", ""))
+    return jsonify({"error": "internal server error",
+                    "request_id": g.get("correlation_id", "")}), 500
+
+
 @app.route("/health")
 def health():
     import sqlite3
-    result = {"status": "ok", "db": "ok", "last_scan": None, "open_trades": 0}
+    from utils.release import release_info
+    result = {"status": "ok", "db": "ok", "last_scan": None, "open_trades": 0,
+              "version": release_info().get("version")}
     try:
         conn = db_connect(DB_PATH)
         result["last_scan"] = conn.execute(
@@ -182,11 +202,29 @@ def prometheus_metrics():
     return body, 200, {'Content-Type': 'text/plain; charset=utf-8; version=0.0.4'}
 
 
-if __name__ == "__main__":
+def init_runtime():
+    """One-time process initialization: idempotent table migrations, the
+    APScheduler, and the Telegram poller thread. Called from __main__ (dev,
+    Flask server) and from gunicorn's post_worker_init hook (production,
+    see gunicorn.conf.py) — extracted so both runtimes share exactly the
+    same startup path (audit P-5)."""
+    from config import validate_config
+    validate_config()
     init_screener_tables()
     init_flow_db()
     init_agent_firm_tables()
-    start_scheduler()
+    init_paper_table()
+    scheduler = start_scheduler()
     poller_thread = threading.Thread(target=telegram_poller_loop, daemon=True)
     poller_thread.start()
+    from utils.release import release_info
+    _rel = release_info()
+    logging.getLogger("app").info(
+        "runtime initialized (scheduler + telegram poller) version=%s source=%s",
+        _rel.get("version"), _rel.get("source"))
+    return scheduler
+
+
+if __name__ == "__main__":
+    init_runtime()
     app.run(host="0.0.0.0", port=5001, debug=False)

@@ -1,15 +1,17 @@
 # scheduler/jobs.py
 import os
 import sqlite3
+import html
 import logging
-from dotenv import load_dotenv
 from datetime import datetime
+from typing import Optional
 import pytz
 
-load_dotenv()
 
 WIB = pytz.timezone("Asia/Jakarta")
-DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
+logger = logging.getLogger(__name__)
+from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, Phase 5)
+DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 
 from utils.telegram import send_telegram  # noqa: E402
 from data.db import connect as db_connect  # noqa: E402
@@ -71,7 +73,7 @@ def run_flow_fetch():
     now_str = dt.now(WIB).strftime('%H:%M')
     is_first_session = dt.now(WIB).hour == 9
     today_str = str(date.today())
-    print(f"[{now_str}] Flow fetch dimulai...")
+    logger.info(f"[{now_str}] Flow fetch dimulai...")
     try:
         from flow_filter import main as flow_main
         import sys as _sys
@@ -85,7 +87,7 @@ def run_flow_fetch():
             "SELECT COUNT(*) FROM stockbit_flow WHERE trade_date=?", (today_str,)
         ).fetchone()[0]
         conn.close()
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] Flow fetch selesai. {count} tickers tersimpan.")
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Flow fetch selesai. {count} tickers tersimpan.")
         if is_first_session and count == 0:
             send_telegram(
                 f"⚠️ <b>Flow Fetch WARNING</b>\n\n"
@@ -94,7 +96,7 @@ def run_flow_fetch():
                 f"Cek: <code>cat .stockbit_token</code>"
             )
     except Exception as e:
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] Flow fetch error: {e}")
+        logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] Flow fetch error: {e}")
         if is_first_session:
             send_telegram(
                 f"🔴 <b>Flow Fetch GAGAL</b>\n\n"
@@ -165,7 +167,7 @@ def run_broker_flow_fetch():
     import sqlite3
     now_str = dt.now(WIB).strftime('%H:%M')
     today_str = str(date.today())
-    print(f"[{now_str}] Broker flow fetch dimulai...")
+    logger.info(f"[{now_str}] Broker flow fetch dimulai...")
     try:
         from stockbit_fetcher import extract_token_from_chrome, verify_token, run_flow, get_tickers
         token = extract_token_from_chrome()
@@ -181,7 +183,7 @@ def run_broker_flow_fetch():
         conn_pt.close()
         extra_new = [t for t in extra if t not in tickers]
         if extra_new:
-            print(f"[{now_str}] + {len(extra_new)} extra tickers from paper trades: {extra_new}")
+            logger.info(f"[{now_str}] + {len(extra_new)} extra tickers from paper trades: {extra_new}")
             tickers = tickers + extra_new
         run_flow(token, tickers)
         conn = db_connect(DB_PATH)
@@ -189,12 +191,12 @@ def run_broker_flow_fetch():
             "SELECT COUNT(DISTINCT ticker) FROM broker_flow WHERE trade_date=?", (today_str,)
         ).fetchone()[0]
         conn.close()
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow selesai. {count} tickers untuk {today_str}.")
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow selesai. {count} tickers untuk {today_str}.")
 
         # Coverage monitor: alert on a stockbit_flow outage while it can still be
         # re-fetched today (a past session cannot be backfilled later).
         cov = check_flow_coverage(DB_PATH, today_str)
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] Flow coverage {today_str}: "
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Flow coverage {today_str}: "
               f"{cov['count']} tickers (baseline {cov['baseline']}) → {cov['severity']}")
         if not cov["healthy"]:
             icon = "🔴" if cov["severity"] == "critical" else "⚠️"
@@ -207,7 +209,7 @@ def run_broker_flow_fetch():
                 f"re-run <code>run_broker_flow_fetch</code> hari ini."
             )
     except Exception as e:
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow fetch error: {e}")
+        logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow fetch error: {e}")
         send_telegram(f"🔴 <b>Broker Flow Fetch Error</b>\n<code>{str(e)[:200]}</code>")
 
 
@@ -221,7 +223,7 @@ def run_ohlcv_reconciliation():
     try:
         rep = reconcile_ohlcv(today)
         n = len(rep["mismatches"])
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] OHLCV reconcile {today}: "
+        logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] OHLCV reconcile {today}: "
               f"{rep['compared']} compared, {rep['missing_yf']} missing on yf, {n} mismatches")
         if n:
             top = "\n".join(
@@ -233,7 +235,7 @@ def run_ohlcv_reconciliation():
                 f"(alert-only; scraper is authority):\n{top}"
             )
     except Exception as e:
-        print(f"[scheduler] OHLCV reconcile error: {e}")
+        logger.warning(f"[scheduler] OHLCV reconcile error: {e}")
 
 
 def run_token_health_check(token_file: str = None):
@@ -253,7 +255,7 @@ def run_token_health_check(token_file: str = None):
         tok = ""
     s = token_status(tok)
     if s["healthy"]:
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Token health OK "
+        logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Token health OK "
               f"({s['hours_left']:.1f}h left)")
         return
     hl = s["hours_left"]
@@ -264,7 +266,7 @@ def run_token_health_check(token_file: str = None):
         f"Token: {left}. Fetching/backfill will 401 until refreshed.\n"
         f"Refresh: <code>python3 auto_token.py</code>"
     )
-    print(f"[{datetime.now(WIB).strftime('%H:%M')}] Token health ALERT: {s['status']} ({left})")
+    logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Token health ALERT: {s['status']} ({left})")
 
 
 def run_ohlcv_coverage_check(date_str: str = None):
@@ -284,10 +286,10 @@ def run_ohlcv_coverage_check(date_str: str = None):
             (day,)).fetchone()[0]
         conn.close()
     except Exception as e:
-        print(f"[coverage] DB error: {e}")
+        logger.warning(f"[coverage] DB error: {e}")
         return
     s = ohlcv_coverage(count, universe)
-    print(f"[{datetime.now(WIB).strftime('%H:%M')}] OHLCV coverage {day}: "
+    logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] OHLCV coverage {day}: "
           f"{count}/{universe} ({s['pct']*100:.0f}%) — {s['severity']}")
     if not s["healthy"]:
         icon = "🔴" if s["severity"] == "critical" else "⚠️"
@@ -309,7 +311,7 @@ def run_foreign_snapshot():
         return
     from datetime import datetime as dt
     now_str = dt.now(WIB).strftime('%H:%M')
-    print(f"[{now_str}] Foreign snapshot dimulai...")
+    logger.info(f"[{now_str}] Foreign snapshot dimulai...")
     try:
         from flow_filter import get_top_foreign_accumulation
         all_results = get_top_foreign_accumulation(top_n=9999)
@@ -335,7 +337,7 @@ def run_foreign_snapshot():
         else:
             msg += "\n<b>🔴 No significant foreign selling</b>\n"
 
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] Foreign snapshot computed ({len(top_buy)} buy, {len(top_sell)} sell) — no alert")
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Foreign snapshot computed ({len(top_buy)} buy, {len(top_sell)} sell) — no alert")
     except Exception as e:
         logging.error(f"run_foreign_snapshot error: {e}")
 
@@ -349,13 +351,13 @@ def run_news_fetch():
         return
     from datetime import datetime as dt
     now_str = dt.now(WIB).strftime('%H:%M')
-    print(f"[{now_str}] News fetch dimulai...")
+    logger.info(f"[{now_str}] News fetch dimulai...")
     try:
         from news_filter import run_news_batch
         saved = run_news_batch()
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] News fetch selesai. {saved} tickers tersimpan.")
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] News fetch selesai. {saved} tickers tersimpan.")
     except Exception as e:
-        print(f"[{dt.now(WIB).strftime('%H:%M')}] News fetch error: {e}")
+        logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] News fetch error: {e}")
         send_telegram(
             f"🔴 <b>News Fetch GAGAL</b>\n\n"
             f"<code>{str(e)[:200]}</code>"
@@ -367,13 +369,13 @@ def _run_open_trade_monitor():
         from monitor import check_all_open_trades
         check_all_open_trades()
     except Exception as e:
-        print(f"[scheduler] Monitor error: {e}")
+        logger.warning(f"[scheduler] Monitor error: {e}")
     # DD circuit breaker check — cheap, runs each monitor cycle (every 5 min during trading)
     try:
         from paper_trade import check_dd_circuit_breaker
         check_dd_circuit_breaker()
     except Exception as e:
-        print(f"[scheduler] DD circuit breaker error: {e}")
+        logger.warning(f"[scheduler] DD circuit breaker error: {e}")
 
 
 def _run_screener_intraday():
@@ -381,7 +383,7 @@ def _run_screener_intraday():
         from screener.screener_jobs import run_intraday
         run_intraday(send_telegram=send_telegram)
     except Exception as e:
-        print(f"[scheduler] Screener intraday error: {e}")
+        logger.warning(f"[scheduler] Screener intraday error: {e}")
 
 
 def _run_screener_eod():
@@ -389,7 +391,7 @@ def _run_screener_eod():
         from screener.screener_jobs import run_eod
         run_eod(send_telegram=send_telegram)
     except Exception as e:
-        print(f"[scheduler] Screener EOD error: {e}")
+        logger.warning(f"[scheduler] Screener EOD error: {e}")
 
 
 # _refresh_backtest_cache moved to research/jobs.py in M3 (spec §10-M3)
@@ -412,7 +414,7 @@ def _send_premover_auto_summary(rows: list, mode: str, send_fn) -> None:
     try:
         send_fn(msg)
     except Exception as e:
-        print(f"[premover auto] Telegram summary error: {e}")
+        logger.warning(f"[premover auto] Telegram summary error: {e}")
 
 
 def get_market_risk_for_circuit_breaker() -> dict:
@@ -454,17 +456,17 @@ def run_premover_eod():
     _risk = get_market_risk_for_circuit_breaker()
     _cb_state, _cb_reason = check_circuit_breaker(_risk)
     if _cb_state == CircuitBreakerState.OPEN:
-        print(f"[{now_str}] Circuit breaker OPEN: {_cb_reason} — premover EOD paused")
+        logger.info(f"[{now_str}] Circuit breaker OPEN: {_cb_reason} — premover EOD paused")
         send_telegram(f"⛔ <b>Circuit Breaker Active</b>\n\n{_cb_reason}\n\nAuto-trading paused. Manual override required.")
         return
 
-    print(f"[{now_str}] Pre-mover EOD scan dimulai...")
+    logger.info(f"[{now_str}] Pre-mover EOD scan dimulai...")
     try:
         new_setups = run_scan(DB_PATH, send_alert_fn=None)
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan selesai. "
+        logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan selesai. "
               f"{len(new_setups)} new setups.")
     except Exception as e:
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan error: {e}")
+        logger.warning(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan error: {e}")
         send_telegram(f"🔴 <b>Pre-mover Scan Error</b>\n<code>{str(e)[:200]}</code>")
         return
 
@@ -489,7 +491,7 @@ def run_premover_eod():
             summary_rows.append({'ticker': ticker, 'score': score,
                                   'pattern': pattern, **ev})
         except Exception as exc:
-            print(f"[premover auto] {ticker} error: {exc}")
+            logger.warning(f"[premover auto] {ticker} error: {exc}")
             summary_rows.append({'ticker': ticker, 'score': score,
                                   'pattern': pattern,
                                   'would_trade': False,
@@ -575,37 +577,164 @@ def run_market_health_report():
 
         msg = ext_block + health + news_block
         send_telegram(msg)
-        print(f"[{now.strftime('%H:%M')}] Premarket briefing sent (tier={risk['tier']})")
+        logger.info(f"[{now.strftime('%H:%M')}] Premarket briefing sent (tier={risk['tier']})")
     except Exception as e:
         logging.error(f"[market_health_report] {e}")
-        print(f"[{now.strftime('%H:%M')}] Health report error: {e}")
+        logger.warning(f"[{now.strftime('%H:%M')}] Health report error: {e}")
     finally:
         conn.close()
 
 
-def _build_premarket_firm_message(decisions: list, rows: list, header: str) -> str:
-    """Pure Telegram-message builder for the premarket firm shortlist.
-
-    decisions: list[AgentDecision] from firm.evaluate_staged.
-    rows: the unified-watchlist long rows (dicts) used for source/strength lookup.
-    header: pre-formatted "dd/mm HH:MM" string.
-    Kept import-free (no langgraph) so it's unit-testable on the Windows venv.
-    """
-    from engine import trade_plan as tp
-
+def _premarket_approved_and_lookup(decisions: list, rows: list) -> tuple[list, dict]:
+    """Firm-approved decisions sorted by confidence (desc) + a ticker→row lookup
+    for source/strength tags. Shared basis for both the Telegram message and the
+    watchlist snapshot so the two never disagree on order (audit 2026-07-28
+    Phase 2 — mirrors engine.trade_plan.rank_approved's role for the EOD plan)."""
     by_ticker = {r["ticker"]: r for r in rows}
     approved = sorted(
         [d for d in decisions if d.decision == "approve"],
         key=lambda d: d.confidence or 0.0, reverse=True,
     )
+    return approved, by_ticker
+
+
+def _premarket_ranked_for_snapshot(approved: list, by_ticker: dict) -> list[dict]:
+    """Build the engine.trade_plan.record_snapshot/diff_watchlist-compatible ranked
+    list from the firm-approved premarket decisions — reuses the same generic
+    snapshot/diff infra built for the EOD plan rather than a parallel mechanism."""
+    out = []
+    for d in approved:
+        r = by_ticker.get(d.ticker, {})
+        out.append({
+            "ticker": d.ticker,
+            "confidence": float(d.confidence) if d.confidence is not None else None,
+            "conviction": r.get("strength"),
+            "confluence": r.get("confluence"),
+            "sources": r.get("sources") or [],
+        })
+    return out
+
+
+_MAX_PREMARKET_DIFF_ROWS = 8
+
+
+def _premarket_factor_note(prior_sources: Optional[list], cur_sources: Optional[list]) -> str:
+    """Factual, non-invented explanation derived from the only per-ticker factor
+    that actually exists at the premarket stage: which watchlist sources newly
+    agree/disagree (REVERSAL/PREMOVER/BEAR_DIP). Never fabricates a momentum/
+    liquidity/risk label the engine doesn't compute here."""
+    prior_set, cur_set = set(prior_sources or []), set(cur_sources or [])
+    gained = sorted(cur_set - prior_set)
+    lost = sorted(prior_set - cur_set)
+    bits = []
+    if gained:
+        bits.append("+" + "/".join(gained))
+    if lost:
+        bits.append("-" + "/".join(lost))
+    return " ".join(bits)
+
+
+def _build_premarket_diff_sections(diff: Optional[dict], approved_by_ticker: dict) -> list[str]:
+    """NEW / REMOVED / UPGRADED / DOWNGRADED (+ optional STABLE) lines for the
+    premarket shortlist. Consumes engine.trade_plan.diff_watchlist's output as-is
+    (the same snapshot/diff infra the EOD plan uses) — reports on rank/confidence
+    already decided elsewhere, never recomputes them. The per-move "explanation"
+    is the firm's own rationale for that ticker today (already-generated engine
+    output) plus the factual source-tag change, not an invented label."""
+    if not diff:
+        return []
+    added, removed, changes = diff["added"], diff["removed"], diff["changes"]
+    upgraded = [c for c in changes if c["status"] == "upgraded"]
+    downgraded = [c for c in changes if c["status"] == "downgraded"]
+    stable = [c for c in changes
+              if c["status"] == "unchanged" and (c["confidence"] or 0) >= 0.70]
+    if not added and not removed and not upgraded and not downgraded and not stable:
+        return []
+
+    L: list[str] = []
+    if added:
+        L += ["", "<b>📈 NEW</b>"]
+        L += [f"  {html.escape(t)}" for t in added[:_MAX_PREMARKET_DIFF_ROWS]]
+        if len(added) > _MAX_PREMARKET_DIFF_ROWS:
+            L.append(f"  …+{len(added) - _MAX_PREMARKET_DIFF_ROWS} more")
+    if removed:
+        L += ["", "<b>📉 REMOVED</b>"]
+        L += [f"  {html.escape(t)}" for t in removed[:_MAX_PREMARKET_DIFF_ROWS]]
+        if len(removed) > _MAX_PREMARKET_DIFF_ROWS:
+            L.append(f"  …+{len(removed) - _MAX_PREMARKET_DIFF_ROWS} more")
+
+    def _render_move(c: dict) -> None:
+        d = approved_by_ticker.get(c["ticker"])
+        rationale = (getattr(d, "rationale", None) or "").replace("\\n", " ").strip() if d else ""
+        note = _premarket_factor_note(c.get("prior_sources"), c.get("sources"))
+        rank_txt = f" rank {c['prior_rank']}→{c['rank']}" if c.get("rank_change") else ""
+        conf_txt = (f" conf {c['prior_confidence']:.2f}→{c['confidence']:.2f} "
+                   f"({c['score_delta']:+.2f})" if c["score_delta"] is not None else "")
+        line = f"  <b>{html.escape(c['ticker'])}</b>{rank_txt}{conf_txt}"
+        if note:
+            line += f" [{note}]"
+        L.append(line)
+        if rationale:
+            L.append(f"    <i>{html.escape(rationale[:140])}</i>")
+
+    if upgraded:
+        L += ["", "<b>⬆ UPGRADED</b>"]
+        for c in upgraded[:_MAX_PREMARKET_DIFF_ROWS]:
+            _render_move(c)
+    if downgraded:
+        L += ["", "<b>⬇ DOWNGRADED</b>"]
+        for c in downgraded[:_MAX_PREMARKET_DIFF_ROWS]:
+            _render_move(c)
+    if stable:
+        L += ["", "<b>🟢 STABLE</b> <i>(high-conviction, unchanged)</i>"]
+        L += [f"  {html.escape(c['ticker'])} conf {c['confidence']:.2f}"
+             for c in stable[:_MAX_PREMARKET_DIFF_ROWS]]
+    return L
+
+
+def _build_premarket_firm_message(decisions: list, rows: list, header: str,
+                                  regime: Optional[str] = None,
+                                  risk: Optional[dict] = None,
+                                  watchlist_total: Optional[int] = None,
+                                  diff: Optional[dict] = None) -> str:
+    """Pure Telegram-message builder for the premarket firm shortlist.
+
+    decisions: list[AgentDecision] from firm.evaluate_staged.
+    rows: the unified-watchlist long rows (dicts) used for source/strength lookup.
+    header: pre-formatted "dd/mm HH:MM" string.
+    regime/risk/watchlist_total: optional Daily-Summary context (market regime
+    label, get_market_risk_for_circuit_breaker() dict, total unified-watchlist
+    size) — each line is omitted when its value is None so old callers/tests
+    that don't pass them keep getting the same message shape.
+    diff: engine.trade_plan.diff_watchlist() output — adds NEW/REMOVED/
+    UPGRADED/DOWNGRADED sections when present.
+    Kept import-free (no langgraph) so it's unit-testable on the Windows venv.
+    """
+    from engine import trade_plan as tp
+
+    approved, by_ticker = _premarket_approved_and_lookup(decisions, rows)
+    approved_by_ticker = {d.ticker: d for d in approved}
     vetoed   = [d for d in decisions if d.decision == "veto"]
     passthru = [d for d in decisions if d.decision in ("degraded", "bypassed")]
 
-    msg = f"🌅 <b>Premarket Shortlist — {header}</b>\n"
-    msg += f"<i>Unified EOD watchlist → agent firm ({len(decisions)} setups)</i>\n\n"
+    msg = f"🏁 <b>PREMARKET SUMMARY — {header}</b>\n"
+    if regime:
+        msg += f"Regime: <b>{html.escape(regime)}</b>\n"
+    if risk:
+        tier = risk.get("tier")
+        score = risk.get("score")
+        score_txt = f" ({score:.0f})" if score is not None else ""
+        msg += f"Risk: <b>{html.escape(str(tier))}</b>{score_txt}\n"
+    if watchlist_total is not None:
+        msg += f"Candidates: {watchlist_total} unified → {len(decisions)} evaluated\n"
+    if approved:
+        top = approved[0]
+        conf_txt = f"{top.confidence:.2f}" if top.confidence is not None else "N/A"
+        msg += f"Highest conviction: <b>{html.escape(top.ticker)}</b> ({conf_txt})\n"
+    msg += "\n"
 
     if approved:
-        msg += "<b>✅ Firm-approved (long):</b>\n"
+        msg += "<b>⭐ TOP CONVICTIONS</b>\n"
         for d in approved:
             conf = f"{d.confidence:.2f}" if d.confidence is not None else "N/A"
             size = f" ×{d.size_hint:.2f}" if d.size_hint else ""
@@ -628,6 +757,10 @@ def _build_premarket_firm_message(decisions: list, rows: list, header: str) -> s
     p_line = tp.provider_line(decisions)
     if p_line:
         msg += "\n" + p_line + "\n"
+
+    diff_lines = _build_premarket_diff_sections(diff, approved_by_ticker)
+    if diff_lines:
+        msg += "\n".join(diff_lines) + "\n"
 
     return msg
 
@@ -662,16 +795,19 @@ def run_premarket_firm_scan():
         try:
             _g.execute("INSERT INTO _job_sentinel VALUES ('premarket_firm', ?)", (date_str,))
         except sqlite3.IntegrityError:
-            print(f"[{now_str}] Premarket firm: already sent today — skipped (duplicate guard)")
+            logger.info(f"[{now_str}] Premarket firm: already sent today — skipped (duplicate guard)")
+            return
+        except sqlite3.OperationalError as e:
+            logger.warning(f"[{now_str}] Premarket firm: dedup guard error (fail-open): {e}")
             return
 
-    print(f"[{now_str}] Premarket agent-firm scan dimulai...")
+    logger.info(f"[{now_str}] Premarket agent-firm scan dimulai...")
 
     try:
         rows = build_unified_watchlist(DB_PATH)
     except Exception as e:
         logging.error(f"[premarket_firm] watchlist build error: {e}")
-        print(f"[{now_str}] Premarket firm: watchlist build error: {e}")
+        logger.warning(f"[{now_str}] Premarket firm: watchlist build error: {e}")
         return
 
     # Value-base liquidity: keep the 3 best long-only setups whose 30d avg daily
@@ -683,7 +819,7 @@ def run_premarket_firm_scan():
     finally:
         conn.close()
     if not longs:
-        print(f"[{now_str}] Premarket firm: no liquid long setups from unified watchlist — skipped")
+        logger.info(f"[{now_str}] Premarket firm: no liquid long setups from unified watchlist — skipped")
         return
 
     # ── Pre-LLM edge veto (Phase 3, gated by EDGE_SCORE_MODE) ─────────────────
@@ -740,17 +876,55 @@ def run_premarket_firm_scan():
         decisions = _firm.evaluate_staged(candidates)
     except Exception as e:
         logging.error(f"[premarket_firm] firm eval error: {e}")
-        print(f"[{now_str}] Premarket firm eval error: {e}")
+        logger.warning(f"[{now_str}] Premarket firm eval error: {e}")
         return
 
+    # Daily-Summary context — same functions the 16:30/16:40 jobs already use,
+    # reused (not reimplemented) here. Fail-soft: a lookup error must not block
+    # the shortlist send, it just omits that summary line.
+    regime = None
     try:
-        send_telegram(_build_premarket_firm_message(decisions, longs, now.strftime('%d/%m %H:%M')))
+        from engine.edge_enrich import market_regime as _market_regime
+        _rconn = db_connect(DB_PATH)
+        try:
+            regime = _market_regime(_rconn)
+        finally:
+            _rconn.close()
     except Exception as e:
-        print(f"[premarket firm] Telegram error: {e}")
+        logging.warning(f"[premarket_firm] regime lookup error (fail-soft): {e}")
+
+    risk = None
+    try:
+        risk = get_market_risk_for_circuit_breaker()
+    except Exception as e:
+        logging.warning(f"[premarket_firm] risk lookup error (fail-soft): {e}")
+
+    # Persist today's ranked shortlist + diff against the prior snapshot so the
+    # report can show new/removed/upgraded/downgraded tickers. Reuses the exact
+    # engine.trade_plan snapshot/diff infra built for the EOD plan (strategy=
+    # 'premarket' keeps the two histories independent) — reporting only, never
+    # feeds back into ranking/decisions.
+    from engine import trade_plan as tp
+    approved, by_ticker = _premarket_approved_and_lookup(decisions, longs)
+    ranked = _premarket_ranked_for_snapshot(approved, by_ticker)
+    diff = None
+    with db_connect(DB_PATH) as _snap_conn:
+        try:
+            diff = tp.diff_watchlist(_snap_conn, date_str, "premarket", ranked)
+            tp.record_snapshot(_snap_conn, date_str, "premarket", ranked)
+        except Exception as e:
+            logging.warning(f"[premarket_firm] watchlist snapshot/diff error (fail-soft): {e}")
+
+    try:
+        send_telegram(_build_premarket_firm_message(
+            decisions, longs, now.strftime('%d/%m %H:%M'),
+            regime=regime, risk=risk, watchlist_total=len(rows), diff=diff))
+    except Exception as e:
+        logger.warning(f"[premarket firm] Telegram error: {e}")
 
     n_app = sum(1 for d in decisions if d.decision == "approve")
     n_veto = sum(1 for d in decisions if d.decision == "veto")
-    print(f"[{now_str}] Premarket firm: {len(decisions)} evaluated "
+    logger.info(f"[{now_str}] Premarket firm: {len(decisions)} evaluated "
           f"({n_app} approve, {n_veto} veto)")
 
 
@@ -778,14 +952,20 @@ def run_eod_trade_plan():
 
     # Dedup guard (mirrors premarket firm scan) — first INSERT wins. 30s busy_timeout
     # waits out transient writers (the 16:40 slot can overlap a long EOD write on the
-    # 2.5GB WAL db, unlike the quiet 08:35 premarket slot).
+    # 2.5GB WAL db, unlike the quiet 08:35 premarket slot). Also fails open on
+    # OperationalError (RC1 F-3, 2026-07-28) — the 16:40 slot is more exposed to
+    # exactly the lock-contention window that caused the 2026-07-24 08:35:30
+    # premarket crash, so it gets the same guard premarket was patched with.
     with db_connect(DB_PATH) as _g:
         _g.execute("CREATE TABLE IF NOT EXISTS _job_sentinel "
                    "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))")
         try:
             _g.execute("INSERT INTO _job_sentinel VALUES ('eod_trade_plan', ?)", (date_str,))
         except sqlite3.IntegrityError:
-            print(f"[{now_str}] EOD trade plan: already sent today — skipped (dup guard)")
+            logger.info(f"[{now_str}] EOD trade plan: already sent today — skipped (dup guard)")
+            return
+        except sqlite3.OperationalError as e:
+            logger.warning(f"[{now_str}] EOD trade plan: dedup guard error (fail-open): {e}")
             return
 
     from config import edge_mode
@@ -818,14 +998,22 @@ def run_eod_trade_plan():
         conn.close()
 
     if not cands:
-        print(f"[{now_str}] EOD trade plan: no long candidates — skipped")
+        logger.info(f"[{now_str}] EOD trade plan: no long candidates — skipped")
         return
 
     if not top:
         # every candidate failed the directional pre-screen — ship an empty plan
+        diff = None
+        with db_connect(DB_PATH) as _snap_conn:
+            try:
+                diff = tp.diff_watchlist(_snap_conn, date_str, "eod", [])
+                tp.record_snapshot(_snap_conn, date_str, "eod", [])
+            except Exception as e:
+                logging.warning(f"[eod_trade_plan] watchlist snapshot/diff error (fail-soft): {e}")
         send_telegram(tp.build_message([], regime, now.strftime('%d/%m'), degraded=False,
-                                       vpin_summary=vpin_summary))
-        print(f"[{now_str}] EOD trade plan: all candidates vetoed by edge pre-screen — empty plan sent")
+                                       vpin_summary=vpin_summary, diff=diff,
+                                       watchlist_size=len(cands)))
+        logger.info(f"[{now_str}] EOD trade plan: all candidates vetoed by edge pre-screen — empty plan sent")
         return
 
     candidates = [
@@ -853,14 +1041,27 @@ def run_eod_trade_plan():
     # except block above never assigns it) — this guard also avoids
     # UnboundLocalError, not just suppressing a stale provider line.
     p_line = None if degraded else tp.provider_line(decisions)
+
+    # Persist today's ranked watchlist + diff against the prior snapshot so the
+    # report can show added/removed/upgraded/downgraded/rank+score deltas.
+    # Reporting only — never feeds back into ranking/decisions.
+    diff = None
+    with db_connect(DB_PATH) as _snap_conn:
+        try:
+            diff = tp.diff_watchlist(_snap_conn, date_str, "eod", ranked)
+            tp.record_snapshot(_snap_conn, date_str, "eod", ranked)
+        except Exception as e:
+            logging.warning(f"[eod_trade_plan] watchlist snapshot/diff error (fail-soft): {e}")
+
     try:
         send_telegram(tp.build_message(ranked, regime, now.strftime('%d/%m'),
                                        degraded=degraded, vpin_summary=vpin_summary,
-                                       provider_line=p_line))
+                                       provider_line=p_line, diff=diff,
+                                       watchlist_size=len(cands)))
     except Exception as e:
-        print(f"[eod_trade_plan] Telegram error: {e}")
+        logger.warning(f"[eod_trade_plan] Telegram error: {e}")
 
-    print(f"[{now_str}] EOD trade plan: {len(cands)} candidates, top {len(top)} vetted, "
+    logger.info(f"[{now_str}] EOD trade plan: {len(cands)} candidates, top {len(top)} vetted, "
           f"{len(ranked)} approved{' (degraded)' if degraded else ''}")
 
 
@@ -893,7 +1094,7 @@ def run_vpin_daily_batch(date_str=None):
         date_str = datetime.now(WIB).strftime('%Y-%m-%d')
 
     now_str = datetime.now(WIB).strftime('%H:%M')
-    print(f"[{now_str}] VPIN batch compute starting for {date_str}...")
+    logger.info(f"[{now_str}] VPIN batch compute starting for {date_str}...")
 
     tickers = get_all_tickers()
     computed = 0
@@ -928,7 +1129,7 @@ def run_vpin_daily_batch(date_str=None):
     conn.commit()
     conn.close()
 
-    print(f"[{now_str}] VPIN batch done: {computed} computed, {errors} errors")
+    logger.warning(f"[{now_str}] VPIN batch done: {computed} computed, {errors} errors")
     return {'computed': computed, 'errors': errors, 'date': date_str}
 
 
@@ -940,7 +1141,7 @@ def run_vpin_backfill(days=90):
     """
     from engine.vpin import calc_vpin as _calc_vpin
     now_str = datetime.now(WIB).strftime('%H:%M')
-    print(f"[{now_str}] VPIN backfill starting ({days} days)...")
+    logger.info(f"[{now_str}] VPIN backfill starting ({days} days)...")
 
     try:
         conn = db_connect(DB_PATH)
@@ -984,7 +1185,7 @@ def run_vpin_backfill(days=90):
             conn.commit()
 
         conn.close()
-        print(f"[{now_str}] VPIN backfill done: {total_computed} computed, {total_errors} errors")
+        logger.warning(f"[{now_str}] VPIN backfill done: {total_computed} computed, {total_errors} errors")
         return {'computed': total_computed, 'errors': total_errors, 'dates': len(dates)}
     except Exception as _e:
         logging.error(f"[vpin_backfill] error: {_e}")
@@ -1010,6 +1211,20 @@ def run_forward_test_cycle(db_path=None, run_date=None):
     db = db_path or DB_PATH
     rd = run_date or datetime.now(WIB).strftime("%Y-%m-%d")
     try:
+        # Dedup guard (mirrors premarket/EOD) — first INSERT wins, so a systemd
+        # restart racing APScheduler never sends the Telegram report twice for
+        # the same run_date. Placed inside this function's own try/except
+        # (unlike the other two jobs) because run_forward_test_cycle's contract
+        # is to never raise on any error, including a broken db_path.
+        with db_connect(db) as _g:
+            _g.execute("CREATE TABLE IF NOT EXISTS _job_sentinel "
+                       "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))")
+            try:
+                _g.execute("INSERT INTO _job_sentinel VALUES ('forward_test_cycle', ?)", (rd,))
+            except sqlite3.IntegrityError:
+                logger.info(f"[forward_test] {rd}: already ran — skipped (dedup guard)")
+                return
+
         init_ft_tables(db)
         repo = FTRepo(db)
 
@@ -1030,10 +1245,19 @@ def run_forward_test_cycle(db_path=None, run_date=None):
         open_after = len(repo.get_open_shadow_positions())
         closed = _trade_count() - trades_before
         opened = (open_after - open_before) + closed
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Forward-test cycle {rd}: "
+        logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Forward-test cycle {rd}: "
               f"ingested={n_ingested} opened={opened} closed={closed} open_now={open_after}")
+
+        # Telegram reporting layer — reads back what the cycle above just wrote/
+        # already held; never recomputes a decision or exit level. Reporting
+        # errors must not mask a successful cycle, so this is its own try/except.
+        try:
+            from forward_testing.reporting import build_forward_test_report
+            send_telegram(build_forward_test_report(db, rd, repo=repo))
+        except Exception as e:
+            logger.warning(f"[forward_test] Telegram report error: {e}")
     except Exception as e:
-        print(f"[scheduler] Forward-test cycle error: {e}")
+        logger.warning(f"[scheduler] Forward-test cycle error: {e}")
 
 
 def run_phase5_bull_watch():

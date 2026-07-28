@@ -10,6 +10,7 @@ from engine.vpin import get_market_vpin_summary
 from engine.breadth import get_market_breadth
 from engine.technicals import detect_ihsg_technicals
 from engine.risk_score import compute_market_risk_score
+from data.db import connect as db_connect
 
 flow_bp = Blueprint("flow", __name__)
 
@@ -18,7 +19,7 @@ flow_bp = Blueprint("flow", __name__)
 def api_flow_monitor():
     from datetime import date
     today_str = str(date.today())
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     rows = conn.execute("""
         SELECT ticker, composite_score, verdict, smart_money,
                buy_lot, sell_lot, net_lot, updated_at
@@ -110,7 +111,7 @@ def check_flow():
 def api_broker_flow(ticker):
     ticker = ticker.upper()
     trade_date = request.args.get('date', None)
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     conn.row_factory = sqlite3.Row
 
     # Latest date if not specified — prefer broker_flow, fall back to stockbit_flow
@@ -170,7 +171,7 @@ def api_broker_flow(ticker):
 @flow_bp.route('/api/broker-flow/dates/<ticker>', methods=['GET'])
 def api_broker_flow_dates(ticker):
     ticker = ticker.upper()
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     dates_bf = [r[0] for r in conn.execute(
         "SELECT DISTINCT trade_date FROM broker_flow WHERE ticker=? ORDER BY trade_date DESC LIMIT 30",
         (ticker,)
@@ -196,7 +197,7 @@ def api_market_accdist():
 
     series = []
     if request.args.get('series'):
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         dates = [r[0] for r in conn.execute(
             "SELECT DISTINCT trade_date FROM bandar_detector "
             "ORDER BY trade_date DESC LIMIT 30"
@@ -217,7 +218,7 @@ def api_market_vpin():
       series — if set, also returns 30-day time series
     """
     query_date = request.args.get('date', str(date.today()))
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     summary = get_market_vpin_summary(conn, query_date)
 
     series = []
@@ -241,7 +242,7 @@ def api_market_technicals():
       date — YYYY-MM-DD (default today)
     """
     query_date = request.args.get('date', str(date.today()))
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     result = detect_ihsg_technicals(conn, query_date)
     conn.close()
     return jsonify(result)
@@ -256,7 +257,7 @@ def api_market_breadth():
       series — if set, returns last 30 trading dates as time series
     """
     query_date = request.args.get('date', str(date.today()))
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     summary = get_market_breadth(conn, query_date)
 
     series = []
@@ -279,7 +280,7 @@ def api_market_risk():
       date — YYYY-MM-DD (default today)
     """
     query_date = request.args.get('date', str(date.today()))
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
 
     vpin_s = get_market_vpin_summary(conn, query_date)
     accdist_s = get_market_accdist_summary(query_date)
@@ -484,7 +485,7 @@ def api_ticker_ohlcv_freq(ticker, freq):
     end   = request.args.get('end')
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         sql  = "SELECT date, open, high, low, close, volume FROM ohlcv WHERE ticker=? ORDER BY date ASC"
         df   = pd.read_sql_query(sql, conn, params=(ticker.upper(),))
         conn.close()

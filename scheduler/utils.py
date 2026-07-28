@@ -3,14 +3,14 @@ import os
 import sqlite3
 import logging
 import pandas as pd
-from dotenv import load_dotenv
 from datetime import datetime
 import pytz
 
-load_dotenv()
 
 WIB = pytz.timezone("Asia/Jakarta")
-DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
+logger = logging.getLogger(__name__)
+from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, Phase 5)
+DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -69,10 +69,10 @@ def fetch_latest():
     from data.fetcher import fetch_all_incremental, load_all_tickers
     now_str = datetime.now(WIB).strftime("%H:%M")
     tickers = load_all_tickers()
-    print(f"[{now_str}] Incremental fetch {len(tickers)} tickers...")
+    logger.info(f"[{now_str}] Incremental fetch {len(tickers)} tickers...")
     try:
         saved = fetch_all_incremental(category="ALL")
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Fetch selesai. {saved} bars saved.")
+        logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Fetch selesai. {saved} bars saved.")
         try:
             _cache = IndicatorCache()
             for t in tickers:
@@ -82,14 +82,14 @@ def fetch_latest():
         try:
             from engine.suspension_detector import scan_all as _scan_suspensions
             n_events = _scan_suspensions()
-            print(f"[{datetime.now(WIB).strftime('%H:%M')}] Suspension scan: {n_events} events written.")
+            logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Suspension scan: {n_events} events written.")
             n_alerts = send_suspension_resume_alerts()
             if n_alerts:
-                print(f"[{datetime.now(WIB).strftime('%H:%M')}] Suspension resume alerts: {n_alerts} sent.")
+                logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Suspension resume alerts: {n_alerts} sent.")
         except Exception as _scan_e:
             logging.exception("suspension scan failed (non-fatal): %s", _scan_e)
     except Exception as e:
-        print(f"[{datetime.now(WIB).strftime('%H:%M')}] Fetch error: {e}")
+        logger.warning(f"[{datetime.now(WIB).strftime('%H:%M')}] Fetch error: {e}")
         send_telegram(
             f"🔴 <b>OHLCV Fetch GAGAL</b>\n\n"
             f"<b>{len(tickers)} tickers</b> @ {now_str}\n"

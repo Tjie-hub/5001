@@ -19,6 +19,7 @@ bury or flood the validated setups.
 import logging
 import sqlite3
 from typing import Optional
+from data.db import connect as db_connect
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ def _priority(row: dict) -> int:
 
 
 def _conn(db_path: str) -> sqlite3.Connection:
-    c = sqlite3.connect(db_path)
+    c = db_connect(db_path)
     c.row_factory = sqlite3.Row
     return c
 

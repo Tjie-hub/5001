@@ -29,6 +29,7 @@ import json
 import sqlite3
 import argparse
 from typing import Optional
+from data.db import connect as db_connect
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -150,7 +151,7 @@ def _build(direction, smart_money, strong_set, *, extreme_pct, oversold_pct,
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def _get_conn(db_path: str = _DB_PATH) -> sqlite3.Connection:
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 

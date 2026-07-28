@@ -9,19 +9,14 @@ need (JSON in, JSON out). See design doc §9.
 
 import asyncio
 import json
-import re
 import subprocess
 import time
 from datetime import datetime, timezone
 
 from .base import ProviderCapabilities, ProviderResponse, strip_fences
-from .errors import (
-    ProviderQuotaExceeded, ProviderRateLimited, ProviderTimeout, ProviderUnavailable,
-)
+from .classification import classify_cli_failure, failure_to_exception
+from .errors import ProviderTimeout, ProviderUnavailable
 from .registry import register
-
-_QUOTA_PATTERNS = re.compile(r"usage limit|quota|out of credits", re.IGNORECASE)
-_RATE_LIMIT_PATTERNS = re.compile(r"rate limit|too many requests|429", re.IGNORECASE)
 
 
 @register("claude")
@@ -92,12 +87,15 @@ class ClaudeProvider:
         duration = time.monotonic() - start
 
         if proc.returncode != 0:
-            stderr_text = stderr.decode(errors="replace").strip()
-            if _QUOTA_PATTERNS.search(stderr_text):
-                raise ProviderQuotaExceeded(stderr_text or "claude CLI quota exceeded")
-            if _RATE_LIMIT_PATTERNS.search(stderr_text):
-                raise ProviderRateLimited(stderr_text or "claude CLI rate limited")
-            raise ProviderUnavailable(stderr_text or f"claude CLI exited {proc.returncode}")
+            # RCA 2026-07-10: the CLI writes quota diagnoses ("You've hit
+            # your session limit · resets …") to STDOUT with stderr empty —
+            # classify from both streams, never discard stdout.
+            failure = classify_cli_failure(
+                proc.returncode,
+                stdout=stdout.decode(errors="replace"),
+                stderr=stderr.decode(errors="replace"),
+            )
+            raise failure_to_exception(failure)
 
         try:
             result = json.loads(stdout.decode())

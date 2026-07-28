@@ -136,6 +136,16 @@ def init_agent_firm_tables():
             ON provider_events(provider, created_at);
     """)
 
+    # RCA 2026-07-10: session-limit events carry the advertised reset time
+    # (engine/agent_firm/providers/metrics.py::provider_stats() has queried
+    # this column since 2abeb4b/48b5d17; the migration adding it was never
+    # committed, so it only ever existed in an uncommitted local edit -- this
+    # is the first real CI run against committed HEAD (RC1), which is why it
+    # surfaced only now).
+    pe_cols = {r[1] for r in conn.execute("PRAGMA table_info(provider_events)")}
+    if "reset_time" not in pe_cols:
+        conn.execute("ALTER TABLE provider_events ADD COLUMN reset_time TEXT")
+
     cols = {r[1] for r in conn.execute("PRAGMA table_info(scheduled_signals)")}
     if "agent_decision_id" not in cols:
         conn.execute(

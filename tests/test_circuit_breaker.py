@@ -52,8 +52,10 @@ def test_missing_tier_defaults_to_closed():
 
 # ── run_premover_eod integration gate ────────────────────────────────────────
 
-def test_run_premover_eod_skips_trades_when_breaker_open(capsys):
+def test_run_premover_eod_skips_trades_when_breaker_open(caplog):
     """run_premover_eod should not open trades when circuit breaker is OPEN."""
+    import logging
+    caplog.set_level(logging.INFO)
     from scheduler.jobs import run_premover_eod
 
     # Bypass the holiday/weekend gate so this exercises the breaker branch
@@ -67,11 +69,11 @@ def test_run_premover_eod_skips_trades_when_breaker_open(capsys):
          patch('paper_trade.get_premover_mode', return_value='auto'):
         run_premover_eod()
 
-    out = capsys.readouterr().out
+    out = caplog.text
     assert 'circuit' in out.lower() or 'CRITICAL' in out or 'breaker' in out.lower()
 
 
-def test_run_premover_eod_proceeds_when_breaker_closed(capsys):
+def test_run_premover_eod_proceeds_when_breaker_closed(caplog):
     """run_premover_eod should attempt scans when circuit breaker is CLOSED."""
     from scheduler.jobs import run_premover_eod
 
@@ -82,6 +84,6 @@ def test_run_premover_eod_proceeds_when_breaker_closed(capsys):
          patch('paper_trade.get_premover_mode', return_value='shadow'):
         run_premover_eod()
 
-    out = capsys.readouterr().out
+    out = caplog.text
     # Circuit breaker must NOT have blocked the scan
     assert 'Circuit breaker OPEN' not in out

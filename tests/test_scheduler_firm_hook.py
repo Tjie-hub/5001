@@ -99,13 +99,15 @@ def test_gate_candidates_capped_at_20():
     assert len(evaluate_calls[0]) == 20, "must cap at 20 candidates for cost control"
 
 
-def test_gate_idle_log_when_intersection_empty(capsys):
+def test_gate_idle_log_when_intersection_empty(caplog):
     """When intersection_results is empty, agent logs idle instead of silently skipping."""
+    import logging
+    caplog.set_level(logging.INFO)
     _call_gate([], [],
                _mock_firm_module(lambda c: []),
                _mock_config_module(is_active=True))
 
-    assert "Agent firm: idle" in capsys.readouterr().out
+    assert "Agent firm: idle" in caplog.text
 
 
 def test_gate_shadow_mode_does_not_filter_flow_confirmed():

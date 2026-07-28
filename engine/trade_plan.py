@@ -198,6 +198,140 @@ def fallback_rank(cands: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+WATCHLIST_SNAPSHOT_DDL = """
+CREATE TABLE IF NOT EXISTS watchlist_snapshot (
+    date TEXT NOT NULL,
+    strategy TEXT NOT NULL,
+    ticker TEXT NOT NULL,
+    rank INTEGER NOT NULL,
+    confidence REAL,
+    conviction REAL,
+    confluence INTEGER,
+    sources TEXT,
+    PRIMARY KEY (date, strategy, ticker)
+)
+"""
+
+UPGRADE_DELTA = 0.05  # confidence-delta threshold for "upgraded"/"downgraded" vs noise
+
+
+def ensure_watchlist_snapshot_table(conn: sqlite3.Connection) -> None:
+    conn.execute(WATCHLIST_SNAPSHOT_DDL)
+    conn.commit()
+
+
+def record_snapshot(conn: sqlite3.Connection, date_str: str, strategy: str,
+                    ranked: list[dict[str, Any]]) -> None:
+    """Persist today's ranked watchlist so a future day's report can diff against
+    it. One row per ticker, keyed by (date, strategy, ticker); INSERT OR REPLACE
+    so a same-day re-run never duplicates rows. Reporting-only — writes rank/
+    confidence/conviction as already decided elsewhere, never recomputes them."""
+    ensure_watchlist_snapshot_table(conn)
+    for i, c in enumerate(ranked, 1):
+        conn.execute(
+            "INSERT OR REPLACE INTO watchlist_snapshot "
+            "(date, strategy, ticker, rank, confidence, conviction, confluence, sources) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (date_str, strategy, c["ticker"], i,
+             c.get("confidence"), c.get("conviction"), c.get("confluence"),
+             json.dumps(c.get("sources") or [])),
+        )
+    conn.commit()
+
+
+def diff_watchlist(conn: sqlite3.Connection, date_str: str, strategy: str,
+                   ranked: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
+    """Diff today's ranked watchlist against the most recent prior `strategy`
+    snapshot. Returns None when there's no prior snapshot (first run ever, or
+    after a gap). Pure function over persisted + in-memory data — never
+    recomputes scores/ranks, only compares numbers already decided elsewhere."""
+    ensure_watchlist_snapshot_table(conn)
+    row = conn.execute(
+        "SELECT MAX(date) FROM watchlist_snapshot WHERE strategy=? AND date<?",
+        (strategy, date_str),
+    ).fetchone()
+    prior_date = row[0] if row else None
+    if not prior_date:
+        return None
+
+    prior = {}
+    for t, rank, confidence, sources_json in conn.execute(
+        "SELECT ticker, rank, confidence, sources FROM watchlist_snapshot "
+        "WHERE strategy=? AND date=?", (strategy, prior_date)).fetchall():
+        try:
+            src = json.loads(sources_json) if sources_json else []
+        except (ValueError, TypeError):
+            src = []
+        prior[t] = {"rank": rank, "confidence": confidence, "sources": src}
+
+    current = {c["ticker"]: {"rank": i, "confidence": c.get("confidence"),
+                             "sources": c.get("sources") or []}
+              for i, c in enumerate(ranked, 1)}
+
+    added = sorted(t for t in current if t not in prior)
+    removed = sorted(t for t in prior if t not in current)
+
+    changes = []
+    for t, cur in current.items():
+        if t not in prior:
+            continue
+        p = prior[t]
+        rank_change = (p["rank"] - cur["rank"]) if p["rank"] is not None else None
+        score_delta = None
+        if p["confidence"] is not None and cur["confidence"] is not None:
+            score_delta = cur["confidence"] - p["confidence"]
+        status = "unchanged"
+        if score_delta is not None:
+            if score_delta >= UPGRADE_DELTA:
+                status = "upgraded"
+            elif score_delta <= -UPGRADE_DELTA:
+                status = "downgraded"
+        changes.append({
+            "ticker": t, "prior_rank": p["rank"], "rank": cur["rank"],
+            "rank_change": rank_change, "prior_confidence": p["confidence"],
+            "confidence": cur["confidence"], "score_delta": score_delta,
+            "status": status, "prior_sources": p["sources"], "sources": cur["sources"],
+        })
+    changes.sort(key=lambda c: abs(c["score_delta"] or 0), reverse=True)
+
+    return {"prior_date": prior_date, "added": added, "removed": removed,
+            "changes": changes}
+
+
+_MAX_DIFF_ROWS = 10
+
+
+def _build_diff_section(diff: Optional[dict[str, Any]]) -> list[str]:
+    """Telegram-text lines for the Watchlist Changes section. Empty when there's
+    no prior snapshot or nothing changed."""
+    if not diff:
+        return []
+    added, removed, changes = diff["added"], diff["removed"], diff["changes"]
+    moved = [c for c in changes if c["status"] != "unchanged"]
+    if not added and not removed and not moved:
+        return []
+
+    L = ["", f"<b>📈 WATCHLIST CHANGES</b> <i>(vs {diff['prior_date']})</i>"]
+    if added:
+        shown = ", ".join(html.escape(t) for t in added[:_MAX_DIFF_ROWS])
+        extra = f" (+{len(added) - _MAX_DIFF_ROWS} more)" if len(added) > _MAX_DIFF_ROWS else ""
+        L.append(f"🆕 Added: {shown}{extra}")
+    if removed:
+        shown = ", ".join(html.escape(t) for t in removed[:_MAX_DIFF_ROWS])
+        extra = f" (+{len(removed) - _MAX_DIFF_ROWS} more)" if len(removed) > _MAX_DIFF_ROWS else ""
+        L.append(f"👋 Removed: {shown}{extra}")
+    for c in moved[:_MAX_DIFF_ROWS]:
+        arrow = "🔼" if c["status"] == "upgraded" else "🔽"
+        rank_txt = (f" rank {c['prior_rank']}→{c['rank']}"
+                   if c["rank_change"] else "")
+        delta_txt = (f" conf {c['prior_confidence']:.2f}→{c['confidence']:.2f} "
+                    f"({c['score_delta']:+.2f})" if c["score_delta"] is not None else "")
+        L.append(f"{arrow} <b>{html.escape(c['ticker'])}</b>{rank_txt}{delta_txt}")
+    if len(moved) > _MAX_DIFF_ROWS:
+        L.append(f"…+{len(moved) - _MAX_DIFF_ROWS} more moves")
+    return L
+
+
 def get_vpin_gate(conn: sqlite3.Connection, date_str: str) -> Optional[dict]:
     """Return market VPIN summary for the most recently settled date (≤ date_str).
 
@@ -275,12 +409,18 @@ def build_message(ranked: list[dict[str, Any]],
                   date_str: str,
                   degraded: bool = False,
                   vpin_summary: Optional[dict] = None,
-                  provider_line: Optional[str] = None) -> str:
+                  provider_line: Optional[str] = None,
+                  diff: Optional[dict[str, Any]] = None,
+                  watchlist_size: Optional[int] = None) -> str:
     """Single Telegram HTML message. No raw <,>,& in dynamic text (tickers/numbers
     only), so HTML parse_mode is safe.
 
     vpin_summary: result of get_vpin_gate() — adds a VPIN warning banner when
     market microstructure is RED or CRITICAL.
+    diff: result of diff_watchlist() — adds a Watchlist Changes section
+    (added/removed/upgraded/downgraded/rank+score deltas) when present.
+    watchlist_size: total candidate pool size before firm filtering, for the
+    Daily Summary line (distinct from len(ranked), the firm-approved count).
     """
     tier, score = regime
     emoji = _REGIME_EMOJI.get(tier, "⚪")
@@ -291,6 +431,8 @@ def build_message(ranked: list[dict[str, Any]],
     L = [f"<b>📊 IDX TRADE PLAN — {date_str}</b>",
          f"{emoji} Regime <b>{tier}</b> ({score_txt}) — next-session longs",
          f"<i>{subtitle}</i>"]
+    if watchlist_size is not None:
+        L.append(f"Watchlist: {watchlist_size} candidates → {len(ranked)} approved")
 
     vpin_lbl = (vpin_summary or {}).get('label')
     if vpin_lbl in _VPIN_GATE_LABELS:
@@ -307,6 +449,7 @@ def build_message(ranked: list[dict[str, Any]],
         L.append("No firm-approved long setups today.")
         L.append("")
         L.append("<i>broker_flow/VPIN settle ~20:15; flow on last settled day.</i>")
+        L.extend(_build_diff_section(diff))
         if provider_line:
             L.append("")
             L.append(provider_line)
@@ -324,6 +467,7 @@ def build_message(ranked: list[dict[str, Any]],
     L.append("")
     L.append("<i>R=reversal S=screen V=volume P=premarket · "
              "broker_flow/VPIN settle ~20:15.</i>")
+    L.extend(_build_diff_section(diff))
     if provider_line:
         L.append("")
         L.append(provider_line)

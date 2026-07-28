@@ -45,3 +45,17 @@ data products: **only `research/` writes them** (CI-enforced by
 dashboards); each such reader's retirement toward registry-artifact evidence is a
 future, separate decision. `ensure_wf_edge_table` (idempotent CREATE) stays usable by
 readers — schema-safety, not a data write.
+
+## Lifecycle evidence (R-10 enforcement)
+
+A `SHADOW`/`APPROVED` entry must carry a verifiable receipt in its manifest. `SHADOW` needs a
+Phase C PROMOTE `gate_decision`; `APPROVED` also needs a Phase 5 forward `GO` clearing the
+frozen bar (`min_n=15, go_exp=0.50`). Enforced by `tests/test_registry_lifecycle.py` (CI, hard)
+and `engine/registry_loader.validate_evidence` (runtime WARN, non-breaking). Pre-R-10 entries
+may be grandfathered in `registry_loader._LIFECYCLE_DEBT` (shrink-only, with a remediation
+deadline).
+
+    evidence:
+      gate_decision: {decision_id, final_state: PROMOTE_TO_FORWARD_TEST, config_hash, dataset_fingerprint}
+      forward:        # APPROVED only
+        {verdict: GO, n, exp_pct, rule: {min_n: 15, go_exp: 0.50}, as_of}

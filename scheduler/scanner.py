@@ -2,15 +2,15 @@
 import os
 import sqlite3
 import logging
-from dotenv import load_dotenv
 from datetime import datetime
 import pytz
 import pandas as pd
 
-load_dotenv()
 
 WIB = pytz.timezone("Asia/Jakarta")
-DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
+logger = logging.getLogger(__name__)
+from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, Phase 5)
+DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 
 from utils.telegram import send_telegram  # noqa: E402
 from data.db import connect as db_connect  # noqa: E402
@@ -522,7 +522,7 @@ def scan_momentum_signals():
 
 def daily_signal_scan():
     """Job harian: fetch data lalu scan signal."""
-    print(f"[{datetime.now(WIB).strftime('%H:%M')}] Daily scan dimulai...")
+    logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Daily scan dimulai...")
 
     # 1. Fetch data terbaru
     fetch_latest()
@@ -568,17 +568,17 @@ def daily_signal_scan():
         msg = f"📊 <b>Momentum Signal — {now}</b>\n\nTidak ada sinyal Momentum hari ini."
 
     send_telegram(msg)
-    print(f"[{datetime.now(WIB).strftime('%H:%M')}] Scan selesai. {len(signals)} signals ditemukan.")
+    logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Scan selesai. {len(signals)} signals ditemukan.")
 
     # ── AUTO-OPEN PAPER TRADE ──
     # Momentum-family entries are blocked during macro panic state
     # (Daniel-Moskowitz) and the MSCI event-risk window.
     _guard_on, _guard_mult = _event_guard_active()
     if signals and _macro_panic_state():
-        print(f"[AutoTrade] Macro panic state — momentum entries blocked ({len(signals)} signals skipped)")
+        logger.info(f"[AutoTrade] Macro panic state — momentum entries blocked ({len(signals)} signals skipped)")
         signals_to_open = []
     elif signals and _guard_on:
-        print(f"[AutoTrade] Event guard active — momentum entries blocked ({len(signals)} signals skipped)")
+        logger.info(f"[AutoTrade] Event guard active — momentum entries blocked ({len(signals)} signals skipped)")
         signals_to_open = []
     else:
         signals_to_open = signals
@@ -596,10 +596,10 @@ def daily_signal_scan():
             auto_opened = []
             for s in signals_to_open:
                 if len(opened) >= max_open:
-                    print(f"[AutoTrade] Max posisi ({max_open}) tercapai, skip {s['ticker']}")
+                    logger.info(f"[AutoTrade] Max posisi ({max_open}) tercapai, skip {s['ticker']}")
                     break
                 if any(t["ticker"] == s["ticker"] for t in opened):
-                    print(f"[AutoTrade] {s['ticker']} sudah ada posisi terbuka, skip")
+                    logger.info(f"[AutoTrade] {s['ticker']} sudah ada posisi terbuka, skip")
                     continue
 
                 # Quality gate — skip entries the backtest rates as coin-flips.
@@ -609,13 +609,13 @@ def daily_signal_scan():
                     _bt_ret = _bt["best_return"] if _bt["best_return"] is not None else 0.0
                     _bt_wr  = _bt["win_rate"]    if _bt["win_rate"]    is not None else 0.0
                     if _bt_ret < 1.0 or _bt_wr < 40.0:
-                        print(f"[AutoTrade] {s['ticker']} skipped — backtest weak "
+                        logger.info(f"[AutoTrade] {s['ticker']} skipped — backtest weak "
                               f"(ret={_bt_ret:.2f}%, win={_bt_wr:.0f}%)")
                         continue
 
                 result = open_trade(s["ticker"], s["close"], notify=False)
                 if "error" in result:
-                    print(f"[AutoTrade] {s['ticker']} error: {result['error']}")
+                    logger.warning(f"[AutoTrade] {s['ticker']} error: {result['error']}")
                 else:
                     auto_opened.append(result)
                     opened.append(result)  # update local list
@@ -627,14 +627,14 @@ def daily_signal_scan():
                         f"   Lot: {result['lots']} | Modal: Rp {result['capital_used']:,.0f}"
                     )
                     send_telegram(notif)
-                    print(f"[AutoTrade] Opened: {result['ticker']} @ {result['entry_price']}")
+                    logger.info(f"[AutoTrade] Opened: {result['ticker']} @ {result['entry_price']}")
 
             if auto_opened:
-                print(f"[AutoTrade] {len(auto_opened)} trade dibuka otomatis.")
+                logger.info(f"[AutoTrade] {len(auto_opened)} trade dibuka otomatis.")
             else:
-                print(f"[AutoTrade] Tidak ada trade baru dibuka.")
+                logger.info(f"[AutoTrade] Tidak ada trade baru dibuka.")
         except Exception as e:
-            print(f"[AutoTrade] Error: {e}")
+            logger.warning(f"[AutoTrade] Error: {e}")
 
     return signals
 
@@ -698,7 +698,7 @@ def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
         disabled = _get_disabled_strategies()
         return [s for s in selectable if s not in disabled]
     except Exception as e:
-        print(f"[get_best_strategies] {ticker} error: {e}")
+        logger.warning(f"[get_best_strategies] {ticker} error: {e}")
         return []
 
 
@@ -986,7 +986,7 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
             return flow_confirmed
 
         if not intersection_results:
-            print(f"[{time_str}] Agent firm: idle (no strategy signals generated)")
+            logger.info(f"[{time_str}] Agent firm: idle (no strategy signals generated)")
             return flow_confirmed
 
         _candidates = [
@@ -1002,7 +1002,7 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
             for r in intersection_results[:20]
         ]
         _decisions = _firm.evaluate_staged(_candidates)
-        print(f"[{time_str}] Agent firm: {len(_decisions)} evaluated"
+        logger.info(f"[{time_str}] Agent firm: {len(_decisions)} evaluated"
               f" ({sum(1 for d in _decisions if d.decision == 'approve')} approved"
               f", {sum(1 for d in _decisions if d.decision == 'veto')} vetoed)")
 
@@ -1039,7 +1039,7 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
 
         return flow_confirmed
     except Exception as _err:
-        print(f"[{time_str}] Agent firm error (fail-open): {_err}")
+        logger.warning(f"[{time_str}] Agent firm error (fail-open): {_err}")
         return flow_confirmed
 
 
@@ -1078,7 +1078,7 @@ def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
 
         _fresh = [t for t in list(watchlist_tickers)[:20] if t not in _already]
         if not _fresh:
-            print(f"[{time_str}] Bear watchlist ranking: all tickers already approved today, skipping")
+            logger.info(f"[{time_str}] Bear watchlist ranking: all tickers already approved today, skipping")
             return
 
         _candidates = [
@@ -1108,7 +1108,7 @@ def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
 
         logging.info(f"[{time_str}] Bear watchlist ranking (no alert): {[d.ticker for d in _approved]}")
     except Exception as _err:
-        print(f"[{time_str}] Bear watchlist ranking error (fail-silent): {_err}")
+        logger.warning(f"[{time_str}] Bear watchlist ranking error (fail-silent): {_err}")
 
 
 def _ensure_scheduled_signals_table(conn):
@@ -1215,16 +1215,16 @@ def scheduled_multi_strategy_scan():
     # Market-closed gate — skip entirely on weekends and IDX public holidays
     _open, _closed_reason = is_trading_day()
     if not _open:
-        print(f"[{time_str}] Pasar tutup: {_closed_reason} — scan skipped.")
+        logger.info(f"[{time_str}] Pasar tutup: {_closed_reason} — scan skipped.")
         return
 
     # Calendar blackout gate
     _blackout, _bl_reason = is_blackout_day()
     if _blackout:
-        print(f"[{time_str}] BLACKOUT: {_bl_reason} — scan skipped.")
+        logger.info(f"[{time_str}] BLACKOUT: {_bl_reason} — scan skipped.")
         return
 
-    print(f"[{time_str}] Starting multi-strategy scan...")
+    logger.info(f"[{time_str}] Starting multi-strategy scan...")
 
     # ── Composite market risk score ───────────────────────────────────────────
     _market_risk = None
@@ -1247,7 +1247,7 @@ def scheduled_multi_strategy_scan():
             _rs_foreign = None
         _rs_conn.close()
         _market_risk = _compute_risk(_rs_vpin, _rs_accdist, _rs_breadth, _rs_tech, _rs_foreign)
-        print(f"[{time_str}] Market risk score: {_market_risk['score']:.1f}/100 — {_market_risk['tier']}")
+        logger.info(f"[{time_str}] Market risk score: {_market_risk['score']:.1f}/100 — {_market_risk['tier']}")
         # Route alert based on tier
         try:
             from engine.risk_alert import route_risk_alert as _route_alert
@@ -1264,7 +1264,7 @@ def scheduled_multi_strategy_scan():
         from flow_filter import get_market_accdist_summary as _get_accdist
         _accdist = _get_accdist(date_str)
         if _accdist['total'] > 0:
-            print(f"[{time_str}] Market accdist: {_accdist['label']} "
+            logger.info(f"[{time_str}] Market accdist: {_accdist['label']} "
                   f"(dist={_accdist['dist_pct']}% acc={_accdist['acc_pct']}% "
                   f"score={_accdist['avg_numeric_score']:+.3f})")
     except Exception as _ae:
@@ -1283,7 +1283,7 @@ def scheduled_multi_strategy_scan():
                 flags.append('LOWER_HIGH')
             if _tech['support_breaks']:
                 flags.append(f"BROKE {','.join(_tech['support_breaks'])}")
-            print(f"[{time_str}] IHSG technicals: {_tech['label']} "
+            logger.info(f"[{time_str}] IHSG technicals: {_tech['label']} "
                   f"({', '.join(flags) if flags else 'no flags'}) "
                   f"close={_tech['close']:,.0f} MA5={_tech['ma5']:,.0f} MA20={_tech.get('ma20', 0) or 0:,.0f}")
             if _tech['label'] in ('BEARISH_TREND', 'DOWNTREND') and _tech['death_cross']:
@@ -1304,7 +1304,7 @@ def scheduled_multi_strategy_scan():
         _breadth = _get_breadth(_breadth_conn, date_str)
         _breadth_conn.close()
         if _breadth['total'] > 0:
-            print(f"[{time_str}] Market breadth: {_breadth['label']} "
+            logger.info(f"[{time_str}] Market breadth: {_breadth['label']} "
                   f"(adv={_breadth['pct_advancing']}% dec={100-_breadth['pct_advancing']-(_breadth['unchanged']/_breadth['total']*100):.1f}% "
                   f"above_ma20={_breadth['pct_above_ma20']}%)")
     except Exception as _be:
@@ -1316,7 +1316,7 @@ def scheduled_multi_strategy_scan():
         _vpin_summary = _get_vpin(_vpin_conn, date_str)
         _vpin_conn.close()
         if _vpin_summary['tickers_with_vpin'] > 0:
-            print(f"[{time_str}] Market VPIN: {_vpin_summary['label']} "
+            logger.info(f"[{time_str}] Market VPIN: {_vpin_summary['label']} "
                   f"(avg={_vpin_summary['avg_vpin']:.4f} "
                   f">0.8={_vpin_summary['pct_above_08']}% "
                   f">0.95={_vpin_summary['pct_above_095']}%)")
@@ -1414,10 +1414,10 @@ def scheduled_multi_strategy_scan():
                 })
 
         except Exception as e:
-            print(f"[Scan] {ticker} error: {e}")
+            logger.warning(f"[Scan] {ticker} error: {e}")
             continue
     _liq_conn.close()
-    print(f"[{time_str}] Adaptive strategy signals: {len(intersection_results)} tickers")
+    logger.info(f"[{time_str}] Adaptive strategy signals: {len(intersection_results)} tickers")
 
     if len(intersection_results) > 0:
         result_tickers = [r['ticker'] for r in intersection_results]
@@ -1438,7 +1438,7 @@ def scheduled_multi_strategy_scan():
                 else:
                     r['flow'] = {'score': None, 'verdict': 'UNAVAILABLE', 'confirmed': False}
         except Exception as e:
-            print(f"[{time_str}] Flow fetch error: {e}")
+            logger.warning(f"[{time_str}] Flow fetch error: {e}")
             from engine.fail_open_alarm import fail_open_alarm
             fail_open_alarm("flow_batch", f"flow fetch failed: {str(e)[:120]}",
                             count=len(intersection_results))
@@ -1446,7 +1446,7 @@ def scheduled_multi_strategy_scan():
                 r['flow'] = {'score': None, 'verdict': 'UNAVAILABLE', 'confirmed': False}
 
     flow_confirmed = [r for r in intersection_results if r.get('flow', {}).get('confirmed', False)]
-    print(f"[{time_str}] Flow confirmed (>= +{flow_threshold}): {len(flow_confirmed)} tickers")
+    logger.info(f"[{time_str}] Flow confirmed (>= +{flow_threshold}): {len(flow_confirmed)} tickers")
 
     try:
         conn = db_connect(DB_PATH)
@@ -1475,14 +1475,14 @@ def scheduled_multi_strategy_scan():
         sell_signals = scan_distribution_signals(ohlcv_map, date_str, time_str)
         if sell_signals:
             _save_signals_to_db(conn, sell_signals, date_str, time_str)
-            print(f"[{time_str}] SELL signals (distribution): {len(sell_signals)} tickers")
+            logger.info(f"[{time_str}] SELL signals (distribution): {len(sell_signals)} tickers")
         # ─────────────────────────────────────────────────────────────────────
 
         conn.commit()
         conn.close()
-        print(f"[{time_str}] Saved {len(flow_confirmed)} BUY + {len(sell_signals)} SELL signals to DB")
+        logger.info(f"[{time_str}] Saved {len(flow_confirmed)} BUY + {len(sell_signals)} SELL signals to DB")
     except Exception as e:
-        print(f"[{time_str}] DB save error: {e}")
+        logger.warning(f"[{time_str}] DB save error: {e}")
 
     # ── Bear dip-scout watchlist ──────────────────────────────────────────────
     # Scan the FULL universe (not just signal-producing tickers — bears don't
@@ -1510,7 +1510,7 @@ def scheduled_multi_strategy_scan():
         # BEAR->BULL recovery on IDX is ~59 cal days; 30d expired ~80% unpromoted)
         _expired = _wl_expire(_wl_conn, scan_date=date_str, max_calendar_days=60)
         if _expired:
-            print(f"[{time_str}] Watchlist expired: {_expired}")
+            logger.warning(f"[{time_str}] Watchlist expired: {_expired}")
 
         _bear_added = []
         _bull_tickers = []
@@ -1548,16 +1548,16 @@ def scheduled_multi_strategy_scan():
             flow_confirmed = _pri_fc + _rest_fc
 
         if _bear_added:
-            print(f"[{time_str}] Watchlist added (BEAR oversold): {_bear_added}")
+            logger.info(f"[{time_str}] Watchlist added (BEAR oversold): {_bear_added}")
         if _promoted:
-            print(f"[{time_str}] Watchlist promoted (→BULL): {_promoted}")
+            logger.info(f"[{time_str}] Watchlist promoted (→BULL): {_promoted}")
 
         _wl_conn.close()
 
         # Rank active watchlist via agent firm and send Telegram digest
         rank_bear_watchlist_and_notify(list(_priority), date_str, time_str)
     except Exception as _wl_err:
-        print(f"[{time_str}] Bear watchlist error (fail-open): {_wl_err}")
+        logger.warning(f"[{time_str}] Bear watchlist error (fail-open): {_wl_err}")
     # ── End bear watchlist ────────────────────────────────────────────────────
 
     # ── Pre-LLM edge veto (Phase 3, gated by EDGE_SCORE_MODE) ─────────────────
@@ -1585,7 +1585,7 @@ def scheduled_multi_strategy_scan():
                 entry_price = signal_details.get(first_strategy, {}).get('price')
 
                 if not entry_price:
-                    print(f"[{time_str}] {ticker}: No price found, skipping")
+                    logger.info(f"[{time_str}] {ticker}: No price found, skipping")
                     continue
 
                 # Check trend filter — counter-trend strategies (Crash
@@ -1596,7 +1596,7 @@ def scheduled_multi_strategy_scan():
                     trend = check_trend(ticker)
 
                     if trend != 'UPTREND':
-                        print(f"[{time_str}] {ticker}: Trend={trend}, skipping (not UPTREND)")
+                        logger.info(f"[{time_str}] {ticker}: Trend={trend}, skipping (not UPTREND)")
                         auto_trade_results.append({
                             'ticker': ticker,
                             'success': False,
@@ -1627,14 +1627,14 @@ def scheduled_multi_strategy_scan():
                                           lots_multiplier=_size_mult, **_ot_kwargs)
 
                 if 'error' in trade_result:
-                    print(f"[{time_str}] {ticker}: {trade_result['error']}")
+                    logger.warning(f"[{time_str}] {ticker}: {trade_result['error']}")
                     auto_trade_results.append({
                         'ticker': ticker,
                         'success': False,
                         'reason': trade_result['error']
                     })
                 else:
-                    print(f"[{time_str}] {ticker}: Paper trade opened - ID {trade_result['id']}, {trade_result['lots']} lots @ {entry_price}")
+                    logger.info(f"[{time_str}] {ticker}: Paper trade opened - ID {trade_result['id']}, {trade_result['lots']} lots @ {entry_price}")
                     auto_trade_results.append({
                         'ticker': ticker,
                         'success': True,
@@ -1646,7 +1646,7 @@ def scheduled_multi_strategy_scan():
                         'capital_used': trade_result['capital_used']
                     })
             except Exception as e:
-                print(f"[{time_str}] {ticker}: Trade open error: {e}")
+                logger.warning(f"[{time_str}] {ticker}: Trade open error: {e}")
                 auto_trade_results.append({
                     'ticker': ticker,
                     'success': False,
@@ -1690,5 +1690,5 @@ def scheduled_multi_strategy_scan():
 
         send_telegram(msg)
     else:
-        print(f"[{time_str}] No flow-confirmed signals (strategy pass: {len(intersection_results)}) — silent.")
-    print(f"[{time_str}] Multi-strategy scan complete.\n")
+        logger.info(f"[{time_str}] No flow-confirmed signals (strategy pass: {len(intersection_results)}) — silent.")
+    logger.info(f"[{time_str}] Multi-strategy scan complete.\n")

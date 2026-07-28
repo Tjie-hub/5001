@@ -40,9 +40,37 @@ def test_cycle_is_idempotent(ft_db, repo):
     assert len(repo.get_open_shadow_positions()) == 1
 
 
-def test_cycle_failsoft_on_bad_db(capsys):
+def test_cycle_failsoft_on_bad_db(caplog):
     """A broken db_path must not raise -- the scheduler must survive."""
     from scheduler.jobs import run_forward_test_cycle
     run_forward_test_cycle(db_path="/nonexistent/dir/x.db", run_date="2026-06-26")
-    out = capsys.readouterr().out
-    assert "Forward-test cycle error" in out
+    assert "Forward-test cycle error" in caplog.text
+
+
+def test_cycle_sends_forward_test_telegram_report(ft_db, repo, monkeypatch):
+    """Phase 3 wiring: a successful cycle sends the Telegram reporting layer's
+    message (audit 2026-07-28) — reporting only, no change to ingest/open/exit."""
+    import scheduler.jobs as jobs_mod
+    sent = []
+    monkeypatch.setattr(jobs_mod, "send_telegram", lambda text: sent.append(text))
+
+    _seed(ft_db)
+    jobs_mod.run_forward_test_cycle(db_path=ft_db, run_date="2026-06-26")   # ingest only
+    jobs_mod.run_forward_test_cycle(db_path=ft_db, run_date="2026-06-27")   # opens BBCA
+
+    assert len(sent) == 2
+    assert "FORWARD TEST SUMMARY" in sent[-1]
+    assert "New: 1" in sent[-1] and "BBCA" in sent[-1]
+
+
+def test_cycle_dedup_guard_sends_telegram_only_once_per_run_date(ft_db, repo, monkeypatch):
+    import scheduler.jobs as jobs_mod
+    sent = []
+    monkeypatch.setattr(jobs_mod, "send_telegram", lambda text: sent.append(text))
+
+    _seed(ft_db)
+    jobs_mod.run_forward_test_cycle(db_path=ft_db, run_date="2026-06-26")
+    jobs_mod.run_forward_test_cycle(db_path=ft_db, run_date="2026-06-27")
+    jobs_mod.run_forward_test_cycle(db_path=ft_db, run_date="2026-06-27")   # dup -> no 2nd send
+
+    assert len(sent) == 2   # one for 06-26, one for 06-27; the repeat 06-27 sent nothing new

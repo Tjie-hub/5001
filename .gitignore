@@ -1,6 +1,7 @@
 .env
 .env.local
 .stockbit_token
+.stockbit_token.lock
 .playwright_state/
 logs/
 *.log
@@ -61,3 +62,4 @@ memory/
 
 # git worktrees (superpowers:using-git-worktrees)
 .worktrees/
+data/reports/

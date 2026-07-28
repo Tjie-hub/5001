@@ -8,6 +8,7 @@ import logging
 import requests
 from flask import Blueprint, jsonify, request
 
+from data.db import connect as db_connect
 from config import (
     DB_PATH,
     TELEGRAM_TOKEN,
@@ -16,6 +17,7 @@ from config import (
     WEBHOOK_URL,
     WEBHOOK_PATH,
 )
+from utils.logging_config import redact_secrets
 
 telegram_bp = Blueprint("telegram_bot", __name__)
 
@@ -69,6 +71,7 @@ def send_telegram_reply(chat_id, text):
     if "ISI_" in TELEGRAM_TOKEN:
         print(f"[Telegram skip] ChatID:{chat_id} - {text}")
         return
+    text = redact_secrets(text)  # RC1 fix R-4 — same rule as send_telegram()/log lines
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         requests.post(url, json={
@@ -83,7 +86,7 @@ def handle_status_command(chat_id):
     """Get current trading status."""
     try:
         import sqlite3
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
 
         # Get recent trades
         recent = conn.execute(
@@ -108,7 +111,7 @@ def handle_signals_command(chat_id):
         import sqlite3, pandas as pd
         from datetime import datetime, timedelta
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
 
         # Get tickers with recent data
         tickers = [r[0] for r in conn.execute(
@@ -126,7 +129,7 @@ def handle_flow_command(chat_id):
     """Get flow confirmation status."""
     try:
         import sqlite3
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
 
         # Get any flow data available
         flow_count = conn.execute(

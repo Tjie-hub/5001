@@ -1,16 +1,19 @@
 # scheduler/__init__.py
 import os
 import sqlite3
-from dotenv import load_dotenv
+import time as _time
+from typing import Optional
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.events import EVENT_JOB_ERROR
 import pytz
 import logging
 
-load_dotenv()
 
 WIB = pytz.timezone("Asia/Jakarta")
-DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
+logger = logging.getLogger(__name__)
+from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, Phase 5)
+DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -72,6 +75,94 @@ from scheduler.reports import (  # noqa: F401
 )
 
 
+# Cooldown between repeated Telegram alerts for the SAME job_id (RC1 fix R-2,
+# 2026-07-28 — scheduler/ is one of the documented exceptions allowed its own
+# os.getenv(), per CLAUDE.md). Default 1h: long enough that a job stuck failing
+# every 5 min (the shortest cron interval in this file) doesn't spam Telegram,
+# short enough that a real, still-unresolved outage gets re-surfaced same-shift.
+JOB_ERROR_ALERT_COOLDOWN_S = float(os.getenv("SCHEDULER_JOB_ERROR_COOLDOWN_S", "3600"))
+
+
+def format_job_error_alert(job_id: str, job_name: Optional[str], exception: BaseException,
+                           suppressed: int = 0) -> str:
+    """Telegram text for an uncaught APScheduler job exception (audit 2026-07-28).
+
+    Closes a silent-failure gap: the dead-man's-switch heartbeat only proves the
+    scheduler *process* is alive, not that any individual job succeeded — several
+    jobs (e.g. run_ohlcv_reconciliation, run_phase5_bull_watch) only logged a
+    warning on exception with no alert at all. Pure formatter so it's testable
+    without a live BackgroundScheduler.
+
+    suppressed: count of further failures of this same job_id that were
+    rate-limited (not alerted) since the last alert — surfaced here so a
+    quieted repeat failure doesn't look identical to the first occurrence.
+    """
+    name = job_name or job_id
+    tail = (f"\n<i>(+{suppressed} more failure{'s' if suppressed != 1 else ''} "
+           f"suppressed since last alert)</i>" if suppressed else "")
+    return (f"🔴 <b>Scheduler Job Failed</b>\n\n"
+            f"<b>{name}</b> (<code>{job_id}</code>)\n"
+            f"<code>{str(exception)[:300]}</code>{tail}")
+
+
+class JobErrorRateLimiter:
+    """Per-job_id cooldown gate for EVENT_JOB_ERROR alerts (RC1 fix R-2).
+
+    Bounded memory: one (last_alert_time, suppressed_count) pair per distinct
+    job_id ever seen — at most ~20 entries for this scheduler, never grows per
+    event. Deterministic: the clock is injectable so tests never depend on
+    real wall-clock timing. The first failure for a given job_id always
+    alerts (nothing to suppress against yet); a repeat failure within
+    `cooldown_s` of the last alert is counted but not sent; the next alert
+    after cooldown expiry reports how many were suppressed in between.
+    """
+
+    def __init__(self, cooldown_s: float = None, clock=_time.monotonic):
+        self.cooldown_s = JOB_ERROR_ALERT_COOLDOWN_S if cooldown_s is None else cooldown_s
+        self._clock = clock
+        self._last_alert: dict[str, float] = {}
+        self._suppressed: dict[str, int] = {}
+
+    def should_alert(self, job_id: str) -> tuple[bool, int]:
+        """Call exactly once per error event. Returns (should_alert, suppressed_count).
+        When True, the suppressed counter for job_id is consumed (returned) and reset."""
+        now = self._clock()
+        last = self._last_alert.get(job_id)
+        if last is not None and (now - last) < self.cooldown_s:
+            self._suppressed[job_id] = self._suppressed.get(job_id, 0) + 1
+            return False, 0
+        suppressed = self._suppressed.pop(job_id, 0)
+        self._last_alert[job_id] = now
+        return True, suppressed
+
+
+def _make_job_error_listener(scheduler, rate_limiter: "JobErrorRateLimiter" = None):
+    """Bind a job-error listener to `scheduler` for EVENT_JOB_ERROR registration.
+
+    rate_limiter: injectable for tests; production gets one limiter per
+    scheduler instance (its lifetime matches the worker process, so cooldown
+    state persists for as long as the scheduler runs — exactly the intent).
+    """
+    limiter = rate_limiter if rate_limiter is not None else JobErrorRateLimiter()
+
+    def _on_job_error(event):
+        try:
+            job = scheduler.get_job(event.job_id)
+            name = job.name if job else None
+        except Exception:
+            name = None
+        should_alert, suppressed = limiter.should_alert(event.job_id)
+        if not should_alert:
+            logger.warning(f"[scheduler] job {event.job_id} failed (alert on cooldown): "
+                          f"{event.exception}")
+            return
+        try:
+            send_telegram(format_job_error_alert(event.job_id, name, event.exception, suppressed))
+        except Exception as e:
+            logger.warning(f"[scheduler] job-error alert failed: {e}")
+    return _on_job_error
+
+
 def start_scheduler():
     # Ensure regime_watchlist table exists (safe to run every start)
     try:
@@ -81,14 +172,14 @@ def start_scheduler():
         _ensure_watchlist(_wl_conn)
         _wl_conn.close()
     except Exception as _e:
-        print(f"[scheduler] watchlist table init error: {_e}")
+        logger.warning(f"[scheduler] watchlist table init error: {_e}")
 
     # Phase 2A: market-data schema (is_final / calendar / corporate_actions)
     try:
         from data.market_schema import ensure_market_data_schema
         ensure_market_data_schema(DB_PATH)
     except Exception as _e:
-        print(f"[scheduler] market schema init error: {_e}")
+        logger.warning(f"[scheduler] market schema init error: {_e}")
 
     scheduler = BackgroundScheduler(timezone=WIB)
 
@@ -114,7 +205,7 @@ def start_scheduler():
         scheduler.add_job(scheduled_multi_strategy_scan, CronTrigger(
             hour=hour, minute=minute, timezone=WIB, day_of_week="mon-fri"),
             id=f"multi_strategy_scan_{hour:02d}{minute:02d}", name=f"Multi-Strategy Scan {label}")
-        print(f"  ✓ Multi-strategy scan @ {hour:02d}:{minute:02d} ({label})")
+        logger.info(f"  ✓ Multi-strategy scan @ {hour:02d}:{minute:02d} ({label})")
 
     # Screener intraday — registered at the same times as multi-strategy scan so they run in parallel
     for hour, minute, label in scan_times:
@@ -218,36 +309,41 @@ def start_scheduler():
         minute="*/5", timezone=WIB), id="scheduler_heartbeat",
         name="Scheduler Heartbeat", replace_existing=True)
 
+    # Alert on ANY uncaught in-process job exception — one shared contract for
+    # all ~20 APScheduler jobs instead of each hand-rolling its own alert-or-not
+    # try/except (audit 2026-07-28).
+    scheduler.add_listener(_make_job_error_listener(scheduler), EVENT_JOB_ERROR)
+
     scheduler.start()
-    print("Scheduler started:")
-    print("  💓 SCHEDULER HEARTBEAT: every 5 min (dead-man's-switch)")
-    print("  📡 PHASE 5 BULL-WATCH: 17:10 (NR7 universe band transitions)")
+    logger.info("Scheduler started:")
+    logger.info("  💓 SCHEDULER HEARTBEAT: every 5 min (dead-man's-switch)")
+    logger.info("  📡 PHASE 5 BULL-WATCH: 17:10 (NR7 universe band transitions)")
     # Edge Registry (M1 inversion): load once, announce what production runs on.
     from engine.registry_loader import announce_registry
     announce_registry()
-    print("  📊 SIGNAL REPORT: 16:00")
-    print("  📰 NEWS FETCH: 08:00 pre-market, 17:00 EOD")
-    print("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
-    print("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
-    print("  🏥 MARKET HEALTH: 08:45 pre-market")
-    print("  🌅 PREMARKET FIRM: 08:35 pre-market (unified watchlist → agent firm)")
-    print("  📋 EOD TRADE PLAN: 16:40 (all long sources → agent firm → 1 ranked msg)")
-    print("  🧪 FORWARD-TEST CYCLE: 18:30 (ingest signals → open/exit shadow positions)")
+    logger.info("  📊 SIGNAL REPORT: 16:00")
+    logger.info("  📰 NEWS FETCH: 08:00 pre-market, 17:00 EOD")
+    logger.info("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
+    logger.info("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
+    logger.info("  🏥 MARKET HEALTH: 08:45 pre-market")
+    logger.info("  🌅 PREMARKET FIRM: 08:35 pre-market (unified watchlist → agent firm)")
+    logger.info("  📋 EOD TRADE PLAN: 16:40 (all long sources → agent firm → 1 ranked msg)")
+    logger.info("  🧪 FORWARD-TEST CYCLE: 18:30 (ingest signals → open/exit shadow positions)")
     return scheduler
 
 
 if __name__ == "__main__":
     import sys
     if "--once" in sys.argv:
-        print("Running daily_signal_scan once...")
+        logger.info("Running daily_signal_scan once...")
         daily_signal_scan()
     else:
         sched = start_scheduler()
         import time
-        print("Scheduler running. Press Ctrl+C to stop.")
+        logger.info("Scheduler running. Press Ctrl+C to stop.")
         try:
             while True:
                 time.sleep(60)
         except KeyboardInterrupt:
             sched.shutdown()
-            print("Scheduler stopped.")
+            logger.info("Scheduler stopped.")

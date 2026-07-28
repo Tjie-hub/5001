@@ -28,11 +28,12 @@ def resolve_filters(filter_names: list) -> list:
     return [FILTER_MAP[f] for f in (filter_names or []) if f in FILTER_MAP]
 
 from config import DB_PATH
+from data.db import connect as db_connect
 backtest_multi_bp = Blueprint('backtest_multi', __name__)
 
 
 def get_ohlcv(ticker: str) -> pd.DataFrame:
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     df   = pd.read_sql(
         "SELECT date, open, high, low, close, volume FROM ohlcv WHERE ticker = ? ORDER BY date ASC",
         conn, params=(ticker,)
@@ -85,7 +86,7 @@ def api_backtest_multi():
         # Load WF scores for this ticker
         wf_map = {}
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect(DB_PATH)
             rows = conn.execute("""
                 SELECT strategy, consistency_pct, weighted_score
                 FROM wf_scores WHERE ticker=?

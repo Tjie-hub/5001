@@ -66,7 +66,7 @@ async def run(
             tokens_in=resp.tokens_in if resp is not None else 0,
             tokens_out=resp.tokens_out if resp is not None else 0,
             cost_usd=resp.cost_usd if resp is not None else 0.0,
-            provider=resp.provider if resp is not None else "",
+            provider=resp.provider if resp is not None else getattr(err, "provider", ""),
             model=resp.model if resp is not None else "",
             runtime_version=resp.runtime_version if resp is not None else "",
             failover=resp.failover if resp is not None else False,

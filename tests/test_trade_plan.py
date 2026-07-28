@@ -10,13 +10,16 @@ import pytest
 from engine.agent_firm.schemas import AgentDecision
 from engine.trade_plan import (
     build_message,
+    diff_watchlist,
     edge_prescreen,
+    ensure_watchlist_snapshot_table,
     fallback_rank,
     gather_long_candidates,
     get_regime,
     get_vpin_gate,
     provider_line,
     rank_approved,
+    record_snapshot,
     select_top,
 )
 from engine.wf_edge import ensure_wf_edge_table, save_wf_edge
@@ -316,3 +319,125 @@ def test_build_message_appends_provider_line_when_given():
 def test_build_message_omits_provider_line_when_none():
     msg = build_message([], ("BULL", 70.0), "08/07", degraded=False, provider_line=None)
     assert "Firm Provider" not in msg
+
+
+class TestWatchlistSnapshotDiff:
+    """Snapshot persistence + day-over-day diff — reporting only, never
+    recomputes rank/confidence, only compares numbers already decided elsewhere."""
+
+    def _db(self):
+        return sqlite3.connect(":memory:")
+
+    def _ranked(self, *rows):
+        """rows: (ticker, confidence, conviction, sources)"""
+        return [{"ticker": t, "confidence": conf, "conviction": conv,
+                 "confluence": len(src), "sources": src}
+                for t, conf, conv, src in rows]
+
+    def test_diff_returns_none_with_no_prior_snapshot(self):
+        c = self._db()
+        ranked = self._ranked(("CPIN", 0.80, 78.1, ["R"]))
+        assert diff_watchlist(c, "2026-06-24", "eod", ranked) is None
+
+    def test_record_snapshot_then_diff_detects_added_and_removed(self):
+        c = self._db()
+        day1 = self._ranked(("CPIN", 0.80, 78.1, ["R"]), ("AKRA", 0.65, 40.0, ["R", "S", "P"]))
+        record_snapshot(c, "2026-06-23", "eod", day1)
+
+        day2 = self._ranked(("CPIN", 0.80, 78.1, ["R"]), ("SURE", 0.55, 10.0, ["S", "V"]))
+        diff = diff_watchlist(c, "2026-06-24", "eod", day2)
+
+        assert diff["prior_date"] == "2026-06-23"
+        assert diff["added"] == ["SURE"]
+        assert diff["removed"] == ["AKRA"]
+        assert [ch["ticker"] for ch in diff["changes"]] == ["CPIN"]
+
+    def test_diff_detects_upgrade_and_downgrade(self):
+        c = self._db()
+        day1 = self._ranked(("CPIN", 0.60, 78.1, ["R"]), ("AKRA", 0.70, 40.0, ["R"]))
+        record_snapshot(c, "2026-06-23", "eod", day1)
+
+        # CPIN confidence rises (upgrade), AKRA falls (downgrade), both by > threshold
+        day2 = self._ranked(("CPIN", 0.75, 78.1, ["R"]), ("AKRA", 0.55, 40.0, ["R"]))
+        diff = diff_watchlist(c, "2026-06-24", "eod", day2)
+        by_ticker = {ch["ticker"]: ch for ch in diff["changes"]}
+
+        assert by_ticker["CPIN"]["status"] == "upgraded"
+        assert by_ticker["CPIN"]["score_delta"] == pytest.approx(0.15)
+        assert by_ticker["AKRA"]["status"] == "downgraded"
+        assert by_ticker["AKRA"]["score_delta"] == pytest.approx(-0.15)
+
+    def test_diff_small_delta_is_unchanged(self):
+        c = self._db()
+        record_snapshot(c, "2026-06-23", "eod", self._ranked(("CPIN", 0.60, 78.1, ["R"])))
+        diff = diff_watchlist(c, "2026-06-24", "eod",
+                              self._ranked(("CPIN", 0.62, 78.1, ["R"])))
+        assert diff["changes"][0]["status"] == "unchanged"
+
+    def test_diff_tracks_rank_change(self):
+        c = self._db()
+        # AKRA rank 1, CPIN rank 2
+        record_snapshot(c, "2026-06-23", "eod",
+                        self._ranked(("AKRA", 0.80, 40.0, ["R"]), ("CPIN", 0.60, 78.1, ["R"])))
+        # CPIN now rank 1 (rank improved from 2 -> 1)
+        diff = diff_watchlist(c, "2026-06-24", "eod",
+                              self._ranked(("CPIN", 0.60, 78.1, ["R"]), ("AKRA", 0.80, 40.0, ["R"])))
+        by_ticker = {ch["ticker"]: ch for ch in diff["changes"]}
+        assert by_ticker["CPIN"]["prior_rank"] == 2 and by_ticker["CPIN"]["rank"] == 1
+        assert by_ticker["CPIN"]["rank_change"] == 1     # improved by one position
+
+    def test_diff_uses_most_recent_prior_date_not_all_history(self):
+        c = self._db()
+        record_snapshot(c, "2026-06-20", "eod", self._ranked(("OLD", 0.50, 10.0, ["S"])))
+        record_snapshot(c, "2026-06-23", "eod", self._ranked(("CPIN", 0.60, 78.1, ["R"])))
+        diff = diff_watchlist(c, "2026-06-24", "eod",
+                              self._ranked(("CPIN", 0.60, 78.1, ["R"])))
+        assert diff["prior_date"] == "2026-06-23"
+        assert diff["added"] == [] and diff["removed"] == []
+
+    def test_diff_strategies_are_isolated(self):
+        c = self._db()
+        record_snapshot(c, "2026-06-23", "premarket", self._ranked(("CPIN", 0.80, 78.1, ["R"])))
+        # no prior 'eod' snapshot exists yet, even though 'premarket' has one for the same date
+        assert diff_watchlist(c, "2026-06-24", "eod",
+                              self._ranked(("CPIN", 0.80, 78.1, ["R"]))) is None
+
+    def test_record_snapshot_same_day_rerun_does_not_duplicate(self):
+        c = self._db()
+        ensure_watchlist_snapshot_table(c)
+        ranked = self._ranked(("CPIN", 0.80, 78.1, ["R"]))
+        record_snapshot(c, "2026-06-23", "eod", ranked)
+        record_snapshot(c, "2026-06-23", "eod", ranked)   # re-run same day
+        n = c.execute("SELECT COUNT(*) FROM watchlist_snapshot").fetchone()[0]
+        assert n == 1
+
+    def test_build_message_renders_added_removed_and_moves(self):
+        diff = {
+            "prior_date": "2026-06-23",
+            "added": ["SURE"],
+            "removed": ["AKRA"],
+            "changes": [{"ticker": "CPIN", "prior_rank": 2, "rank": 1, "rank_change": 1,
+                        "prior_confidence": 0.60, "confidence": 0.75,
+                        "score_delta": 0.15, "status": "upgraded"}],
+        }
+        msg = build_message(
+            [{"ticker": "CPIN", "close": 3150, "confidence": 0.75, "sources": ["R"],
+             "rationale": "flow up"}],
+            ("YELLOW", 45.0), DATE, diff=diff, watchlist_size=12)
+        assert "WATCHLIST CHANGES" in msg
+        assert "SURE" in msg and "Added" in msg
+        assert "AKRA" in msg and "Removed" in msg
+        assert "CPIN" in msg and "rank 2→1" in msg and "+0.15" in msg
+        assert "Watchlist: 12 candidates" in msg
+
+    def test_build_message_omits_diff_section_when_none(self):
+        msg = build_message([], ("YELLOW", 45.0), DATE, diff=None)
+        assert "WATCHLIST CHANGES" not in msg
+
+    def test_build_message_omits_diff_section_when_nothing_changed(self):
+        diff = {"prior_date": "2026-06-23", "added": [], "removed": [],
+                "changes": [{"ticker": "CPIN", "prior_rank": 1, "rank": 1, "rank_change": 0,
+                            "prior_confidence": 0.60, "confidence": 0.61,
+                            "score_delta": 0.01, "status": "unchanged"}]}
+        msg = build_message([], ("YELLOW", 45.0), DATE, diff=diff)
+        assert "WATCHLIST CHANGES" not in msg

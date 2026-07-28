@@ -63,6 +63,7 @@ def refresh_wf_scores():
     A pid-aware _job_lock guard prevents concurrent refreshes from stacking.
     """
     from research.walkforward_multi import run_walk_forward
+    from research.tracking import track_run, ensure_column
     from engine.wf_edge import aggregate_wf_windows, save_wf_edge, ensure_wf_edge_table
     from datetime import datetime as dt
 
@@ -70,6 +71,8 @@ def refresh_wf_scores():
         print("[WF] refresh_wf_scores: another run is in progress — skipped")
         return
     try:
+      with track_run("wf-refresh", params={"final_only": True, "adjusted": True},
+                     db_path=DB_PATH) as run:
         # Survivorship (item 2.4): score EVERY ticker in the corpus, not just
         # currently-active idx_tickers — a name that later delists must keep
         # its real (often losing) history in wf_scores. _refresh_backtest_cache
@@ -115,18 +118,30 @@ def refresh_wf_scores():
                 "CREATE TABLE IF NOT EXISTS wf_scores ("
                 "ticker TEXT NOT NULL, strategy TEXT NOT NULL, consistency_pct REAL, "
                 "avg_return_pct REAL, avg_sharpe REAL, weighted_score REAL, "
-                "windows_tested INTEGER, updated_at TEXT, PRIMARY KEY(ticker,strategy))")
+                "windows_tested INTEGER, updated_at TEXT, run_id TEXT, "
+                "PRIMARY KEY(ticker,strategy))")
             ensure_wf_edge_table(conn)
+            # run_id provenance (audit R-4): nullable columns, added
+            # idempotently so pre-existing tables keep working.
+            ensure_column(conn, "wf_scores", "run_id")
+            ensure_column(conn, "wf_edge", "run_id")
             conn.executemany(
                 "INSERT OR REPLACE INTO wf_scores "
-                "(ticker,strategy,consistency_pct,avg_return_pct,avg_sharpe,weighted_score,windows_tested,updated_at) "
-                "VALUES (?,?,?,?,?,?,?,?)", score_rows)
+                "(ticker,strategy,consistency_pct,avg_return_pct,avg_sharpe,weighted_score,windows_tested,updated_at,run_id) "
+                "VALUES (?,?,?,?,?,?,?,?,?)",
+                [row + (run.run_id,) for row in score_rows])
             for ticker, agg in edge_payloads:
                 save_wf_edge(conn, ticker, agg, now_str)
+            conn.execute("UPDATE wf_edge SET run_id=? WHERE last_computed=?",
+                         (run.run_id, now_str))
             conn.commit()
             edge_count = conn.execute(
                 "SELECT COUNT(*) FROM wf_edge WHERE last_computed=?", (now_str,)
             ).fetchone()[0]
+            run.metrics.update({"tickers_total": len(tickers),
+                                "score_rows": len(score_rows),
+                                "wf_edge_rows": edge_count,
+                                "updated_at_stamp": now_str})
             print(f"[WF] wf_edge updated: {edge_count} rows")
 
             # Strategy health re-validation: alert when a live-selectable strategy's
@@ -161,6 +176,7 @@ def refresh_wf_scores():
                 print(f"[WF] Re-validation check error: {_rv_err}")
         finally:
             conn.close()
+        run.metrics["tickers_updated"] = updated
         print(f"[WF] refresh_wf_scores selesai: {updated}/{len(tickers)} ticker diupdate")
     finally:
         _wf_lock_release(DB_PATH)
@@ -169,47 +185,53 @@ def refresh_wf_scores():
 def _refresh_backtest_cache():
     try:
         from research.walkforward_multi import run_all_strategies
+        from research.tracking import track_run, ensure_column
         from engine.regime_filter import detect_regime
         from datetime import date
         today = date.today().isoformat()
-        conn = db_connect(DB_PATH)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS backtest_cache (
-                ticker TEXT NOT NULL, computed_date TEXT NOT NULL,
-                best_strategy TEXT, best_return REAL, win_rate REAL,
-                sharpe REAL, total_trades INTEGER, profitable INTEGER,
-                regime TEXT, updated_at TEXT, PRIMARY KEY (ticker, computed_date)
-            )""")
-        ohlcv_map = _load_ohlcv_bulk(final_only=True)  # research: no partial bars (plan 2A)
-        computed = 0
-        rows_to_insert = []
-        for ticker, df in ohlcv_map.items():
-            try:
-                if len(df) < 60:
-                    continue
-                strat_results = run_all_strategies(df, capital=50_000_000)
-                best = max(strat_results, key=lambda x: x['total_return_pct'])
+        with track_run("backtest-cache", params={"final_only": True, "adjusted": True},
+                       db_path=DB_PATH) as run:
+            conn = db_connect(DB_PATH)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS backtest_cache (
+                    ticker TEXT NOT NULL, computed_date TEXT NOT NULL,
+                    best_strategy TEXT, best_return REAL, win_rate REAL,
+                    sharpe REAL, total_trades INTEGER, profitable INTEGER,
+                    regime TEXT, updated_at TEXT, run_id TEXT,
+                    PRIMARY KEY (ticker, computed_date)
+                )""")
+            ensure_column(conn, "backtest_cache", "run_id")   # audit R-4 provenance
+            ohlcv_map = _load_ohlcv_bulk(final_only=True)  # research: no partial bars (plan 2A)
+            computed = 0
+            rows_to_insert = []
+            for ticker, df in ohlcv_map.items():
                 try:
-                    regime = detect_regime(df)
+                    if len(df) < 60:
+                        continue
+                    strat_results = run_all_strategies(df, capital=50_000_000)
+                    best = max(strat_results, key=lambda x: x['total_return_pct'])
+                    try:
+                        regime = detect_regime(df)
+                    except Exception:
+                        regime = "UNCERTAIN"
+                    rows_to_insert.append((
+                        ticker, today, best['strategy'], best['total_return_pct'],
+                        best['win_rate'], best.get('sharpe', 0), best.get('total_trades', 0),
+                        int(best['total_return_pct'] > 0), regime, run.run_id,
+                    ))
+                    computed += 1
                 except Exception:
-                    regime = "UNCERTAIN"
-                rows_to_insert.append((
-                    ticker, today, best['strategy'], best['total_return_pct'],
-                    best['win_rate'], best.get('sharpe', 0), best.get('total_trades', 0),
-                    int(best['total_return_pct'] > 0), regime,
-                ))
-                computed += 1
-            except Exception:
-                pass
-        conn.executemany("""
-            INSERT OR REPLACE INTO backtest_cache
-            (ticker, computed_date, best_strategy, best_return, win_rate, sharpe,
-             total_trades, profitable, regime, updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,datetime('now'))
-        """, rows_to_insert)
-        conn.commit()
-        conn.close()
-        print(f"[scheduler] Backtest cache refreshed: {computed} tickers")
+                    pass
+            conn.executemany("""
+                INSERT OR REPLACE INTO backtest_cache
+                (ticker, computed_date, best_strategy, best_return, win_rate, sharpe,
+                 total_trades, profitable, regime, run_id, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))
+            """, rows_to_insert)
+            conn.commit()
+            conn.close()
+            run.metrics["tickers_computed"] = computed
+            print(f"[scheduler] Backtest cache refreshed: {computed} tickers")
     except Exception as e:
         print(f"[scheduler] Cache refresh error: {e}")
 
@@ -217,11 +239,19 @@ def _refresh_backtest_cache():
 def run_backtest_roller():
     """Monthly backtest window roller — appends new windows, exports JSON."""
     from research.backtest_roller import roll_all, export_meta_dataset
+    from research.tracking import track_run
     now_str = datetime.now(WIB).strftime('%H:%M')
     print(f"[{now_str}] Backtest roller dimulai...")
     try:
-        summary = roll_all(include_partial=True)
-        n_exported = export_meta_dataset()
+        with track_run("roller", params={"include_partial": True},
+                       db_path=DB_PATH) as run:
+            summary = roll_all(include_partial=True)
+            n_exported = export_meta_dataset()
+            run.metrics.update({"new_complete": summary["new_complete"],
+                                "new_partial": summary["new_partial"],
+                                "tickers_updated": summary["tickers_updated"],
+                                "exported": n_exported,
+                                "errors": len(summary["errors"])})
         msg = (
             f"🔄 <b>Backtest Roller Selesai</b>\n\n"
             f"New complete windows: <b>{summary['new_complete']}</b>\n"

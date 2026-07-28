@@ -80,3 +80,54 @@ def test_provider_stats_claude_cost_is_none(tmp_db):
     _seed_traces(tmp_db, [("claude", 1.0, None, "2026-07-08 09:00:00")])
     stats = provider_stats(str(tmp_db), "claude", since="2026-07-08 00:00:00")
     assert stats.cost_usd is None
+
+
+# --- RCA 2026-07-10: availability + session-limit observability --------------
+
+def _seed_event(db_path, event_type, provider, created_at, reset_time=None,
+                reason=None):
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT INTO provider_events (event_type, provider, reason, reset_time, created_at) "
+        "VALUES (?,?,?,?,?)",
+        (event_type, provider, reason, reset_time, created_at),
+    )
+    conn.commit()
+    conn.close()
+
+
+def test_stats_report_unavailable_during_session_limit_hold(tmp_db):
+    _seed_event(tmp_db, "provider_session_limit", "claude",
+                "2026-07-10 03:06:00", reset_time="2099-01-01 11:20:00")
+    stats = provider_stats(str(tmp_db), "claude", since="2026-07-10 00:00:00")
+    assert stats.available is False
+    assert "session limit" in stats.unavailable_reason
+    assert stats.estimated_next_reset == "2099-01-01 11:20:00"
+    assert stats.session_limit_events == 1
+
+
+def test_stats_available_again_after_reset_passed(tmp_db):
+    _seed_event(tmp_db, "provider_session_limit", "claude",
+                "2026-07-10 03:06:00", reset_time="2026-07-10 06:20:00")
+    stats = provider_stats(str(tmp_db), "claude", since="2026-07-10 00:00:00")
+    assert stats.available is True
+    assert stats.unavailable_reason is None
+    assert stats.session_limit_events == 1  # history retained
+
+
+def test_stats_expose_quota_failures_and_fallbacks(tmp_db):
+    _seed_event(tmp_db, "provider_session_limit", "claude",
+                "2026-07-10 03:06:00", reset_time="2026-07-10 06:20:00")
+    _seed_event(tmp_db, "provider_skipped", "claude", "2026-07-10 03:07:00")
+    _seed_event(tmp_db, "provider_failover", "claude", "2026-07-10 03:08:00")
+    stats = provider_stats(str(tmp_db), "claude", since="2026-07-10 00:00:00")
+    assert stats.quota_skips == 1
+    assert stats.fallback_count == 1
+
+
+def test_stats_unavailable_when_circuit_open(tmp_db):
+    _seed_event(tmp_db, "provider_circuit_open", "claude", "2026-07-10 03:06:48")
+    stats = provider_stats(str(tmp_db), "claude", since="2026-07-10 00:00:00")
+    assert stats.circuit_state == "OPEN"
+    assert stats.available is False
+    assert "circuit" in stats.unavailable_reason

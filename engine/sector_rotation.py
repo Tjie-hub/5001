@@ -11,6 +11,7 @@ import pandas as pd
 from typing import Dict, List, Tuple
 
 from config import DB_PATH
+from data.db import connect as db_connect
 
 # IDX Sector → Ticker mapping (based on tickers in DB)
 IDX_SECTOR_MAP: Dict[str, List[str]] = {
@@ -52,7 +53,7 @@ def score_sectors(db_path: str = None) -> List[Dict]:
     Returns list sorted descending, tagged OVERWEIGHT / NEUTRAL / UNDERWEIGHT.
     """
     db_path = db_path or DB_PATH
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     try:
         tickers_in_db = {r[0] for r in conn.execute(
             "SELECT DISTINCT ticker FROM ohlcv"

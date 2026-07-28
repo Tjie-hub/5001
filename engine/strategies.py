@@ -23,6 +23,7 @@ from engine.indicators import (
 # CONFIG — cost values live in engine/exits/costs.py (single authority, plan 1C)
 # ─────────────────────────────────────────────
 from engine.exits.costs import COMMISSION_BUY, COMMISSION_SELL, SLIPPAGE
+from data.db import connect as db_connect
 
 @dataclass
 class Trade:
@@ -268,15 +269,20 @@ def run_strategy(df: pd.DataFrame, signals: pd.Series,
 # STRATEGY 1 — VOL-WEIGHTED ENTRY
 # ─────────────────────────────────────────────
 
-def strategy_vol_weighted(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None) -> dict:
+def strategy_vol_weighted(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None,
+                          vr_threshold: float = 1.8, atr_sl_mult: float = 1.0,
+                          atr_tp_mult: float = 2.0) -> dict:
     """
     Entry: Vol Ratio > 2.0x AND Delta positif (close > open)
     Exit:  SL = ATR×1.0, TP = ATR×2.0 (2:1 R/R minimum)
+
+    Threshold/exit kwargs exist for parameter search (research/optimizer);
+    defaults are the production values — omitting them changes nothing.
     """
     vr    = calc_vol_ratio(df, 20)
     delta = calc_delta(df)
-    sig   = (vr > 1.8) & (delta > 0) & (df['close'] > df['open'])
-    return run_strategy(df, sig, atr_sl_mult=1.0, atr_tp_mult=2.0, min_rr=2.0,
+    sig   = (vr > vr_threshold) & (delta > 0) & (df['close'] > df['open'])
+    return run_strategy(df, sig, atr_sl_mult=atr_sl_mult, atr_tp_mult=atr_tp_mult, min_rr=2.0,
                         strategy_name='Vol-Weighted Entry', initial_capital=capital,
                         filters=filters)
 
@@ -285,10 +291,15 @@ def strategy_vol_weighted(df: pd.DataFrame, capital: float = 50_000_000, filters
 # STRATEGY 2 — MOMENTUM FOLLOWING
 # ─────────────────────────────────────────────
 
-def strategy_momentum(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None) -> dict:
+def strategy_momentum(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None,
+                      vr_threshold: float = 1.3, atr_sl_mult: float = 1.2,
+                      atr_tp_mult: float = 2.4) -> dict:
     """
     Entry: 2 hari berturut close > close[-1] + Vol Ratio > 1.3x
     Exit:  SL = ATR×1.2 (trailing), TP = ATR×2.4 (2:1 R/R minimum)
+
+    Threshold/exit kwargs exist for parameter search (research/optimizer);
+    defaults are the production values — omitting them changes nothing.
     """
     vr        = calc_vol_ratio(df, 20)
     streak2   = (df['close'] > df['close'].shift(1)) & \
@@ -296,8 +307,8 @@ def strategy_momentum(df: pd.DataFrame, capital: float = 50_000_000, filters: li
     # Watch block + VR cap: match live scheduler.py behavior
     # Live also checks daily_screen signal and caps VR at 5.0x
     watch_block = _watch_signal_block(df)
-    sig = streak2 & (vr > 1.3) & (vr <= 5.0) & ~watch_block
-    return run_strategy(df, sig, atr_sl_mult=1.2, atr_tp_mult=2.4, min_rr=2.0,
+    sig = streak2 & (vr > vr_threshold) & (vr <= 5.0) & ~watch_block
+    return run_strategy(df, sig, atr_sl_mult=atr_sl_mult, atr_tp_mult=atr_tp_mult, min_rr=2.0,
                         strategy_name='Momentum Following',
                         initial_capital=capital, trail_sl=True,
                         filters=filters)
@@ -307,16 +318,21 @@ def strategy_momentum(df: pd.DataFrame, capital: float = 50_000_000, filters: li
 # STRATEGY 3 — VWAP REVERSION
 # ─────────────────────────────────────────────
 
-def strategy_vwap_reversion(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None) -> dict:
+def strategy_vwap_reversion(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None,
+                            dist_threshold: float = -0.010, vr_threshold: float = 1.3,
+                            atr_sl_mult: float = 0.8, atr_tp_mult: float = 1.6) -> dict:
     """
     Entry: Close > 1.5% di bawah VWAP + Vol spike (ratio > 1.5x)
     Exit:  SL = ATR×0.8 (tight mean-rev), TP = ATR×1.6 (2:1 R/R minimum)
+
+    Threshold/exit kwargs exist for parameter search (research/optimizer);
+    defaults are the production values — omitting them changes nothing.
     """
     vwap = calc_vwap(df)
     vr   = calc_vol_ratio(df, 20)
     dist = (df['close'] - vwap) / vwap
-    sig  = (dist < -0.010) & (vr > 1.3)
-    return run_strategy(df, sig, atr_sl_mult=0.8, atr_tp_mult=1.6, min_rr=2.0,
+    sig  = (dist < dist_threshold) & (vr > vr_threshold)
+    return run_strategy(df, sig, atr_sl_mult=atr_sl_mult, atr_tp_mult=atr_tp_mult, min_rr=2.0,
                         strategy_name='VWAP Reversion', initial_capital=capital,
                         filters=filters)
 
@@ -325,10 +341,15 @@ def strategy_vwap_reversion(df: pd.DataFrame, capital: float = 50_000_000, filte
 # STRATEGY 4 — CONSERVATIVE CONFIRMATION
 # ─────────────────────────────────────────────
 
-def strategy_conservative(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None) -> dict:
+def strategy_conservative(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None,
+                          vr_threshold: float = 1.3, atr_sl_mult: float = 0.7,
+                          atr_tp_mult: float = 1.4) -> dict:
     """
     Entry: Vol Ratio > 1.5x + close > open + close di atas MA20 + ATR normal
     Exit:  TP +1.5% / SL -1.0%  (tightest risk)
+
+    Threshold/exit kwargs exist for parameter search (research/optimizer);
+    defaults are the production values — omitting them changes nothing.
     """
     vr    = calc_vol_ratio(df, 20)
     ma20  = calc_sma(df, 20)
@@ -338,8 +359,8 @@ def strategy_conservative(df: pd.DataFrame, capital: float = 50_000_000, filters
     above_ma = df['close'] > ma20
     atr_ok   = atr < atr_ma * 1.5   # hindari hari terlalu volatile
 
-    sig = (vr > 1.3) & bullish & above_ma & atr_ok
-    return run_strategy(df, sig, atr_sl_mult=0.7, atr_tp_mult=1.4, min_rr=2.0,
+    sig = (vr > vr_threshold) & bullish & above_ma & atr_ok
+    return run_strategy(df, sig, atr_sl_mult=atr_sl_mult, atr_tp_mult=atr_tp_mult, min_rr=2.0,
                         strategy_name='Conservative Confirm', initial_capital=capital,
                         filters=filters)
 
@@ -1112,7 +1133,7 @@ def calc_opening_range_from_ticks(ticker: str, trade_date: str,
     end_time = (datetime.strptime('09:00:00', '%H:%M:%S')
                 + timedelta(minutes=opening_minutes)).strftime('%H:%M:%S')
     try:
-        conn = sqlite3.connect(db_path)
+        conn = db_connect(db_path)
         rows = conn.execute("""
             SELECT price, volume FROM ticks
             WHERE ticker=? AND date=?
@@ -1182,7 +1203,7 @@ def check_orb_intraday_signal(ticker: str, opening_minutes: int = 30,
                 'details': {'or_today': or_today}}
 
     try:
-        conn = sqlite3.connect(db_path)
+        conn = db_connect(db_path)
         past_dates = [r[0] for r in conn.execute("""
             SELECT DISTINCT date FROM ticks
             WHERE ticker=? AND date < ?
@@ -1542,7 +1563,7 @@ def get_ticker_data(ticker: str) -> pd.DataFrame:
     db_path = 'data/walkforward.db'
     
     try:
-        conn = sqlite3.connect(db_path)
+        conn = db_connect(db_path)
         query = f"""
             SELECT date, open, high, low, close, volume
             FROM ohlcv
@@ -1874,7 +1895,10 @@ def strategy_swing_trend(df: pd.DataFrame,
 def strategy_trend_following_breakout(df: pd.DataFrame,
                                       capital: float = 50_000_000,
                                       filters: list = None,
-                                      atr_mult: float = 3.0) -> dict:
+                                      atr_mult: float = 3.0,
+                                      donchian_period: int = 20,
+                                      vol_mult: float = 1.8,
+                                      atr_expand_mult: float = 0.5) -> dict:
     """
     Trend-Following Breakout — catch high-momentum breakouts, let runners run.
 
@@ -1915,17 +1939,19 @@ def strategy_trend_following_breakout(df: pd.DataFrame,
     ma50        = df['close'].rolling(50).mean()
     atr         = calc_atr(df, 14)
     avg_vol     = df['volume'].rolling(20).mean()
-    donchian20  = df['high'].rolling(20).max().shift(1)   # prior 20-bar high
+    donchian20  = df['high'].rolling(donchian_period).max().shift(1)   # prior N-bar high
     atr60_med   = atr.rolling(60).median()
     ma20_slope  = calc_ma_slope(df, 20, 5)                # % rise of MA20 over 5 bars
 
     # Breakout signal per bar (NaN operands compare False, so unready bars
     # are naturally excluded). Evaluated on the signal bar; entry fills at the
     # NEXT bar's open — never at the signal bar's own close.
+    # donchian_period / vol_mult / atr_expand_mult are parameter-search knobs
+    # (research/optimizer); their defaults are the production values.
     signal = (
         (df['close']  > donchian20) &
-        (df['volume'] > 1.8 * avg_vol) &
-        (atr          > 0.5 * atr60_med) &
+        (df['volume'] > vol_mult * avg_vol) &
+        (atr          > atr_expand_mult * atr60_med) &
         (df['close']  > ma50) &
         (ma20_slope   > 0.5) &                # rising trend (not sideways/down)
         (df['volume'] < 4.0 * avg_vol)        # not a climax blow-off
@@ -2253,7 +2279,7 @@ def check_crash_recovery_signal(ticker: str, df: pd.DataFrame,
     earliest = min(last_5_dates)
 
     try:
-        conn = _sqlite3.connect(db_path)
+        conn = db_connect(db_path)
         row = conn.execute(
             "SELECT resume_date, gap_pct, last_normal_date, missing_td "
             "FROM suspension_events "

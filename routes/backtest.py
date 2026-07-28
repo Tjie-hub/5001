@@ -13,6 +13,7 @@ from scheduler import (
     daily_signal_scan,
 )
 from engine.strategies import check_current_entry_signal, get_ticker_data
+from data.db import connect as db_connect
 
 backtest_bp = Blueprint("backtest", __name__)
 
@@ -113,14 +114,14 @@ def api_scan_all():
     flow_confirmed_only = body.get('flow_confirmed_only', False)
     use_wf_filter       = body.get('use_wf_filter', False)
     wf_min_consistency  = float(body.get('wf_min_consistency', 50.0))
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker').fetchall()]
     conn.close()
 
     results = []
     for ticker in tickers:
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect(DB_PATH)
             df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
             conn.close()
             if len(df) < 60:
@@ -185,7 +186,7 @@ def api_scan_all():
     # Load wf_scores untuk enrichment
     wf_map = {}
     try:
-        conn_wf = sqlite3.connect(DB_PATH)
+        conn_wf = db_connect(DB_PATH)
         # Ambil best WF score per ticker across ALL strategies
         rows = conn_wf.execute("""
             SELECT ticker,
@@ -258,7 +259,7 @@ def api_quick_scan():
     filter_mode = body.get('filter_mode', 'all')
     capital = float(body.get('capital', 50_000_000))
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker').fetchall()]
     conn.close()
 
@@ -268,7 +269,7 @@ def api_quick_scan():
     cache_map = {}
     try:
         _init_backtest_cache()
-        conn_c = sqlite3.connect(DB_PATH)
+        conn_c = db_connect(DB_PATH)
         rows = conn_c.execute(
             "SELECT ticker, best_strategy, best_return, win_rate, sharpe, total_trades, profitable, regime FROM backtest_cache WHERE computed_date=?",
             (today,)
@@ -281,7 +282,7 @@ def api_quick_scan():
     results = []
     for ticker in tickers:
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect(DB_PATH)
             df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
             conn.close()
 
@@ -354,7 +355,7 @@ def api_quick_scan():
     # Load WF scores for enrichment
     wf_map = {}
     try:
-        conn_wf = sqlite3.connect(DB_PATH)
+        conn_wf = db_connect(DB_PATH)
         rows = conn_wf.execute("""
             SELECT ticker, MAX(weighted_score) as best_wf_score
             FROM wf_scores
@@ -399,7 +400,7 @@ def api_quick_scan():
 def _init_backtest_cache():
     """Create backtest_cache table if not exists."""
     import sqlite3
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS backtest_cache (
             ticker TEXT NOT NULL,
@@ -434,7 +435,7 @@ def api_precompute():
     capital = float(request.get_json(force=True).get('capital', 50_000_000))
     today = date.today().isoformat()
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker').fetchall()]
     conn.close()
 
@@ -442,7 +443,7 @@ def api_precompute():
     errors = 0
     for ticker in tickers:
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect(DB_PATH)
             df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
             conn.close()
             if len(df) < 60:
@@ -457,7 +458,7 @@ def api_precompute():
             except Exception:
                 regime = "SIDEWAYS"
 
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect(DB_PATH)
             conn.execute("""
                 INSERT OR REPLACE INTO backtest_cache
                 (ticker, computed_date, best_strategy, best_return, win_rate, sharpe, total_trades, profitable, regime, updated_at)
@@ -514,7 +515,7 @@ def api_multi_quick_scan():
     filter_mode = body.get('filter_mode', 'all')
     intersection_mode = body.get('intersection_mode', True)  # NEW: default True
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker').fetchall()]
     conn.close()
 
@@ -523,7 +524,7 @@ def api_multi_quick_scan():
 
     for ticker in tickers:
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect(DB_PATH)
             df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
             conn.close()
 
@@ -584,7 +585,7 @@ def api_multi_quick_scan():
             best = None
             regime = "SIDEWAYS"
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = db_connect(DB_PATH)
                 df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
                 conn.close()
                 if len(df) >= 60:
@@ -625,7 +626,7 @@ def api_multi_quick_scan():
         # Load WF scores
         wf_map = {}
         try:
-            conn_wf = sqlite3.connect(DB_PATH)
+            conn_wf = db_connect(DB_PATH)
             rows = conn_wf.execute("""
                 SELECT ticker, MAX(weighted_score) as best_wf_score
                 FROM wf_scores
@@ -683,7 +684,7 @@ def api_multi_quick_scan():
             regime = "SIDEWAYS"
             if has_any_signal:
                 try:
-                    conn = sqlite3.connect(DB_PATH)
+                    conn = db_connect(DB_PATH)
                     df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
                     conn.close()
                     if len(df) >= 60:
@@ -729,7 +730,7 @@ def api_multi_quick_scan():
         # Load WF scores
         wf_map = {}
         try:
-            conn_wf = sqlite3.connect(DB_PATH)
+            conn_wf = db_connect(DB_PATH)
             rows = conn_wf.execute("""
                 SELECT ticker, MAX(weighted_score) as best_wf_score
                 FROM wf_scores
@@ -791,7 +792,7 @@ def api_signals_scheduled():
     import datetime, sqlite3
     since = request.args.get("since", datetime.date.today().isoformat())
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         rows = conn.execute(
             "SELECT scan_time, ticker, strategies, flow_score, flow_verdict, "
             "smart_money, signal_reasons, "
@@ -825,7 +826,7 @@ def agent_status():
     today = datetime.date.today().isoformat()
     stats = {"evaluated": 0, "approved": 0, "vetoed": 0, "cost_usd": 0.0}
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         row = conn.execute(
             "SELECT COUNT(*), "
             "SUM(CASE WHEN decision='approve' THEN 1 ELSE 0 END), "
@@ -963,12 +964,12 @@ def api_signals_custom():
     use_streak      = body.get('use_streak', True)
     vr_min          = float(body.get('vr_min', 1.3))
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     all_tickers = [r[0] for r in conn.execute('SELECT DISTINCT ticker FROM ohlcv ORDER BY ticker').fetchall()]
     conn.close()
     tickers = tickers_input if tickers_input else all_tickers
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect(DB_PATH)
     wf_rows = conn.execute("SELECT ticker, consistency_pct, weighted_score FROM wf_scores WHERE strategy='Momentum Following'").fetchall()
     conn.close()
     wf_map = {r[0]: {"consistency_pct": r[1], "weighted_score": r[2]} for r in wf_rows}
@@ -1003,7 +1004,7 @@ def api_signals_custom():
             row["flow"] = "SKIP"
 
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect(DB_PATH)
             df = pd.read_sql('SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC', conn, params=(ticker,))
             conn.close()
             if len(df) < 25:
@@ -1131,7 +1132,7 @@ def api_optimizer_run():
         }), 422
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         df = pd.read_sql(
             "SELECT date, open, high, low, close, volume FROM ohlcv WHERE ticker=? ORDER BY date",
             conn, params=(ticker,),
@@ -1217,7 +1218,7 @@ def api_adaptive_strategy(ticker):
 
     ticker = ticker.upper()
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect(DB_PATH)
         df = pd.read_sql(
             "SELECT * FROM ohlcv WHERE ticker=? ORDER BY date ASC", conn,
             params=(ticker,)

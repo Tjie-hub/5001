@@ -9,11 +9,12 @@ and fail-closed on negative flow (so live trades require real flow).
 import sqlite3
 from config import DB_PATH
 from engine.delta_flow import session_delta_stats
+from data.db import connect as db_connect
 
 
 def _daily_flow_score(ticker: str, date: str, db_path: str):
     """composite_score for ticker/date as float, or None if absent/unparseable."""
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     try:
         row = conn.execute(
             "SELECT composite_score FROM stockbit_flow WHERE ticker=? AND trade_date=?",

@@ -4,6 +4,7 @@ calculator.py — Compute VWAP, Delta Volume, Vol Ratio, Signal
 from __future__ import annotations
 import logging
 from datetime import date as dt_date
+from data.db import connect as db_connect
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +198,7 @@ def calc_consec_up(ticker: str, today_close: int | None) -> int:
     try:
         import sqlite3, os
         db_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'walkforward.db')
-        conn = sqlite3.connect(db_path)
+        conn = db_connect(db_path)
         rows = conn.execute(
             "SELECT date, close FROM ohlcv WHERE ticker=? AND close IS NOT NULL ORDER BY date DESC LIMIT 30",
             (ticker,),

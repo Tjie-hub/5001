@@ -1,0 +1,29 @@
+EXP-PM-0001 confirmatory run @ 2026-07-18T01:09:37Z
+flow_bars dataset: 2025-07-07..2026-07-17  rows=12956970  tickers=867
+loading flow bars...
+loaded 12,956,970 rows
+analysis rows (valid ofi + r_t, |r_t|<=20%): 12,642,224
+
+[Leg 1] displacement  beta(r_t~ofi)=1.737092e-04  corr=0.0158  (expect >0)
+
+[Leg 2 k=5 robustness] beta(rev~ofi)=-2.380e-04 (expect <0 for reversion)
+   signed_reversal gross = 0.0007%/trade  t=0.92  CI95=[-0.0008,0.0023]%  days=233
+   NET of 0.60% friction = -0.5993%/trade
+   bid-ask-bounce guard (skip 1 bar): gross=0.0008%/trade t=0.97
+
+[Leg 2 k=15 PRIMARY] beta(rev~ofi)=-4.806e-04 (expect <0 for reversion)
+   signed_reversal gross = -0.0008%/trade  t=-0.35  CI95=[-0.0052,0.0036]%  days=233
+   NET of 0.60% friction = -0.6008%/trade
+   bid-ask-bounce guard (skip 1 bar): gross=-0.0010%/trade t=-0.47
+
+[Leg 2 k=30 robustness] beta(rev~ofi)=-6.340e-04 (expect <0 for reversion)
+   signed_reversal gross = -0.0072%/trade  t=-1.67  CI95=[-0.0157,0.0012]%  days=233
+   NET of 0.60% friction = -0.6072%/trade
+   bid-ask-bounce guard (skip 1 bar): gross=-0.0077%/trade t=-1.77
+
+[Decile k=15] fwd-ret%% by OFI decile (0=lowest OFI): 0.0520, 0.0080, -0.0026, -0.0032, -0.0089, -0.0110, -0.0237, -0.0069, -0.0140, -0.0464
+   low-minus-high reversal spread = 0.0983%  (gross; vs 0.60% round-trip)
+
+[Robustness] gross reversal signs across k=[5, 15, 30]: {5: 1, 15: -1, 30: -1}  consistent=False
+
+results.json + execution.log written to docs/research_programs/P-M/experiments/EXP-PM-0001

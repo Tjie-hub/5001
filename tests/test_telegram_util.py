@@ -128,6 +128,31 @@ def test_logs_error_when_plain_text_fallback_also_fails(monkeypatch):
     mock_log.assert_called_once()
 
 
+# ── secret redaction (RC1 fix R-4) ──────────────────────────────────────────
+
+def test_redacts_configured_secret_before_posting(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tok123")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "chat456")
+    monkeypatch.setenv("ZAI_API_KEY", "supersecretzaikey")
+    with patch("utils.telegram.requests.post") as mock_post:
+        tg.send_telegram("job failed: supersecretzaikey leaked in exception text")
+    sent_text = mock_post.call_args.kwargs["json"]["text"]
+    assert "supersecretzaikey" not in sent_text
+    assert "[REDACTED]" in sent_text
+
+
+def test_does_not_redact_short_values(monkeypatch):
+    """Matches redact_secrets()'s own >=8 char floor -- short/unset secret vars
+    must not accidentally mask ordinary short substrings in alert text."""
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tok123")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "chat456")
+    monkeypatch.setenv("AUTH_TOKEN_VIEWER", "short")
+    with patch("utils.telegram.requests.post") as mock_post:
+        tg.send_telegram("short circuit detected")
+    sent_text = mock_post.call_args.kwargs["json"]["text"]
+    assert sent_text == "short circuit detected"
+
+
 def test_retries_on_http_429_then_succeeds(monkeypatch):
     """Non-400 HTTP errors (e.g. 429 rate limit) are logged and retried with backoff."""
     monkeypatch.setenv("TELEGRAM_TOKEN", "tok123")

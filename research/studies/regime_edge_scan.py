@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 import pandas as pd
 
 from data.db import connect as db_connect
+from data.loaders import load_ohlcv_df
 from engine.liquidity import get_adv_value_30d, VALUE_LIQ_MIN_IDR
 from research.walkforward_multi import STRATEGY_FUNCS, walk_forward_split
 from engine.regime_filter import detect_regime
@@ -155,8 +156,7 @@ def _load_liquid_dfs(conn, as_of):
         adv = get_adv_value_30d(conn, t, as_of)
         if adv is None or adv < VALUE_LIQ_MIN_IDR:
             continue
-        df = pd.read_sql("SELECT date, open, high, low, close, volume FROM ohlcv "
-                         "WHERE ticker=? ORDER BY date", conn, params=(t,))
+        df = load_ohlcv_df(conn, t)   # settled + split-adjusted (audit R-1)
         if len(df) >= 300:
             dfs[t] = df
     return dfs

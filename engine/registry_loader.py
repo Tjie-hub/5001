@@ -29,7 +29,48 @@ _REQUIRED = ('id', 'version', 'status', 'strategy_fn', 'regimes',
 _LOADABLE = ('APPROVED', 'SHADOW')
 _LIFECYCLE = ('CANDIDATE', 'SUSPENDED', 'RETIRED', 'SUPERSEDED')
 
+# Forward-test bar for APPROVED. Mirrors research.studies.phase5_tracker.RULE;
+# engine/ must not import research/, so it is pinned here and asserted equal by
+# tests/test_registry_lifecycle.py::test_forward_bar_matches_phase5_rule.
+_FORWARD_BAR = {'min_n': 15, 'go_exp': 0.50}
+
+# Shrink-only lifecycle debt (like tests/test_research_data_fence._ROUTES_WRITE_DEBT).
+# Pre-existing APPROVED/SHADOW entries that predate R-10 enforcement. NEW violations are
+# NOT added here — they fail CI. Entries are removed as they remediate, never added.
+_LIFECYCLE_DEBT = {
+    ("NR7_BULL", 1): {
+        "reason": "APPROVED 2026-07-04 under the pre-Phase-C generalization bar; "
+                  "Phase C gate=REJECT and shadow N=0. Governs on legacy grounds.",
+        "remediation": "Phase 5 forward test (phase5_tracker); deadline 2027-01-08.",
+        "deadline": "2027-01-08",
+    },
+}
+
 _cache = None
+
+
+def validate_evidence(entry, manifest, bar):
+    """Return a list of reasons a SHADOW/APPROVED entry fails its evidence receipt.
+
+    Pure. Empty list == compliant (or a non-loadable status that needs no receipt).
+    SHADOW needs a Phase C PROMOTE gate_decision; APPROVED also needs a Phase 5
+    forward GO clearing `bar`."""
+    status = entry.get('status')
+    if status not in ('SHADOW', 'APPROVED'):
+        return []
+    ev = (manifest or {}).get('evidence') or {}
+    reasons = []
+    gd = ev.get('gate_decision') or {}
+    if gd.get('final_state') != 'PROMOTE_TO_FORWARD_TEST':
+        reasons.append('no PROMOTE gate_decision')
+    if status == 'APPROVED':
+        fw = ev.get('forward') or {}
+        if fw.get('verdict') != 'GO':
+            reasons.append('forward verdict != GO')
+        elif fw.get('n', 0) < bar['min_n'] or fw.get('exp_pct', -1.0) < bar['go_exp']:
+            reasons.append(
+                f"forward below bar (n={fw.get('n')}, exp={fw.get('exp_pct')})")
+    return reasons
 
 
 def _registry_hash(path):
@@ -51,6 +92,7 @@ def load_registry(path=None, engine_versions=None):
     with open(path, 'r') as f:
         raw = yaml.safe_load(f) or []
     entries, skipped = [], []
+    violations, debt = [], []
     for e in raw:
         ident = f"{e.get('id', '?')}_v{e.get('version', '?')}"
         status = e.get('status')
@@ -81,8 +123,30 @@ def load_registry(path=None, engine_versions=None):
             fail_open_alarm("edge_registry", f"{ident} artifact unreadable: {ex}",
                             count=1, notify=False)
             continue
+        manifest = {}
+        if e.get('manifest'):
+            man_path = os.path.join(os.path.dirname(path), e['manifest'])
+            try:
+                with open(man_path, 'r') as f:
+                    manifest = yaml.safe_load(f) or {}
+            except Exception:
+                manifest = {}
+        # else: no manifest -> empty -> validate_evidence flags the missing receipt
+        reasons = validate_evidence(e, manifest, _FORWARD_BAR)
+        if reasons:
+            key = (e['id'], e['version'])
+            if key in _LIFECYCLE_DEBT:
+                debt.append((ident, _LIFECYCLE_DEBT[key]['reason']))
+                logger.info("edge_registry %s — known lifecycle debt (%s)",
+                            ident, _LIFECYCLE_DEBT[key]['remediation'])
+            else:
+                violations.append((ident, "; ".join(reasons)))
+                fail_open_alarm("edge_registry",
+                                f"{ident} lifecycle-unverified — {'; '.join(reasons)}",
+                                count=1, notify=False)
         entries.append(e)
-    return {'entries': entries, 'skipped': skipped, 'hash': _registry_hash(path)}
+    return {'entries': entries, 'skipped': skipped,
+            'violations': violations, 'debt': debt, 'hash': _registry_hash(path)}
 
 
 def get_registry():
@@ -92,7 +156,8 @@ def get_registry():
             _cache = load_registry()
         except Exception as ex:
             fail_open_alarm("edge_registry", f"registry load failed: {ex}", count=1)
-            _cache = {'entries': [], 'skipped': [('*', str(ex))], 'hash': 'load-failed'}
+            _cache = {'entries': [], 'skipped': [('*', str(ex))],
+                      'violations': [], 'debt': [], 'hash': 'load-failed'}
     return _cache
 
 
@@ -114,14 +179,14 @@ def startup_summary():
     n_app = sum(1 for e in r['entries'] if e['status'] == 'APPROVED')
     n_sh = sum(1 for e in r['entries'] if e['status'] == 'SHADOW')
     return (f"registry @{r['hash']}: {n_app} approved, {n_sh} shadow, "
-            f"{len(r['skipped'])} skipped")
+            f"{len(r['skipped'])} skipped, {len(r.get('debt', []))} debt, "
+            f"{len(r.get('violations', []))} unverified")
 
 
 def announce_registry(telegram_fn=None):
     """Log + best-effort Telegram the loaded registry state at startup."""
     msg = "📜 " + startup_summary()
     logger.info(msg)
-    print(f"  {msg}")
     if telegram_fn is None:
         try:
             from utils.telegram import send_telegram as telegram_fn

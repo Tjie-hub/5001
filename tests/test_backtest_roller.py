@@ -98,7 +98,8 @@ def test_roll_all_returns_summary(monkeypatch, tmp_path):
     df = _make_df(400)
     monkeypatch.setattr(roller, "DB_PATH", db)
     # roller's lazy import resolves data.loaders at call time (M2) — patch there
-    monkeypatch.setattr(dl, "_load_ohlcv_bulk", lambda: {"ACES": df})
+    monkeypatch.setattr(dl, "_load_ohlcv_bulk",
+                        lambda final_only=False, adjusted=None: {"ACES": df})
     monkeypatch.setattr(dl, "get_all_tickers", lambda: ["ACES"])
 
     result = roller.roll_all(db_path=db)

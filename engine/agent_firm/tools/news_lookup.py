@@ -3,10 +3,11 @@
 import json
 import sqlite3
 from typing import Any
+from data.db import connect as db_connect
 
 
 def lookup(db_path: str, ticker: str, days: int = 7) -> list[dict[str, Any]]:
-    conn = sqlite3.connect(db_path)
+    conn = db_connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
         rows = conn.execute(

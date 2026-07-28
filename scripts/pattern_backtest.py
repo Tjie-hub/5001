@@ -24,7 +24,9 @@ import pandas as pd
 from engine.premover_detector import score_ticker, score_ticker_reversal
 
 
-DEFAULT_DB = '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db'
+import os as _os
+
+DEFAULT_DB = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), 'data', 'walkforward.db')
 
 
 def run_pattern_backtest(

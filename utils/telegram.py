@@ -4,6 +4,8 @@ import time
 
 import requests
 
+from utils.logging_config import redact_secrets
+
 logger = logging.getLogger(__name__)
 
 _MIN_INTERVAL = 1.0  # seconds between sends
@@ -16,6 +18,12 @@ def send_telegram(msg: str) -> None:
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
     if not token or not chat_id or "ISI_" in token:
         return
+
+    # RC1 fix R-4: every outbound alert passes through the same secret-redaction
+    # rule as log lines (utils.logging_config.redact_secrets) — e.g. an
+    # exception message that happens to embed a token must never ship to
+    # Telegram unmasked just because it skipped the logging path.
+    msg = redact_secrets(msg)
 
     global _last_sent
     elapsed = time.time() - _last_sent
