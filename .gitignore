@@ -1,6 +1,7 @@
 .env
 .env.local
 .stockbit_token
+.stockbit_token.lock
 .playwright_state/
 logs/
 *.log
