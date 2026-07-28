@@ -39,7 +39,11 @@ def _py_files():
 def test_no_raw_sqlite_connect_in_production():
     offenders = []
     for p in _py_files():
-        rel = str(p.relative_to(ROOT))
+        # .as_posix(): see test_architecture_boundary.py's identical fix note
+        # (RC1 audit R-1) — native-separator str() broke this allowlist match
+        # on Windows, flagging data/db.py's own authorized connect() as a
+        # violation.
+        rel = p.relative_to(ROOT).as_posix()
         if rel in ALLOWLIST or "__pycache__" in rel:
             continue
         for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):

@@ -46,7 +46,12 @@ def test_no_hardcoded_home_paths_in_production_code():
 def test_dotenv_loaded_only_in_config():
     offenders = []
     for p in _py_files():
-        rel = str(p.relative_to(ROOT))
+        # .as_posix() (not str()) so the DOTENV_ALLOWED match is platform-
+        # independent — same fix as test_architecture_boundary.py/
+        # test_db_centralization.py/test_research_data_fence.py (RC1 audit
+        # R-1, 2026-07-28): str(Path.relative_to(...)) uses native separators,
+        # which silently broke this allowlist match on Windows.
+        rel = p.relative_to(ROOT).as_posix()
         if rel in DOTENV_ALLOWED:
             continue
         if DOTENV_CALL.search(p.read_text(encoding="utf-8")):

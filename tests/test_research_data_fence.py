@@ -51,7 +51,10 @@ def _py_files():
 def test_w1_no_research_table_writes_in_production():
     offenders = []
     for p in _py_files():
-        rel = str(p.relative_to(ROOT))
+        # .as_posix(): see test_architecture_boundary.py's identical fix note
+        # (RC1 audit R-1) — native-separator str() broke this allowlist match
+        # on Windows.
+        rel = p.relative_to(ROOT).as_posix()
         if rel in DAO_ALLOWLIST or rel in _ROUTES_WRITE_DEBT:
             continue
         if WRITE_SQL.search(p.read_text(encoding="utf-8")):
@@ -67,7 +70,7 @@ def test_w1_routes_write_debt_shrinks_only():
 def test_w2_save_wf_edge_only_called_from_research():
     offenders = []
     for p in _py_files():
-        rel = str(p.relative_to(ROOT))
+        rel = p.relative_to(ROOT).as_posix()
         if rel in DAO_ALLOWLIST:          # the definition itself
             continue
         src = p.read_text(encoding="utf-8")

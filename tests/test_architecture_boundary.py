@@ -41,7 +41,12 @@ def _py_files(scopes, files):
 def test_production_does_not_import_research():
     offenders = []
     for p in _py_files(PRODUCTION_SCOPES, PRODUCTION_FILES):
-        rel = str(p.relative_to(ROOT))
+        # .as_posix() (not str()) so the ALLOWLIST match is platform-independent —
+        # str(Path.relative_to(...)) uses native separators, which silently broke
+        # this check on Windows (backslash paths never matched the forward-slash
+        # ALLOWLIST entries, making already-documented debt look like fresh
+        # violations; RC1 release-readiness audit R-1, 2026-07-28).
+        rel = p.relative_to(ROOT).as_posix()
         if rel in ALLOWLIST:
             continue
         if RESEARCH_IMPORT.search(p.read_text(encoding="utf-8")):
@@ -53,7 +58,7 @@ def test_research_does_not_import_execution():
     offenders = []
     for p in (ROOT / "research").rglob("*.py"):
         if EXECUTION_IMPORT.search(p.read_text(encoding="utf-8")):
-            offenders.append(str(p.relative_to(ROOT)))
+            offenders.append(p.relative_to(ROOT).as_posix())
     assert not offenders, f"research/ imports execution modules: {offenders}"
 
 
