@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
+from utils.logging_config import redact_secrets
+
 # ── Config ──
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
@@ -50,6 +52,7 @@ def send_telegram(msg):
             "Telegram not configured (set TELEGRAM_TOKEN and TELEGRAM_CHAT_ID env vars)"
         )
         return
+    msg = redact_secrets(msg)  # RC1-C2 — same shared rule as utils.telegram.send_telegram
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         requests.post(

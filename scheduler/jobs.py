@@ -1,8 +1,10 @@
 # scheduler/jobs.py
 import os
 import sqlite3
+import html
 import logging
 from datetime import datetime
+from typing import Optional
 import pytz
 
 
@@ -583,29 +585,156 @@ def run_market_health_report():
         conn.close()
 
 
-def _build_premarket_firm_message(decisions: list, rows: list, header: str) -> str:
-    """Pure Telegram-message builder for the premarket firm shortlist.
-
-    decisions: list[AgentDecision] from firm.evaluate_staged.
-    rows: the unified-watchlist long rows (dicts) used for source/strength lookup.
-    header: pre-formatted "dd/mm HH:MM" string.
-    Kept import-free (no langgraph) so it's unit-testable on the Windows venv.
-    """
-    from engine import trade_plan as tp
-
+def _premarket_approved_and_lookup(decisions: list, rows: list) -> tuple[list, dict]:
+    """Firm-approved decisions sorted by confidence (desc) + a ticker→row lookup
+    for source/strength tags. Shared basis for both the Telegram message and the
+    watchlist snapshot so the two never disagree on order (audit 2026-07-28
+    Phase 2 — mirrors engine.trade_plan.rank_approved's role for the EOD plan)."""
     by_ticker = {r["ticker"]: r for r in rows}
     approved = sorted(
         [d for d in decisions if d.decision == "approve"],
         key=lambda d: d.confidence or 0.0, reverse=True,
     )
+    return approved, by_ticker
+
+
+def _premarket_ranked_for_snapshot(approved: list, by_ticker: dict) -> list[dict]:
+    """Build the engine.trade_plan.record_snapshot/diff_watchlist-compatible ranked
+    list from the firm-approved premarket decisions — reuses the same generic
+    snapshot/diff infra built for the EOD plan rather than a parallel mechanism."""
+    out = []
+    for d in approved:
+        r = by_ticker.get(d.ticker, {})
+        out.append({
+            "ticker": d.ticker,
+            "confidence": float(d.confidence) if d.confidence is not None else None,
+            "conviction": r.get("strength"),
+            "confluence": r.get("confluence"),
+            "sources": r.get("sources") or [],
+        })
+    return out
+
+
+_MAX_PREMARKET_DIFF_ROWS = 8
+
+
+def _premarket_factor_note(prior_sources: Optional[list], cur_sources: Optional[list]) -> str:
+    """Factual, non-invented explanation derived from the only per-ticker factor
+    that actually exists at the premarket stage: which watchlist sources newly
+    agree/disagree (REVERSAL/PREMOVER/BEAR_DIP). Never fabricates a momentum/
+    liquidity/risk label the engine doesn't compute here."""
+    prior_set, cur_set = set(prior_sources or []), set(cur_sources or [])
+    gained = sorted(cur_set - prior_set)
+    lost = sorted(prior_set - cur_set)
+    bits = []
+    if gained:
+        bits.append("+" + "/".join(gained))
+    if lost:
+        bits.append("-" + "/".join(lost))
+    return " ".join(bits)
+
+
+def _build_premarket_diff_sections(diff: Optional[dict], approved_by_ticker: dict) -> list[str]:
+    """NEW / REMOVED / UPGRADED / DOWNGRADED (+ optional STABLE) lines for the
+    premarket shortlist. Consumes engine.trade_plan.diff_watchlist's output as-is
+    (the same snapshot/diff infra the EOD plan uses) — reports on rank/confidence
+    already decided elsewhere, never recomputes them. The per-move "explanation"
+    is the firm's own rationale for that ticker today (already-generated engine
+    output) plus the factual source-tag change, not an invented label."""
+    if not diff:
+        return []
+    added, removed, changes = diff["added"], diff["removed"], diff["changes"]
+    upgraded = [c for c in changes if c["status"] == "upgraded"]
+    downgraded = [c for c in changes if c["status"] == "downgraded"]
+    stable = [c for c in changes
+              if c["status"] == "unchanged" and (c["confidence"] or 0) >= 0.70]
+    if not added and not removed and not upgraded and not downgraded and not stable:
+        return []
+
+    L: list[str] = []
+    if added:
+        L += ["", "<b>📈 NEW</b>"]
+        L += [f"  {html.escape(t)}" for t in added[:_MAX_PREMARKET_DIFF_ROWS]]
+        if len(added) > _MAX_PREMARKET_DIFF_ROWS:
+            L.append(f"  …+{len(added) - _MAX_PREMARKET_DIFF_ROWS} more")
+    if removed:
+        L += ["", "<b>📉 REMOVED</b>"]
+        L += [f"  {html.escape(t)}" for t in removed[:_MAX_PREMARKET_DIFF_ROWS]]
+        if len(removed) > _MAX_PREMARKET_DIFF_ROWS:
+            L.append(f"  …+{len(removed) - _MAX_PREMARKET_DIFF_ROWS} more")
+
+    def _render_move(c: dict) -> None:
+        d = approved_by_ticker.get(c["ticker"])
+        rationale = (getattr(d, "rationale", None) or "").replace("\\n", " ").strip() if d else ""
+        note = _premarket_factor_note(c.get("prior_sources"), c.get("sources"))
+        rank_txt = f" rank {c['prior_rank']}→{c['rank']}" if c.get("rank_change") else ""
+        conf_txt = (f" conf {c['prior_confidence']:.2f}→{c['confidence']:.2f} "
+                   f"({c['score_delta']:+.2f})" if c["score_delta"] is not None else "")
+        line = f"  <b>{html.escape(c['ticker'])}</b>{rank_txt}{conf_txt}"
+        if note:
+            line += f" [{note}]"
+        L.append(line)
+        if rationale:
+            L.append(f"    <i>{html.escape(rationale[:140])}</i>")
+
+    if upgraded:
+        L += ["", "<b>⬆ UPGRADED</b>"]
+        for c in upgraded[:_MAX_PREMARKET_DIFF_ROWS]:
+            _render_move(c)
+    if downgraded:
+        L += ["", "<b>⬇ DOWNGRADED</b>"]
+        for c in downgraded[:_MAX_PREMARKET_DIFF_ROWS]:
+            _render_move(c)
+    if stable:
+        L += ["", "<b>🟢 STABLE</b> <i>(high-conviction, unchanged)</i>"]
+        L += [f"  {html.escape(c['ticker'])} conf {c['confidence']:.2f}"
+             for c in stable[:_MAX_PREMARKET_DIFF_ROWS]]
+    return L
+
+
+def _build_premarket_firm_message(decisions: list, rows: list, header: str,
+                                  regime: Optional[str] = None,
+                                  risk: Optional[dict] = None,
+                                  watchlist_total: Optional[int] = None,
+                                  diff: Optional[dict] = None) -> str:
+    """Pure Telegram-message builder for the premarket firm shortlist.
+
+    decisions: list[AgentDecision] from firm.evaluate_staged.
+    rows: the unified-watchlist long rows (dicts) used for source/strength lookup.
+    header: pre-formatted "dd/mm HH:MM" string.
+    regime/risk/watchlist_total: optional Daily-Summary context (market regime
+    label, get_market_risk_for_circuit_breaker() dict, total unified-watchlist
+    size) — each line is omitted when its value is None so old callers/tests
+    that don't pass them keep getting the same message shape.
+    diff: engine.trade_plan.diff_watchlist() output — adds NEW/REMOVED/
+    UPGRADED/DOWNGRADED sections when present.
+    Kept import-free (no langgraph) so it's unit-testable on the Windows venv.
+    """
+    from engine import trade_plan as tp
+
+    approved, by_ticker = _premarket_approved_and_lookup(decisions, rows)
+    approved_by_ticker = {d.ticker: d for d in approved}
     vetoed   = [d for d in decisions if d.decision == "veto"]
     passthru = [d for d in decisions if d.decision in ("degraded", "bypassed")]
 
-    msg = f"🌅 <b>Premarket Shortlist — {header}</b>\n"
-    msg += f"<i>Unified EOD watchlist → agent firm ({len(decisions)} setups)</i>\n\n"
+    msg = f"🏁 <b>PREMARKET SUMMARY — {header}</b>\n"
+    if regime:
+        msg += f"Regime: <b>{html.escape(regime)}</b>\n"
+    if risk:
+        tier = risk.get("tier")
+        score = risk.get("score")
+        score_txt = f" ({score:.0f})" if score is not None else ""
+        msg += f"Risk: <b>{html.escape(str(tier))}</b>{score_txt}\n"
+    if watchlist_total is not None:
+        msg += f"Candidates: {watchlist_total} unified → {len(decisions)} evaluated\n"
+    if approved:
+        top = approved[0]
+        conf_txt = f"{top.confidence:.2f}" if top.confidence is not None else "N/A"
+        msg += f"Highest conviction: <b>{html.escape(top.ticker)}</b> ({conf_txt})\n"
+    msg += "\n"
 
     if approved:
-        msg += "<b>✅ Firm-approved (long):</b>\n"
+        msg += "<b>⭐ TOP CONVICTIONS</b>\n"
         for d in approved:
             conf = f"{d.confidence:.2f}" if d.confidence is not None else "N/A"
             size = f" ×{d.size_hint:.2f}" if d.size_hint else ""
@@ -628,6 +757,10 @@ def _build_premarket_firm_message(decisions: list, rows: list, header: str) -> s
     p_line = tp.provider_line(decisions)
     if p_line:
         msg += "\n" + p_line + "\n"
+
+    diff_lines = _build_premarket_diff_sections(diff, approved_by_ticker)
+    if diff_lines:
+        msg += "\n".join(diff_lines) + "\n"
 
     return msg
 
@@ -663,6 +796,9 @@ def run_premarket_firm_scan():
             _g.execute("INSERT INTO _job_sentinel VALUES ('premarket_firm', ?)", (date_str,))
         except sqlite3.IntegrityError:
             logger.info(f"[{now_str}] Premarket firm: already sent today — skipped (duplicate guard)")
+            return
+        except sqlite3.OperationalError as e:
+            logger.warning(f"[{now_str}] Premarket firm: dedup guard error (fail-open): {e}")
             return
 
     logger.info(f"[{now_str}] Premarket agent-firm scan dimulai...")
@@ -743,8 +879,46 @@ def run_premarket_firm_scan():
         logger.warning(f"[{now_str}] Premarket firm eval error: {e}")
         return
 
+    # Daily-Summary context — same functions the 16:30/16:40 jobs already use,
+    # reused (not reimplemented) here. Fail-soft: a lookup error must not block
+    # the shortlist send, it just omits that summary line.
+    regime = None
     try:
-        send_telegram(_build_premarket_firm_message(decisions, longs, now.strftime('%d/%m %H:%M')))
+        from engine.edge_enrich import market_regime as _market_regime
+        _rconn = db_connect(DB_PATH)
+        try:
+            regime = _market_regime(_rconn)
+        finally:
+            _rconn.close()
+    except Exception as e:
+        logging.warning(f"[premarket_firm] regime lookup error (fail-soft): {e}")
+
+    risk = None
+    try:
+        risk = get_market_risk_for_circuit_breaker()
+    except Exception as e:
+        logging.warning(f"[premarket_firm] risk lookup error (fail-soft): {e}")
+
+    # Persist today's ranked shortlist + diff against the prior snapshot so the
+    # report can show new/removed/upgraded/downgraded tickers. Reuses the exact
+    # engine.trade_plan snapshot/diff infra built for the EOD plan (strategy=
+    # 'premarket' keeps the two histories independent) — reporting only, never
+    # feeds back into ranking/decisions.
+    from engine import trade_plan as tp
+    approved, by_ticker = _premarket_approved_and_lookup(decisions, longs)
+    ranked = _premarket_ranked_for_snapshot(approved, by_ticker)
+    diff = None
+    with db_connect(DB_PATH) as _snap_conn:
+        try:
+            diff = tp.diff_watchlist(_snap_conn, date_str, "premarket", ranked)
+            tp.record_snapshot(_snap_conn, date_str, "premarket", ranked)
+        except Exception as e:
+            logging.warning(f"[premarket_firm] watchlist snapshot/diff error (fail-soft): {e}")
+
+    try:
+        send_telegram(_build_premarket_firm_message(
+            decisions, longs, now.strftime('%d/%m %H:%M'),
+            regime=regime, risk=risk, watchlist_total=len(rows), diff=diff))
     except Exception as e:
         logger.warning(f"[premarket firm] Telegram error: {e}")
 
@@ -778,7 +952,10 @@ def run_eod_trade_plan():
 
     # Dedup guard (mirrors premarket firm scan) — first INSERT wins. 30s busy_timeout
     # waits out transient writers (the 16:40 slot can overlap a long EOD write on the
-    # 2.5GB WAL db, unlike the quiet 08:35 premarket slot).
+    # 2.5GB WAL db, unlike the quiet 08:35 premarket slot). Also fails open on
+    # OperationalError (RC1 F-3, 2026-07-28) — the 16:40 slot is more exposed to
+    # exactly the lock-contention window that caused the 2026-07-24 08:35:30
+    # premarket crash, so it gets the same guard premarket was patched with.
     with db_connect(DB_PATH) as _g:
         _g.execute("CREATE TABLE IF NOT EXISTS _job_sentinel "
                    "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))")
@@ -786,6 +963,9 @@ def run_eod_trade_plan():
             _g.execute("INSERT INTO _job_sentinel VALUES ('eod_trade_plan', ?)", (date_str,))
         except sqlite3.IntegrityError:
             logger.info(f"[{now_str}] EOD trade plan: already sent today — skipped (dup guard)")
+            return
+        except sqlite3.OperationalError as e:
+            logger.warning(f"[{now_str}] EOD trade plan: dedup guard error (fail-open): {e}")
             return
 
     from config import edge_mode
@@ -823,8 +1003,16 @@ def run_eod_trade_plan():
 
     if not top:
         # every candidate failed the directional pre-screen — ship an empty plan
+        diff = None
+        with db_connect(DB_PATH) as _snap_conn:
+            try:
+                diff = tp.diff_watchlist(_snap_conn, date_str, "eod", [])
+                tp.record_snapshot(_snap_conn, date_str, "eod", [])
+            except Exception as e:
+                logging.warning(f"[eod_trade_plan] watchlist snapshot/diff error (fail-soft): {e}")
         send_telegram(tp.build_message([], regime, now.strftime('%d/%m'), degraded=False,
-                                       vpin_summary=vpin_summary))
+                                       vpin_summary=vpin_summary, diff=diff,
+                                       watchlist_size=len(cands)))
         logger.info(f"[{now_str}] EOD trade plan: all candidates vetoed by edge pre-screen — empty plan sent")
         return
 
@@ -853,10 +1041,23 @@ def run_eod_trade_plan():
     # except block above never assigns it) — this guard also avoids
     # UnboundLocalError, not just suppressing a stale provider line.
     p_line = None if degraded else tp.provider_line(decisions)
+
+    # Persist today's ranked watchlist + diff against the prior snapshot so the
+    # report can show added/removed/upgraded/downgraded/rank+score deltas.
+    # Reporting only — never feeds back into ranking/decisions.
+    diff = None
+    with db_connect(DB_PATH) as _snap_conn:
+        try:
+            diff = tp.diff_watchlist(_snap_conn, date_str, "eod", ranked)
+            tp.record_snapshot(_snap_conn, date_str, "eod", ranked)
+        except Exception as e:
+            logging.warning(f"[eod_trade_plan] watchlist snapshot/diff error (fail-soft): {e}")
+
     try:
         send_telegram(tp.build_message(ranked, regime, now.strftime('%d/%m'),
                                        degraded=degraded, vpin_summary=vpin_summary,
-                                       provider_line=p_line))
+                                       provider_line=p_line, diff=diff,
+                                       watchlist_size=len(cands)))
     except Exception as e:
         logger.warning(f"[eod_trade_plan] Telegram error: {e}")
 
@@ -1010,6 +1211,20 @@ def run_forward_test_cycle(db_path=None, run_date=None):
     db = db_path or DB_PATH
     rd = run_date or datetime.now(WIB).strftime("%Y-%m-%d")
     try:
+        # Dedup guard (mirrors premarket/EOD) — first INSERT wins, so a systemd
+        # restart racing APScheduler never sends the Telegram report twice for
+        # the same run_date. Placed inside this function's own try/except
+        # (unlike the other two jobs) because run_forward_test_cycle's contract
+        # is to never raise on any error, including a broken db_path.
+        with db_connect(db) as _g:
+            _g.execute("CREATE TABLE IF NOT EXISTS _job_sentinel "
+                       "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))")
+            try:
+                _g.execute("INSERT INTO _job_sentinel VALUES ('forward_test_cycle', ?)", (rd,))
+            except sqlite3.IntegrityError:
+                logger.info(f"[forward_test] {rd}: already ran — skipped (dedup guard)")
+                return
+
         init_ft_tables(db)
         repo = FTRepo(db)
 
@@ -1032,6 +1247,15 @@ def run_forward_test_cycle(db_path=None, run_date=None):
         opened = (open_after - open_before) + closed
         logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Forward-test cycle {rd}: "
               f"ingested={n_ingested} opened={opened} closed={closed} open_now={open_after}")
+
+        # Telegram reporting layer — reads back what the cycle above just wrote/
+        # already held; never recomputes a decision or exit level. Reporting
+        # errors must not mask a successful cycle, so this is its own try/except.
+        try:
+            from forward_testing.reporting import build_forward_test_report
+            send_telegram(build_forward_test_report(db, rd, repo=repo))
+        except Exception as e:
+            logger.warning(f"[forward_test] Telegram report error: {e}")
     except Exception as e:
         logger.warning(f"[scheduler] Forward-test cycle error: {e}")
 

@@ -1,8 +1,11 @@
 # scheduler/__init__.py
 import os
 import sqlite3
+import time as _time
+from typing import Optional
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.events import EVENT_JOB_ERROR
 import pytz
 import logging
 
@@ -70,6 +73,94 @@ from scheduler.reports import (  # noqa: F401
     flow_broker_report,
     auto_trade_status_report,
 )
+
+
+# Cooldown between repeated Telegram alerts for the SAME job_id (RC1 fix R-2,
+# 2026-07-28 — scheduler/ is one of the documented exceptions allowed its own
+# os.getenv(), per CLAUDE.md). Default 1h: long enough that a job stuck failing
+# every 5 min (the shortest cron interval in this file) doesn't spam Telegram,
+# short enough that a real, still-unresolved outage gets re-surfaced same-shift.
+JOB_ERROR_ALERT_COOLDOWN_S = float(os.getenv("SCHEDULER_JOB_ERROR_COOLDOWN_S", "3600"))
+
+
+def format_job_error_alert(job_id: str, job_name: Optional[str], exception: BaseException,
+                           suppressed: int = 0) -> str:
+    """Telegram text for an uncaught APScheduler job exception (audit 2026-07-28).
+
+    Closes a silent-failure gap: the dead-man's-switch heartbeat only proves the
+    scheduler *process* is alive, not that any individual job succeeded — several
+    jobs (e.g. run_ohlcv_reconciliation, run_phase5_bull_watch) only logged a
+    warning on exception with no alert at all. Pure formatter so it's testable
+    without a live BackgroundScheduler.
+
+    suppressed: count of further failures of this same job_id that were
+    rate-limited (not alerted) since the last alert — surfaced here so a
+    quieted repeat failure doesn't look identical to the first occurrence.
+    """
+    name = job_name or job_id
+    tail = (f"\n<i>(+{suppressed} more failure{'s' if suppressed != 1 else ''} "
+           f"suppressed since last alert)</i>" if suppressed else "")
+    return (f"🔴 <b>Scheduler Job Failed</b>\n\n"
+            f"<b>{name}</b> (<code>{job_id}</code>)\n"
+            f"<code>{str(exception)[:300]}</code>{tail}")
+
+
+class JobErrorRateLimiter:
+    """Per-job_id cooldown gate for EVENT_JOB_ERROR alerts (RC1 fix R-2).
+
+    Bounded memory: one (last_alert_time, suppressed_count) pair per distinct
+    job_id ever seen — at most ~20 entries for this scheduler, never grows per
+    event. Deterministic: the clock is injectable so tests never depend on
+    real wall-clock timing. The first failure for a given job_id always
+    alerts (nothing to suppress against yet); a repeat failure within
+    `cooldown_s` of the last alert is counted but not sent; the next alert
+    after cooldown expiry reports how many were suppressed in between.
+    """
+
+    def __init__(self, cooldown_s: float = None, clock=_time.monotonic):
+        self.cooldown_s = JOB_ERROR_ALERT_COOLDOWN_S if cooldown_s is None else cooldown_s
+        self._clock = clock
+        self._last_alert: dict[str, float] = {}
+        self._suppressed: dict[str, int] = {}
+
+    def should_alert(self, job_id: str) -> tuple[bool, int]:
+        """Call exactly once per error event. Returns (should_alert, suppressed_count).
+        When True, the suppressed counter for job_id is consumed (returned) and reset."""
+        now = self._clock()
+        last = self._last_alert.get(job_id)
+        if last is not None and (now - last) < self.cooldown_s:
+            self._suppressed[job_id] = self._suppressed.get(job_id, 0) + 1
+            return False, 0
+        suppressed = self._suppressed.pop(job_id, 0)
+        self._last_alert[job_id] = now
+        return True, suppressed
+
+
+def _make_job_error_listener(scheduler, rate_limiter: "JobErrorRateLimiter" = None):
+    """Bind a job-error listener to `scheduler` for EVENT_JOB_ERROR registration.
+
+    rate_limiter: injectable for tests; production gets one limiter per
+    scheduler instance (its lifetime matches the worker process, so cooldown
+    state persists for as long as the scheduler runs — exactly the intent).
+    """
+    limiter = rate_limiter if rate_limiter is not None else JobErrorRateLimiter()
+
+    def _on_job_error(event):
+        try:
+            job = scheduler.get_job(event.job_id)
+            name = job.name if job else None
+        except Exception:
+            name = None
+        should_alert, suppressed = limiter.should_alert(event.job_id)
+        if not should_alert:
+            logger.warning(f"[scheduler] job {event.job_id} failed (alert on cooldown): "
+                          f"{event.exception}")
+            return
+        try:
+            send_telegram(format_job_error_alert(event.job_id, name, event.exception, suppressed))
+        except Exception as e:
+            logger.warning(f"[scheduler] job-error alert failed: {e}")
+    return _on_job_error
 
 
 def start_scheduler():
@@ -217,6 +308,11 @@ def start_scheduler():
     scheduler.add_job(run_scheduler_heartbeat, CronTrigger(
         minute="*/5", timezone=WIB), id="scheduler_heartbeat",
         name="Scheduler Heartbeat", replace_existing=True)
+
+    # Alert on ANY uncaught in-process job exception — one shared contract for
+    # all ~20 APScheduler jobs instead of each hand-rolling its own alert-or-not
+    # try/except (audit 2026-07-28).
+    scheduler.add_listener(_make_job_error_listener(scheduler), EVENT_JOB_ERROR)
 
     scheduler.start()
     logger.info("Scheduler started:")
