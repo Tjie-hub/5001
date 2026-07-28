@@ -17,6 +17,7 @@ from config import (
     WEBHOOK_URL,
     WEBHOOK_PATH,
 )
+from utils.logging_config import redact_secrets
 
 telegram_bp = Blueprint("telegram_bot", __name__)
 
@@ -70,6 +71,7 @@ def send_telegram_reply(chat_id, text):
     if "ISI_" in TELEGRAM_TOKEN:
         print(f"[Telegram skip] ChatID:{chat_id} - {text}")
         return
+    text = redact_secrets(text)  # RC1 fix R-4 — same rule as send_telegram()/log lines
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         requests.post(url, json={

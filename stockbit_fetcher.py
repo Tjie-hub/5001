@@ -34,6 +34,7 @@ import requests
 import base64
 from datetime import datetime
 from flow_filter import _parse_bars, _analyze
+from utils.logging_config import redact_secrets
 
 # === CONFIG ===
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -99,6 +100,7 @@ def send_telegram(msg):
     if not token or not chat_id:
         log("Telegram not configured")
         return
+    msg = redact_secrets(msg)  # RC1-C2 — same shared rule as utils.telegram.send_telegram
     try:
         requests.post(
             f"https://api.telegram.org/bot{token}/sendMessage",

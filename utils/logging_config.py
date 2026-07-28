@@ -85,21 +85,29 @@ _SECRET_VARS = ("TELEGRAM_TOKEN", "ZAI_API_KEY", "DEEPSEEK_API_KEY",
                 "AUTH_TOKEN_SCHEDULER", "TELEGRAM_WEBHOOK_SECRET")
 
 
+def redact_secrets(text: str) -> str:
+    """Mask any configured secret value that appears verbatim in `text`
+    (security hardening Phase 3; extracted as a standalone function for RC1
+    fix R-4 so outbound Telegram alerts can reuse the exact same redaction
+    logic as log lines, instead of a second implementation). Values are read
+    from env at call time so rotation needs no restart of the caller."""
+    for var in _SECRET_VARS:
+        for val in (v.strip() for v in os.getenv(var, "").split(",")):
+            if len(val) >= 8 and val in text:
+                text = text.replace(val, "[REDACTED]")
+    return text
+
+
 class SecretRedactionFilter(logging.Filter):
     """Mask configured secret values if they ever reach a log line
-    (security hardening Phase 3). Values are read from env at filter time so
-    rotation needs no restart of the logging stack."""
+    (security hardening Phase 3). Delegates to redact_secrets() — see there
+    for the actual masking rule."""
 
     def filter(self, record: logging.LogRecord) -> bool:
         msg = record.getMessage()
-        dirty = False
-        for var in _SECRET_VARS:
-            for val in (v.strip() for v in os.getenv(var, "").split(",")):
-                if len(val) >= 8 and val in msg:
-                    msg = msg.replace(val, "[REDACTED]")
-                    dirty = True
-        if dirty:
-            record.msg = msg
+        redacted = redact_secrets(msg)
+        if redacted != msg:
+            record.msg = redacted
             record.args = ()
         return True
 

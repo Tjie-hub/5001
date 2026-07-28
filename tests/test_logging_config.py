@@ -81,6 +81,64 @@ class TestCorrelationFilter:
         assert rec.get('correlation_id') == 'test-123'
 
 
+class TestRedactSecrets:
+    """redact_secrets() — extracted (RC1 fix R-4) so log-line masking and
+    outbound Telegram alerts share one implementation, not two."""
+
+    def test_masks_configured_secret_value(self, monkeypatch):
+        from utils.logging_config import redact_secrets
+        monkeypatch.setenv("ZAI_API_KEY", "supersecretzaikey")
+        assert redact_secrets("token=supersecretzaikey leaked") == "token=[REDACTED] leaked"
+
+    def test_leaves_text_without_secrets_unchanged(self, monkeypatch):
+        from utils.logging_config import redact_secrets
+        monkeypatch.setenv("ZAI_API_KEY", "supersecretzaikey")
+        assert redact_secrets("nothing sensitive here") == "nothing sensitive here"
+
+    def test_ignores_values_shorter_than_8_chars(self, monkeypatch):
+        from utils.logging_config import redact_secrets
+        monkeypatch.setenv("AUTH_TOKEN_VIEWER", "short")
+        assert redact_secrets("a short string") == "a short string"
+
+    def test_handles_comma_separated_multi_value_vars(self, monkeypatch):
+        from utils.logging_config import redact_secrets
+        monkeypatch.setenv("AUTH_TOKEN_VIEWER", "firstlongtoken, secondlongtoken")
+        text = redact_secrets("firstlongtoken and secondlongtoken both present")
+        assert "firstlongtoken" not in text and "secondlongtoken" not in text
+
+
+class TestSecretRedactionFilter:
+    """The logging.Filter now delegates to redact_secrets() — verify the
+    delegation actually redacts a log line (this filter had no direct test
+    before RC1 fix R-4)."""
+
+    def _emit(self, msg, extra_env, monkeypatch):
+        from utils.logging_config import JSONFormatter, SecretRedactionFilter
+        import io
+        for k, v in extra_env.items():
+            monkeypatch.setenv(k, v)
+        handler = logging.StreamHandler(io.StringIO())
+        handler.setFormatter(JSONFormatter())
+        handler.addFilter(SecretRedactionFilter())
+        logger = logging.getLogger(f'redact_test_{id(handler)}')
+        logger.handlers = [handler]
+        logger.propagate = False
+        logger.setLevel(logging.DEBUG)
+        logger.info(msg)
+        handler.stream.seek(0)
+        return json.loads(handler.stream.read())
+
+    def test_filter_redacts_secret_in_log_message(self, monkeypatch):
+        rec = self._emit("leaked token supersecretzaikey here",
+                         {"ZAI_API_KEY": "supersecretzaikey"}, monkeypatch)
+        assert "supersecretzaikey" not in rec["msg"]
+        assert "[REDACTED]" in rec["msg"]
+
+    def test_filter_leaves_clean_message_untouched(self, monkeypatch):
+        rec = self._emit("all clear", {"ZAI_API_KEY": "supersecretzaikey"}, monkeypatch)
+        assert rec["msg"] == "all clear"
+
+
 class TestSetupLogging:
     def test_creates_log_directory(self):
         from utils.logging_config import setup_logging
