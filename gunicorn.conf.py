@@ -33,13 +33,21 @@ def post_worker_init(worker):
 
 def worker_exit(server, worker):
     """Graceful shutdown: stop APScheduler so in-flight jobs aren't killed
-    mid-write when systemd stops/restarts the service."""
+    mid-write when systemd stops/restarts the service.
+
+    wait=True (Production Readiness Cert) -- APScheduler's own docs: only
+    wait=True actually waits for currently-executing jobs to finish before
+    returning; wait=False (the prior value here) returned immediately while
+    a job could still be mid-write, directly contradicting this function's
+    own stated purpose. Bounded by gunicorn's graceful_timeout=30, which
+    still forces a hard stop if a job genuinely hangs."""
     global _scheduler
     if _scheduler is not None:
         try:
-            _scheduler.shutdown(wait=False)
+            _scheduler.shutdown(wait=True)
             logging.getLogger("gunicorn.error").info(
                 "worker %s: scheduler shut down", worker.pid)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.getLogger("gunicorn.error").warning(
+                "worker %s: scheduler shutdown error: %s", worker.pid, e)
         _scheduler = None
