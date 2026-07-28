@@ -204,17 +204,62 @@ Every job runs through `scripts/cron_wrap.sh`: per-job log at
 script alarms instead of failing silently for weeks (audit P-4).
 `tests/test_cron_contract.py` asserts every referenced script exists.
 
+## Telegram operational reporting (Production Engine Phases 1–3, 2026-07-28)
+
+Three daily Telegram reports, all read-only over engine outputs that were already computed
+elsewhere — none of them recompute a score, rank, or exit decision:
+
+| Report | Job | Time (WIB) | What it shows |
+|---|---|---|---|
+| EOD Trade Plan | `scheduler.jobs.run_eod_trade_plan` | 16:40 | Agent-ranked long shortlist + Watchlist Changes (added/removed/upgraded/downgraded, rank + confidence deltas) |
+| Premarket Shortlist | `scheduler.jobs.run_premarket_firm_scan` | 08:35 | Firm-vetted shortlist + PREMARKET SUMMARY (regime/risk/candidates/highest conviction) + NEW/REMOVED/UPGRADED/DOWNGRADED/STABLE |
+| Forward-Testing Summary | `scheduler.jobs.run_forward_test_cycle` | 18:30 | New/closed/active shadow positions, cumulative win/loss scoreboard, best/worst trades |
+
+The EOD and Premarket reports share one snapshot/diff mechanism: `engine/trade_plan.py`'s
+`record_snapshot()`/`diff_watchlist()` against a `watchlist_snapshot` table (`date, strategy,
+ticker, rank, confidence, conviction, confluence, sources`; `strategy` is `'eod'` or `'premarket'`,
+keeping the two histories independent). The Forward-Testing report reads `ft_shadow_position`/
+`ft_shadow_trade` directly (`forward_testing/reporting.py`) — no new table.
+
+All three jobs guard against duplicate sends with a shared `_job_sentinel` table (`job, run_date`
+primary key, first `INSERT` wins) — the same pattern each already used individually, so a
+systemd-restart race never double-sends a day's report.
+
+**Scheduler crash alerting**: an `EVENT_JOB_ERROR` listener (`scheduler/__init__.py`) sends one
+Telegram alert per uncaught in-process job exception — this is what actually tells you *which* job
+died, as distinct from the heartbeat below (which only proves the process is alive). Rate-limited
+per `job_id` via `SCHEDULER_JOB_ERROR_COOLDOWN_S` (default 3600s): the first failure always alerts;
+repeats inside the cooldown window are logged only (`[scheduler] job <id> failed (alert on
+cooldown)`) and rolled into the next alert as a "+N suppressed" count once the cooldown expires.
+
+```sql
+-- N/A: job-error alerts are not persisted to a table today, only Telegram + logs/app.log.
+-- "which jobs ran today" still requires grepping logs/app.log — a persisted, queryable job-run
+-- ledger is the scoped remaining gap (see the Operations Dashboard / Job History phase).
+```
+
 ## Logging
 
 - `logs/app.log` — structured JSON (rotating 10 MB × 5), correlation IDs.
 - `journalctl --user -u idx-walkforward` — gunicorn/systemd lifecycle.
 - `logs/cron_*.log` — per-cron-job output.
 - Scheduler jobs log at INFO/WARNING (no print()) — guard: keep it that way.
+- `utils.logging_config.redact_secrets()` masks configured secret env-var values
+  (`_SECRET_VARS`) in any text before it's logged (`SecretRedactionFilter`) **or** sent to
+  Telegram (`utils.telegram.send_telegram`, `routes.telegram.send_telegram_reply`, RC1 fix R-4) —
+  one masking rule, two consumers, so an exception message that embeds a token can't leak through
+  whichever path skips the other.
 
 ## Operational checklist
 
 Daily (or after any alert):
 - [ ] Telegram: no 🚨 CRON FAIL / ⚠️ FAIL-OPEN messages overnight
+- [ ] Telegram: 🔴 Scheduler Job Failed alerts — if any include a "+N suppressed" count, the
+      underlying job has been failing repeatedly, not just once; check `logs/app.log` for that
+      `job_id`, don't treat it as a one-off
+- [ ] The three daily reports (EOD Trade Plan 16:40, Premarket Shortlist 08:35, Forward-Testing
+      Summary 18:30) actually arrived — a missing one with no crash alert suggests the dedup guard
+      false-positived (check `_job_sentinel` for that job/date)
 - [ ] `systemctl --user status idx-walkforward` active; NRestarts stable
 - [ ] `/health` returns `status: ok` and a fresh `last_scan`
 - [ ] Heartbeat watchdog quiet (`logs/heartbeat_check.log`)
