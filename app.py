@@ -10,6 +10,7 @@ from screener.routes import screener_bp
 from screener.db import init_screener_tables
 from stockbit_fetcher import init_flow_db
 from data.db import init_agent_firm_tables
+from paper_trade import init_paper_table
 from data.db import connect as db_connect
 from routes.telegram import telegram_bp, telegram_poller_loop
 from routes.flow import flow_bp
@@ -212,6 +213,7 @@ def init_runtime():
     init_screener_tables()
     init_flow_db()
     init_agent_firm_tables()
+    init_paper_table()
     scheduler = start_scheduler()
     poller_thread = threading.Thread(target=telegram_poller_loop, daemon=True)
     poller_thread.start()
