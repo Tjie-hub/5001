@@ -711,3 +711,8 @@ Dated, append-only. Entries record changes routed through EXEC-001 §7 Change Co
 
   Trivial-complexity content fix on legacy code already in this story's file, discovered while executing this story's own audit item — not a new phase, not a FROZEN-surface change, hence a plan update rather than an ADR-candidate.
 
+- **2026-07-26 — Added P0.E1.S2.T6 (new AN-8 finding from T4's repository audit).** `P0.E1.S2.T4`'s general grep-audit (`scripts/audits/an8_unregistered_jobs.py`) found `run_vpin_backfill` (`scheduler/jobs.py:894`) — fully implemented, imported into `scheduler/__init__.py` since VPIN batch work landed, referenced nowhere else in the entire repository (not `add_job`-ed, no route, no CLI entry point, no test) — the exact H-1/H-2 unwired-capability class, previously unnamed by the Audit. T4's scope is audit-and-document, not disposition (per its own instructions); this entry supplies the follow-up task and, per the audit script's own `ALLOWLIST` mechanism, is cited so the gate does not fail on a documented, already-tracked finding while it awaits disposition. Same story as T1–T3/T5 (P0.E1.S2 — Dead jobs/reports decision), since it is the same defect class discovered mid-story, not new-phase scope:
+  - **P0.E1.S2.T6** — decide `run_vpin_backfill`'s fate (register on a schedule, or delete) using the same register-or-delete methodology as T1–T3; update `scripts/audits/an8_unregistered_jobs.py`'s `ALLOWLIST` to remove the citation once dispositioned. Evidence: `docs/evidence/P0/P0.E1.S2.T6/`.
+
+  Not a FROZEN-surface change; a legacy scheduler function's disposition, same as T1–T3 — plan update, not an ADR-candidate.
+

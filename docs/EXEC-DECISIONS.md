@@ -95,3 +95,14 @@ Format per entry: `{TYPE}-{nnn} — {date} — {one-line summary}` followed by t
 **Deadline phase:** Phase 0 (same story as T3, T4).
 
 ---
+
+## DEBT-003 — 2026-07-26 — `run_vpin_backfill` is an unwired capability (new AN-8 finding)
+
+**Type:** Technical debt (AN-8 class — same defect type as H-1/H-2, newly discovered)
+**What:** `run_vpin_backfill(days=90)` (`scheduler/jobs.py:894`) — a complete, working N-day VPIN historical backfill utility, complementary to the registered daily `run_vpin_daily_batch` — is imported into `scheduler/__init__.py` but is referenced nowhere else in the entire repository: not `add_job`-ed, no route, no CLI entry point, no test. Found by `P0.E1.S2.T4`'s repository-wide grep-audit (`scripts/audits/an8_unregistered_jobs.py`), which checked all 37 names re-exported from `scheduler/__init__.py` and found exactly this one unaccounted for.
+**Why deferred:** T4's scope is "audit and document," explicitly not "disposition" (its own task-card intent, mirroring T1–T3's register-or-delete pattern but for a *newly found* instance rather than one of the Audit's originally-named 6). Deciding register-vs-delete requires the same kind of investigation T1–T3 did (is it superseded? does a schedule make sense for a backfill utility, or is it meant to stay a manual/CLI tool?) — out of scope for an audit task.
+**Payoff task:** decide `run_vpin_backfill`'s fate (register on a schedule, or delete, or expose via a documented manual/CLI path) using the same methodology as T1–T3; remove the corresponding `ALLOWLIST` entry in `scripts/audits/an8_unregistered_jobs.py` once dispositioned.
+**Payoff task ID:** **`P0.E1.S2.T6`** (PLAN-001 §18 changelog, 2026-07-26).
+**Deadline phase:** Phase 0 (same story as T1–T3/T5).
+
+---
