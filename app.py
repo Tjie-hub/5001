@@ -153,7 +153,7 @@ def prometheus_metrics():
         sell_signals    = _q(conn, "SELECT COUNT(*) FROM scheduled_signals WHERE date(scan_time)=? AND signal_direction='SELL'", today) or 0
         agent_decisions = _q(conn, "SELECT COUNT(*) FROM agent_decisions WHERE date(scan_time)=?", today) or 0
         ohlcv_tickers   = _q(conn, "SELECT COUNT(DISTINCT ticker) FROM ohlcv WHERE date=?", today) or 0
-        risk_score      = _q(conn, "SELECT risk_score FROM market_risk_log ORDER BY computed_at DESC LIMIT 1")
+        risk_score      = _q(conn, "SELECT score FROM market_risk_log ORDER BY created_at DESC LIMIT 1")
         avg_vpin        = _q(conn, "SELECT AVG(vpin) FROM daily_screen WHERE date=? AND vpin IS NOT NULL", today)
 
         last_scan_str   = _q(conn, "SELECT MAX(scan_time) FROM scheduled_signals")
