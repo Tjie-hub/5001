@@ -57,15 +57,21 @@ from scheduler.utils import get_all_tickers, _load_ohlcv_bulk  # noqa: E402
 
 
 def _holiday_skip(fn_name: str) -> bool:
-    """Return True when IDX is closed today (holiday or weekend) — caller should return."""
+    """Return True when IDX is closed today (holiday or weekend) — caller should return.
+
+    L-4: a broken calendar check (import error, unexpected exception from
+    is_trading_day()) fails open -- the job runs as if today were a normal
+    trading day, exactly as before this note was added. This only logs
+    the fact that the fail-open path was taken; it does not change it.
+    """
     try:
         from engine.calendar_filter import is_trading_day
         ok, reason = is_trading_day()
         if not ok:
             logging.info(f"[{fn_name}] Non-trading day ({reason}) — skipped")
             return True
-    except Exception:
-        pass
+    except Exception as e:
+        logging.warning(f"[{fn_name}] holiday check failed ({e}) — failing open, job will run")
     return False
 
 
