@@ -716,3 +716,5 @@ Dated, append-only. Entries record changes routed through EXEC-001 §7 Change Co
 
   Not a FROZEN-surface change; a legacy scheduler function's disposition, same as T1–T3 — plan update, not an ADR-candidate.
 
+- **2026-07-30 — P0.E1.S2.T5 implemented on branch `p0/e1-s2-t5-auto-trade-scope`.** `auto_trade_status_report`'s query scoped via an `EXISTS` join against `premover_auto_log` (`mode='enforce'`, `would_trade=1`) exactly as proposed when the task was added; `yesterday` now uses `datetime.now(WIB)`. 5 new named tests (`tests/test_auto_trade_status_report.py`), each confirmed to fail against the pre-fix code and pass after. Full suite 1,241 passed/1 skipped/0 failed (+5 from baseline 1,236). Gate green. `DEBT-001`/`DEBT-002` close on merge, not before. Evidence bundle complete; awaiting cold review + merge (EXEC-001 §4).
+

@@ -83,6 +83,10 @@ Format per entry: `{TYPE}-{nnn} — {date} — {one-line summary}` followed by t
 
 **Update — 2026-07-26 (appended, entry not edited per §8 rule):** Payoff task assigned — **`P0.E1.S2.T5`** (PLAN-001 §18 changelog, same date). No new schema column needed: `P0.E1.S2.T3`'s cold review found the existing `premover_auto_log` table already records which tickers/dates were auto-trade-evaluated, so `P0.E1.S2.T5` scopes via a join against it rather than the originally-proposed provenance column. Deadline phase: Phase 0 (same story as T3, T4 — not deferred to Phase 1). Entry now meets EXEC-001 §8's payoff-task requirement.
 
+**Update — 2026-07-30 (appended, entry not edited per §8 rule): payoff implemented, pending merge.** `P0.E1.S2.T5` on branch `p0/e1-s2-t5-auto-trade-scope`: `auto_trade_status_report`'s query now requires `EXISTS (SELECT 1 FROM premover_auto_log WHERE ticker=pt.ticker AND detected_at=pt.entry_date AND mode='enforce' AND would_trade=1)` — exactly the join proposed above, against the existing table, no schema change. Verified with 3 new named tests (manual-entry exclusion, shadow-mode exclusion, would_trade=0 exclusion), each confirmed to fail against the pre-fix query before the fix, then pass after. Evidence: `docs/evidence/P0/P0.E1.S2.T5/`. **This entry closes once T5 is cold-reviewed and merged (EXEC-001 §4), not before.**
+
+**Update — 2026-07-30 (appended, entry not edited per §8 rule): CLOSED.** T5 cold-reviewed (1 Minor doc-wording finding, fixed before merge; adversarial edge-case probing found no functional defects) and merged to `master`.
+
 ---
 
 ## DEBT-002 — 2026-07-26 — `auto_trade_status_report` mixes naive and WIB-aware `datetime.now()`
@@ -93,6 +97,10 @@ Format per entry: `{TYPE}-{nnn} — {date} — {one-line summary}` followed by t
 **Payoff task:** fix the `yesterday` computation to use `datetime.now(WIB)`, matching the file's own convention.
 **Payoff task ID:** **`P0.E1.S2.T5`** (PLAN-001 §18 changelog, 2026-07-26) — same payoff task as `DEBT-001`, since both are in the same function and the same follow-up task fixes both.
 **Deadline phase:** Phase 0 (same story as T3, T4).
+
+**Update — 2026-07-30 (appended, entry not edited per §8 rule): payoff implemented, pending merge.** `P0.E1.S2.T5` on branch `p0/e1-s2-t5-auto-trade-scope`: `yesterday` now computed via `datetime.now(WIB) - timedelta(days=1)` (local `timedelta` import, matching this file's own convention at lines 38/64/76), replacing the naive `datetime.now() - __import__('datetime').timedelta(days=1)`. Verified with a frozen-time regression test asserting the WIB-derived cutoff, not a naive one, gates inclusion — confirmed failing against the pre-fix code, passing after. Evidence: `docs/evidence/P0/P0.E1.S2.T5/`. **This entry closes once T5 is cold-reviewed and merged (EXEC-001 §4), not before.**
+
+**Update — 2026-07-30 (appended, entry not edited per §8 rule): CLOSED.** T5 cold-reviewed (1 Minor doc-wording finding, fixed before merge; adversarial edge-case probing found no functional defects) and merged to `master`.
 
 ---
 

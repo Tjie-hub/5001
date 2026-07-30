@@ -472,12 +472,23 @@ def auto_trade_status_report():
         conn = db_connect(DB_PATH)
 
         # Get last auto-trade results from yesterday
-        yesterday = (datetime.now() - __import__('datetime').timedelta(days=1)).strftime("%Y-%m-%d")
+        from datetime import timedelta
+        yesterday = (datetime.now(WIB) - timedelta(days=1)).strftime("%Y-%m-%d")
 
+        # Scoped to rows premover_eod's enforce-mode path actually opened
+        # (DEBT-001): a plain paper_trades scan would also surface manual or
+        # other-strategy entries under this "Auto-Trade Status" header.
         cursor = conn.execute('''
             SELECT ticker, status, entry_price, entry_date, tp_price, sl_price, pnl_rp
-            FROM paper_trades
+            FROM paper_trades pt
             WHERE entry_date >= ?
+              AND EXISTS (
+                  SELECT 1 FROM premover_auto_log pal
+                  WHERE pal.ticker = pt.ticker
+                    AND pal.detected_at = pt.entry_date
+                    AND pal.mode = 'enforce'
+                    AND pal.would_trade = 1
+              )
             ORDER BY entry_date DESC
             LIMIT 10
         ''', (yesterday,))
