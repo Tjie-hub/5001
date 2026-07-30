@@ -113,4 +113,8 @@ Format per entry: `{TYPE}-{nnn} — {date} — {one-line summary}` followed by t
 **Payoff task ID:** **`P0.E1.S2.T6`** (PLAN-001 §18 changelog, 2026-07-26).
 **Deadline phase:** Phase 0 (same story as T1–T3/T5).
 
+**Update — 2026-07-30 (appended, entry not edited per §8 rule): payoff implemented, pending merge.** `P0.E1.S2.T6` on branch `p0/e1-s2-t6-vpin-backfill-register`: registered `run_vpin_backfill` daily mon-fri at 18:15 WIB (15 min after `run_vpin_daily_batch`, its data source) — not superseded by anything (the daily batch only ever covers "today"; this is the only gap-healing path), idempotent (skips dates already fully scored), matching the existing daily cadence of `run_ohlcv_reconciliation`/`run_ohlcv_coverage_check`. `ALLOWLIST` entry removed from `scripts/audits/an8_unregistered_jobs.py` per its own citation's instruction. Verified with 3 new named tests plus T4's own real-repo integration test (still passing with an empty allowlist). Evidence: `docs/evidence/P0/P0.E1.S2.T6/`. **This entry closes once T6 is cold-reviewed and merged (EXEC-001 §4), not before.**
+
+**Update — 2026-07-30 (appended, entry not edited per §8 rule): CLOSED.** T6 cold-reviewed (0 findings — isolated diff, registration correctness re-derived from source, all 3 new tests independently confirmed to fail pre-fix/pass post-fix) and merged to `master`, reconciled against T5's already-merged doc changes.
+
 ---

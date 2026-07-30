@@ -53,19 +53,9 @@ CANDIDATE_SOURCE_FILES = [
 
 # Explicit, reasoned exceptions. Each entry documents WHY a name is
 # allowed to stay unregistered-and-only-self-referenced without being
-# flagged. Empty at T4 merge except for findings T4's own audit
-# surfaced and handed to a follow-up task (PLAN-001 §18 changelog) —
-# T4's scope is audit-and-document, not disposition (see task card).
-ALLOWLIST: dict[str, str] = {
-    "run_vpin_backfill": (
-        "New AN-8 finding, surfaced by P0.E1.S2.T4's own audit run "
-        "(2026-07-26): fully implemented, imported since VPIN batch work "
-        "landed, referenced nowhere else in the repo. Not one of the "
-        "Audit's originally-named 6 dead jobs. T4's scope is audit-and-"
-        "document, not disposition — follow-up is P0.E1.S2.T6 (PLAN-001 "
-        "§18 changelog). Remove this entry once T6 dispositions it."
-    ),
-}
+# flagged. Empty as of P0.E1.S2.T6 (run_vpin_backfill registered — see
+# scheduler/__init__.py "VPIN Backfill 18:15").
+ALLOWLIST: dict[str, str] = {}
 
 
 def _find_reexported_names(init_source: str) -> set[str]:

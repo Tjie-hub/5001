@@ -215,6 +215,16 @@ def start_scheduler():
         day_of_week="mon-fri", hour=18, minute=0, timezone=WIB),
         id="vpin_daily_batch", name="VPIN Daily Batch 18:00")
 
+    # VPIN backfill — 18:15 WIB (audit AN-8/P0.E1.S2.T4/T6: fully implemented
+    # and imported since VPIN batch work landed, never registered. Complements
+    # the daily batch above — it heals any gaps in vpin_scores from prior-day
+    # failures, not just today; idempotent, skips dates already fully scored.
+    # Scheduled 15 min after its data source, same pattern as
+    # ohlcv_reconciliation/ohlcv_coverage_check below.)
+    scheduler.add_job(run_vpin_backfill, CronTrigger(
+        day_of_week="mon-fri", hour=18, minute=15, timezone=WIB),
+        id="vpin_backfill", name="VPIN Backfill 18:15")
+
     # Pre-market health report — 08:45 WIB
     scheduler.add_job(run_market_health_report, CronTrigger(
         day_of_week="mon-fri", hour=8, minute=45, timezone=WIB),
