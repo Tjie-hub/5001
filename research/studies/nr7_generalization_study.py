@@ -21,9 +21,8 @@ from research.walkforward_multi import walk_forward_split
 from engine.regime_filter import detect_regime
 from engine.exits.costs import COMMISSION_SELL, SLIPPAGE
 import research.nr7_study as ns
+from config import DB_PATH
 
-DB_PATH = os.getenv('DB_PATH', os.path.join(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__))), 'data', 'walkforward.db'))
 RESULTS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                        'docs', 'superpowers', 'results',
                        '2026-07-07-nr7-generalization-study.md')

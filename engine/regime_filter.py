@@ -344,7 +344,7 @@ if __name__ == "__main__":
     import sqlite3
     import sys
 
-    DB_PATH = "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db"
+    from config import DB_PATH
     ticker = sys.argv[1] if len(sys.argv) > 1 else "BRPT"
 
     conn = sqlite3.connect(DB_PATH)

@@ -2,7 +2,9 @@ import sqlite3
 import os
 from contextlib import contextmanager
 
-DB_PATH = os.getenv('DB_PATH', os.path.join(os.path.dirname(__file__), 'walkforward.db'))
+from config import default_db_path, resolve_db_path
+
+DB_PATH = resolve_db_path(os.getenv('DB_PATH', default_db_path()))
 
 def connect(path=None, timeout=30):
     """The one SQLite entry point: timeout + busy_timeout + WAL.

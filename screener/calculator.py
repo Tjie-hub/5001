@@ -195,8 +195,8 @@ def calc_consec_up(ticker: str, today_close: int | None) -> int:
     if today_close is None:
         return 0
     try:
-        import sqlite3, os
-        db_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'walkforward.db')
+        import sqlite3
+        from config import DB_PATH as db_path
         conn = sqlite3.connect(db_path)
         rows = conn.execute(
             "SELECT date, close FROM ohlcv WHERE ticker=? AND close IS NOT NULL ORDER BY date DESC LIMIT 30",

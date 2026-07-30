@@ -40,9 +40,7 @@ from datetime import date as dt_date
 from typing import Optional
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_PROJECT = os.path.dirname(_HERE)
-_DB_PATH = os.path.join(_PROJECT, "data", "walkforward.db")
+from config import DB_PATH as _DB_PATH
 
 # ── BRPT Reference Values (pre-crash baseline) ─────────────────────────────────
 BRPT_PROFILE = {

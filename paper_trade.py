@@ -10,7 +10,7 @@ import pytz
 load_dotenv()
 
 WIB     = pytz.timezone("Asia/Jakarta")
-DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
+from config import DB_PATH
 
 def calc_swing_tp(ticker: str, entry_price: float, lookback: int = 20) -> float:
     """

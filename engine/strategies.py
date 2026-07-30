@@ -1101,7 +1101,7 @@ def strategy_orb(df: pd.DataFrame, capital: float = 50_000_000,
 
 def calc_opening_range_from_ticks(ticker: str, trade_date: str,
                                   opening_minutes: int = 30,
-                                  db_path: str = 'data/walkforward.db') -> dict | None:
+                                  db_path: str = None) -> dict | None:
     """
     Compute true intraday Opening Range from the `ticks` table (1-min Stockbit).
     trade_date: 'YYYY-MM-DD'. Window: 09:00:00 (inclusive) to 09:00 + opening_minutes (exclusive).
@@ -1109,6 +1109,9 @@ def calc_opening_range_from_ticks(ticker: str, trade_date: str,
     """
     import sqlite3
     from datetime import datetime, timedelta
+    if db_path is None:
+        from config import DB_PATH
+        db_path = DB_PATH
     end_time = (datetime.strptime('09:00:00', '%H:%M:%S')
                 + timedelta(minutes=opening_minutes)).strftime('%H:%M:%S')
     try:
@@ -1141,7 +1144,7 @@ def calc_opening_range_from_ticks(ticker: str, trade_date: str,
 
 def check_orb_intraday_signal(ticker: str, opening_minutes: int = 30,
                               lookback_days: int = 20, vol_mult: float = 1.5,
-                              db_path: str = 'data/walkforward.db',
+                              db_path: str = None,
                               as_of_date: str = None,
                               as_of_time: str = None) -> dict:
     """
@@ -1161,6 +1164,10 @@ def check_orb_intraday_signal(ticker: str, opening_minutes: int = 30,
     """
     import sqlite3
     from datetime import datetime, timedelta
+
+    if db_path is None:
+        from config import DB_PATH
+        db_path = DB_PATH
 
     if as_of_date and as_of_time:
         today, now_time = as_of_date, as_of_time
@@ -1537,10 +1544,8 @@ def get_ticker_data(ticker: str) -> pd.DataFrame:
         DataFrame dengan kolom: date, open, high, low, close, volume
     """
     import sqlite3
-    
-    # Path ke database (adjust sesuai struktur project)
-    db_path = 'data/walkforward.db'
-    
+    from config import DB_PATH as db_path
+
     try:
         conn = sqlite3.connect(db_path)
         query = f"""

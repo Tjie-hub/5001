@@ -9,9 +9,7 @@ import os
 import pandas as pd
 
 from data.db import connect as db_connect
-
-DB_PATH = os.getenv("DB_PATH", os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "walkforward.db"))
+from config import DB_PATH
 
 
 def get_all_tickers():

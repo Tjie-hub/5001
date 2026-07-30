@@ -125,9 +125,36 @@ nvm install --lts
 ```
 ## Running the Project
 
-Project-specific runtime instructions will be documented here.
-Refer to the relevant documentation under `docs/` until a standardized startup workflow is finalized.
+Start the production application:
 
+```bash
+python app.py
+```
+
+By default the application:
+
+- Starts the Flask web server
+- Starts the production scheduler
+- Starts the Telegram polling service
+- Initializes required database tables
+
+The web interface is available at:
+
+```
+http://localhost:5001
+```
+
+Health endpoint:
+
+```
+http://localhost:5001/health
+```
+
+Prometheus metrics:
+
+```
+http://localhost:5001/metrics
+```
 ## Running Tests
 
 Run the complete regression suite:

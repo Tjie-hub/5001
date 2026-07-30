@@ -22,9 +22,10 @@ from typing import Iterable
 import pandas as pd
 
 from engine.premover_detector import score_ticker, score_ticker_reversal
+from config import default_db_path, resolve_db_path
 
 
-DEFAULT_DB = '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db'
+DEFAULT_DB = default_db_path()
 
 
 def run_pattern_backtest(
@@ -169,7 +170,7 @@ def main():
     p.add_argument('--threshold', type=int, default=45)
     p.add_argument('--win-pct', type=float, default=10.0)
     p.add_argument('--forward-days', type=int, default=10)
-    p.add_argument('--db', default=os.getenv('DB_PATH', DEFAULT_DB))
+    p.add_argument('--db', default=resolve_db_path(os.getenv('DB_PATH', DEFAULT_DB)))
     p.add_argument('--out-csv', help='Write per-alert detail to CSV')
     p.add_argument('--pattern', action='append',
                    choices=['CONTINUATION', 'REVERSAL_BREAKOUT'],

@@ -31,9 +31,7 @@ import argparse
 from typing import Optional
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_PROJECT = os.path.dirname(_HERE)
-_DB_PATH = os.path.join(_PROJECT, "data", "walkforward.db")
+from config import DB_PATH as _DB_PATH
 
 # ── Tunables ───────────────────────────────────────────────────────────────────
 OVERSOLD_PCT = 15.0          # min distance from 30d extreme to qualify

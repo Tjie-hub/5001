@@ -18,8 +18,10 @@ Usage:
   python3 stockbit_fetcher.py flow                # flow fetch all IDX80
   python3 stockbit_fetcher.py flow --cat IDX30    # flow fetch IDX30 only
 
-Cron (setiap hari 08:50 WIB sebelum market):
-  50 8 * * 1-5 cd "/home/tjiesar/10 Projects/idx-walkforward-5001" && python3 stockbit_fetcher.py >> logs/stockbit.log 2>&1
+Cron (setiap hari 08:50 WIB sebelum market) -- run from the repo root, DB_PATH
+no longer needs to be absolute in the crontab entry itself (H-7: resolved to
+an absolute path centrally in config.py regardless of cwd):
+  50 8 * * 1-5 cd /path/to/repo && python3 stockbit_fetcher.py >> logs/stockbit.log 2>&1
 """
 
 import os
@@ -37,7 +39,7 @@ from flow_filter import _parse_bars, _analyze
 
 # === CONFIG ===
 _HERE = os.path.dirname(os.path.abspath(__file__))
-WALKFORWARD_DB = os.path.join(_HERE, "data", "walkforward.db")
+from config import DB_PATH as WALKFORWARD_DB  # noqa: E402
 CHROME_LOCALSTORAGE = os.path.expanduser(
     "~/.config/google-chrome/Default/Local Storage/leveldb"
 )

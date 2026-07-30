@@ -16,8 +16,7 @@ from data.loaders import _load_ohlcv_bulk
 from utils.telegram import send_telegram
 
 WIB = pytz.timezone("Asia/Jakarta")
-DB_PATH = os.getenv("DB_PATH", os.path.join(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__))), "data", "walkforward.db"))
+from config import DB_PATH
 
 
 _WF_LOCK_JOB = "refresh_wf_scores"

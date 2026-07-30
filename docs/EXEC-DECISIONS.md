@@ -105,6 +105,20 @@ Format per entry: `{TYPE}-{nnn} — {date} — {one-line summary}` followed by t
 
 ---
 
+## IMPL-DEC-008 — 2026-07-30 — `resolve_db_path()`: normalizing relative `DB_PATH` values, not just centralizing the default (P0.E2.S2.T1)
+
+**Type:** Implementation decision
+**Context:** P0.E2.S2.T1's task card reads "config resolves absolute DB_PATH once; all modules import it; delete per-module fallbacks." The literal first step — giving `config.py` a single `default_db_path()` function and having ~20 modules import `config.DB_PATH` instead of hand-rolling their own `os.getenv("DB_PATH", <duplicated fallback>)` — does **not**, by itself, make `DB_PATH` absolute. This repo's real `.env` (and `.env.example`) ship `DB_PATH=data/walkforward.db` — relative. `os.getenv("DB_PATH", <any absolute default>)` returns the env var verbatim whenever it's set, so centralizing only the *default* leaves every module (including `config.py` itself) resolving to a relative path in the common case (env var present), silently dependent on the process's cwd being the repo root at launch. This was found empirically, mid-implementation, while writing `tests/test_db_path_resolution.py` — `config.DB_PATH` failed an `is_absolute()` assertion against the real `.env`.
+**Options considered:**
+1. Leave `.env`/`.env.example`'s `DB_PATH` value as relative, and only fix `config.py`'s fallback to be absolute — insufficient: the bug reproduces the moment the env var is set to anything relative, which is the actual shipped configuration today.
+2. Rewrite `.env`/`.env.example` to hold an absolute path instead — pushes the correctness requirement onto every deployment's env file (and every developer's local `.env`) rather than the code; also machine-specific (an absolute path baked into a checked-in `.env.example` is exactly the class of bug this task exists to remove), and `.env` itself is local/gitignored config outside this task's diff surface.
+3. Add `config.resolve_db_path(raw)`: a pure function that takes whatever `os.getenv("DB_PATH", ...)` returned (env var, `.env`, or the default) and joins it against `_BASE` if it isn't already absolute. `config.DB_PATH` becomes `resolve_db_path(os.getenv("DB_PATH", default_db_path()))`; the two reload-dependent modules (`app.py`, `data/db.py`) wrap their own independent `os.getenv` call in the same function, so there is still exactly one place the normalization logic lives, imported everywhere it's needed — consistent with "config resolves DB_PATH once."
+**Choice:** Option 3. An already-absolute `DB_PATH` (e.g. an operator override) passes through unchanged (`Path(raw).is_absolute()` short-circuits); a relative one, from any source, resolves against the repo root exactly once.
+**Reversibility:** trivial — `resolve_db_path` is pure path math with no side effects; reverting removes the normalization step, code returns to the pre-fix (relative-when-set) behavior.
+**Consequence:** every module's resolved `DB_PATH` is unchanged from before this task in the normal runtime case (repo root cwd, real `.env`) — confirmed by a direct multi-module smoke import printing each module's resolved value, all identical and absolute. `.env`/`.env.example` were **not** changed; a relative `DB_PATH` there remains valid and is now safe by construction.
+
+---
+
 ## DEBT-001 — 2026-07-26 — `auto_trade_status_report`'s query is not scoped to auto-trade-originated trades
 
 **Type:** Technical debt

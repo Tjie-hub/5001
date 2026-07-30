@@ -24,7 +24,7 @@ import feedparser
 from datetime import datetime, date, timedelta
 from urllib.parse import quote_plus
 
-_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "walkforward.db")
+from config import DB_PATH as _DB_PATH
 
 # Indonesian locale + " saham" qualifier reduces off-topic hits (e.g. ASII as a name match)
 _RSS_URL = "https://news.google.com/rss/search?q={query}&hl=id&gl=ID&ceid=ID:id"

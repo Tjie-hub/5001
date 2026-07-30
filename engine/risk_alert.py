@@ -12,8 +12,7 @@ import logging
 import os
 import sqlite3
 
-DB_PATH = os.getenv("DB_PATH", "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db")
-
+from config import DB_PATH
 from utils.telegram import send_telegram
 
 _TIER_EMOJI = {

@@ -12,6 +12,7 @@ from screener.db import init_screener_tables
 from stockbit_fetcher import init_flow_db
 from data.db import init_agent_firm_tables
 from data.db import connect as db_connect
+from config import default_db_path, resolve_db_path
 from routes.telegram import telegram_bp, telegram_poller_loop
 from routes.flow import flow_bp
 from routes.screener import screener_main_bp
@@ -23,7 +24,7 @@ import threading
 
 load_dotenv()
 setup_logging()
-DB_PATH = os.getenv('DB_PATH', '/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db')
+DB_PATH = resolve_db_path(os.getenv('DB_PATH', default_db_path()))
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.urandom(32)

@@ -26,7 +26,7 @@ _SB_HEADERS = {
     "Referer": "https://stockbit.com/",
 }
 
-_DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'walkforward.db')
+from config import DB_PATH as _DB_PATH
 
 
 # ── Core tradebook fetch ──────────────────────────────────────────────────────

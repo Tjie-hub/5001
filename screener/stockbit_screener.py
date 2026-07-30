@@ -193,7 +193,8 @@ def run_screener(template_id: int, template_type: str = "TEMPLATE_TYPE_GURU",
       { template_id, count, tickers, sb_metrics, results: [{ticker, name, <sb>..., <ks>...}] }
     """
     if db_path is None:
-        db_path = os.getenv("DB_PATH", str(BASE_DIR / "data" / "walkforward.db"))
+        from config import default_db_path, resolve_db_path
+        db_path = resolve_db_path(os.getenv("DB_PATH", default_db_path()))
 
     rows = fetch_template(template_id, template_type)
     if not rows:

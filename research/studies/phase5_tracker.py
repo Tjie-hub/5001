@@ -10,9 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))))
 
 from data.db import connect as db_connect
-
-DB_PATH = os.getenv('DB_PATH', os.path.join(os.path.dirname(os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__)))), 'data', 'walkforward.db'))
+from config import DB_PATH
 
 RULE = {'min_n': 15, 'go_exp': 0.50, 'nogo_exp': 0.0,
         'extend_n': 10, 'timebox_months': 6, 'start_date': '2026-07-08'}

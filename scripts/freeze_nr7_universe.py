@@ -8,9 +8,8 @@ from datetime import date
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from data.db import connect as db_connect
+from config import DB_PATH
 
-DB_PATH = os.getenv('DB_PATH', os.path.join(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__))), 'data', 'walkforward.db'))
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                    'registry', 'artifacts', 'NR7_BULL_v1_tickers.json')
 
