@@ -382,28 +382,6 @@ def save_keystats(conn, stats):
     )
 
 
-def _parse_args(args):
-    """Parse common CLI args: --token, --cat, and positional ticker list."""
-    manual_token = None
-    category = None
-
-    if "--token" in args:
-        i = args.index("--token")
-        manual_token = args[i + 1]
-        args = [a for a in args if a != "--token" and a != manual_token]
-
-    if "--cat" in args:
-        i = args.index("--cat")
-        category = args[i + 1].upper()
-        args = [a for a in args if a != "--cat" and a != args[i + 1] if i + 1 < len(args)]
-        # clean up properly
-        raw = sys.argv[:]
-        idx_c = raw.index("--cat") if "--cat" in raw else -1
-        args = [a for j, a in enumerate(args) if a != category]
-
-    return args, manual_token, category
-
-
 def main():
     log("=" * 50)
     log("STOCKBIT KEYSTATS FETCHER")
