@@ -9,6 +9,12 @@ Also defines IDX market holidays (exchange closed) for 2026 so
 schedulers can skip scans on non-trading days.
 Update IDX_MARKET_HOLIDAYS_2026 each year from the official BEI
 trading calendar (https://www.idx.co.id).
+
+L-5: `check_calendar_year_coverage()` alarms (via
+scheduler.jobs.run_calendar_coverage_check, December-only daily cron)
+if next year's holiday dict isn't added yet -- it cannot populate the
+calendar itself; a human still has to add the new IDX_MARKET_HOLIDAYS_/
+BI_RATE_DATES_/FOMC_DATES_ blocks each year.
 """
 
 from datetime import date, timedelta
@@ -235,6 +241,39 @@ def is_trading_day(check_date: date = None) -> Tuple[bool, str]:
     if check_date in _MARKET_HOLIDAYS:
         return False, _MARKET_HOLIDAYS[check_date]
     return True, "trading day"
+
+
+def check_calendar_year_coverage(today: date = None) -> str | None:
+    """L-5: warn once next year's IDX holiday calendar isn't populated yet.
+
+    `_MARKET_HOLIDAYS` is hand-curated per year (``IDX_MARKET_HOLIDAYS_2026``
+    etc., updated annually from the official BEI trading calendar) -- it
+    cannot be derived programmatically, so this cannot fix the gap, only
+    surface it. Without it, ``is_trading_day()`` silently treats every
+    weekday of the missing year as a trading day (no holiday, no blackout
+    check possible) -- the exact failure mode the audit flagged.
+
+    Returns ``None`` outside December (nothing actionable yet -- the next
+    year's calendar is not due until closer to year-end) and once next
+    year's holidays are present. Returns a warning message in December
+    when they're still missing.
+    """
+    if today is None:
+        today = date.today()
+    if today.month != 12:
+        return None
+    next_year = today.year + 1
+    if any(d.year == next_year for d in _MARKET_HOLIDAYS):
+        return None
+    return (
+        f"IDX market holiday calendar for {next_year} is not populated "
+        f"(add IDX_MARKET_HOLIDAYS_{next_year} to engine/calendar_filter.py). "
+        f"From {next_year}-01-01, is_trading_day() will treat every weekday "
+        f"as a trading day with no holidays, and BI Rate/FOMC blackout "
+        f"windows for {next_year} will not exist either until "
+        f"BI_RATE_DATES_{next_year}/FOMC_DATES_{next_year} are added in the "
+        f"same update."
+    )
 
 
 def is_blackout_day(check_date: date = None) -> Tuple[bool, str]:

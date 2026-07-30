@@ -54,6 +54,7 @@ from scheduler.jobs import (  # noqa: F401
     run_eod_trade_plan,
     run_forward_test_cycle,
     run_scheduler_heartbeat,
+    run_calendar_coverage_check,
     run_phase5_bull_watch,
     run_vpin_daily_batch,
     run_vpin_backfill,
@@ -271,6 +272,14 @@ def start_scheduler():
     scheduler.add_job(run_scheduler_heartbeat, CronTrigger(
         minute="*/5", timezone=WIB), id="scheduler_heartbeat",
         name="Scheduler Heartbeat", replace_existing=True)
+
+    # L-5 — daily in December only, alarm if next year's IDX holiday calendar
+    # isn't populated yet (calendar_filter.py's holiday dicts are hand-curated
+    # per year). Every day of the week, not just mon-fri -- this is about the
+    # calendar data's own completeness, not market activity.
+    scheduler.add_job(run_calendar_coverage_check, CronTrigger(
+        month=12, hour=9, minute=0, timezone=WIB), id="calendar_coverage_check",
+        name="Calendar Year Coverage Check (December)", replace_existing=True)
 
     scheduler.start()
     print("Scheduler started:")

@@ -31,6 +31,28 @@ def run_scheduler_heartbeat():
         write_heartbeat(HEARTBEAT_PATH, datetime.now(timezone.utc))
     except Exception as e:  # never let the heartbeat crash the scheduler
         logging.warning(f"[heartbeat] write failed: {e}")
+
+
+def run_calendar_coverage_check():
+    """L-5: alarm once daily in December if next year's IDX holiday
+    calendar isn't populated yet (engine/calendar_filter.py's holiday
+    dicts are hand-curated per year and must be updated annually).
+
+    Deliberately does not call `_holiday_skip` -- this alarm is about the
+    calendar data's own completeness, not market activity, so it must
+    still fire on weekends/holidays in December. Runs once per day
+    (December-only CronTrigger in scheduler/__init__.py) -- that daily
+    cadence is the alarm's own duplicate-prevention: nothing here fires
+    more than once per scheduled invocation.
+    """
+    try:
+        from engine.calendar_filter import check_calendar_year_coverage
+        msg = check_calendar_year_coverage()
+        if msg:
+            logging.warning(f"[calendar-coverage] {msg}")
+            send_telegram(f"⚠️ {msg}")
+    except Exception as e:  # never let this alarm crash the scheduler
+        logging.warning(f"[calendar-coverage] check failed: {e}")
 from scheduler.utils import get_all_tickers, _load_ohlcv_bulk  # noqa: E402
 
 
