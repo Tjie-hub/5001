@@ -10,6 +10,7 @@ from data.db import connect as db_connect
 from datetime import date as dt_date
 
 from config import DB_PATH
+from engine.freshness import is_fresh
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +205,12 @@ def _check_trade(trade: dict) -> dict:
     if bar_row is None:
         return {'should_close': False, 'alerts': alerts, 'trail_update': None,
                 'exit_reason': None, 'exit_price': None}
+    # H-3 minimal freshness guard (P0.E2.S1.T2): don't re-evaluate SL/TP off a
+    # stale last bar (feed gap, suspension, token death) — skip this cycle
+    # instead. Full Certifier-based freshness flag is Phase 1 scope.
+    if not is_fresh(bar_row[0]):
+        return {'should_close': False, 'alerts': alerts, 'trail_update': None,
+                'exit_reason': None, 'exit_price': None, 'stale': True}
     bar = Bar(date=str(bar_row[0]), open=float(bar_row[1]), high=float(bar_row[2]),
               low=float(bar_row[3]), close=float(bar_row[4]))
     current = bar.close
@@ -368,6 +375,10 @@ def _evaluate_swing_trend(trade: dict) -> dict:
     if len(df) < 55:
         return {'action': 'OK', 'reason': None, 'message': 'insufficient_history', 'new_sl': None}
 
+    # H-3 minimal freshness guard (P0.E2.S1.T2) — see _check_trade
+    if not is_fresh(df['date'].iloc[-1]):
+        return {'action': 'OK', 'reason': None, 'message': 'stale_bar', 'new_sl': None, 'stale': True}
+
     for c in ['open','high','low','close','volume']:
         df[c] = df[c].astype(float)
 
@@ -523,12 +534,16 @@ def check_all_open_trades():
 
     logger.info(f"[monitor] Checking {len(open_trades)} open trade(s)...")
     total_alerts = 0
+    stale_skipped = 0
 
     for trade in open_trades:
         strategy = (trade.get('strategy') or '').strip().lower()
 
         if strategy == 'swing trend':
             result = _evaluate_swing_trend(trade)
+            if result.get('stale'):
+                stale_skipped += 1
+                continue
             # Persist trailing state even when not closing
             if result.get('new_sl') or result.get('new_highest') or result.get('new_adx_peak'):
                 try:
@@ -572,6 +587,9 @@ def check_all_open_trades():
 
         # Non-swing: check for stop loss / TP, alerts, and trailing stop
         result = _check_trade(trade)
+        if result.get('stale'):
+            stale_skipped += 1
+            continue
 
         # Persist trailing stop update if SL or highest_seen changed
         if result.get('trail_update'):
@@ -612,5 +630,7 @@ def check_all_open_trades():
             send_telegram(alert['message'])
             total_alerts += 1
 
+    if stale_skipped:
+        logger.warning(f"[monitor] {stale_skipped}/{len(open_trades)} open trade(s) skipped this cycle (stale last bar)")
     logger.info(f"[monitor] Done. {total_alerts} alert(s) sent.")
     return total_alerts

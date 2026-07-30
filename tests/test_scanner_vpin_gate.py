@@ -100,8 +100,12 @@ def _minimal_ohlcv_map(ticker="TESTVPIN"):
     """A >=25-row df — just enough to clear the `len(df) < 25` early-exit
     right after the VPIN block, so a spy on the next call (calc_vol_ratio)
     can prove downstream code was actually reached. Values are arbitrary —
-    the spy raises before any of them would be read."""
-    return {ticker: pd.DataFrame({"close": list(range(25)), "volume": [1000] * 25})}
+    the spy raises before any of them would be read. `date` must be present
+    and fresh (today) since the P0.E2.S1.T2 freshness guard reads it right
+    after the same len(df)<25 check, before calc_vol_ratio is ever called."""
+    import datetime as _dt
+    today = _dt.date.today().isoformat()
+    return {ticker: pd.DataFrame({"date": [today] * 25, "close": list(range(25)), "volume": [1000] * 25})}
 
 
 def test_vpin_disabled_never_calls_calc_vpin_multi(wire_common_mocks, monkeypatch):

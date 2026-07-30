@@ -16,6 +16,7 @@ from utils.telegram import send_telegram  # noqa: E402
 from data.db import connect as db_connect  # noqa: E402
 from scheduler.state import _regime_clf_cache  # noqa: E402  — dict; _sector_scores_cache handled inside _get_sector_scores_cached via scheduler.state ref
 from scheduler.utils import get_all_tickers, _load_ohlcv_bulk, fetch_latest  # noqa: E402
+from engine.freshness import is_fresh  # noqa: E402
 
 
 def calc_votes(df):
@@ -305,6 +306,7 @@ def scan_momentum_signals():
         logging.warning(f"wf_map load error: {_e}")
 
     signals = []
+    stale_skipped = 0
     ohlcv_map = _load_ohlcv_bulk()
 
     # R16: flush indicator cache at scan start
@@ -429,6 +431,12 @@ def scan_momentum_signals():
         try:
             if df is None or len(df) < 25:
                 continue
+            # H-3 minimal freshness guard (P0.E2.S1.T2): a stale last bar must
+            # not be evaluated as if it were today's — full Certifier-based
+            # freshness flag is Phase 1 scope (PLAN-001 P1.E4.S1).
+            if not is_fresh(df["date"].iloc[-1]):
+                stale_skipped += 1
+                continue
             vr     = calc_vol_ratio(df)
             streak = (df["close"] > df["close"].shift(1)) & (df["close"].shift(1) > df["close"].shift(2))
             # Gap-up after a >1-day calendar break (weekend/holiday) fires even
@@ -527,6 +535,8 @@ def scan_momentum_signals():
             logging.exception(f"scan error [{ticker}]: {_te}")
 
     signals.sort(key=lambda x: x["wf_score"], reverse=True)
+    if stale_skipped:
+        logging.warning(f"[scan_momentum] {stale_skipped} ticker(s) skipped this run (stale last bar)")
     return signals
 
 def daily_signal_scan():
@@ -1183,9 +1193,18 @@ def scan_distribution_signals(ohlcv_map, date_str, time_str):
         logging.warning(f"[scan_distribution] DB query error: {_e}")
         return []
 
+    stale_skipped = 0
     for ticker, score, smart_money in rows:
         df = ohlcv_map.get(ticker)
         if df is None or len(df) < 10:
+            continue
+
+        # H-3 minimal freshness guard (P0.E2.S1.T2): this is an independent
+        # ohlcv_map read (not shared with scheduled_multi_strategy_scan's
+        # already-guarded adaptive-selection loop) — a stale last bar must
+        # not be evaluated as if it were today's.
+        if not is_fresh(df["date"].iloc[-1]):
+            stale_skipped += 1
             continue
 
         regime = _safe_regime(df)
@@ -1207,6 +1226,8 @@ def scan_distribution_signals(ohlcv_map, date_str, time_str):
             ],
         })
 
+    if stale_skipped:
+        logging.warning(f"[scan_distribution] {stale_skipped} ticker(s) skipped this run (stale last bar)")
     return results
 
 
@@ -1358,6 +1379,7 @@ def scheduled_multi_strategy_scan():
 
     # Step 1: Adaptive strategy selection per ticker
     intersection_results = []
+    stale_skipped = 0
 
     # Value-base liquidity pre-filter connection — opened once, reused per ticker.
     # Avg daily traded value (close*volume) must be >= Rp 5B to pass.
@@ -1389,6 +1411,10 @@ def scheduled_multi_strategy_scan():
 
             df = ohlcv_map.get(ticker)
             if df is None or len(df) < 20:
+                continue
+            # H-3 minimal freshness guard (P0.E2.S1.T2) — see scan_momentum_signals
+            if not is_fresh(df["date"].iloc[-1]):
+                stale_skipped += 1
                 continue
 
             # Get best strategies for this ticker — regime-aware selection
@@ -1427,6 +1453,8 @@ def scheduled_multi_strategy_scan():
             continue
     _liq_conn.close()
     print(f"[{time_str}] Adaptive strategy signals: {len(intersection_results)} tickers")
+    if stale_skipped:
+        logging.warning(f"[scan] {stale_skipped} ticker(s) skipped this run (stale last bar)")
 
     if len(intersection_results) > 0:
         result_tickers = [r['ticker'] for r in intersection_results]

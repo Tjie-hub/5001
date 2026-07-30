@@ -6,6 +6,7 @@ Honesty contract: every gate passes on MERIT (data crafted to satisfy it);
 mocks exist only at network seams (flow fetch, agent firm, telegram)."""
 import json
 import sqlite3
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -177,9 +178,10 @@ def test_e2e_monitor_closes_with_net_pnl(drill_env, monkeypatch):
     row = dict(conn.execute("SELECT * FROM paper_trades WHERE ticker='DRILL' "
                             "AND status='OPEN'").fetchone())
     tp = float(row["tp_price"])
-    # next session gaps through TP
-    conn.execute("INSERT INTO ohlcv VALUES ('DRILL', '2026-07-09', ?, ?, ?, ?, 2000000)",
-                 (tp * 1.001, tp * 1.02, tp * 0.999, tp * 1.01))
+    # next session gaps through TP — dated today so the P0.E2.S1.T2 freshness
+    # guard in monitor._check_trade doesn't treat it as a stale bar.
+    conn.execute("INSERT INTO ohlcv VALUES ('DRILL', ?, ?, ?, ?, ?, 2000000)",
+                 (date.today().isoformat(), tp * 1.001, tp * 1.02, tp * 0.999, tp * 1.01))
     conn.commit(); conn.close()
 
     res = mon._check_trade(row)

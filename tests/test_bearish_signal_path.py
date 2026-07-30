@@ -17,8 +17,14 @@ from scheduler.scanner import scan_distribution_signals
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 def _make_ohlcv(n=20, trend='declining'):
-    """Build minimal OHLCV DataFrame."""
-    dates = pd.date_range('2026-01-01', periods=n, freq='D')
+    """Build minimal OHLCV DataFrame ending today.
+
+    P0.E2.S1.T2's freshness guard requires the last bar to be fresh
+    relative to the real clock (`date.today()`), independent of whichever
+    historical `trade_date` the flow-side fixtures below use — so this
+    always ends on today regardless of `n`/`trend`.
+    """
+    dates = pd.date_range(end=pd.Timestamp.today().normalize(), periods=n, freq='D')
     if trend == 'declining':
         close = np.linspace(1000, 800, n)  # drops from 1000 → 800
     elif trend == 'rising':
