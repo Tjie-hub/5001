@@ -1,10 +1,52 @@
 import sqlite3
 import os
+import logging
 from contextlib import contextmanager
+from datetime import datetime, timezone
 
 from config import default_db_path, resolve_db_path
 
 DB_PATH = resolve_db_path(os.getenv('DB_PATH', default_db_path()))
+
+
+def log_db_identity(db_path: str = None) -> None:
+    """Log the resolved absolute DB_PATH and its file identity (H-7
+    continuation, P0.E2.S2.T2). Positively identifies which physical
+    database file is in use -- not merely the configured path string --
+    by including stat-derived identity (device/inode, size, mtime), so a
+    silently-wrong path (e.g. an empty file freshly created at the wrong
+    location) is distinguishable from the real, populated DB in the logs.
+
+    Callers are responsible for invoking this exactly once at startup;
+    this function has no import-time side effects and is safe to call
+    from any process that wants a startup DB-identity record (currently
+    just app.py's `if __name__ == "__main__"` block).
+
+    Pre-figures the Phase 1 Certifier DB-identity check (PLAN-001
+    P1.E4.S1, EXEC-001 section 7.3) -- this is intentionally just a log
+    line, not that check.
+    """
+    path = db_path or DB_PATH
+    logger = logging.getLogger(__name__)
+    try:
+        st = os.stat(path)
+        logger.info(
+            'DB identity resolved at startup',
+            extra={
+                'db_path': path,
+                'db_exists': True,
+                'db_size_bytes': st.st_size,
+                'db_mtime': datetime.fromtimestamp(st.st_mtime, tz=timezone.utc)
+                                     .isoformat(timespec='seconds'),
+                'db_dev': st.st_dev,
+                'db_ino': st.st_ino,
+            },
+        )
+    except FileNotFoundError:
+        logger.info(
+            'DB identity resolved at startup',
+            extra={'db_path': path, 'db_exists': False},
+        )
 
 def connect(path=None, timeout=30):
     """The one SQLite entry point: timeout + busy_timeout + WAL.

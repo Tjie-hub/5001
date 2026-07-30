@@ -12,6 +12,7 @@ from screener.db import init_screener_tables
 from stockbit_fetcher import init_flow_db
 from data.db import init_agent_firm_tables
 from data.db import connect as db_connect
+from data.db import log_db_identity
 from config import default_db_path, resolve_db_path
 from routes.telegram import telegram_bp, telegram_poller_loop
 from routes.flow import flow_bp
@@ -184,6 +185,7 @@ def prometheus_metrics():
 
 
 if __name__ == "__main__":
+    log_db_identity()
     init_screener_tables()
     init_flow_db()
     init_agent_firm_tables()
