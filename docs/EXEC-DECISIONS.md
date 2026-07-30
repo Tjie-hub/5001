@@ -72,6 +72,23 @@ Format per entry: `{TYPE}-{nnn} — {date} — {one-line summary}` followed by t
 
 ---
 
+## IMPL-DEC-006 — 2026-07-30 — Stale-skip visibility + helper extraction for the EOD coverage-fallback date guard (P0.E2.S1.T1)
+
+**Type:** Implementation decision
+**Context:** P0.E2.S1.T1 requires the EOD coverage-fallback path (`screener_jobs.run_eod`) to assert a ticker's last OHLCV bar date equals `trade_date` before treating it as valid coverage. The pre-fix code had no such check: `_ = df.iloc[-1]` was used unconditionally as "today's" bar. Two OPEN-latitude choices arose while implementing the guard itself.
+**Options considered (visibility on skip):**
+1. Skip silently (`continue`) with no logging — matches the terse style of the pre-existing `except Exception: pass` in the same loop, but reintroduces exactly the kind of silent gap this epic (`P0.E2 — Baseline data honesty`) exists to close: an operator would have no way to see that coverage for a ticker quietly dropped to zero because its data is stale.
+2. Alarm per-ticker (Telegram or per-symbol WARNING) — too noisy; a ticker being a few days stale (e.g. newly suspended) is expected background state, not an incident.
+3. Aggregate a `stale_skipped` counter and log one WARNING line per EOD run only when it's nonzero — mirrors the existing `fallback_ok` info line's own shape (`"X/Y tickers inserted"`) one line below it.
+**Choice:** Option 3.
+**Options considered (implementation shape):**
+1. Inline the date check into the existing per-ticker loop in `run_eod` — smallest diff, but the loop already reaches deep into scraped/DB-shaped code and isn't independently testable without standing up a full `run_eod` call (network + Telegram + VPIN side effects).
+2. Extract the per-ticker computation (already a fully self-contained block reading only `df`/`trade_date`) into a module-level `_coverage_fallback_row(ticker, df, trade_date)` returning `(row_or_None, skip_reason)`, called from the unchanged loop — same runtime behavior, but the guard becomes unit-testable in isolation (mirrors the existing `_eod_calendar_cleanup` extraction in the same file, tested the same way in `tests/test_eod_purge.py`).
+**Choice:** Option 2 — matches an established idiom already in this exact file rather than introducing a new one.
+**Reversibility:** trivial — both choices are pure refactor/logging additions; `git revert` of the squash commit removes them cleanly, no data or schema implication.
+
+---
+
 ## DEBT-001 — 2026-07-26 — `auto_trade_status_report`'s query is not scoped to auto-trade-originated trades
 
 **Type:** Technical debt

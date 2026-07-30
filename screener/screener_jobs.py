@@ -149,6 +149,43 @@ def _eod_calendar_cleanup(min_days: int = 1) -> int:
         return 0
 
 
+def _coverage_fallback_row(ticker: str, df, trade_date: str):
+    """Compute a neutral daily_screen fallback row for `ticker` from its OHLCV
+    history.
+
+    Returns `(row_dict, None)` when there's enough history *and* the last
+    available bar is actually dated `trade_date`. Otherwise returns
+    `(None, skip_reason)` with reason `'insufficient_history'` or `'stale'` —
+    a stale last bar must never be reported as trade_date's coverage
+    (P0.E2.S1.T1, EOD coverage-fallback date guard).
+    """
+    if df is None or len(df) < 20:
+        return None, 'insufficient_history'
+    last = df.iloc[-1]
+    if str(last['date']) != trade_date:
+        return None, 'stale'
+    avg_vol = df['volume'].tail(20).mean()
+    vr = last['volume'] / avg_vol if avg_vol > 0 else None
+    rng = last['high'] - last['low']
+    delta_p = (last['close'] - last['open']) / rng * last['volume'] if rng > 0 else 0
+    tp = (last['high'] + last['low'] + last['close']) / 3
+    signal = 'neutral'
+    if vr is not None and vr > 1.5:
+        if delta_p > 0 and last['close'] > tp:
+            signal = 'bullish'
+        elif delta_p < 0 and last['close'] < tp:
+            signal = 'bearish'
+        else:
+            signal = 'watch'
+    row = {
+        'close': int(last['close']), 'volume': int(last['volume']),
+        'avg_vol_20d': int(avg_vol),
+        'vol_ratio': round(float(vr), 2) if vr else None,
+        'vwap': round(float(tp), 2), 'delta': int(delta_p), 'signal': signal,
+    }
+    return row, None
+
+
 def run_eod(trade_date: str = None, send_telegram=None) -> dict:
     t0 = time.time()
     if trade_date is None:
@@ -203,32 +240,20 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
                 ohlcv_all[c] = ohlcv_all[c].astype(float)
             grouped = {t: grp.reset_index(drop=True) for t, grp in ohlcv_all.groupby('ticker')}
             fallback_ok = 0
+            stale_skipped = 0
             for ticker in missing:
                 try:
-                    df = grouped.get(ticker)
-                    if df is None or len(df) < 20:
+                    row, skip_reason = _coverage_fallback_row(ticker, grouped.get(ticker), trade_date)
+                    if row is None:
+                        if skip_reason == 'stale':
+                            stale_skipped += 1
                         continue
-                    last = df.iloc[-1]
-                    avg_vol = df['volume'].tail(20).mean()
-                    vr = last['volume'] / avg_vol if avg_vol > 0 else None
-                    rng = last['high'] - last['low']
-                    delta_p = (last['close'] - last['open']) / rng * last['volume'] if rng > 0 else 0
-                    tp = (last['high'] + last['low'] + last['close']) / 3
-                    signal = 'neutral'
-                    if vr is not None and vr > 1.5:
-                        if delta_p > 0 and last['close'] > tp:
-                            signal = 'bullish'
-                        elif delta_p < 0 and last['close'] < tp:
-                            signal = 'bearish'
-                        else:
-                            signal = 'watch'
                     conn.execute(
                         "INSERT OR IGNORE INTO daily_screen "
                         "(date, ticker, close, volume, avg_vol_20d, vol_ratio, vwap, delta, signal) "
                         "VALUES (?,?,?,?,?,?,?,?,?)",
-                        (trade_date, ticker, int(last['close']), int(last['volume']),
-                         int(avg_vol), round(float(vr), 2) if vr else None,
-                         round(float(tp), 2), int(delta_p), signal)
+                        (trade_date, ticker, row['close'], row['volume'],
+                         row['avg_vol_20d'], row['vol_ratio'], row['vwap'], row['delta'], row['signal'])
                     )
                     fallback_ok += 1
                 except Exception:
@@ -236,6 +261,11 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
             conn.commit()
             if fallback_ok:
                 logger.info(f"[screener] Coverage fallback: {fallback_ok}/{len(missing)} tickers inserted")
+            if stale_skipped:
+                logger.warning(
+                    f"[screener] Coverage fallback: {stale_skipped}/{len(missing)} tickers skipped "
+                    f"(last bar predates {trade_date}, not treated as valid coverage)"
+                )
     except Exception as _fe:
         logger.error(f"[screener] Coverage fallback error: {_fe}")
 
