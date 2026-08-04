@@ -47,6 +47,7 @@ from scheduler.jobs import (  # noqa: F401
     run_broker_flow_fetch,
     run_broker_period_summary_fetch,
     run_corporate_actions_fetch,
+    run_ownership_fetch,
     run_ohlcv_reconciliation,
     run_token_health_check,
     run_ohlcv_coverage_check,
@@ -256,6 +257,17 @@ def start_scheduler():
         day_of_week="mon-fri", hour=20, minute=20, timezone=WIB),
         id="corporate_actions_fetch", name="Corporate Actions Fetch 20:20")
 
+    # Ownership composition (named major holders + investor-type buckets) —
+    # monthly, day 5 at 09:00 WIB. Monthly, not daily/weekly: live-testing
+    # found every ticker reporting the identical report_date (last day of
+    # the prior month) with no history behind it — a market-wide monthly
+    # registry publication, not a continuously-updated feed. Day 5 (not day
+    # 1) gives Stockbit a few days to ingest the new month-end registry
+    # before this job runs — see run_ownership_fetch()'s own docstring.
+    scheduler.add_job(run_ownership_fetch, CronTrigger(
+        day="5", hour=9, minute=0, timezone=WIB),
+        id="ownership_fetch", name="Ownership Composition Fetch (monthly, day 5)")
+
     # Broker period summary (LAST_7_DAYS/LAST_1_MONTH/LAST_3_MONTHS) — weekly,
     # Friday 20:30 WIB, after the daily broker flow fetch (20:15). Weekly, not
     # daily: a rolling accumulation window only shifts by one trading day at a
@@ -346,6 +358,7 @@ def start_scheduler():
     logger.info("  📰 NEWS FETCH: 08:00 pre-market, 17:00 EOD")
     logger.info("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
     logger.info("  🏢 CORPORATE ACTIONS: 20:20 (dividend/rups/split/bonus/warrant/rightissue)")
+    logger.info("  🧾 OWNERSHIP COMPOSITION: monthly, day 5 09:00 (major holders + investor buckets)")
     logger.info("  📅 BROKER PERIOD SUMMARY: 20:30 Fri only (7d/1mo/3mo accumulation)")
     logger.info("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
     logger.info("  🏥 MARKET HEALTH: 08:45 pre-market")

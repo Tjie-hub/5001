@@ -342,6 +342,68 @@ def run_corporate_actions_fetch():
                    f"{total} event tersimpan untuk {len(tickers)} tickers.")
 
 
+def run_ownership_fetch():
+    """Monthly ownership composition/distribution (named major holders +
+    investor-type buckets, e.g. "Mutual Funds", "Pension Funds") — see
+    stockbit_ownership.py's module docstring for the endpoint investigation.
+    Genuinely new dataset: nothing else in this pipeline captures ownership
+    structure or float concentration for any ticker.
+
+    Cadence: monthly, not daily/weekly like the other three collectors —
+    empirically determined, not assumed. Live-testing the endpoint against
+    six unrelated tickers on 2026-08-05 found every one of them reporting
+    the IDENTICAL report_date (the last calendar day of the prior month),
+    and the endpoint only ever returns a single period (no history). A
+    daily or weekly schedule would refetch byte-identical data for ~30/~4
+    runs out of every cycle respectively — this is a market-wide monthly
+    registry publication (KSEI-style), not a continuously-updated feed, so
+    the schedule matches that reality directly: once a month, a few days
+    after month-end to give Stockbit time to ingest the new registry.
+
+    Reuses the exact token-acquisition and ticker-universe calls the other
+    three collectors already use. One ticker failing is logged and
+    skipped — every other ticker is still attempted, and this job never
+    raises.
+    """
+    if _holiday_skip("run_ownership_fetch"):
+        return
+    from datetime import datetime as dt
+    from stockbit_fetcher import extract_token_from_chrome, verify_token, get_tickers
+    from stockbit_ownership import run_and_persist_ownership
+    now_str = dt.now(WIB).strftime('%H:%M')
+    logger.info(f"[{now_str}] Ownership composition fetch dimulai...")
+
+    token = extract_token_from_chrome()
+    if not token or not verify_token(token):
+        send_telegram("🔴 <b>Ownership Fetch GAGAL</b>\n"
+                      "Token Stockbit expired atau tidak ditemukan.")
+        return
+
+    tickers = get_tickers("ALL")
+    total = 0
+    failures = []
+    for ticker in tickers:
+        try:
+            summary = run_and_persist_ownership(ticker, token, db_path=DB_PATH)
+            total += summary["count"]
+        except Exception as e:
+            logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] Ownership "
+                          f"'{ticker}' error: {e}")
+            failures.append((ticker, str(e)))
+
+    if failures:
+        detail = "\n".join(f"  {t}: {err[:150]}" for t, err in failures[:10])
+        more = f"\n  ... +{len(failures) - 10} more" if len(failures) > 10 else ""
+        send_telegram(
+            f"🔴 <b>Ownership Fetch GAGAL (sebagian)</b>\n\n"
+            f"{len(failures)}/{len(tickers)} ticker gagal:\n{detail}{more}\n\n"
+            f"{total} baris tersimpan dari ticker yang berhasil."
+        )
+    else:
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Ownership fetch selesai. "
+                   f"{total} baris tersimpan untuk {len(tickers)} tickers.")
+
+
 def run_ohlcv_reconciliation():
     """21:00 WIB — alert-only comparison of today's scraper-final closes vs
     yfinance raw (Phase 2A, audit C-4). Scraper stays the authority."""
