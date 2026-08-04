@@ -277,6 +277,71 @@ def run_broker_period_summary_fetch():
                    f"{total} baris tersimpan untuk {len(tickers)} tickers x {len(PERIODS)} periods.")
 
 
+def run_corporate_actions_fetch():
+    """Daily corporate-action event history (dividend/rups/stocksplit/bonus/
+    warrant/rightissue) — see stockbit_corporate_actions.py's module
+    docstring for the endpoint investigation (confirmed + rejected
+    candidates). Complementary to the existing yfinance-sourced
+    corporate_actions table (dividends/splits only); this job writes the
+    separate corporate_action_events table.
+
+    Cadence: daily (not weekly like run_broker_period_summary_fetch()).
+    Reasoning is the opposite of that job's: broker_period_summary is a
+    slow-moving rolling window that barely changes day to day, so daily
+    refetching would be mostly duplicate work. Corporate actions are the
+    opposite — they're discrete, sporadically-announced, often
+    price-moving catalysts (a new rights issue or dividend announcement),
+    and only useful here if caught close to when Stockbit publishes them.
+    The endpoint is also cheap: no pagination, and each ticker's full
+    history (proven live to be identical regardless of `limit`) is at most
+    a few dozen small rows — a daily full-universe pass costs roughly the
+    same request volume as one day of run_broker_flow_fetch(), not 3x like
+    the period-summary job would if run daily.
+
+    Reuses the exact token-acquisition and ticker-universe calls
+    run_broker_flow_fetch()/run_broker_period_summary_fetch() already use.
+    One ticker failing is logged and skipped — every other ticker is still
+    attempted, and this job never raises.
+    """
+    if _holiday_skip("run_corporate_actions_fetch"):
+        return
+    from datetime import datetime as dt
+    from stockbit_fetcher import extract_token_from_chrome, verify_token, get_tickers
+    from stockbit_corporate_actions import run_and_persist_corporate_actions
+    now_str = dt.now(WIB).strftime('%H:%M')
+    logger.info(f"[{now_str}] Corporate actions fetch dimulai...")
+
+    token = extract_token_from_chrome()
+    if not token or not verify_token(token):
+        send_telegram("🔴 <b>Corporate Actions Fetch GAGAL</b>\n"
+                      "Token Stockbit expired atau tidak ditemukan.")
+        return
+
+    tickers = get_tickers("ALL")
+    total = 0
+    failures = []
+    for ticker in tickers:
+        try:
+            summary = run_and_persist_corporate_actions(ticker, token, db_path=DB_PATH)
+            total += summary["count"]
+        except Exception as e:
+            logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] Corporate actions "
+                          f"'{ticker}' error: {e}")
+            failures.append((ticker, str(e)))
+
+    if failures:
+        detail = "\n".join(f"  {t}: {err[:150]}" for t, err in failures[:10])
+        more = f"\n  ... +{len(failures) - 10} more" if len(failures) > 10 else ""
+        send_telegram(
+            f"🔴 <b>Corporate Actions Fetch GAGAL (sebagian)</b>\n\n"
+            f"{len(failures)}/{len(tickers)} ticker gagal:\n{detail}{more}\n\n"
+            f"{total} event tersimpan dari ticker yang berhasil."
+        )
+    else:
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Corporate actions fetch selesai. "
+                   f"{total} event tersimpan untuk {len(tickers)} tickers.")
+
+
 def run_ohlcv_reconciliation():
     """21:00 WIB — alert-only comparison of today's scraper-final closes vs
     yfinance raw (Phase 2A, audit C-4). Scraper stays the authority."""
