@@ -45,6 +45,7 @@ from scheduler.scanner import (  # noqa: F401
 from scheduler.jobs import (  # noqa: F401
     run_flow_fetch,
     run_broker_flow_fetch,
+    run_broker_period_summary_fetch,
     run_ohlcv_reconciliation,
     run_token_health_check,
     run_ohlcv_coverage_check,
@@ -244,6 +245,15 @@ def start_scheduler():
         day_of_week="mon-fri", hour=20, minute=15, timezone=WIB),
         id="broker_flow_fetch", name="Broker Flow Fetch 20:15")
 
+    # Broker period summary (LAST_7_DAYS/LAST_1_MONTH/LAST_3_MONTHS) — weekly,
+    # Friday 20:30 WIB, after the daily broker flow fetch (20:15). Weekly, not
+    # daily: a rolling accumulation window only shifts by one trading day at a
+    # time, so a daily refetch across the whole universe would be mostly
+    # duplicate work — see run_broker_period_summary_fetch()'s own docstring.
+    scheduler.add_job(run_broker_period_summary_fetch, CronTrigger(
+        day_of_week="fri", hour=20, minute=30, timezone=WIB),
+        id="broker_period_summary_fetch", name="Broker Period Summary Fetch 20:30 (Fri)")
+
     # OHLCV reconciliation — 21:00 WIB (after 20:15 broker flow; alert-only)
     scheduler.add_job(run_ohlcv_reconciliation, CronTrigger(
         day_of_week="mon-fri", hour=21, minute=0, timezone=WIB),
@@ -324,6 +334,7 @@ def start_scheduler():
     logger.info("  📊 SIGNAL REPORT: 16:00")
     logger.info("  📰 NEWS FETCH: 08:00 pre-market, 17:00 EOD")
     logger.info("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
+    logger.info("  📅 BROKER PERIOD SUMMARY: 20:30 Fri only (7d/1mo/3mo accumulation)")
     logger.info("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
     logger.info("  🏥 MARKET HEALTH: 08:45 pre-market")
     logger.info("  🌅 PREMARKET FIRM: 08:35 pre-market (unified watchlist → agent firm)")

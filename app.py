@@ -9,6 +9,7 @@ from routes_backtest_multi import backtest_multi_bp
 from screener.routes import screener_bp
 from screener.db import init_screener_tables
 from stockbit_fetcher import init_flow_db
+from stockbit_broker_period import init_db as init_broker_period_summary_table
 from data.db import init_agent_firm_tables
 from paper_trade import init_paper_table
 from data.db import connect as db_connect
@@ -212,6 +213,7 @@ def init_runtime():
     validate_config()
     init_screener_tables()
     init_flow_db()
+    init_broker_period_summary_table()
     init_agent_firm_tables()
     init_paper_table()
     scheduler = start_scheduler()

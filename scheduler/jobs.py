@@ -213,6 +213,70 @@ def run_broker_flow_fetch():
         send_telegram(f"🔴 <b>Broker Flow Fetch Error</b>\n<code>{str(e)[:200]}</code>")
 
 
+def run_broker_period_summary_fetch():
+    """Weekly period-aggregated broker summary (LAST_7_DAYS/LAST_1_MONTH/
+    LAST_3_MONTHS) — see stockbit_broker_period.py's module docstring for the
+    endpoint investigation. Complementary to run_broker_flow_fetch() (daily,
+    single-day broker_flow, untouched); this job writes the separate
+    broker_period_summary table.
+
+    Cadence: weekly (Friday, after the daily broker flow fetch), not daily.
+    Reasoning: a rolling 7-day/1-month/3-month accumulation window shifts by
+    only one trading day at a time — a daily refetch would be >95% duplicate
+    work for the LAST_1_MONTH/LAST_3_MONTHS windows in particular. Weekly
+    keeps total request volume for this job (~universe x 3 periods, once a
+    week) in the same order of magnitude as the existing daily broker_flow
+    fetch (~universe x 1, five times a week), rather than 3x it every day.
+
+    Reuses the exact token-acquisition and ticker-universe calls
+    run_broker_flow_fetch() already uses (extract_token_from_chrome/
+    verify_token/get_tickers) rather than reimplementing them. One ticker
+    failing (or one period within a ticker) is logged and skipped — every
+    other ticker/period combination is still attempted, and this job never
+    raises, matching run_broker_flow_fetch()'s contract.
+    """
+    if _holiday_skip("run_broker_period_summary_fetch"):
+        return
+    from datetime import datetime as dt
+    from stockbit_fetcher import extract_token_from_chrome, verify_token, get_tickers
+    from stockbit_broker_period import run_and_persist_broker_period, PERIODS
+    now_str = dt.now(WIB).strftime('%H:%M')
+    logger.info(f"[{now_str}] Broker period summary fetch dimulai...")
+
+    token = extract_token_from_chrome()
+    if not token or not verify_token(token):
+        send_telegram("🔴 <b>Broker Period Summary Fetch GAGAL</b>\n"
+                      "Token Stockbit expired atau tidak ditemukan.")
+        return
+
+    tickers = get_tickers("ALL")
+    total = 0
+    failures = []
+    for ticker in tickers:
+        for period_name in PERIODS:
+            try:
+                summary = run_and_persist_broker_period(ticker, period_name, token, db_path=DB_PATH)
+                total += summary["count"]
+            except Exception as e:
+                logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] Broker period summary "
+                              f"'{ticker}'/'{period_name}' error: {e}")
+                failures.append((ticker, period_name, str(e)))
+
+    if failures:
+        tickers_failed = sorted({t for t, _, _ in failures})
+        detail = "\n".join(f"  {t}/{p}: {err[:120]}" for t, p, err in failures[:10])
+        more = f"\n  ... +{len(failures) - 10} more" if len(failures) > 10 else ""
+        send_telegram(
+            f"🔴 <b>Broker Period Summary Fetch GAGAL (sebagian)</b>\n\n"
+            f"{len(failures)} kombinasi ticker/period gagal ({len(tickers_failed)} ticker):\n"
+            f"{detail}{more}\n\n"
+            f"{total} baris tersimpan dari kombinasi yang berhasil."
+        )
+    else:
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Broker period summary fetch selesai. "
+                   f"{total} baris tersimpan untuk {len(tickers)} tickers x {len(PERIODS)} periods.")
+
+
 def run_ohlcv_reconciliation():
     """21:00 WIB — alert-only comparison of today's scraper-final closes vs
     yfinance raw (Phase 2A, audit C-4). Scraper stays the authority."""
