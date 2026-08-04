@@ -193,43 +193,55 @@ def verify_token(token):
     return r.status_code == 200
 
 
+def _auto_login_fallback():
+    """Try Playwright session-replay refresh, then credential login. Returns
+    a verified, already-persisted token, or None if both stages fail."""
+    import auto_token as at
+
+    new_token = at.auto_refresh()
+    if new_token and at.verify_token(new_token):
+        at._write_token_atomic(new_token)
+        log("✅ Token refreshed via auto_token")
+        return new_token
+
+    log("Auto refresh failed — trying credential login...")
+    new_token = at.credential_login()
+    if new_token and at.verify_token(new_token):
+        at._write_token_atomic(new_token)
+        log("✅ Token obtained via credential login")
+        return new_token
+
+    return None
+
+
 def ensure_valid_token(manual_token=None):
-    """Return a valid token, running auto_token refresh/login if needed."""
+    """Return a valid token, running auto_token refresh/login if needed.
+
+    Every production cron passes --token "$(cat .stockbit_token)" (see
+    deploy/crontab), so `manual_token` is always set in practice. An invalid
+    manual token used to be a dead end (`return None` here, with the
+    auto_refresh()/credential_login() fallback below structurally
+    unreachable) -- see docs/audit/STOCKBIT_TOKEN_REFRESH_HARDENING.md §1b.
+    It now falls through to the same fallback used when no manual token is
+    supplied at all.
+    """
     if manual_token:
         log("Using manual token")
         if verify_token(manual_token):
             return manual_token
-        log("ERROR: Manual token invalid")
-        return None
+        log("Manual token expired/invalid — attempting auto-login fallback...")
+    else:
+        token = extract_token_from_chrome()
+        if token and verify_token(token):
+            log("Token OK!")
+            return token
+        log("Token invalid/missing — running auto_token refresh...")
 
-    token = extract_token_from_chrome()
-    if token and verify_token(token):
-        log("Token OK!")
-        return token
-
-    log("Token invalid/missing — running auto_token refresh...")
     try:
-        import auto_token as at
-        new_token = at.auto_refresh()
-        if new_token and at.verify_token(new_token):
-            token_file = os.path.join(_HERE, ".stockbit_token")
-            with open(token_file, "w") as f:
-                f.write(new_token)
-            log("✅ Token refreshed via auto_token")
-            return new_token
-
-        log("Auto refresh failed — trying credential login...")
-        new_token = at.credential_login()
-        if new_token and at.verify_token(new_token):
-            token_file = os.path.join(_HERE, ".stockbit_token")
-            with open(token_file, "w") as f:
-                f.write(new_token)
-            log("✅ Token obtained via credential login")
-            return new_token
+        return _auto_login_fallback()
     except Exception as e:
         log(f"auto_token error: {e}")
-
-    return None
+        return None
 
 
 def fetch_keystats(token, ticker):

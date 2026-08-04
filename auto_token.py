@@ -7,7 +7,7 @@ Usage:
   python3 auto_token.py --check    # Cek apakah token masih valid
 """
 
-import sys, os, time, requests, base64, json
+import sys, os, time, requests, base64, json, fcntl, tempfile, contextlib
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
@@ -19,8 +19,18 @@ BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
 TOKEN_FILE = BASE_DIR / ".stockbit_token"
+LOCK_FILE = BASE_DIR / ".stockbit_token.lock"
 STATE_DIR = BASE_DIR / ".playwright_state"
 LOG_FILE = BASE_DIR / "logs" / "auto_token.log"
+
+# Refresh reliability tuning (incident 2026-07-27 hardening — see
+# docs/audit/STOCKBIT_TOKEN_REFRESH_HARDENING.md). The margin must comfortably
+# exceed the gap from the 08:40 refresh check to the day's last token
+# consumer (20:15 WIB, run_broker_flow_fetch) — 11h35m — not just be a
+# round-sounding number (the old flat 6h bar was exactly that mistake).
+REFRESH_MARGIN_HOURS = float(os.environ.get("STOCKBIT_TOKEN_REFRESH_MARGIN_HOURS", "14"))
+MAX_RETRIES = int(os.environ.get("STOCKBIT_TOKEN_REFRESH_MAX_RETRIES", "2"))
+RETRY_BACKOFF_BASE_S = float(os.environ.get("STOCKBIT_TOKEN_REFRESH_BACKOFF_BASE_S", "5"))
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
@@ -98,17 +108,31 @@ def _jwt_iat(token):
         return 0
 
 
-def should_skip_refresh():
-    """Return True if current token is still fresh — skip Playwright entirely."""
+def should_skip_refresh(margin_hours=None):
+    """Return True if current token will comfortably outlive today's last
+    consumer — skip Playwright entirely. `margin_hours` must cover the gap to
+    that consumer, not just be "some positive number" (incident 2026-07-27:
+    a flat 6h bar let an 8.9h-remaining token through, which then expired an
+    hour before the 18:30 stockbit_flow cron needed it)."""
+    if margin_hours is None:
+        margin_hours = REFRESH_MARGIN_HOURS
     if not TOKEN_FILE.exists():
         return False
     token = TOKEN_FILE.read_text().strip()
     if not token:
         return False
     remaining = jwt_expiry(token)
-    if remaining > 6:
+    if remaining <= 0:
+        return False
+    if remaining > 48:
+        # A 24h-TTL token can never legitimately have >48h left — treat as a
+        # clock-skew/corruption signal and force a real check instead of
+        # trusting it blindly.
+        log(f"⚠ Implausible remaining time ({remaining:.1f}h) — possible clock skew, forcing refresh check")
+        return False
+    if remaining > margin_hours:
         if verify_token(token):
-            log(f"Token still fresh ({remaining:.1f}h remaining), skipping refresh")
+            log(f"Token still fresh ({remaining:.1f}h remaining, margin={margin_hours:.1f}h), skipping refresh")
             return True
     return False
 
@@ -144,6 +168,90 @@ def check_state_size():
             log(f"⚠ Browser state is {mb:.0f}MB (limit={MAX_STATE_MB}MB) — consider recreating session")
     except Exception:
         pass
+
+
+def _write_token_atomic(token, token_file=None):
+    """Write the token via tmpfile+rename so a crash mid-write can never
+    leave a truncated/partial token on disk — readers always see a complete
+    old or complete new token."""
+    path = Path(token_file) if token_file is not None else TOKEN_FILE
+    fd, tmp_path = tempfile.mkstemp(prefix=f"{path.name}.", suffix=".tmp", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(token)
+        os.chmod(tmp_path, 0o600)
+        os.replace(tmp_path, path)
+    except Exception:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+def _retry_with_backoff(fn, max_retries=3, backoff_base=1, label="", sleep_fn=time.sleep):
+    """Call fn() up to max_retries times, retrying on exception or a falsy
+    result, with exponential backoff between attempts. Returns fn()'s result
+    or None if every attempt failed."""
+    for attempt in range(1, max_retries + 1):
+        try:
+            result = fn()
+        except Exception as e:
+            log(f"  [WARN] {label} attempt {attempt}/{max_retries} error: {e}")
+            result = None
+        else:
+            if result:
+                return result
+            log(f"  [WARN] {label} attempt {attempt}/{max_retries} returned no result")
+        if attempt < max_retries:
+            delay = backoff_base * (2 ** (attempt - 1))
+            log(f"  retrying {label} in {delay}s (attempt {attempt + 1}/{max_retries})")
+            sleep_fn(delay)
+    return None
+
+
+@contextlib.contextmanager
+def _refresh_lock(lock_path=None):
+    """Non-blocking exclusive lock so a second concurrent invocation (manual
+    run racing the cron, or a scheduler restart) never launches a second
+    Playwright instance against the same .playwright_state profile. Yields
+    True if the lock was acquired, False if another refresh already holds it
+    — the caller should treat False as a normal, idempotent no-op, not an
+    error."""
+    path = Path(lock_path) if lock_path is not None else LOCK_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    f = open(path, "w")
+    acquired = False
+    try:
+        try:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            acquired = True
+        except OSError:
+            acquired = False
+        yield acquired
+    finally:
+        if acquired:
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        f.close()
+
+
+def _old_token_still_safe(max_age_hours=20, token_file=None):
+    """Return True if the existing on-disk token is still API-valid and not
+    old enough to expire before it can next be refreshed."""
+    path = Path(token_file) if token_file is not None else TOKEN_FILE
+    if not path.exists():
+        return False
+    token = path.read_text().strip()
+    if not token:
+        return False
+    if not verify_token(token):
+        return False
+    age_h = (time.time() - _jwt_iat(token)) / 3600
+    return age_h < max_age_hours
 
 
 # ── Mode 1: Initial Login (non-headless, via CRD) ──
@@ -471,62 +579,70 @@ def main():
     log("STOCKBIT AUTO TOKEN")
     log("=" * 40)
 
-    # Hardening: skip if token is still fresh
+    # Hardening: skip if token will comfortably survive to today's last consumer
     if should_skip_refresh():
         return
 
-    check_state_size()
-    cleanup_zombies()
-
-    token = auto_refresh()
-
-    if token and verify_token(token):
-        # Reject stale re-capture: if token was issued >20h ago it will expire
-        # before the next cron run — force fresh credential login instead.
-        hours_old = (time.time() - _jwt_iat(token)) / 3600
-        if hours_old < 20:
-            TOKEN_FILE.write_text(token)
-            log(f"✅ Token refreshed (len={len(token)}, age={hours_old:.1f}h)")
+    with _refresh_lock() as acquired:
+        if not acquired:
+            log("Another refresh is already in progress — skipping (idempotent, not an error)")
             return
-        log(f"⚠ Captured token is {hours_old:.1f}h old — forcing credential re-login")
 
-    # Gagal capture — cek token lama masih valid?
-    if TOKEN_FILE.exists():
-        old_token = TOKEN_FILE.read_text().strip()
-        if old_token and verify_token(old_token):
-            hours_old = (time.time() - _jwt_iat(old_token)) / 3600
-            if hours_old < 20:
-                log("⚠ Capture gagal, tapi token lama masih valid")
-                return
-
-    # Coba credential login sebagai last resort
-    log("Trying credential login as fallback...")
-    send_telegram("⚠️ <b>Auto Token</b>: session expired, mencoba credential login...")
-
-    token = credential_login()
-    if token and verify_token(token):
-        TOKEN_FILE.write_text(token)
-        log("✅ Credential login berhasil — token saved")
-        send_telegram("✅ <b>Auto Token</b>: credential login berhasil, token diperbarui.")
+        check_state_size()
         cleanup_zombies()
-        return
 
-    # Benar-benar gagal
-    log("❌ Token capture GAGAL dan credential login juga gagal")
-    send_telegram(
-        "⚠️ <b>Stockbit Auto Token GAGAL</b>\n\n"
-        "Session expired + credential login gagal.\n"
-        "Kemungkinan: password berubah atau ada CAPTCHA.\n\n"
-        "Refresh manual sebelum 08:50:\n"
-        "1. CRD → Chrome → stockbit.com/symbol/BBCA\n"
-        "2. F12 → Network → Fetch/XHR → refresh\n"
-        "3. Copy Bearer token\n"
-        "4. <code>echo 'TOKEN' > ~/.stockbit_token</code>\n\n"
-        "Atau re-login:\n"
-        "<code>python3 auto_token.py --login</code>"
-    )
-    cleanup_zombies()
-    sys.exit(1)
+        token = _retry_with_backoff(
+            auto_refresh, max_retries=MAX_RETRIES, backoff_base=RETRY_BACKOFF_BASE_S,
+            label="auto_refresh",
+        )
+
+        if token and verify_token(token):
+            # Reject stale re-capture: if token was issued >20h ago it will expire
+            # before the next cron run — force fresh credential login instead.
+            hours_old = (time.time() - _jwt_iat(token)) / 3600
+            if hours_old < 20:
+                _write_token_atomic(token)
+                log(f"✅ Token refreshed (len={len(token)}, age={hours_old:.1f}h)")
+                return
+            log(f"⚠ Captured token is {hours_old:.1f}h old — forcing credential re-login")
+
+        # Gagal capture — cek token lama masih valid?
+        if _old_token_still_safe(max_age_hours=20):
+            log("⚠ Capture gagal, tapi token lama masih valid")
+            return
+
+        # Coba credential login sebagai last resort (deliberately not
+        # auto-retried — a failure here is more likely a hard failure, bad
+        # password/CAPTCHA, where blind retries risk tripping bot detection)
+        log("Trying credential login as fallback...")
+        send_telegram("⚠️ <b>Auto Token</b>: session expired, mencoba credential login...")
+
+        token = credential_login()
+        if token and verify_token(token):
+            _write_token_atomic(token)
+            log("✅ Credential login berhasil — token saved")
+            send_telegram("✅ <b>Auto Token</b>: credential login berhasil, token diperbarui.")
+            cleanup_zombies()
+            return
+
+        # Benar-benar gagal
+        old_safe = _old_token_still_safe(max_age_hours=20)
+        log(f"REFRESH_FAILED old_token_still_safe={old_safe} action=manual_intervention_required")
+        log("❌ Token capture GAGAL dan credential login juga gagal")
+        send_telegram(
+            "⚠️ <b>Stockbit Auto Token GAGAL</b>\n\n"
+            "Session expired + credential login gagal.\n"
+            "Kemungkinan: password berubah atau ada CAPTCHA.\n\n"
+            "Refresh manual sebelum 08:50:\n"
+            "1. CRD → Chrome → stockbit.com/symbol/BBCA\n"
+            "2. F12 → Network → Fetch/XHR → refresh\n"
+            "3. Copy Bearer token\n"
+            "4. <code>echo 'TOKEN' > ~/.stockbit_token</code>\n\n"
+            "Atau re-login:\n"
+            "<code>python3 auto_token.py --login</code>"
+        )
+        cleanup_zombies()
+        sys.exit(1)
 
 
 if __name__ == "__main__":
