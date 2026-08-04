@@ -638,16 +638,27 @@ def init_flow_db():
     return conn
 
 
-def fetch_broker_flow(token, ticker):
-    """Fetch broker net buy/sell summary from marketdetectors endpoint."""
+def fetch_broker_flow(token, ticker, date=None):
+    """Fetch broker net buy/sell summary from marketdetectors endpoint.
+
+    If `date` (YYYY-MM-DD) is given, fetch that historical session instead of
+    the current one. The endpoint only honors a historical date when BOTH
+    `from` and `to` are supplied together — either one alone is silently
+    ignored and the server returns today's data instead (verified live,
+    2026-08-04; see docs/audit/BROKER_FLOW_BACKFILL_REPORT.md).
+    """
+    params = {
+        "transaction_type": "TRANSACTION_TYPE_NET",
+        "market_board": "MARKET_BOARD_REGULER",
+        "investor_type": "INVESTOR_TYPE_ALL",
+        "limit": 25,
+    }
+    if date:
+        params["from"] = date
+        params["to"] = date
     r = requests.get(
         f"{STOCKBIT_BASE}/marketdetectors/{ticker}",
-        params={
-            "transaction_type": "TRANSACTION_TYPE_NET",
-            "market_board": "MARKET_BOARD_REGULER",
-            "investor_type": "INVESTOR_TYPE_ALL",
-            "limit": 25,
-        },
+        params=params,
         headers={
             "Authorization": f"Bearer {token}",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
@@ -774,12 +785,14 @@ def run_flow(token, tickers, date=None):
                 log(f"  ✓ NetLot={nl:+,} NetVal={sign}{nv:,}")
                 success += 1
 
-                # Broker flow — only for live (current-session) fetches.
-                # marketdetectors has no historical date param, so in backfill
-                # mode it would tag today's broker data to a past date. bf=None
-                # makes the block below a no-op (it already guards on falsy bf).
+                # Broker flow — live and historical fetches both supported.
+                # marketdetectors DOES accept a historical date when `from`
+                # and `to` are both supplied (verified live, 2026-08-04; see
+                # docs/audit/BROKER_FLOW_BACKFILL_REPORT.md) — the prior
+                # assumption that this endpoint had no historical param was
+                # wrong, so backfill mode no longer skips this block.
                 try:
-                    bf = fetch_broker_flow(token, ticker) if not date else None
+                    bf = fetch_broker_flow(token, ticker, date)
                     # Skip only if data for this trade_date already exists in DB.
                     # This allows saving prior trading days that were missed.
                     _bf_existing = 0
