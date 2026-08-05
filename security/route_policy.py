@@ -83,6 +83,10 @@ POLICY = {
     # --- chart ---
     "/api/chart/<ticker>/indicators": VIEWER, "/api/chart/<ticker>/delta": VIEWER,
     "/api/chart/tv/sync": OPERATOR, "/api/chart/tv/status": VIEWER,
+    # --- production status registry (read-only job health) ---
+    "/api/status/jobs/running": VIEWER, "/api/status/jobs/latest": VIEWER,
+    "/api/status/jobs/failed": VIEWER, "/api/status/jobs/history": VIEWER,
+    "/api/status/summary": VIEWER,
 }
 
 

@@ -360,3 +360,88 @@ def test_get_jobs_since_returns_all_statuses_from_cutoff(tmp_path):
 
     rows = get_jobs_since("2026-08-02 00:00:00", db_path=db_path)
     assert [r["job_name"] for r in rows] == ["job_b"]
+
+
+def test_get_running_jobs_returns_only_running_status(tmp_path):
+    from engine.job_status import get_running_jobs
+
+    db_path = str(tmp_path / "test.db")
+    _seed_row(db_path, job_name="job_a", status="running",
+              started_at="2026-08-01 09:00:00", completed_at=None)
+    _seed_row(db_path, job_name="job_b", status="success", started_at="2026-08-01 09:00:00")
+
+    running = get_running_jobs(db_path=db_path)
+    assert {r["job_name"] for r in running} == {"job_a"}
+
+
+def test_get_running_jobs_empty_when_none_running(tmp_path):
+    from engine.job_status import get_running_jobs
+
+    db_path = str(tmp_path / "test.db")
+    _seed_row(db_path, job_name="job_a", status="success")
+
+    assert get_running_jobs(db_path=db_path) == []
+
+
+def test_get_running_jobs_newest_first(tmp_path):
+    from engine.job_status import get_running_jobs
+
+    db_path = str(tmp_path / "test.db")
+    _seed_row(db_path, job_name="job_a", status="running", started_at="2026-08-01 09:00:00")
+    _seed_row(db_path, job_name="job_b", status="running", started_at="2026-08-02 09:00:00")
+
+    running = get_running_jobs(db_path=db_path)
+    assert [r["job_name"] for r in running] == ["job_b", "job_a"]
+
+
+def test_get_recent_jobs_respects_limit(tmp_path):
+    from engine.job_status import get_recent_jobs
+
+    db_path = str(tmp_path / "test.db")
+    for i in range(5):
+        _seed_row(db_path, job_name=f"job_{i}", started_at=f"2026-08-0{i+1} 09:00:00")
+
+    recent = get_recent_jobs(limit=3, db_path=db_path)
+    assert len(recent) == 3
+    # newest first
+    assert [r["job_name"] for r in recent] == ["job_4", "job_3", "job_2"]
+
+
+def test_get_recent_jobs_default_limit_is_reasonable(tmp_path):
+    from engine.job_status import get_recent_jobs
+
+    db_path = str(tmp_path / "test.db")
+    for i in range(120):
+        _seed_row(db_path, job_name=f"job_{i}", started_at=f"2026-08-01 {i%24:02d}:00:00")
+
+    recent = get_recent_jobs(db_path=db_path)
+    assert 0 < len(recent) <= 100  # some sane cap, not unbounded
+
+
+def test_get_recent_jobs_empty_db_returns_empty_list(tmp_path):
+    from engine.job_status import get_recent_jobs
+
+    db_path = str(tmp_path / "test.db")
+    assert get_recent_jobs(db_path=db_path) == []
+
+
+def test_get_status_summary_counts_by_status(tmp_path):
+    from engine.job_status import get_status_summary
+
+    db_path = str(tmp_path / "test.db")
+    _seed_row(db_path, job_name="job_a", status="success")
+    _seed_row(db_path, job_name="job_b", status="success")
+    _seed_row(db_path, job_name="job_c", status="failed")
+    _seed_row(db_path, job_name="job_d", status="skipped")
+    _seed_row(db_path, job_name="job_e", status="running")
+
+    summary = get_status_summary(db_path=db_path)
+    assert summary == {"total": 5, "success": 2, "failed": 1, "skipped": 1, "running": 1}
+
+
+def test_get_status_summary_empty_db_all_zero(tmp_path):
+    from engine.job_status import get_status_summary
+
+    db_path = str(tmp_path / "test.db")
+    summary = get_status_summary(db_path=db_path)
+    assert summary == {"total": 0, "success": 0, "failed": 0, "skipped": 0, "running": 0}

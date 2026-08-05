@@ -274,3 +274,61 @@ def get_jobs_since(since, db_path: str = None):
         return [_row_to_dict(r) for r in rows]
     finally:
         conn.close()
+
+
+def get_running_jobs(db_path: str = None):
+    """All status='running' rows, newest first -- jobs currently executing
+    (or, if orphaned by a process crash, jobs that never finalized)."""
+    db_path = db_path or DB_PATH
+    conn = db_connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        ensure_job_status_table(conn)
+        rows = conn.execute(
+            "SELECT * FROM job_execution_log WHERE status='running' ORDER BY id DESC"
+        ).fetchall()
+        return [_row_to_dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+_RECENT_JOBS_DEFAULT_LIMIT = 50
+_RECENT_JOBS_MAX_LIMIT = 500
+
+
+def get_recent_jobs(limit: int = _RECENT_JOBS_DEFAULT_LIMIT, db_path: str = None):
+    """Most recent `limit` rows (any status, any job), newest first. `limit`
+    is clamped to [1, _RECENT_JOBS_MAX_LIMIT] so a careless caller can't force
+    an unbounded table scan/response."""
+    db_path = db_path or DB_PATH
+    limit = max(1, min(int(limit), _RECENT_JOBS_MAX_LIMIT))
+    conn = db_connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        ensure_job_status_table(conn)
+        rows = conn.execute(
+            "SELECT * FROM job_execution_log ORDER BY id DESC LIMIT ?", (limit,)
+        ).fetchall()
+        return [_row_to_dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def get_status_summary(db_path: str = None) -> dict:
+    """Aggregate counts by status, plus a total -- the at-a-glance health
+    snapshot for a status dashboard/report. Always returns all 5 keys, zero-
+    filled for statuses with no rows (never a KeyError for a quiet engine)."""
+    db_path = db_path or DB_PATH
+    conn = db_connect(db_path)
+    try:
+        ensure_job_status_table(conn)
+        rows = conn.execute(
+            "SELECT status, COUNT(*) FROM job_execution_log GROUP BY status"
+        ).fetchall()
+    finally:
+        conn.close()
+    counts = {"success": 0, "failed": 0, "skipped": 0, "running": 0}
+    for status, count in rows:
+        if status in counts:
+            counts[status] = count
+    return {"total": sum(counts.values()), **counts}
