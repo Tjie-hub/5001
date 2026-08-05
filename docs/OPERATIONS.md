@@ -119,6 +119,19 @@ systemctl --user start idx-walkforward
 `--apply` moves the current DB aside to `walkforward.db.pre_restore_<ts>`
 (never deletes) — reversible by moving it back.
 
+## Data integrity — Syncthing exclusion
+
+**Never remove `.stignore` from the repo root.** It excludes `*.db`, `*.db-wal`, `*.db-shm`,
+`*.db-journal`, `*.sync-conflict-*.db(-wal|-shm)`, and `logs/` from Syncthing sync — root cause of
+a real, confirmed production data corruption incident
+(`Audit/INCIDENT_VPIN_DB_CORRUPTION_2026-07-29.md`): a bidirectional Syncthing folder racing the
+live app's own WAL-mode writes to `data/walkforward.db` corrupted one table (`ticks`). If this repo
+directory is ever a Syncthing folder (check `~/.local/state/syncthing/config.xml` for a folder
+entry at this path) — WAL-mode SQLite files being synced by any file-sync tool while a writer is
+live is a well-documented corruption mechanism, not specific to Syncthing. `.stignore` closing this
+was verified holding as of 2026-08-06 (8 days, zero new sync-conflict artifacts despite continuous
+DB writes) — see the incident report's addendum for the evidence trail.
+
 ## Provider failover (agent firm)
 
 `.env`: `AGENT_FIRM_PROVIDER=auto`, `AGENT_FIRM_PROVIDER_ORDER=zai,claude`

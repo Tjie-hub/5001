@@ -1,0 +1,15 @@
+// SQLite corruption hardening (2026-07-29) -- live WAL-mode SQLite databases
+// and their sidecar/conflict files must never be synced bidirectionally.
+// Root cause of localized data/walkforward.db corruption. Do not remove
+// without first addressing why these were excluded.
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sync-conflict-*.db
+*.sync-conflict-*.db-wal
+*.sync-conflict-*.db-shm
+
+// High-churn, fully regenerable logs -- not needed for cross-device sync,
+// and were themselves generating sync-conflict files.
+logs/
