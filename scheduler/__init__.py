@@ -48,6 +48,7 @@ from scheduler.jobs import (  # noqa: F401
     run_broker_period_summary_fetch,
     run_corporate_actions_fetch,
     run_ownership_fetch,
+    run_stockbit_screener_fetch,
     run_ohlcv_reconciliation,
     run_token_health_check,
     run_ohlcv_coverage_check,
@@ -294,6 +295,15 @@ def start_scheduler():
         day_of_week="mon-fri", hour=17, minute=0, timezone=WIB),
         id="ohlcv_coverage_check", name="OHLCV Coverage Check 17:00")
 
+    # Stockbit guru-template screener fetch — 17:05 WIB (after the 17:00 OHLCV
+    # coverage check, once the day's price action has settled). Schedules the
+    # existing on-demand collector (screener/stockbit_screener.py) so guru
+    # template snapshots (incl. Big Money %) accumulate a daily history
+    # instead of only existing on-demand via the /api/screener route.
+    scheduler.add_job(run_stockbit_screener_fetch, CronTrigger(
+        day_of_week="mon-fri", hour=17, minute=5, timezone=WIB),
+        id="stockbit_screener_fetch", name="Stockbit Screener Fetch 17:05")
+
     # Pre-mover EOD scan — 16:30 WIB
     scheduler.add_job(run_premover_eod, CronTrigger(
         day_of_week="mon-fri", hour=16, minute=30, timezone=WIB),
@@ -360,6 +370,7 @@ def start_scheduler():
     logger.info("  🏢 CORPORATE ACTIONS: 20:20 (dividend/rups/split/bonus/warrant/rightissue)")
     logger.info("  🧾 OWNERSHIP COMPOSITION: monthly, day 5 09:00 (major holders + investor buckets)")
     logger.info("  📅 BROKER PERIOD SUMMARY: 20:30 Fri only (7d/1mo/3mo accumulation)")
+    logger.info("  📈 STOCKBIT SCREENER: 17:05 (guru templates → stockbit_screener_results)")
     logger.info("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
     logger.info("  🏥 MARKET HEALTH: 08:45 pre-market")
     logger.info("  🌅 PREMARKET FIRM: 08:35 pre-market (unified watchlist → agent firm)")

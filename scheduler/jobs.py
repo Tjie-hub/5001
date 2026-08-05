@@ -404,6 +404,48 @@ def run_ownership_fetch():
                    f"{total} baris tersimpan untuk {len(tickers)} tickers.")
 
 
+def run_stockbit_screener_fetch():
+    """Fetch Stockbit guru-template screener snapshots and persist them.
+
+    Runs the existing on-demand collector (screener/stockbit_screener.py,
+    unchanged — only its new save_screener_results()/run_and_persist_screener()
+    persistence layer is scheduler-specific) once per trading day for every
+    registered GURU_TEMPLATES entry. One template failing (e.g. an expired
+    token) does not block the others, and this job never raises — matching
+    run_broker_flow_fetch()/run_news_fetch()'s contract so a bad day here
+    can't take down the rest of the scheduler run.
+    """
+    if _holiday_skip("run_stockbit_screener_fetch"):
+        return
+    from datetime import datetime as dt
+    from screener.stockbit_screener import GURU_TEMPLATES, run_and_persist_screener
+    now_str = dt.now(WIB).strftime('%H:%M')
+    logger.info(f"[{now_str}] Stockbit screener fetch dimulai...")
+
+    total = 0
+    failures = []
+    for name in GURU_TEMPLATES:
+        try:
+            summary = run_and_persist_screener(name, db_path=DB_PATH)
+            total += summary["count"]
+            logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Screener '{name}': "
+                       f"{summary['count']} tickers tersimpan.")
+        except Exception as e:
+            logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] Screener '{name}' error: {e}")
+            failures.append((name, str(e)))
+
+    if failures:
+        detail = "\n".join(f"  {n}: {err[:150]}" for n, err in failures)
+        send_telegram(
+            f"🔴 <b>Stockbit Screener Fetch GAGAL (sebagian)</b>\n\n"
+            f"{len(failures)}/{len(GURU_TEMPLATES)} template gagal:\n{detail}\n\n"
+            f"{total} baris tersimpan dari template yang berhasil."
+        )
+    else:
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Stockbit screener fetch selesai. "
+                   f"{total} baris tersimpan.")
+
+
 def run_ohlcv_reconciliation():
     """21:00 WIB — alert-only comparison of today's scraper-final closes vs
     yfinance raw (Phase 2A, audit C-4). Scraper stays the authority."""

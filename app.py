@@ -9,6 +9,7 @@ from routes_backtest_multi import backtest_multi_bp
 from screener.routes import screener_bp
 from screener.db import init_screener_tables
 from stockbit_fetcher import init_flow_db
+from screener.stockbit_screener import init_db as init_stockbit_screener_table
 from stockbit_broker_period import init_db as init_broker_period_summary_table
 from stockbit_corporate_actions import init_db as init_corporate_action_events_table
 from stockbit_ownership import init_db as init_ownership_composition_table
@@ -215,6 +216,7 @@ def init_runtime():
     validate_config()
     init_screener_tables()
     init_flow_db()
+    init_stockbit_screener_table()
     init_broker_period_summary_table()
     init_corporate_action_events_table()
     init_ownership_composition_table()

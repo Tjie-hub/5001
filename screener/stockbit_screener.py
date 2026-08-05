@@ -8,7 +8,8 @@ Token is captured by intercepting Bearer tokens from the persistent browser
 session (DS project's .browser_agent_state, known working).  Falls back to
 the cached .stockbit_token file if the browser capture fails.
 """
-import asyncio, os, time, sqlite3, requests
+import asyncio, json, os, time, sqlite3, requests
+from datetime import date as _date
 from pathlib import Path
 from data.db import connect as db_connect
 
@@ -225,4 +226,93 @@ def run_screener(template_id: int, template_type: str = "TEMPLATE_TYPE_GURU",
         "tickers": symbols,
         "sb_metrics": sb_metrics,
         "results": results,
+    }
+
+
+# ── Persistence (scheduler integration) ─────────────────────────────────────
+# The functions above (fetch_favorites/fetch_template/run_screener) were
+# already working and are called on demand by screener/routes.py; nothing
+# above this point is touched. These functions just give the scheduler
+# somewhere to put the result of run_screener() so guru-template snapshots
+# accumulate a history instead of being discarded after each web request.
+
+def init_db(db_path: str | None = None) -> None:
+    """Idempotent table creation — safe to call on every process start,
+    mirrors stockbit_fetcher.init_flow_db()/init_agent_firm_tables()."""
+    if db_path is None:
+        db_path = os.getenv("DB_PATH", str(BASE_DIR / "data" / "walkforward.db"))
+    conn = db_connect(db_path)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS stockbit_screener_results (
+            template_id   INTEGER NOT NULL,
+            template_name TEXT NOT NULL,
+            ticker        TEXT NOT NULL,
+            fetch_date    TEXT NOT NULL,
+            name          TEXT,
+            metrics_json  TEXT,
+            updated_at    TEXT NOT NULL,
+            PRIMARY KEY (template_id, ticker, fetch_date)
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def save_screener_results(conn, template_id: int, template_name: str, fetch_date: str,
+                          results: list[dict]) -> int:
+    """Insert or replace one row per ticker for (template_id, fetch_date).
+
+    Idempotent: rerunning the same template_id/fetch_date (e.g. a same-day
+    scheduler retry) replaces existing rows rather than duplicating them —
+    same PRIMARY-KEY-based upsert pattern as stockbit_fetcher.save_keystats().
+    Does not commit — caller owns the transaction, matching save_keystats().
+    """
+    from datetime import datetime as _dt
+    now = _dt.now().isoformat()
+    for row in results:
+        ticker = row.get("symbol") or row.get("ticker")
+        if not ticker:
+            continue
+        metrics = {k: v for k, v in row.items() if k not in ("symbol", "ticker", "name")}
+        conn.execute(
+            "INSERT OR REPLACE INTO stockbit_screener_results "
+            "(template_id, template_name, ticker, fetch_date, name, metrics_json, updated_at) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (template_id, template_name, ticker, fetch_date, row.get("name"),
+             json.dumps(metrics), now),
+        )
+    return len(results)
+
+
+def run_and_persist_screener(template_name: str, db_path: str | None = None,
+                             fetch_date: str | None = None) -> dict:
+    """Run a named GURU_TEMPLATES entry and persist its snapshot.
+
+    This is the single entrypoint scheduler.jobs.run_stockbit_screener_fetch()
+    calls — it wraps the existing run_screener()/fetch_template() collector
+    (unchanged) with the new save_screener_results() upsert.
+    """
+    if template_name not in GURU_TEMPLATES:
+        raise ValueError(f"Unknown Stockbit guru template: {template_name!r} "
+                         f"(known: {sorted(GURU_TEMPLATES)})")
+    template_id, template_type = GURU_TEMPLATES[template_name]
+    if db_path is None:
+        db_path = os.getenv("DB_PATH", str(BASE_DIR / "data" / "walkforward.db"))
+    if fetch_date is None:
+        fetch_date = str(_date.today())
+
+    rows = fetch_template(template_id, template_type)
+
+    conn = db_connect(db_path)
+    try:
+        saved = save_screener_results(conn, template_id, template_name, fetch_date, rows)
+        conn.commit()
+    finally:
+        conn.close()
+
+    return {
+        "template_id": template_id,
+        "template_name": template_name,
+        "fetch_date": fetch_date,
+        "count": saved,
     }
