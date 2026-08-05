@@ -9,6 +9,15 @@ secret redaction added to Architecture/Environment Variables below (RC1 fixes; s
 `Audit/PRODUCTION_ENGINE_IMPLEMENTATION_AUDIT_2026-07-28.md` and
 `Audit/RELEASE_READINESS_AUDIT_2026-07-28.md` for the full implementation/audit trail this section
 promotes into canonical documentation).
+**Amended:** 2026-07-29 — **ADR-AF-002 (Agent Firm Tier 1 Context Ownership) is COMPLETE.** Every
+Tier 1 context object (technical/flow/regime/news/market/portfolio/risk/execution) is now assembled
+by `engine/agent_firm_context.py` and attached to `SignalCandidate` at all five live construction
+sites (`scheduler/scanner.py` x2, `scheduler/jobs.py` x2, `monitor.py` x1) before Agent Firm
+evaluation; every specialist (`engine/agent_firm/agents/*.py`) consumes only typed candidate fields,
+with no raw SQL/data retrieval inside any specialist. See `Audit/ADR-AF-002_CLOSURE_REPORT.md` for
+the full WP1-4 implementation/audit/validation trail this section closes out, and
+`Audit/ADR-AF-002_HANDOFF_CHECKLIST.md` for the operational handoff. Next Production Engine
+milestone: see `Audit/PRODUCTION_ENGINE_NEXT_MILESTONE.md`.
 
 > This document is the canonical workspace operating manual for Claude sessions in this
 > repository. It defines how work should be performed but does not supersede repository source
