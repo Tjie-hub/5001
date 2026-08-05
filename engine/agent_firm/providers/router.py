@@ -41,6 +41,82 @@ def _claude_daily_call_count(db_path: str) -> int:
         return 0
 
 
+def _parse_utc(s: str | None) -> datetime.datetime | None:
+    """Parse a persisted '%Y-%m-%d %H:%M:%S' UTC string (the format
+    events.py's `_utc_str` writes) back into an aware UTC datetime. Returns
+    None for anything unparseable (missing column, corrupt row) rather than
+    raising -- hydration must degrade, never crash."""
+    if not s:
+        return None
+    try:
+        return datetime.datetime.strptime(s, "%Y-%m-%d %H:%M:%S").replace(
+            tzinfo=datetime.timezone.utc)
+    except (ValueError, TypeError):
+        return None
+
+
+def _hydrate_quota_holds(db_path: str) -> dict[str, dict]:
+    """Rebuild in-memory quota holds from the persisted provider_events table
+    so a freshly-constructed router (evaluate_staged() rebuilds one every
+    scheduler tick) honors a hold a PREVIOUS tick already discovered, instead
+    of re-probing an exhausted provider until its own failure re-teaches it
+    (audit 2026-07-21: the exact gap that caused the incident).
+
+    Pure function of the DB: reads the latest ('provider_session_limit' |
+    'provider_restored') event per provider, in insertion order, so N
+    duplicate session_limit rows from a fan-out collapse to one hold and a
+    'provider_restored' as the latest event clears any hold. Reconstructs
+    the same {"until", "reset_time"} shape `_on_session_limit` writes live,
+    anchoring the fallback window and the QUOTA_MAX_HOLD_S safety cap to the
+    persisted event's own timestamp (not "now") so a hold's expiry is a fixed
+    fact of when it happened, not when it happens to be checked. Already-
+    expired holds are dropped, not hydrated -- no stale-hold-forever.
+
+    Fails soft to {} on any error (missing file, missing/pre-Phase-1-schema
+    table, corrupt row) -- hydration must never crash router construction.
+    """
+    from data.db import connect as _db_connect
+
+    try:
+        conn = _db_connect(db_path)
+    except Exception:
+        return {}
+    try:
+        try:
+            rows = conn.execute(
+                "SELECT provider, event_type, reset_time, created_at "
+                "FROM provider_events "
+                "WHERE event_type IN ('provider_session_limit', 'provider_restored') "
+                "ORDER BY id ASC"
+            ).fetchall()
+        except Exception:
+            return {}  # missing table/db (pre-Phase-1 schema) -- degrade silently
+    finally:
+        conn.close()
+
+    latest: dict[str, tuple] = {}
+    for provider, event_type, reset_time_s, created_at_s in rows:
+        latest[provider] = (event_type, reset_time_s, created_at_s)
+
+    now = _now()
+    holds: dict[str, dict] = {}
+    for provider, (event_type, reset_time_s, created_at_s) in latest.items():
+        if event_type != "provider_session_limit":
+            continue
+        reset_time = _parse_utc(reset_time_s)
+        anchor = _parse_utc(created_at_s) or now
+        if reset_time is not None:
+            until = reset_time + datetime.timedelta(seconds=config.QUOTA_RESET_BUFFER_S)
+        else:
+            until = anchor + datetime.timedelta(seconds=config.QUOTA_FALLBACK_HOLD_S)
+        cap = anchor + datetime.timedelta(seconds=config.QUOTA_MAX_HOLD_S)
+        until = min(until, cap)
+        if until <= now:
+            continue  # expired -- do not hydrate a stale hold
+        holds[provider] = {"until": until, "reset_time": reset_time}
+    return holds
+
+
 def _hold_until(reset_time: datetime.datetime | None) -> datetime.datetime:
     """Hold horizon for a session-limited provider: advertised reset + buffer,
     fallback duration when no reset was parseable, always capped by
@@ -62,7 +138,15 @@ class ProviderRouter:
         self._routed = routed  # list[tuple[FirmLLMProvider, CircuitBreaker]]
         self._db_path = db_path
         # provider name -> {"until": aware dt, "reset_time": aware dt | None}
-        self._quota_holds: dict[str, dict] = {}
+        # Hydrated eagerly (not lazily on first generate()) from provider_events
+        # so a fresh router built against an existing db_path honors a hold a
+        # PREVIOUS tick already discovered (audit 2026-07-21) -- every caller
+        # already passes db_path (factory.build_router() included), so a
+        # freshly-built router observing an in-flight hold is the norm, not an
+        # edge case. db_path=None (unit tests without a db) hydrates to {}.
+        self._quota_holds: dict[str, dict] = (
+            _hydrate_quota_holds(db_path) if db_path else {}
+        )
 
     def model(self) -> str:
         return self._routed[0][0].model() if self._routed else ""

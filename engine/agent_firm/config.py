@@ -99,6 +99,29 @@ ALERT_MIN_INTERVAL_S = float(os.getenv("AGENT_FIRM_ALERT_MIN_INTERVAL", "1800"))
 # Alert escalation after this many session-limit hits without a recovery.
 QUOTA_REPEAT_THRESHOLD = int(os.getenv("AGENT_FIRM_QUOTA_REPEAT_THRESHOLD", "3"))
 
+# --- Adaptive provider governor (R-7 Tier 1, issuance-rate pacing) ---------
+# Process-singleton AIMD controller (engine/agent_firm/providers/governor.py)
+# that paces per-provider request ISSUE RATE -- fixes z.ai HTTP 429 code 1302
+# bursts a per-tick-rebuilt token bucket couldn't prevent (state survives
+# router rebuilds). Enabled by default for zai, the provider with the
+# burst-limit failure mode; Claude's constraint is the subscription window
+# already handled by the quota-hold settings above, so it stays un-governed
+# unless added to AGENT_FIRM_GOVERNOR_PROVIDERS. Defaults mirror the tuned
+# values validated by scripts/replay_governor_ab.py's A/B replay.
+GOVERNOR_ENABLED = _env_bool("AGENT_FIRM_GOVERNOR_ENABLED", True)
+GOVERNOR_PROVIDERS = [
+    p.strip() for p in os.getenv("AGENT_FIRM_GOVERNOR_PROVIDERS", "zai").split(",")
+    if p.strip()
+]
+GOVERNOR_RATE_MAX = float(os.getenv("AGENT_FIRM_GOVERNOR_RATE_MAX", "3.0"))
+GOVERNOR_RATE_MIN = float(os.getenv("AGENT_FIRM_GOVERNOR_RATE_MIN", "0.5"))
+GOVERNOR_BURST = float(os.getenv("AGENT_FIRM_GOVERNOR_BURST", "3.0"))
+GOVERNOR_AI_STEP = float(os.getenv("AGENT_FIRM_GOVERNOR_AI_STEP", "0.5"))
+GOVERNOR_AI_INTERVAL_S = float(os.getenv("AGENT_FIRM_GOVERNOR_AI_INTERVAL_S", "10.0"))
+GOVERNOR_MD_FACTOR = float(os.getenv("AGENT_FIRM_GOVERNOR_MD_FACTOR", "0.5"))
+GOVERNOR_POST_DECREASE_COOLDOWN_S = float(
+    os.getenv("AGENT_FIRM_GOVERNOR_POST_DECREASE_COOLDOWN_S", "30.0"))
+
 CONNECTION_TIMEOUT_S = float(os.getenv("AGENT_FIRM_CONNECTION_TIMEOUT", "10"))
 READ_TIMEOUT_S = float(os.getenv("AGENT_FIRM_READ_TIMEOUT", "60"))
 OVERALL_TIMEOUT_S = float(os.getenv("AGENT_FIRM_OVERALL_TIMEOUT", "75"))
