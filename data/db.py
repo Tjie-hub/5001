@@ -168,6 +168,11 @@ def init_agent_firm_tables():
     decision_cols = {r[1] for r in conn.execute("PRAGMA table_info(agent_decisions)")}
     if "providers_used" not in decision_cols:
         conn.execute("ALTER TABLE agent_decisions ADD COLUMN providers_used TEXT")
+    # ADR-AF-003: the Risk agent's qualitative size_tier recommendation was added to the
+    # AgentDecision Pydantic model but never reached this table or _persist()'s INSERT —
+    # found during post-ADR integration validation (Audit/AGENT_FIRM_INTEGRATION_VALIDATION_REPORT.md).
+    if "size_tier" not in decision_cols:
+        conn.execute("ALTER TABLE agent_decisions ADD COLUMN size_tier TEXT")
 
     conn.commit()
     conn.close()

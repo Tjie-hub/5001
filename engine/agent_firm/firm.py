@@ -4,34 +4,42 @@ Public API:
   evaluate(candidates) -> list[AgentDecision]            # sync, full pipeline
   evaluate_staged(candidates) -> list[AgentDecision]     # sync, 2-stage pre-scan (Phase 3)
   evaluate_async(candidates, client) -> ...              # async, for tests
-  reset_market_ctx() -> None                             # call at scan start to flush cache
+  reset_market_ctx() -> None                             # compat shim, see below
+
+WP3 (Specialist Context Consumption Migration): analyst nodes (technical/flow/regime/news) no
+longer receive a raw SQL-query context dict — they read typed Tier 1 context already attached
+to the SignalCandidate by engine.agent_firm_context.py (WP2), per ADR-AF-002. This retires
+_build_context()'s 7 raw queries entirely, per ADR-AF-002's "Required Implementation Changes"
+("_build_context() is deleted, not replaced in place").
 """
 
 import asyncio
 import json
-import time
 
 from langgraph.graph import END, StateGraph
 
 from . import config
 from .agents import bear, bull, flow, news, regime, risk, technical
-from .guardrails import apply_guardrails
+from .guardrails import apply_guardrails, build_consensus_summary
 from .providers.base import FirmLLMProvider
 from .providers.factory import build_router
 from .schemas import AgentDecision, AgentResult, AgentState, SignalCandidate
-from .tools import news_lookup
 from .tools.sqlite_query import query
 
 
-# ── Shared market context cache (Phase 3.2) ───────────────────────────────────
-# Reset once per scan batch via reset_market_ctx(); avoids N redundant queries
-# for open_trades and IHSG data when evaluating N candidates.
+# ── Legacy market-context cache (Phase 3.2) — retained as a compat shim only ──
+# _build_context() (this cache's sole consumer) is retired per ADR-AF-002/WP3; the cache it
+# fed has moved to engine.agent_firm_context.py's _batch_ctx/reset_batch_context() (WP2).
+# reset_market_ctx() itself is kept, unchanged, purely because scheduler/scanner.py still
+# imports and calls it once per scan cycle (scanner.py is out of WP3's scope) — it is now an
+# inert no-op flush of a cache nothing populates. Removing it requires a scanner.py edit,
+# deferred to a future, scanner-touching work package.
 
 _market_ctx: dict | None = None
 
 
 def reset_market_ctx() -> None:
-    """Call at the start of each scan batch to flush the per-scan market cache."""
+    """Compat shim for scheduler/scanner.py's existing call sites — no-op (see above)."""
     global _market_ctx
     _market_ctx = None
 
@@ -76,86 +84,19 @@ def _capped_decisions(candidates: list[SignalCandidate]) -> list[AgentDecision]:
     ]
 
 
-# ── Context pre-fetch ────────────────────────────────────────────────────────
-
-def _build_context(state: AgentState) -> dict:
-    global _market_ctx
-    import data.db as _db
-    db_path = str(_db.DB_PATH)
-    ticker = state["candidate"].ticker
-
-    if _market_ctx is None:
-        _market_ctx = {
-            "open_trades": query(
-                db_path,
-                "SELECT ticker, entry_price, lots, tp_price, sl_price "
-                "FROM paper_trades WHERE status='OPEN'",
-            ),
-            "ihsg": query(
-                db_path,
-                "SELECT date, close FROM ohlcv WHERE ticker='IHSG' ORDER BY date DESC LIMIT 20",
-            ),
-        }
-
-    context = {
-        "ohlcv": query(
-            db_path,
-            "SELECT date, open, high, low, close, volume FROM ohlcv "
-            "WHERE ticker=? ORDER BY date DESC LIMIT 60",
-            (ticker,),
-        ),
-        "broker_flow": query(
-            db_path,
-            "SELECT trade_date, broker_code, side, lot_value, investor_type FROM broker_flow "
-            "WHERE ticker=? AND trade_date >= date('now', '-14 days') ORDER BY trade_date DESC",
-            (ticker,),
-        ),
-        "stockbit_flow": query(
-            db_path,
-            "SELECT trade_date, buy_lot, sell_lot, net_lot, net_value, verdict, "
-            "smart_money, foreign_score, composite_score FROM stockbit_flow "
-            "WHERE ticker=? AND trade_date >= date('now', '-14 days') ORDER BY trade_date DESC",
-            (ticker,),
-        ),
-        "stockbit_flow_bars": query(
-            db_path,
-            "SELECT trade_date, bar_time, buy_lot, sell_lot, delta, net_value "
-            "FROM stockbit_flow_bars "
-            "WHERE ticker=? AND trade_date >= date('now', '-7 days') "
-            "ORDER BY trade_date DESC, bar_time",
-            (ticker,),
-        ),
-        "wf_scores": query(
-            db_path,
-            "SELECT strategy, consistency_pct, avg_return_pct, avg_sharpe, weighted_score "
-            "FROM wf_scores WHERE ticker=? ORDER BY weighted_score DESC",
-            (ticker,),
-        ),
-        "sector_data": query(
-            db_path,
-            "SELECT date, signal, vpin_label, vol_ratio FROM daily_screen "
-            "WHERE ticker=? ORDER BY date DESC LIMIT 10",
-            (ticker,),
-        ),
-        "news_mentions": news_lookup.lookup(db_path, ticker, days=7),
-        "open_trades": _market_ctx["open_trades"],
-        "ihsg": _market_ctx["ihsg"],
-    }
-    return {"db_path": db_path, "context": context}
-
-
 # ── Analyst nodes ─────────────────────────────────────────────────────────────
+# Each analyst reads its own typed Tier 1 context straight off `candidate` (attached by
+# engine.agent_firm_context.py before evaluate/evaluate_staged is ever called, per WP2) —
+# no per-scan context dict or db_path is built or threaded through the graph anymore.
 
 async def _run_analysts(state: AgentState) -> dict:
     client = state["client"]
     candidate = state["candidate"]
-    ctx = state["context"]
-    db_path = state["db_path"]
     t, f, r, n = await asyncio.gather(
-        technical.run(candidate, client, db_path),
-        flow.run(candidate, client, ctx),
-        regime.run(candidate, client, ctx),
-        news.run(candidate, client, ctx),
+        technical.run(candidate, client),
+        flow.run(candidate, client),
+        regime.run(candidate, client),
+        news.run(candidate, client),
     )
     return {
         "technical_result": t,
@@ -197,27 +138,39 @@ async def _run_risk(state: AgentState) -> dict:
         state["bear_result"],
     ]
     result = await risk.run(state["candidate"], all_results, state["client"])
+    candidate = state["candidate"]
 
     if result.status == "failed":
         decision_str = "degraded"
         confidence = None
-        size_hint = None
+        size_tier = None
         rationale = "Agent firm degraded — quant signal passed through"
     else:
         out = result.output or {}
         decision_str = out.get("decision", "degraded")
         confidence = out.get("confidence")
-        size_hint = out.get("size_hint")
+        # AF-2 ADR-AF-003: the Risk agent recommends a qualitative size_tier, not a numeric
+        # size_hint — engine.position_sizing.resolve_size_hint() (Production Engine) is now
+        # the sole authority that turns this into the executable agent_size_hint number.
+        size_tier = out.get("size_tier")
         rationale = out.get("rationale")
-        # Deterministic guardrails (post-LLM): override approve→veto on a hard
-        # flow contradiction or sub-floor confidence in a weak regime. Keyed on
-        # analyst verdicts, not the scale-inconsistent quant_score.
+        # Deterministic guardrails (post-LLM): override approve→veto on a hard flow
+        # contradiction, sub-floor confidence in a weak regime, ≥3 negative analyst
+        # verdicts (K1, WP4), or an already-open position (K2, WP4). Keyed on analyst
+        # verdicts and Tier 1 context (candidate.portfolio/.risk_limits, ADR-AF-002),
+        # never the scale-inconsistent quant_score.
         analysts = [state["technical_result"], state["flow_result"],
                     state["regime_result"], state["news_result"]]
-        new_decision, override = apply_guardrails(decision_str, confidence, analysts)
+        consensus = build_consensus_summary(
+            analysts, candidate.ticker,
+            portfolio_ctx=candidate.portfolio, risk_ctx=candidate.risk_limits,
+        )
+        new_decision, override = apply_guardrails(
+            decision_str, confidence, analysts, consensus=consensus,
+        )
         if override:
             decision_str = new_decision
-            size_hint = 0.0
+            size_tier = None
             rationale = f"[{override}] {rationale or ''}".strip()
 
     traces = [
@@ -229,7 +182,6 @@ async def _run_risk(state: AgentState) -> dict:
     tokens_out = sum(t.tokens_out for t in traces)
     cost_usd = sum(t.cost_usd for t in traces)
     providers_used = sorted({t.provider for t in traces if t.provider})
-    candidate = state["candidate"]
 
     decision = AgentDecision(
         ticker=candidate.ticker,
@@ -238,7 +190,16 @@ async def _run_risk(state: AgentState) -> dict:
         quant_score=candidate.score,
         decision=decision_str,
         confidence=confidence,
-        size_hint=size_hint,
+        # AF-2 ADR-AF-003: size_hint is no longer set here — it is repurposed by the ADR to
+        # eventually carry resolve_size_hint()'s final resolved value (Production Engine,
+        # engine/position_sizing.py), which is not computed until after this decision has
+        # already been persisted (see _persist(), below). Closing that audit-trail loop is
+        # explicitly out of this change's scope (not listed in ADR-AF-003's "Required
+        # Implementation Changes") — left None here, deliberately, rather than silently
+        # inventing new cross-module persistence-update logic. size_tier is the Risk agent's
+        # own qualitative recommendation, unchanged by this deferral.
+        size_hint=None,
+        size_tier=size_tier,
         rationale=rationale,
         traces=traces,
         tokens_in=tokens_in,
@@ -261,14 +222,12 @@ def _persist_node(state: AgentState) -> dict:
 
 def _build_graph():
     g = StateGraph(AgentState)
-    g.add_node("build_context", _build_context)
     g.add_node("run_analysts", _run_analysts)
     g.add_node("run_bull", _run_bull)
     g.add_node("run_bear", _run_bear)
     g.add_node("run_risk", _run_risk)
     g.add_node("persist", _persist_node)
-    g.set_entry_point("build_context")
-    g.add_edge("build_context", "run_analysts")
+    g.set_entry_point("run_analysts")
     g.add_edge("run_analysts", "run_bull")
     g.add_edge("run_bull", "run_bear")
     g.add_edge("run_bear", "run_risk")
@@ -291,6 +250,9 @@ async def evaluate_async(
     initial_states = [
         AgentState(
             candidate=c,
+            # db_path/context are vestigial AgentState keys nothing reads anymore
+            # (see _run_analysts) — populated empty only because AgentState's
+            # TypedDict shape still declares them (schemas.py is out of WP3's scope).
             db_path="",
             context={},
             client=client,
@@ -336,26 +298,11 @@ async def _run_stage1(
     candidate: SignalCandidate,
     client: FirmLLMProvider,
 ) -> tuple[AgentResult, AgentResult]:
-    """Stage 1: technical + regime in parallel (~$0.004 per candidate)."""
-    import data.db as _db
-    db_path = str(_db.DB_PATH)
-    ctx = {
-        "wf_scores": query(
-            db_path,
-            "SELECT strategy, consistency_pct, avg_return_pct, avg_sharpe, weighted_score "
-            "FROM wf_scores WHERE ticker=? ORDER BY weighted_score DESC",
-            (candidate.ticker,),
-        ),
-        "sector_data": query(
-            db_path,
-            "SELECT date, signal, vpin_label, vol_ratio FROM daily_screen "
-            "WHERE ticker=? ORDER BY date DESC LIMIT 10",
-            (candidate.ticker,),
-        ),
-    }
+    """Stage 1: technical + regime in parallel (~$0.004 per candidate). Both read their
+    typed Tier 1 context straight off `candidate`, same as the full pipeline's analyst node."""
     return await asyncio.gather(
-        technical.run(candidate, client, db_path),
-        regime.run(candidate, client, ctx),
+        technical.run(candidate, client),
+        regime.run(candidate, client),
     )
 
 
@@ -444,12 +391,13 @@ def _persist(decision: AgentDecision) -> int:
         cur = conn.execute(
             "INSERT OR REPLACE INTO agent_decisions "
             "(scan_time, ticker, strategy, quant_score, decision, confidence, "
-            "size_hint, rationale, tokens_in, tokens_out, cost_usd, duration_s, providers_used) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "size_hint, size_tier, rationale, tokens_in, tokens_out, cost_usd, duration_s, "
+            "providers_used) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 decision.scan_time, decision.ticker, decision.strategy,
                 decision.quant_score, decision.decision, decision.confidence,
-                decision.size_hint, decision.rationale,
+                decision.size_hint, decision.size_tier, decision.rationale,
                 decision.tokens_in, decision.tokens_out, decision.cost_usd,
                 decision.duration_s, json.dumps(decision.providers_used),
             ),

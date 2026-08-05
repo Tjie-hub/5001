@@ -74,7 +74,7 @@ async def test_evaluate_async_v2_runs_all_7_agents_and_persists(monkeypatch, tmp
                return_value=AgentResult(
                    role="risk", status="ok",
                    output={"decision": "approve", "confidence": 0.75,
-                           "size_hint": 1.0, "rationale": "ok.\nok."},
+                           "size_tier": "normal", "rationale": "ok.\nok."},
                    tokens_in=500, tokens_out=100, duration_s=3.0)):
         decisions = await firm.evaluate_async([candidate])
 
@@ -124,13 +124,17 @@ async def test_guardrail_overrides_llm_approve_to_veto(monkeypatch, tmp_path):
          patch("engine.agent_firm.agents.risk.run",
                return_value=AgentResult(role="risk", status="ok",
                    output={"decision": "approve", "confidence": 0.7,
-                           "size_hint": 1.0, "rationale": "bullish narrative"},
+                           "size_tier": "increase", "rationale": "bullish narrative"},
                    tokens_in=50, tokens_out=10, duration_s=0.3)):
         decisions = await firm.evaluate_async([candidate])
 
     assert decisions[0].decision == "veto"
     assert "guardrail" in (decisions[0].rationale or "")
-    assert decisions[0].size_hint == 0.0
+    # AF-2 ADR-AF-003: a guardrail override clears size_tier (no sizing recommendation
+    # survives a deterministic veto override) — size_hint is always None at construction
+    # time now, regardless of override (see firm.py::_run_risk()'s own comment).
+    assert decisions[0].size_tier is None
+    assert decisions[0].size_hint is None
 
 
 def test_evaluate_returns_bypassed_when_disabled(monkeypatch, tmp_path):

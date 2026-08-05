@@ -1,12 +1,19 @@
-"""Flow Specialist agent. Reads Stockbit and broker flow, returns smart-money verdict."""
+"""Flow Specialist agent. Interprets precomputed FlowContext facts.
+
+WP3 (Specialist Context Consumption Migration): this agent no longer receives raw
+stockbit_flow/broker_flow/stockbit_flow_bars rows or sums lots itself —
+engine.agent_firm_context.build_flow_context() (Production Engine) already computed
+verdict/smart_money/composite_score/foreign_score (passthroughs of stockbit_flow's own
+columns) and net_foreign_14d/trend_7d (the only genuinely new aggregations, per ADR-AF-001).
+This agent's job is interpretation of those facts, not re-aggregation.
+"""
 
 import json
 import time
 from pathlib import Path
-from typing import Any
 
 from ..providers.base import FirmLLMProvider
-from ..schemas import AgentResult, SignalCandidate
+from ..schemas import AgentResult, FlowContext, SignalCandidate
 
 _PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "flow_v1.md"
 PROMPT_VERSION = "v1"
@@ -16,19 +23,27 @@ def _load_prompt() -> str:
     return _PROMPT_PATH.read_text()
 
 
+def _candidate_summary(candidate: SignalCandidate) -> dict:
+    return {
+        "ticker": candidate.ticker,
+        "strategy": candidate.strategy,
+        "score": candidate.score,
+        "regime": candidate.regime,
+        "foreign_score": candidate.foreign_score,
+    }
+
+
 async def run(
     candidate: SignalCandidate,
     client: FirmLLMProvider,
-    context: dict[str, Any],
 ) -> AgentResult:
     start = time.monotonic()
     resp = None
     try:
+        flow_ctx = candidate.flow or FlowContext()
         user_msg = json.dumps({
-            "candidate": candidate.model_dump(),
-            "stockbit_flow_14d": context.get("stockbit_flow", []),
-            "broker_flow_14d": context.get("broker_flow", []),
-            "stockbit_flow_bars_7d": context.get("stockbit_flow_bars", []),
+            "candidate": _candidate_summary(candidate),
+            "flow_context": flow_ctx.model_dump(),
         })
         resp = await client.generate([
             {"role": "system", "content": _load_prompt()},

@@ -96,7 +96,7 @@ async def test_evaluate_async_runs_full_pipeline_and_persists(monkeypatch, tmp_p
                return_value=AgentResult(
                    role="risk", status="ok",
                    output={"decision": "approve", "confidence": 0.7,
-                           "size_hint": 1.0, "rationale": "Risk: ok.\nBull/Bear: bull edges out"},
+                           "size_tier": "normal", "rationale": "Risk: ok.\nBull/Bear: bull edges out"},
                    tokens_in=1500, tokens_out=80, duration_s=4.0)):
         decisions = await firm.evaluate_async([candidate])
 
@@ -112,6 +112,56 @@ async def test_evaluate_async_runs_full_pipeline_and_persists(monkeypatch, tmp_p
     assert rows[0][0] == "approve"
     trace_count = conn.execute("SELECT COUNT(*) FROM agent_traces").fetchone()[0]
     assert trace_count == 7
+
+
+@pytest.mark.asyncio
+async def test_evaluate_async_persists_size_tier_to_agent_decisions(monkeypatch, tmp_path):
+    """AF-2 ADR-AF-003 integration-validation regression: size_tier was added to the
+    AgentDecision Pydantic model but `_persist()`'s INSERT never included it and the
+    agent_decisions table never had the column — the Risk agent's actual qualitative sizing
+    recommendation silently never reached the audit trail. Both are now fixed (data/db.py's
+    idempotent migration + firm.py::_persist()'s INSERT); this proves size_tier is round-tripped
+    through the real DB, not just held in the in-memory AgentDecision object."""
+    monkeypatch.setenv("AGENT_FIRM_ENABLED", "true")
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "t2.db"))
+    import importlib
+    from data import db as data_db
+    importlib.reload(data_db)
+    from engine.agent_firm import config, firm
+    importlib.reload(config); importlib.reload(firm)
+
+    _seed(tmp_path / "t2.db")
+
+    candidate = SignalCandidate(
+        ticker="BBCA", strategy="momentum_following",
+        score=4.2, scan_time="2026-05-19T16:00:00+07:00",
+    )
+
+    with patch("engine.agent_firm.agents.technical.run", return_value=_ok("technical")), \
+         patch("engine.agent_firm.agents.flow.run",      return_value=_ok("flow")), \
+         patch("engine.agent_firm.agents.regime.run",    return_value=_ok("regime")), \
+         patch("engine.agent_firm.agents.news.run",      return_value=_ok("news")), \
+         patch("engine.agent_firm.agents.bull.run",      return_value=_ok("bull")), \
+         patch("engine.agent_firm.agents.bear.run",      return_value=_ok("bear")), \
+         patch("engine.agent_firm.agents.risk.run",
+               return_value=AgentResult(
+                   role="risk", status="ok",
+                   output={"decision": "approve", "confidence": 0.8,
+                           "size_tier": "increase", "rationale": "Risk: strong.\nBull/Bear: bull dominates"},
+                   tokens_in=1200, tokens_out=70, duration_s=3.5)):
+        decisions = await firm.evaluate_async([candidate])
+
+    assert decisions[0].size_tier == "increase"
+    assert decisions[0].size_hint is None  # ADR-AF-003: deferred audit-trail completeness
+
+    conn = sqlite3.connect(tmp_path / "t2.db")
+    row = conn.execute(
+        "SELECT decision, size_tier, size_hint FROM agent_decisions WHERE ticker='BBCA'"
+    ).fetchone()
+    assert row is not None, "decision was not persisted at all"
+    assert row[0] == "approve"
+    assert row[1] == "increase", "size_tier must round-trip through the real DB, not be dropped"
+    assert row[2] is None
 
 
 @pytest.mark.asyncio

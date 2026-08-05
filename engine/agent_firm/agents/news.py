@@ -1,12 +1,19 @@
-"""News/Sentiment agent. Reads news_mentions + optional Tavily web search."""
+"""News/Sentiment agent. Interprets precomputed NewsContext + a live web search.
+
+WP3 (Specialist Context Consumption Migration): this agent no longer receives a raw
+news_mentions dict — engine.agent_firm_context.build_news_context() (Production Engine)
+already computed mentions_count_7d and has_catalyst (a engine.catalyst.has_catalyst()
+passthrough, per ADR-AF-001). The live Tavily web search is kept as-is: it is genuine
+real-time NLU input the specialist itself interprets, not a deterministic fact with an
+existing canonical producer.
+"""
 
 import json
 import time
 from pathlib import Path
-from typing import Any
 
 from ..providers.base import FirmLLMProvider
-from ..schemas import AgentResult, SignalCandidate
+from ..schemas import AgentResult, NewsContext, SignalCandidate
 from ..tools import web_search as _web_search
 
 _PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "news_v1.md"
@@ -17,10 +24,13 @@ def _load_prompt() -> str:
     return _PROMPT_PATH.read_text()
 
 
+def _candidate_summary(candidate: SignalCandidate) -> dict:
+    return {"ticker": candidate.ticker, "strategy": candidate.strategy}
+
+
 async def run(
     candidate: SignalCandidate,
     client: FirmLLMProvider,
-    context: dict[str, Any],
 ) -> AgentResult:
     start = time.monotonic()
     tools_called: list[dict] = []
@@ -30,9 +40,14 @@ async def run(
             f"{candidate.ticker} IDX saham berita terbaru site:idx.co.id OR site:bisnis.com OR site:kontan.co.id"
         )
         tools_called.append({"tool": "tavily_search", "results": len(tavily_results)})
+        news_ctx = candidate.news or NewsContext()
         user_msg = json.dumps({
-            "candidate": candidate.model_dump(),
-            "news_mentions_7d": context.get("news_mentions", []),
+            "candidate": _candidate_summary(candidate),
+            "news_context": {
+                "mentions_7d": news_ctx.mentions_7d,
+                "mentions_count_7d": news_ctx.mentions_count_7d,
+                "has_catalyst": news_ctx.has_catalyst,
+            },
             "web_search_results": tavily_results,
         })
         resp = await client.generate([

@@ -1,29 +1,44 @@
-"""Regime Analyst agent. Reads WF scores and daily screen data."""
+"""Regime Analyst agent. Interprets precomputed RegimeContext facts.
+
+WP3 (Specialist Context Consumption Migration): this agent no longer receives raw wf_scores/
+daily_screen rows or re-thresholds VPIN/volume-ratio/Sharpe itself —
+engine.agent_firm_context.build_regime_context() (Production Engine) already computed
+regime_call (a detect_regime() passthrough, per ADR-AF-001), sector_tailwind, macro_risk,
+best_strategy, and ticker_consistency_pct. This agent's job is to confirm or challenge that
+already-computed reading, not build a second regime classifier.
+"""
 
 import json
 import time
 from pathlib import Path
-from typing import Any
 
 from ..providers.base import FirmLLMProvider
-from ..schemas import AgentResult, SignalCandidate
+from ..schemas import AgentResult, RegimeContext, SignalCandidate
 
 _PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "regime_v1.md"
 PROMPT_VERSION = "v1"
 
 
+def _candidate_summary(candidate: SignalCandidate) -> dict:
+    return {
+        "ticker": candidate.ticker,
+        "strategy": candidate.strategy,
+        "score": candidate.score,
+        "regime": candidate.regime,
+    }
+
+
 async def run(
     candidate: SignalCandidate,
     client: FirmLLMProvider,
-    context: dict[str, Any],
 ) -> AgentResult:
     start = time.monotonic()
     resp = None
     try:
+        regime_ctx = candidate.regime_context or RegimeContext()
         user_msg = json.dumps({
-            "candidate": candidate.model_dump(),
-            "wf_scores": context.get("wf_scores", []),
-            "sector_data_10d": context.get("sector_data", []),
+            "candidate": _candidate_summary(candidate),
+            "regime_context": regime_ctx.model_dump(),
         })
         resp = await client.generate([
             {"role": "system", "content": _PROMPT_PATH.read_text()},

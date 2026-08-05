@@ -46,13 +46,13 @@ async def test_risk_v2_approve_on_full_bullish_committee():
     fake_client = AsyncMock()
     fake_client.generate.return_value = _response(json.dumps({
         "decision": "approve", "confidence": 0.82,
-        "size_hint": 1.2,
+        "size_tier": "increase",
         "rationale": "Risk: all analysts aligned.\nBull/Bear: bull case dominates.",
     }))
     result = await risk.run(_make_candidate(), _make_all_analysts(), fake_client)
     assert result.status == "ok"
     assert result.output["decision"] == "approve"
-    assert result.output["size_hint"] == 1.2
+    assert result.output["size_tier"] == "increase"
     assert result.tokens_in == 2000
 
 
@@ -64,7 +64,7 @@ async def test_risk_v2_all_6_reports_in_payload():
         captured["body"] = messages
         return _response(json.dumps({
             "decision": "approve", "confidence": 0.6,
-            "size_hint": 1.0, "rationale": "ok.\nok.",
+            "size_tier": "normal", "rationale": "ok.\nok.",
         }), tokens_in=50, tokens_out=30)
 
     fake_client = AsyncMock()

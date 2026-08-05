@@ -1,3 +1,5 @@
+import pytest
+
 from engine.agent_firm.schemas import SignalCandidate, AgentResult, AgentDecision, AgentState
 
 
@@ -92,3 +94,120 @@ def test_agent_decision_providers_used_defaults_empty_list():
         ticker="BBRI", strategy="x", scan_time="t", quant_score=1.0, decision="approve",
     )
     assert d.providers_used == []
+
+
+# ── WP1 (Foundation): new Tier 1/Tier 2 context objects — see
+#    docs/agent_firm/ADR-AF-001..004 and docs/agent_firm/AF2_ARCHITECTURE_CERTIFICATION.md.
+#    None of these are consumed anywhere yet — these tests verify construction,
+#    validation, and serialization only. ──
+
+def test_signal_candidate_new_context_fields_default_none_backward_compatible():
+    """Existing call sites that construct SignalCandidate with only the original fields
+    must keep working unchanged (AGENT_FIRM_GOVERNANCE.md: additive optional fields are
+    MINOR, not MAJOR) — this is the direct backward-compatibility check for ADR-AF-004."""
+    c = SignalCandidate(
+        ticker="BBRI", strategy="momentum_following",
+        score=4.2, scan_time="2026-05-19T16:00:00+07:00",
+    )
+    assert c.technical is None
+    assert c.flow is None
+    assert c.regime_context is None
+    assert c.news is None
+    assert c.market is None
+    assert c.portfolio is None
+    assert c.risk_limits is None
+    assert c.execution is None
+
+
+def test_signal_candidate_accepts_context_objects():
+    from engine.agent_firm.schemas import TechnicalContext, FlowContext
+
+    c = SignalCandidate(
+        ticker="BBRI", strategy="momentum_following",
+        score=4.2, scan_time="2026-05-19T16:00:00+07:00",
+        technical=TechnicalContext(sma20=100.0, mechanical_direction="BULLISH"),
+        flow=FlowContext(verdict="BULLISH", net_foreign_14d=5000),
+    )
+    assert c.technical.sma20 == 100.0
+    assert c.technical.mechanical_direction == "BULLISH"
+    assert c.flow.net_foreign_14d == 5000
+
+
+def test_signal_candidate_serializes_nested_context_to_json():
+    """These objects are JSON-dumped straight into LLM prompts (ADR-AF-002's serialization
+    decision) — round-trip must preserve nested structure exactly."""
+    import json
+    from engine.agent_firm.schemas import TechnicalContext
+
+    c = SignalCandidate(
+        ticker="BBRI", strategy="momentum_following",
+        score=4.2, scan_time="2026-05-19T16:00:00+07:00",
+        technical=TechnicalContext(
+            sma20=100.0, support_levels=[95.0, 90.0], mechanical_direction="BULLISH",
+        ),
+    )
+    dumped = json.loads(c.model_dump_json())
+    assert dumped["technical"]["sma20"] == 100.0
+    assert dumped["technical"]["support_levels"] == [95.0, 90.0]
+    assert dumped["technical"]["mechanical_direction"] == "BULLISH"
+
+
+def test_agent_decision_size_tier_defaults_none_backward_compatible():
+    d = AgentDecision(
+        ticker="BBRI", strategy="x", scan_time="t", quant_score=1.0, decision="approve",
+    )
+    assert d.size_tier is None
+    # size_hint's pre-existing behavior is unchanged by the new field's addition.
+    assert d.size_hint is None
+
+
+def test_agent_decision_rejects_invalid_size_tier():
+    import pytest
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        AgentDecision(
+            ticker="BBRI", strategy="x", scan_time="t", quant_score=1.0,
+            decision="approve", size_tier="double_it",
+        )
+
+
+def test_agent_decision_accepts_valid_size_tier():
+    d = AgentDecision(
+        ticker="BBRI", strategy="x", scan_time="t", quant_score=1.0,
+        decision="approve", size_tier="increase",
+    )
+    assert d.size_tier == "increase"
+
+
+def test_portfolio_context_has_open_position_method():
+    from engine.agent_firm.schemas import PortfolioContext
+
+    p = PortfolioContext(open_trades=[{"ticker": "BBRI"}, {"ticker": "TLKM"}])
+    assert p.has_open_position("BBRI") is True
+    assert p.has_open_position("UNKNOWN") is False
+
+
+@pytest.mark.parametrize("cls_name", [
+    "TechnicalContext", "FlowContext", "RegimeContext", "NewsContext", "MarketContext",
+    "PortfolioContext", "RiskContext", "ExecutionContext", "ConsensusContext",
+])
+def test_context_object_constructs_with_all_defaults(cls_name):
+    """Every new context type must be constructible with zero arguments — required for
+    the 'may exist unused, nothing consumes it yet' WP1 constraint."""
+    from engine.agent_firm import schemas as _schemas
+
+    cls = getattr(_schemas, cls_name)
+    instance = cls()
+    assert instance is not None
+    # Must be JSON-serializable even in its default state.
+    assert instance.model_dump_json() is not None
+
+
+def test_session_context_requires_scan_time():
+    from pydantic import ValidationError
+    from engine.agent_firm.schemas import SessionContext
+
+    with pytest.raises(ValidationError):
+        SessionContext()
+    s = SessionContext(scan_time="2026-07-29 08:35")
+    assert s.wib_session == "regular"  # default before any derivation logic is applied

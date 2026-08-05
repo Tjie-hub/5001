@@ -25,16 +25,38 @@ from . import config
 from .firm import evaluate_async
 from .schemas import AgentDecision, SignalCandidate
 
-_CANNED = SignalCandidate(
+_CANNED_BASE = dict(
     ticker="BBRI",
     strategy="momentum_following",
     score=4.2,
-    scan_time=datetime.now(timezone.utc).isoformat(),
     regime="BULL",
     flow_verdict="STRONG_BUY",
     foreign_score=3.42,
     indicators={"vwma_above": True, "ma50_above": True},
 )
+
+
+def _build_canned_candidate() -> SignalCandidate:
+    """WP3: specialists now read Tier 1 context off the candidate instead of querying raw
+    data themselves, so the canned smoke candidate must carry real context — otherwise every
+    analyst would see empty defaults regardless of what's actually in the production DB. Uses
+    the same engine.agent_firm_context.build_candidate_context() scheduler/scanner.py calls;
+    fails soft to no context (pre-WP2 shape) on any DB error, matching that module's own
+    fail-open contract."""
+    base = dict(_CANNED_BASE, scan_time=datetime.now(timezone.utc).isoformat())
+    try:
+        import data.db as _db
+        from engine.agent_firm_context import build_candidate_context
+
+        conn = _db.connect(str(_db.DB_PATH))
+        try:
+            ctx = build_candidate_context(conn, base["ticker"], base["scan_time"])
+        finally:
+            conn.close()
+    except Exception:
+        ctx = {}
+    return SignalCandidate(**base, **ctx)
+
 
 _MAX_DURATION_S = 150.0
 _COST_MIN = 0.0001
@@ -93,7 +115,7 @@ def main() -> int:
         print("SKIP: agent firm not active (FIRM_ENABLED=false or kill switch set)")
         return 0
     try:
-        decisions = asyncio.run(evaluate_async([_CANNED]))
+        decisions = asyncio.run(evaluate_async([_build_canned_candidate()]))
     except Exception as err:
         print(f"FAIL: pipeline raised {type(err).__name__}: {err}")
         return 1
