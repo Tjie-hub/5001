@@ -31,6 +31,26 @@ def _agent_confirms_exit(trade: dict, result: dict) -> bool:
         if not _cfg.is_active():
             return True
 
+        # AF-2 WP4: this single-trade review is its own "scan cycle" for Tier 1
+        # context purposes (runs every ~30 min, independent of the scheduler's own
+        # scan cycles) — flush both caches immediately before building context so
+        # market/portfolio/risk_limits/execution reflect *this* check, not whatever
+        # a premarket/EOD job last computed hours earlier in the same process.
+        from engine.agent_firm_context import build_candidate_context, reset_batch_context
+        _ctx = {}
+        try:
+            _firm.reset_market_ctx()
+            reset_batch_context()
+            _conn = db_connect(DB_PATH)
+            try:
+                _ctx = build_candidate_context(
+                    _conn, trade["ticker"], dt_date.today().isoformat(),
+                )
+            finally:
+                _conn.close()
+        except Exception as _ctx_err:
+            logger.warning(f"[monitor] exit-review context build error (fail-open): {_ctx_err}")
+
         _candidate = _SC(
             ticker=trade["ticker"],
             strategy=trade.get("strategy") or "swing trend",
@@ -39,6 +59,7 @@ def _agent_confirms_exit(trade: dict, result: dict) -> bool:
             flow_verdict=None,
             foreign_score=None,
             indicators={},
+            **_ctx,
         )
         _decisions = _firm.evaluate([_candidate])
         if not _decisions:

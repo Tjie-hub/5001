@@ -7,6 +7,8 @@ markets where flow_confirmed is always empty.
 import sys
 from unittest.mock import MagicMock
 
+import paper_trade
+import scheduler.scanner as scanner_mod
 from engine.agent_firm.schemas import SignalCandidate
 from scheduler.scanner import run_agent_firm_gate
 
@@ -44,10 +46,19 @@ def _call_gate(intersection_results, flow_confirmed, mock_firm, mock_cfg,
     package attributes and sys.modules so mocking is robust regardless of whether
     the real submodules were imported by an earlier test in the same session.
     """
+    # AF-2 WP2: run_agent_firm_gate() now opens a DB connection (via scanner.DB_PATH) to
+    # populate Tier 1 context per candidate. Pin both scanner.DB_PATH and paper_trade.DB_PATH
+    # (build_risk_context/build_execution_context import paper_trade directly, with its own
+    # module-level DB_PATH) to an isolated in-memory DB so this test suite stays hermetic —
+    # per CLAUDE.md, tests must never touch the gitignored data/walkforward.db. A ":memory:"
+    # connection has no tables, so context population fails soft to empty defaults, which is
+    # exactly what these tests need (they assert filtering/logging, not context content).
     import engine.agent_firm as _pkg
     from unittest.mock import patch
     with patch.object(_pkg, "firm", mock_firm), \
          patch.object(_pkg, "config", mock_cfg), \
+         patch.object(scanner_mod, "DB_PATH", ":memory:"), \
+         patch.object(paper_trade, "DB_PATH", ":memory:"), \
          patch.dict(sys.modules, {
              "engine.agent_firm.firm": mock_firm,
              "engine.agent_firm.config": mock_cfg,

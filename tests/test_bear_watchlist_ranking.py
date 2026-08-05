@@ -35,7 +35,16 @@ def isolated_db(tmp_path):
     The ranking fn queries agent_decisions to skip already-approved tickers;
     without this the test would depend on the ambient (gitignored) live DB and
     break in CI. Empty table → no tickers pre-approved → all are ranked.
+
+    AF-2 WP2: rank_bear_watchlist_and_notify() now also populates Tier 1 context
+    per candidate (build_risk_context/build_execution_context import paper_trade
+    directly, with its own module-level DB_PATH) — also pinned to this same temp
+    DB so context population never falls back to the ambient live DB either. The
+    temp DB has no ohlcv/stockbit_flow/wf_scores/paper_trades tables, so context
+    population fails soft to empty defaults (CLAUDE.md fail-soft convention),
+    which these tests don't inspect.
     """
+    import paper_trade
     db = tmp_path / "wf.db"
     conn = sqlite3.connect(db)
     conn.execute(
@@ -44,7 +53,8 @@ def isolated_db(tmp_path):
     )
     conn.commit()
     conn.close()
-    with patch.object(scheduler.scanner, "DB_PATH", str(db)):
+    with patch.object(scheduler.scanner, "DB_PATH", str(db)), \
+         patch.object(paper_trade, "DB_PATH", str(db)):
         yield str(db)
 
 

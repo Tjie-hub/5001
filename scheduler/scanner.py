@@ -908,7 +908,12 @@ def run_edge_veto_stage(intersection_results, flow_confirmed, ohlcv_map,
     off     → no-op (returns inputs unchanged).
     shadow  → enrich + veto + log survivors; inputs returned unchanged.
     enforce → restrict BOTH intersection_results and flow_confirmed to the
-              survivors and attach edge-based size_mult (agent_size_hint).
+              survivors and attach each survivor's edge_score.
+
+    AF-2 ADR-AF-003: this stage no longer writes agent_size_hint itself — it only
+    contributes edge_score as an input. engine.position_sizing.resolve_size_hint() is
+    the sole writer of agent_size_hint, called once per candidate after both this stage
+    and the Agent Firm gate have run (scheduled_multi_strategy_scan()).
 
     Fail-open: any error logs and returns inputs unchanged.
     Returns (intersection_results, flow_confirmed).
@@ -959,11 +964,11 @@ def run_edge_veto_stage(intersection_results, flow_confirmed, ohlcv_map,
     kept_fc = [r for r in flow_confirmed if r['ticker'] in keep]
     for r in kept_ir + kept_fc:
         r['edge_score'] = keep[r['ticker']]['edge_score']
-        r['agent_size_hint'] = keep[r['ticker']]['size_mult']
     return kept_ir, kept_fc
 
 
-def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str):
+def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str,
+                        market_risk_score=None):
     """Evaluate intersection_results through the agent firm gate.
 
     Candidates are taken from intersection_results (all strategy signals), not
@@ -976,11 +981,19 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
     - shadow mode → flow_confirmed unchanged (agent evaluates, doesn't filter)
     - enforce mode → flow_confirmed minus vetoes, plus explicitly-approved
       promotions; degraded/bypassed fall back to the flow gate (+ alarm).
+
+    Each candidate's Tier 1 context objects (technical/flow/regime_context/news/market/
+    portfolio/risk_limits/execution) are populated via engine.agent_firm_context's
+    canonical producers before evaluate_staged() runs (AF-2 WP2, ADR-AF-002). Every
+    specialist (technical/flow/regime/news/risk) reads its own field directly off the
+    candidate (AF-2 WP3) — this population step is load-bearing for decision output, not
+    inert producer wiring (see Audit/AF2_WP3_IMPLEMENTATION_REPORT.md).
     """
     try:
         from engine.agent_firm import config as _firm_cfg
         from engine.agent_firm import firm as _firm
         from engine.agent_firm.schemas import SignalCandidate as _SC
+        from engine.agent_firm_context import build_candidate_context
 
         if not _firm_cfg.is_active():
             return flow_confirmed
@@ -988,6 +1001,21 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
         if not intersection_results:
             logger.info(f"[{time_str}] Agent firm: idle (no strategy signals generated)")
             return flow_confirmed
+
+        _cand_rows = intersection_results[:20]
+        _ctx_by_ticker = {}
+        try:
+            _ctx_conn = db_connect(DB_PATH)
+            try:
+                for r in _cand_rows:
+                    _ctx_by_ticker[r["ticker"]] = build_candidate_context(
+                        _ctx_conn, r["ticker"], date_str, market_risk_score=market_risk_score,
+                    )
+            finally:
+                _ctx_conn.close()
+        except Exception as _ctx_err:
+            logger.warning(f"[{time_str}] Agent firm context build error (fail-open, "
+                          f"candidates proceed without Tier 1 context): {_ctx_err}")
 
         _candidates = [
             _SC(
@@ -998,19 +1026,25 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
                 flow_verdict=(r.get("flow") or {}).get("verdict"),
                 foreign_score=None,
                 indicators={},
+                **_ctx_by_ticker.get(r["ticker"], {}),
             )
-            for r in intersection_results[:20]
+            for r in _cand_rows
         ]
         _decisions = _firm.evaluate_staged(_candidates)
         logger.info(f"[{time_str}] Agent firm: {len(_decisions)} evaluated"
               f" ({sum(1 for d in _decisions if d.decision == 'approve')} approved"
               f", {sum(1 for d in _decisions if d.decision == 'veto')} vetoed)")
 
-        # Build size-hint map and attach to every intersection result
-        _size_map = {d.ticker: d.size_hint or 1.0
-                     for d in _decisions if d.decision == "approve"}
+        # AF-2 ADR-AF-003: this gate no longer writes agent_size_hint itself — it only
+        # contributes the Agent Firm's qualitative size_tier recommendation as an input.
+        # engine.position_sizing.resolve_size_hint() is the sole writer of agent_size_hint,
+        # called once per candidate after this gate returns (scheduled_multi_strategy_scan()).
+        _tier_map = {d.ticker: d.size_tier
+                     for d in _decisions if d.decision == "approve" and d.size_tier}
         for r in intersection_results:
-            r["agent_size_hint"] = _size_map.get(r["ticker"], 1.0)
+            tier = _tier_map.get(r["ticker"])
+            if tier is not None:
+                r["agent_size_tier"] = tier
 
         if _firm_cfg.get_enforce():
             # C-9 fix (Phase 3B): the firm is a filter ON TOP OF the flow gate.
@@ -1043,7 +1077,25 @@ def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str
         return flow_confirmed
 
 
-def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
+def resolve_agent_size_hints(rows: list) -> None:
+    """AF-2 ADR-AF-003 — the sole write of `agent_size_hint`, in place, once per row.
+
+    Called exactly once per scan cycle, after both `run_edge_veto_stage()` (which may have
+    attached `edge_score`) and `run_agent_firm_gate()` (which may have attached
+    `agent_size_tier`) have run. Replaces the two former direct-write sites — neither stage
+    writes `agent_size_hint` itself anymore; each only contributes an input to
+    `engine.position_sizing.resolve_size_hint()`, called here.
+    """
+    from engine.position_sizing import resolve_size_hint
+    for r in rows:
+        r["agent_size_hint"] = resolve_size_hint(
+            edge_score=r.get("edge_score"),
+            size_tier=r.get("agent_size_tier"),
+        )
+
+
+def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str,
+                                   market_risk_score=None):
     """Rank active BEAR watchlist tickers via agent firm; log the ranking.
 
     Called after the bear watchlist scout so the agent can surface which
@@ -1051,6 +1103,10 @@ def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
     Log-only by design (no Telegram) since the 2026-06-16 lean-notification
     audit (commit 89baa33) — this ranking is reference signal, not an alert.
     Fail-silent: any error is logged and swallowed.
+
+    Tier 1 context is populated per candidate the same way run_agent_firm_gate() does
+    (AF-2 WP2, ADR-AF-002) — every specialist reads it directly (AF-2 WP3), so this
+    context materially informs the ranking, not just inert producer wiring.
     """
     if not watchlist_tickers:
         return
@@ -1058,6 +1114,7 @@ def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
         from engine.agent_firm import config as _firm_cfg
         from engine.agent_firm import firm as _firm
         from engine.agent_firm.schemas import SignalCandidate as _SC
+        from engine.agent_firm_context import build_candidate_context
 
         if not _firm_cfg.is_active():
             return
@@ -1081,6 +1138,20 @@ def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
             logger.info(f"[{time_str}] Bear watchlist ranking: all tickers already approved today, skipping")
             return
 
+        _ctx_by_ticker = {}
+        try:
+            _ctx_conn = db_connect(DB_PATH)
+            try:
+                for t in _fresh:
+                    _ctx_by_ticker[t] = build_candidate_context(
+                        _ctx_conn, t, date_str, market_risk_score=market_risk_score,
+                    )
+            finally:
+                _ctx_conn.close()
+        except Exception as _ctx_err:
+            logger.warning(f"[{time_str}] Bear watchlist context build error (fail-open, "
+                          f"candidates proceed without Tier 1 context): {_ctx_err}")
+
         _candidates = [
             _SC(
                 ticker=t,
@@ -1090,6 +1161,7 @@ def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str):
                 flow_verdict=None,
                 foreign_score=None,
                 indicators={},
+                **_ctx_by_ticker.get(t, {}),
             )
             for t in _fresh
         ]
@@ -1347,6 +1419,15 @@ def scheduled_multi_strategy_scan():
     except Exception:
         pass
 
+    # AF-2 WP2: flush the Tier 1 batch-level context cache (market/portfolio/risk_limits/
+    # execution) — same once-per-scan-cycle lifecycle as _reset_mctx above (ADR-AF-002),
+    # scoped to engine/agent_firm_context.py rather than firm.py's legacy cache.
+    try:
+        from engine.agent_firm_context import reset_batch_context as _reset_batch_ctx
+        _reset_batch_ctx()
+    except Exception:
+        pass
+
     # Step 1: Adaptive strategy selection per ticker
     intersection_results = []
 
@@ -1555,7 +1636,10 @@ def scheduled_multi_strategy_scan():
         _wl_conn.close()
 
         # Rank active watchlist via agent firm and send Telegram digest
-        rank_bear_watchlist_and_notify(list(_priority), date_str, time_str)
+        rank_bear_watchlist_and_notify(
+            list(_priority), date_str, time_str,
+            market_risk_score=(_market_risk.get('score') if _market_risk else None),
+        )
     except Exception as _wl_err:
         logger.warning(f"[{time_str}] Bear watchlist error (fail-open): {_wl_err}")
     # ── End bear watchlist ────────────────────────────────────────────────────
@@ -1567,9 +1651,12 @@ def scheduled_multi_strategy_scan():
 
     # ── Agent Firm evaluation ─────────────────────────────────────────────────
     flow_confirmed = run_agent_firm_gate(
-        intersection_results, flow_confirmed, date_str, time_str
+        intersection_results, flow_confirmed, date_str, time_str,
+        market_risk_score=(_market_risk.get('score') if _market_risk else None),
     )
     # ── End agent firm ────────────────────────────────────────────────────────
+
+    resolve_agent_size_hints(flow_confirmed)
 
     # Step 7: Auto-open paper trades for flow-confirmed signals
     auto_trade_results = []

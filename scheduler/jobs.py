@@ -1090,6 +1090,35 @@ def run_premarket_firm_scan():
         except Exception as _ev:
             logging.warning(f"[{now_str}] Premarket edge veto error (fail-open): {_ev}")
 
+    # AF-2 WP4: this job's own run is its "scan cycle" for Tier 1 context purposes —
+    # it does not run inside scheduled_multi_strategy_scan(), so it must flush both
+    # caches itself (mirrors that function's reset_market_ctx()/reset_batch_context()
+    # pair) before building context, or market/portfolio/risk_limits/execution would
+    # be silently reused from whatever the process last computed, hours stale.
+    _risk = None
+    try:
+        _risk = get_market_risk_for_circuit_breaker()
+    except Exception as e:
+        logging.warning(f"[premarket_firm] risk lookup error (fail-soft): {e}")
+
+    from engine.agent_firm_context import build_candidate_context, reset_batch_context
+    _firm.reset_market_ctx()
+    reset_batch_context()
+    _ctx_by_ticker = {}
+    try:
+        _ctx_conn = db_connect(DB_PATH)
+        try:
+            for r in longs:
+                _ctx_by_ticker[r["ticker"]] = build_candidate_context(
+                    _ctx_conn, r["ticker"], date_str,
+                    market_risk_score=(_risk or {}).get("score"),
+                )
+        finally:
+            _ctx_conn.close()
+    except Exception as _ctx_err:
+        logging.warning(f"[premarket_firm] context build error (fail-open, "
+                        f"candidates proceed without Tier 1 context): {_ctx_err}")
+
     candidates = [
         _SC(
             ticker=r["ticker"],
@@ -1100,12 +1129,12 @@ def run_premarket_firm_scan():
             foreign_score=None,
             indicators={"sources": r.get("sources", []),
                         "confluence": r.get("confluence", False)},
+            **_ctx_by_ticker.get(r["ticker"], {}),
         )
         for r in longs
     ]
 
     try:
-        _firm.reset_market_ctx()
         decisions = _firm.evaluate_staged(candidates)
     except Exception as e:
         logging.error(f"[premarket_firm] firm eval error: {e}")
@@ -1126,11 +1155,9 @@ def run_premarket_firm_scan():
     except Exception as e:
         logging.warning(f"[premarket_firm] regime lookup error (fail-soft): {e}")
 
-    risk = None
-    try:
-        risk = get_market_risk_for_circuit_breaker()
-    except Exception as e:
-        logging.warning(f"[premarket_firm] risk lookup error (fail-soft): {e}")
+    # Reuses _risk computed above (context-population step) — not a second
+    # compute_market_risk_score() call; same value, same fail-soft None on error.
+    risk = _risk
 
     # Persist today's ranked shortlist + diff against the prior snapshot so the
     # report can show new/removed/upgraded/downgraded tickers. Reuses the exact
@@ -1249,17 +1276,44 @@ def run_eod_trade_plan():
         logger.info(f"[{now_str}] EOD trade plan: all candidates vetoed by edge pre-screen — empty plan sent")
         return
 
+    # AF-2 WP4: this job's own run is its "scan cycle" for Tier 1 context purposes —
+    # see run_premarket_firm_scan()'s identical comment for why both caches are
+    # flushed here rather than relying on scheduled_multi_strategy_scan()'s reset.
+    _risk = None
+    try:
+        _risk = get_market_risk_for_circuit_breaker()
+    except Exception as e:
+        logging.warning(f"[eod_trade_plan] risk lookup error (fail-soft): {e}")
+
+    from engine.agent_firm_context import build_candidate_context, reset_batch_context
+    _firm.reset_market_ctx()
+    reset_batch_context()
+    _ctx_by_ticker = {}
+    try:
+        _ctx_conn = db_connect(DB_PATH)
+        try:
+            for c in top:
+                _ctx_by_ticker[c["ticker"]] = build_candidate_context(
+                    _ctx_conn, c["ticker"], date_str,
+                    market_risk_score=(_risk or {}).get("score"),
+                )
+        finally:
+            _ctx_conn.close()
+    except Exception as _ctx_err:
+        logging.warning(f"[eod_trade_plan] context build error (fail-open, "
+                        f"candidates proceed without Tier 1 context): {_ctx_err}")
+
     candidates = [
         _SC(ticker=c["ticker"], strategy="eod", score=float(c["conviction"] or 0.0),
             scan_time=f"{date_str} {now_str}", flow_verdict=c.get("smart_money"),
             indicators={"sources": c["sources"], "confluence": c["confluence"],
-                        "vol_ratio": c["vol_ratio"], "net_value": c["net_value"]})
+                        "vol_ratio": c["vol_ratio"], "net_value": c["net_value"]},
+            **_ctx_by_ticker.get(c["ticker"], {}))
         for c in top
     ]
 
     degraded = False
     try:
-        _firm.reset_market_ctx()
         decisions = _firm.evaluate_staged(candidates)
         firm_ran = any(d.decision in ("approve", "veto") for d in decisions)
         if firm_ran:

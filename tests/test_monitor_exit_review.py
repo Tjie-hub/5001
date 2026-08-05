@@ -9,6 +9,17 @@ from unittest.mock import MagicMock, patch
 # Pre-import schemas so sys.modules["engine.agent_firm.schemas"] is never None
 import engine.agent_firm.schemas  # noqa: F401
 
+# AF-2 WP4: pre-import at collection time, before any test's importlib.reload() gymnastics
+# run at runtime (tests/agent_firm/test_firm.py reloads config/firm in several tests). This
+# module lazily imports engine.agent_firm_context (hence pandas/numpy) inside
+# _agent_confirms_exit — on this Windows .winvenv environment, a *first-ever* pandas/numpy
+# import performed *after* an importlib.reload() cycle has already run in the same process
+# fails with "ImportError: cannot load module more than once per process" (a numpy C-extension
+# guard, not a logic bug). Importing it here, at collection time, sidesteps the ordering
+# entirely — mirrors how tests/test_scheduler_jobs_context_wiring.py avoids the same trap by
+# importing engine.agent_firm_context at module level instead of relying on the lazy import.
+import engine.agent_firm_context  # noqa: F401
+
 
 def _mock_firm(decisions):
     m = MagicMock()
@@ -26,13 +37,19 @@ def _call_confirms(trade, result, mock_firm, mock_cfg):
     # monitor does ``from engine.agent_firm import firm`` lazily, which resolves to
     # package attributes; patch those (not just sys.modules) so the mock holds even
     # after an earlier test imports the real submodules.
+    import monitor as monitor_mod
     import engine.agent_firm as _pkg
     with patch.object(_pkg, "firm", mock_firm), \
          patch.object(_pkg, "config", mock_cfg), \
          patch.dict(sys.modules, {
              "engine.agent_firm.firm":   mock_firm,
              "engine.agent_firm.config": mock_cfg,
-         }):
+         }), \
+         patch.object(monitor_mod, "DB_PATH", ":memory:"):
+        # AF-2 WP4: _agent_confirms_exit now opens a real db_connect(DB_PATH) to build
+        # Tier 1 context (mirrors scanner.py's WP2 wiring) — pinned to ":memory:" here,
+        # same fix WP2 applied to test_scheduler_firm_hook.py/test_agent_size_hint.py,
+        # so this test suite never touches the real gitignored data/walkforward.db.
         from monitor import _agent_confirms_exit
         return _agent_confirms_exit(trade, result)
 
@@ -42,6 +59,56 @@ _TRADE = {
     "entry_price": 8000, "sl_price": 7600, "tp_price": 9600,
     "lots": 10, "highest_seen": 8200, "adx_peak": 30.0,
 }
+
+
+def test_exit_review_candidate_carries_populated_tier1_context(tmp_path, monkeypatch):
+    """AF-2 WP4: _agent_confirms_exit's SignalCandidate must carry real Tier 1 context
+    (built via engine.agent_firm_context.build_candidate_context()) when a real DB is
+    available — a WP4 audit found this call site was never wired, unlike scanner.py's two
+    sites (WP2). This is the regression coverage for closing that gap."""
+    import sqlite3
+    import monitor as monitor_mod
+
+    db = tmp_path / "wf.db"
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE ohlcv (ticker TEXT, date TEXT, open REAL, high REAL, "
+                 "low REAL, close REAL, volume REAL)")
+    conn.execute("CREATE TABLE paper_trades (ticker TEXT, entry_price REAL, lots INT, "
+                 "tp_price REAL, sl_price REAL, capital_used REAL, status TEXT)")
+    price = 100.0
+    for i in range(30):
+        price += 1.5
+        conn.execute("INSERT INTO ohlcv VALUES (?,?,?,?,?,?,?)",
+                     ("BBCA", f"2026-{(i // 28) + 1:02d}-{(i % 28) + 1:02d}",
+                      price - 1, price + 2, price - 2, price, 1_000_000))
+    conn.commit()
+    conn.close()
+
+    captured = {}
+
+    def _capture_evaluate(candidates):
+        captured["candidate"] = candidates[0]
+        return [MagicMock(ticker="BBCA", decision="approve")]
+
+    mock_firm = MagicMock()
+    mock_firm.evaluate = MagicMock(side_effect=_capture_evaluate)
+    result = {"action": "CLOSE", "reason": "R4_DISTRIBUTION"}
+
+    import engine.agent_firm as _pkg
+    with patch.object(_pkg, "firm", mock_firm), \
+         patch.object(_pkg, "config", _mock_cfg()), \
+         patch.dict(sys.modules, {
+             "engine.agent_firm.firm":   mock_firm,
+             "engine.agent_firm.config": _mock_cfg(),
+         }), \
+         patch.object(monitor_mod, "DB_PATH", str(db)):
+        from monitor import _agent_confirms_exit
+        _agent_confirms_exit(_TRADE, result)
+
+    cand = captured["candidate"]
+    assert cand.ticker == "BBCA"
+    assert cand.technical is not None
+    assert cand.technical.mechanical_direction == "BULLISH"
 
 
 def test_agent_veto_prevents_r4_close():
@@ -115,7 +182,9 @@ def test_check_all_open_trades_r4_agent_veto_skips_close(monkeypatch):
          patch.dict(sys.modules, {
              "engine.agent_firm.firm":   fake_firm,
              "engine.agent_firm.config": fake_cfg,
-         }), patch("monitor.send_telegram"):
+         }), \
+         patch.object(monitor, "DB_PATH", ":memory:"), \
+         patch("monitor.send_telegram"):
         monitor.check_all_open_trades()
 
     assert close_calls == [], "close_trade must NOT be called when agent vetoes R4"
