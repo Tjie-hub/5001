@@ -17,6 +17,7 @@ def good_env(tmp_path, monkeypatch):
     monkeypatch.setenv("DB_PATH", str(db))
     monkeypatch.setenv("TELEGRAM_TOKEN", "t")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "c")
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "s")
     monkeypatch.delenv("AGENT_FIRM_ENABLED", raising=False)
     return db
 
@@ -35,6 +36,13 @@ def test_validate_config_reports_all_problems_at_once(monkeypatch, tmp_path):
         cfg.validate_config()
     msg = str(e.value)
     assert "DB_PATH" in msg and "TELEGRAM_TOKEN" in msg and "TELEGRAM_CHAT_ID" in msg
+
+
+def test_validate_config_requires_telegram_webhook_secret(good_env, monkeypatch):
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "")
+    monkeypatch.setattr(cfg, "TELEGRAM_WEBHOOK_SECRET", "")
+    with pytest.raises(cfg.ConfigError, match="TELEGRAM_WEBHOOK_SECRET"):
+        cfg.validate_config()
 
 
 def test_validate_config_requires_zai_key_when_firm_enabled(good_env, monkeypatch):

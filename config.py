@@ -60,6 +60,16 @@ def validate_config() -> None:
     if not os.getenv("TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID):
         problems.append("TELEGRAM_CHAT_ID is not set")
 
+    # /telegram/updates skips its HMAC check entirely when this is unset
+    # (routes/telegram.py) -- a fail-open webhook, not just a missing
+    # alerting channel. Owner Decision Package Decision 1, Option B
+    # (Audit/OWNER_DECISION_PACKAGE.md): confirmed safe to enforce against
+    # the live production .env (TELEGRAM_WEBHOOK_SECRET verified set,
+    # 2026-07-28 SSH check) -- same enforcement pattern as TELEGRAM_TOKEN.
+    if not os.getenv("TELEGRAM_WEBHOOK_SECRET", TELEGRAM_WEBHOOK_SECRET):
+        problems.append("TELEGRAM_WEBHOOK_SECRET is not set (the /telegram/updates "
+                        "webhook would accept unauthenticated requests)")
+
     if os.getenv("AGENT_FIRM_ENABLED", "").strip().lower() in ("1", "true", "yes"):
         mode = os.getenv("AGENT_FIRM_PROVIDER", "zai").strip().lower()
         order = ([p.strip() for p in

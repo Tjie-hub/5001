@@ -100,6 +100,26 @@ def test_rollback_with_nothing_older_fails(tmp_path):
     assert "no release" in r.stderr.lower()
 
 
+def test_release_refuses_uncommitted_tracked_changes(tmp_path):
+    src = _mk_repo(tmp_path)
+    env = _env(tmp_path, src)
+    (src / "hello.py").write_text("print('dirty')\n")  # uncommitted, tracked
+    r = subprocess.run([RELEASE], env=env, capture_output=True, text=True)
+    assert r.returncode != 0
+    assert "uncommitted" in r.stderr.lower()
+    assert not (tmp_path / "releases").exists()
+
+
+def test_release_allows_uncommitted_changes_with_override(tmp_path):
+    src = _mk_repo(tmp_path)
+    env = _env(tmp_path, src)
+    env["ALLOW_DIRTY_RELEASE"] = "1"
+    (src / "hello.py").write_text("print('dirty')\n")  # uncommitted, tracked
+    r = subprocess.run([RELEASE], env=env, capture_output=True, text=True)
+    assert r.returncode == 0
+    assert (tmp_path / "current").exists()
+
+
 def test_shared_paths_symlinked_not_copied(tmp_path):
     src = _mk_repo(tmp_path)
     shared_db = src / "walkforward.db"

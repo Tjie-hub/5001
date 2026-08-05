@@ -9,6 +9,9 @@
 #   SHARED_PATHS  space-separated mutable paths symlinked into each release
 #                 (default: ".env venv logs walkforward.db flow.db
 #                  idx_data.db .stockbit_token")
+#   ALLOW_DIRTY_RELEASE=1  override the uncommitted-changes guard below
+#                 (documented escape hatch for a deliberate manual smoke
+#                  build; never set this for a real deploy)
 #
 # The service is NOT restarted; the activation command is printed instead
 # (operator decision).
@@ -30,7 +33,15 @@ VERSION="$(date +%Y%m%d-%H%M%S)-${SHORT_SHA}"
 DEST="$RELEASES_DIR/$VERSION"
 
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
-    echo "WARNING: uncommitted tracked changes exist; the release is built from HEAD only." >&2
+    if [ "${ALLOW_DIRTY_RELEASE:-0}" != "1" ]; then
+        echo "ERROR: uncommitted tracked changes exist. \`git archive HEAD\` (what this script" >&2
+        echo "packages) silently omits them, so the release would not match what was tested." >&2
+        echo "Commit or stash first. To force a one-off build anyway (e.g. a manual smoke" >&2
+        echo "build, never for a real deploy), re-run with ALLOW_DIRTY_RELEASE=1." >&2
+        exit 1
+    fi
+    echo "WARNING: ALLOW_DIRTY_RELEASE=1 set; uncommitted tracked changes exist and the" >&2
+    echo "release is built from HEAD only, silently omitting them." >&2
 fi
 
 if [ -e "$DEST" ]; then

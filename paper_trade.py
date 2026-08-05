@@ -475,6 +475,9 @@ def close_trade(trade_id: int, exit_price: float, exit_reason: str = "MANUAL", n
     if not trade:
         conn.close()
         return {"error": "Trade tidak ditemukan"}
+    if trade["status"] != "OPEN":
+        conn.close()
+        return {"error": f"Trade {trade_id} sudah closed"}
 
     trade    = dict(trade)
     # Item 1.7: P&L is NET of the same commission+slippage the backtests and
@@ -487,12 +490,18 @@ def close_trade(trade_id: int, exit_price: float, exit_reason: str = "MANUAL", n
     pnl_pct  = round((_exit_net - _entry_net) / _entry_net * 100, 2)
     now      = datetime.now(WIB).strftime("%Y-%m-%d")
 
-    conn.execute("""
+    cur = conn.execute("""
         UPDATE paper_trades SET
         exit_date=?, exit_price=?, exit_reason=?,
         pnl_rp=?, pnl_pct=?, status=\'CLOSED\'
-        WHERE id=?
+        WHERE id=? AND status=\'OPEN\'
     """, (now, exit_price, exit_reason, pnl_rp, pnl_pct, trade_id))
+    if cur.rowcount == 0:
+        # Lost a race to a concurrent close_trade() call between the SELECT
+        # check above and this UPDATE (e.g. scheduled monitor vs. manual API
+        # close) -- the other caller already closed it first.
+        conn.close()
+        return {"error": f"Trade {trade_id} sudah closed"}
     conn.commit()
     conn.close()
 
