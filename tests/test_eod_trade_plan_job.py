@@ -401,3 +401,66 @@ class TestPersistentActiveWatchlistWiring:
         trade_plan_msgs = [m for m in sent2 if "TRADE PLAN" in m]
         assert len(trade_plan_msgs) == 1
         assert "📋 ACTIVE WATCHLIST" not in trade_plan_msgs[0]
+
+
+class _DuplicateSentinelConn:
+    """Fake db_connect() return whose dedup-guard INSERT always finds a
+    duplicate row already present — mirrors _LockedSentinelConn but for the
+    IntegrityError branch. Duplicated locally per this file's own convention
+    (see module docstring) of keeping fixtures independent of sibling test
+    files."""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        return False
+
+    def execute(self, sql, params=None):
+        if sql.strip().upper().startswith("INSERT"):
+            raise sqlite3.IntegrityError("UNIQUE constraint failed")
+        return None
+
+
+def test_run_eod_trade_plan_marks_skipped_on_holiday(monkeypatch):
+    import scheduler.jobs as jobs_mod
+    from unittest.mock import MagicMock
+
+    monkeypatch.setattr(jobs_mod, "_holiday_skip", lambda name: True)
+    fake_handle = MagicMock()
+    monkeypatch.setattr(jobs_mod, "current_job", lambda: fake_handle)
+
+    jobs_mod.run_eod_trade_plan()
+
+    fake_handle.mark_skipped.assert_called_once_with("holiday")
+
+
+def test_run_eod_trade_plan_marks_skipped_on_duplicate_run(monkeypatch):
+    import scheduler.jobs as jobs_mod
+    from unittest.mock import MagicMock
+
+    monkeypatch.setattr(jobs_mod, "_holiday_skip", lambda name: False)
+    monkeypatch.setattr(jobs_mod, "db_connect", lambda *a, **k: _DuplicateSentinelConn())
+    fake_handle = MagicMock()
+    monkeypatch.setattr(jobs_mod, "current_job", lambda: fake_handle)
+
+    jobs_mod.run_eod_trade_plan()
+
+    fake_handle.mark_skipped.assert_called_once_with("duplicate_run")
+
+
+def test_run_eod_trade_plan_marks_skipped_on_dedup_guard_error(monkeypatch, caplog):
+    import scheduler.jobs as jobs_mod
+    from unittest.mock import MagicMock
+
+    monkeypatch.setattr(jobs_mod, "_holiday_skip", lambda name: False)
+    monkeypatch.setattr(jobs_mod, "db_connect", lambda *a, **k: _LockedSentinelConn())
+    fake_handle = MagicMock()
+    monkeypatch.setattr(jobs_mod, "current_job", lambda: fake_handle)
+
+    with caplog.at_level("WARNING"):
+        jobs_mod.run_eod_trade_plan()
+
+    fake_handle.mark_skipped.assert_called_once()
+    reason = fake_handle.mark_skipped.call_args[0][0]
+    assert reason.startswith("dedup_guard_error:")

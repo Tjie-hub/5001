@@ -16,6 +16,7 @@ DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 from utils.telegram import send_telegram  # noqa: E402
 from data.db import connect as db_connect  # noqa: E402
 from engine.heartbeat import write_heartbeat  # noqa: E402
+from engine.job_status import current_job  # noqa: E402
 
 HEARTBEAT_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)),
                               "logs", "scheduler_heartbeat.txt")
@@ -1007,6 +1008,9 @@ def run_premarket_firm_scan():
     stays owned by the 16:30 premover EOD path.
     """
     if _holiday_skip("run_premarket_firm_scan"):
+        handle = current_job()
+        if handle:
+            handle.mark_skipped("holiday")
         return
     from engine.unified_watchlist import build_unified_watchlist
     from engine.liquidity import select_top_liquid_longs
@@ -1029,9 +1033,15 @@ def run_premarket_firm_scan():
             _g.execute("INSERT INTO _job_sentinel VALUES ('premarket_firm', ?)", (date_str,))
         except sqlite3.IntegrityError:
             logger.info(f"[{now_str}] Premarket firm: already sent today — skipped (duplicate guard)")
+            handle = current_job()
+            if handle:
+                handle.mark_skipped("duplicate_run")
             return
         except sqlite3.OperationalError as e:
             logger.warning(f"[{now_str}] Premarket firm: dedup guard error (fail-open): {e}")
+            handle = current_job()
+            if handle:
+                handle.mark_skipped(f"dedup_guard_error: {e}")
             return
 
     logger.info(f"[{now_str}] Premarket agent-firm scan dimulai...")
@@ -1201,6 +1211,9 @@ def run_eod_trade_plan():
     back to deterministic confluence ranking (report flagged ⚠️ Firm offline).
     """
     if _holiday_skip("run_eod_trade_plan"):
+        handle = current_job()
+        if handle:
+            handle.mark_skipped("holiday")
         return
     from engine import trade_plan as tp
     from engine.agent_firm import firm as _firm
@@ -1223,9 +1236,15 @@ def run_eod_trade_plan():
             _g.execute("INSERT INTO _job_sentinel VALUES ('eod_trade_plan', ?)", (date_str,))
         except sqlite3.IntegrityError:
             logger.info(f"[{now_str}] EOD trade plan: already sent today — skipped (dup guard)")
+            handle = current_job()
+            if handle:
+                handle.mark_skipped("duplicate_run")
             return
         except sqlite3.OperationalError as e:
             logger.warning(f"[{now_str}] EOD trade plan: dedup guard error (fail-open): {e}")
+            handle = current_job()
+            if handle:
+                handle.mark_skipped(f"dedup_guard_error: {e}")
             return
 
     from config import edge_mode
@@ -1561,6 +1580,9 @@ def run_forward_test_cycle(db_path=None, run_date=None):
                 _g.execute("INSERT INTO _job_sentinel VALUES ('forward_test_cycle', ?)", (rd,))
             except sqlite3.IntegrityError:
                 logger.info(f"[forward_test] {rd}: already ran — skipped (dedup guard)")
+                handle = current_job()
+                if handle:
+                    handle.mark_skipped("duplicate_run")
                 return
 
         init_ft_tables(db)

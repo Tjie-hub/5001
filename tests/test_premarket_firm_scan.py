@@ -361,3 +361,64 @@ def test_run_premarket_firm_scan_fails_open_on_sentinel_db_lock(monkeypatch, cap
         jobs_mod.run_premarket_firm_scan()  # must not raise
 
     assert any("database is locked" in r.message for r in caplog.records)
+
+
+class _DuplicateSentinelConn:
+    """Fake db_connect() return whose dedup-guard INSERT always finds a
+    duplicate row already present — mirrors _LockedSentinelConn but for the
+    IntegrityError branch."""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        return False
+
+    def execute(self, sql, params=None):
+        if sql.strip().upper().startswith("INSERT"):
+            raise sqlite3.IntegrityError("UNIQUE constraint failed")
+        return None
+
+
+def test_run_premarket_firm_scan_marks_skipped_on_holiday(monkeypatch):
+    import scheduler.jobs as jobs_mod
+    from unittest.mock import MagicMock
+
+    monkeypatch.setattr(jobs_mod, "_holiday_skip", lambda name: True)
+    fake_handle = MagicMock()
+    monkeypatch.setattr(jobs_mod, "current_job", lambda: fake_handle)
+
+    jobs_mod.run_premarket_firm_scan()
+
+    fake_handle.mark_skipped.assert_called_once_with("holiday")
+
+
+def test_run_premarket_firm_scan_marks_skipped_on_duplicate_run(monkeypatch):
+    import scheduler.jobs as jobs_mod
+    from unittest.mock import MagicMock
+
+    monkeypatch.setattr(jobs_mod, "_holiday_skip", lambda name: False)
+    monkeypatch.setattr(jobs_mod, "db_connect", lambda *a, **k: _DuplicateSentinelConn())
+    fake_handle = MagicMock()
+    monkeypatch.setattr(jobs_mod, "current_job", lambda: fake_handle)
+
+    jobs_mod.run_premarket_firm_scan()
+
+    fake_handle.mark_skipped.assert_called_once_with("duplicate_run")
+
+
+def test_run_premarket_firm_scan_marks_skipped_on_dedup_guard_error(monkeypatch, caplog):
+    import scheduler.jobs as jobs_mod
+    from unittest.mock import MagicMock
+
+    monkeypatch.setattr(jobs_mod, "_holiday_skip", lambda name: False)
+    monkeypatch.setattr(jobs_mod, "db_connect", lambda *a, **k: _LockedSentinelConn())
+    fake_handle = MagicMock()
+    monkeypatch.setattr(jobs_mod, "current_job", lambda: fake_handle)
+
+    with caplog.at_level("WARNING"):
+        jobs_mod.run_premarket_firm_scan()
+
+    fake_handle.mark_skipped.assert_called_once()
+    reason = fake_handle.mark_skipped.call_args[0][0]
+    assert reason.startswith("dedup_guard_error:")

@@ -77,6 +77,7 @@ from scheduler.reports import (  # noqa: F401
     flow_broker_report,
     auto_trade_status_report,
 )
+from engine.job_status import wrap_scheduled
 
 
 # Cooldown between repeated Telegram alerts for the SAME job_id (RC1 fix R-2,
@@ -140,6 +141,17 @@ class JobErrorRateLimiter:
         return True, suppressed
 
 
+def _add_job(scheduler, func, trigger, **kwargs):
+    """Registers func on scheduler, wrapped so every execution is recorded in
+    the Production Status Registry (engine.job_status). job_name is the
+    APScheduler job id (kwargs['id']) — unique per registered cron slot, so a
+    function registered multiple times at different times of day (e.g.
+    run_flow_fetch) gets one row per slot, not one shared row per function.
+    """
+    job_id = kwargs.get("id") or getattr(func, "__name__", "unnamed_job")
+    scheduler.add_job(wrap_scheduled(func, job_id), trigger, **kwargs)
+
+
 def _make_job_error_listener(scheduler, rate_limiter: "JobErrorRateLimiter" = None):
     """Bind a job-error listener to `scheduler` for EVENT_JOB_ERROR registration.
 
@@ -188,7 +200,7 @@ def start_scheduler():
     scheduler = BackgroundScheduler(timezone=WIB)
 
     # Daily signal scan — Mon-Fri 16:00 WIB (market close, always send even if no signals)
-    scheduler.add_job(daily_signal_scan, CronTrigger(
+    _add_job(scheduler, daily_signal_scan, CronTrigger(
         day_of_week="mon-fri", hour=16, minute=0, timezone=WIB
     ), id="daily_scan", name="Signal Report 16:00")
 
@@ -199,21 +211,21 @@ def start_scheduler():
     # (IDX closes 16:00; 16:05 captures the final pre-closing/closing-auction flow
     # so the EOD reversal scan at 16:15 sees the *complete* day's smart-money flow).
     for hour, minute in [(9,30),(10,30),(11,30),(12,30),(13,30),(14,30),(15,15),(16,5)]:
-        scheduler.add_job(run_flow_fetch, CronTrigger(
+        _add_job(scheduler, run_flow_fetch, CronTrigger(
             day_of_week="mon-fri", hour=hour, minute=minute, timezone=WIB),
             id=f"flow_fetch_{hour:02d}{minute:02d}")
 
     # Multi-strategy scanner — 5x per day
     scan_times = [(9,5,"post-open"),(10,5,"mid-morning"),(11,5,"pre-lunch"),(13,35,"post-lunch"),(14,35,"near-close")]
     for hour, minute, label in scan_times:
-        scheduler.add_job(scheduled_multi_strategy_scan, CronTrigger(
+        _add_job(scheduler, scheduled_multi_strategy_scan, CronTrigger(
             hour=hour, minute=minute, timezone=WIB, day_of_week="mon-fri"),
             id=f"multi_strategy_scan_{hour:02d}{minute:02d}", name=f"Multi-Strategy Scan {label}")
         logger.info(f"  ✓ Multi-strategy scan @ {hour:02d}:{minute:02d} ({label})")
 
     # Screener intraday — registered at the same times as multi-strategy scan so they run in parallel
     for hour, minute, label in scan_times:
-        scheduler.add_job(_run_screener_intraday, CronTrigger(
+        _add_job(scheduler, _run_screener_intraday, CronTrigger(
             hour=hour, minute=minute,
             timezone=WIB, day_of_week="mon-fri"),
             id=f"screener_intraday_{hour:02d}{minute:02d}", name=f"Screener Intraday {label}")
@@ -223,28 +235,28 @@ def start_scheduler():
     # close price, full-day order-flow delta, and smart-money flow are all final.
     # Running before the close used a mid-auction close and an incomplete tape,
     # which silently produced an empty/wrong next-day reversal watchlist.
-    scheduler.add_job(_run_screener_eod, CronTrigger(
+    _add_job(scheduler, _run_screener_eod, CronTrigger(
         day_of_week="mon-fri", hour=16, minute=15, timezone=WIB),
         id="screener_eod", name="Screener EOD 16:15")
 
     # Open trade monitor — hourly at :05 during market hours (09:05–15:05) = 7×/day
     for hour in range(9, 16):
-        scheduler.add_job(_run_open_trade_monitor, CronTrigger(
+        _add_job(scheduler, _run_open_trade_monitor, CronTrigger(
             day_of_week="mon-fri", hour=hour, minute=5, timezone=WIB),
             id=f"trade_monitor_{hour:02d}05")
 
     # News mentions fetch — pre-market 08:00 WIB
-    scheduler.add_job(run_news_fetch, CronTrigger(
+    _add_job(scheduler, run_news_fetch, CronTrigger(
         day_of_week="mon-fri", hour=8, minute=0, timezone=WIB),
         id="news_fetch_premarket", name="News Mentions Fetch 08:00 (pre-market)")
 
     # News mentions fetch — 17:00 WIB
-    scheduler.add_job(run_news_fetch, CronTrigger(
+    _add_job(scheduler, run_news_fetch, CronTrigger(
         day_of_week="mon-fri", hour=17, minute=0, timezone=WIB),
         id="news_fetch", name="News Mentions Fetch 17:00")
 
     # Broker flow fetch — 20:15 WIB
-    scheduler.add_job(run_broker_flow_fetch, CronTrigger(
+    _add_job(scheduler, run_broker_flow_fetch, CronTrigger(
         day_of_week="mon-fri", hour=20, minute=15, timezone=WIB),
         id="broker_flow_fetch", name="Broker Flow Fetch 20:15")
 
@@ -254,7 +266,7 @@ def start_scheduler():
     # sporadically-announced catalysts (a new rights issue announcement is
     # only useful caught promptly), not a slow-moving rolling aggregate —
     # see run_corporate_actions_fetch()'s own docstring.
-    scheduler.add_job(run_corporate_actions_fetch, CronTrigger(
+    _add_job(scheduler, run_corporate_actions_fetch, CronTrigger(
         day_of_week="mon-fri", hour=20, minute=20, timezone=WIB),
         id="corporate_actions_fetch", name="Corporate Actions Fetch 20:20")
 
@@ -265,7 +277,7 @@ def start_scheduler():
     # registry publication, not a continuously-updated feed. Day 5 (not day
     # 1) gives Stockbit a few days to ingest the new month-end registry
     # before this job runs — see run_ownership_fetch()'s own docstring.
-    scheduler.add_job(run_ownership_fetch, CronTrigger(
+    _add_job(scheduler, run_ownership_fetch, CronTrigger(
         day="5", hour=9, minute=0, timezone=WIB),
         id="ownership_fetch", name="Ownership Composition Fetch (monthly, day 5)")
 
@@ -274,24 +286,24 @@ def start_scheduler():
     # daily: a rolling accumulation window only shifts by one trading day at a
     # time, so a daily refetch across the whole universe would be mostly
     # duplicate work — see run_broker_period_summary_fetch()'s own docstring.
-    scheduler.add_job(run_broker_period_summary_fetch, CronTrigger(
+    _add_job(scheduler, run_broker_period_summary_fetch, CronTrigger(
         day_of_week="fri", hour=20, minute=30, timezone=WIB),
         id="broker_period_summary_fetch", name="Broker Period Summary Fetch 20:30 (Fri)")
 
     # OHLCV reconciliation — 21:00 WIB (after 20:15 broker flow; alert-only)
-    scheduler.add_job(run_ohlcv_reconciliation, CronTrigger(
+    _add_job(scheduler, run_ohlcv_reconciliation, CronTrigger(
         day_of_week="mon-fri", hour=21, minute=0, timezone=WIB),
         id="ohlcv_reconciliation", name="OHLCV Reconciliation 21:00")
 
     # Token health — 08:20 (pre-market, before flow jobs) + 12:00 (mid-session).
     # Alerts if the 24h Stockbit JWT is expired/expiring (2026-07-04 silent-death fix).
     for _h, _m in [(8, 20), (12, 0)]:
-        scheduler.add_job(run_token_health_check, CronTrigger(
+        _add_job(scheduler, run_token_health_check, CronTrigger(
             day_of_week="mon-fri", hour=_h, minute=_m, timezone=WIB),
             id=f"token_health_{_h:02d}{_m:02d}", name=f"Token Health {_h:02d}:{_m:02d}")
 
     # OHLCV coverage monitor — 17:00 WIB (after EOD scraper/trade-plan settle)
-    scheduler.add_job(run_ohlcv_coverage_check, CronTrigger(
+    _add_job(scheduler, run_ohlcv_coverage_check, CronTrigger(
         day_of_week="mon-fri", hour=17, minute=0, timezone=WIB),
         id="ohlcv_coverage_check", name="OHLCV Coverage Check 17:00")
 
@@ -300,46 +312,46 @@ def start_scheduler():
     # existing on-demand collector (screener/stockbit_screener.py) so guru
     # template snapshots (incl. Big Money %) accumulate a daily history
     # instead of only existing on-demand via the /api/screener route.
-    scheduler.add_job(run_stockbit_screener_fetch, CronTrigger(
+    _add_job(scheduler, run_stockbit_screener_fetch, CronTrigger(
         day_of_week="mon-fri", hour=17, minute=5, timezone=WIB),
         id="stockbit_screener_fetch", name="Stockbit Screener Fetch 17:05")
 
     # Pre-mover EOD scan — 16:30 WIB
-    scheduler.add_job(run_premover_eod, CronTrigger(
+    _add_job(scheduler, run_premover_eod, CronTrigger(
         day_of_week="mon-fri", hour=16, minute=30, timezone=WIB),
         id="premover_eod", name="Pre-mover EOD Scan 16:30")
 
     # VPIN daily batch — 18:00 WIB
-    scheduler.add_job(run_vpin_daily_batch, CronTrigger(
+    _add_job(scheduler, run_vpin_daily_batch, CronTrigger(
         day_of_week="mon-fri", hour=18, minute=0, timezone=WIB),
         id="vpin_daily_batch", name="VPIN Daily Batch 18:00")
 
     # Pre-market health report — 08:45 WIB
-    scheduler.add_job(run_market_health_report, CronTrigger(
+    _add_job(scheduler, run_market_health_report, CronTrigger(
         day_of_week="mon-fri", hour=8, minute=45, timezone=WIB),
         id="market_health_report", name="Market Health Report 08:45")
 
     # Premarket agent-firm shortlist — 08:35 WIB (vets last night's unified watchlist)
-    scheduler.add_job(run_premarket_firm_scan, CronTrigger(
+    _add_job(scheduler, run_premarket_firm_scan, CronTrigger(
         day_of_week="mon-fri", hour=8, minute=35, timezone=WIB),
         id="premarket_firm_scan", name="Premarket Firm Scan 08:35")
 
     # EOD consolidated trade plan — 16:40 WIB (after screener EOD 16:15 + premover 16:30)
     # Merges all long sources → agent firm → single ranked Telegram message.
-    scheduler.add_job(run_eod_trade_plan, CronTrigger(
+    _add_job(scheduler, run_eod_trade_plan, CronTrigger(
         day_of_week="mon-fri", hour=16, minute=40, timezone=WIB),
         id="eod_trade_plan", name="EOD Trade Plan 16:40")
 
     # Forward-test SHADOW cycle — 18:30 WIB (after 16:00 close, 16:05 flow fetch,
     # 18:00 VPIN batch). Ingests today's scheduled_signals into the ft model and
     # runs the open + exit passes so the shadow-position population grows daily.
-    scheduler.add_job(run_forward_test_cycle, CronTrigger(
+    _add_job(scheduler, run_forward_test_cycle, CronTrigger(
         day_of_week="mon-fri", hour=18, minute=30, timezone=WIB),
         id="forward_test_cycle", name="Forward-Test Cycle 18:30")
 
     # Phase 5 (spec 2026-07-08) — daily BULL-watch on the NR7 governed universe;
     # alerts only on band transitions, so the moment NR7 becomes eligible is loud.
-    scheduler.add_job(run_phase5_bull_watch, CronTrigger(
+    _add_job(scheduler, run_phase5_bull_watch, CronTrigger(
         day_of_week="mon-fri", hour=17, minute=10, timezone=WIB),
         id="phase5_bull_watch", name="Phase 5 BULL-watch 17:10",
         replace_existing=True)
@@ -348,7 +360,7 @@ def start_scheduler():
     # external crontab watchdog (scripts/check_scheduler_heartbeat.py) alarms if
     # this goes stale, catching a dead scheduler/process that would otherwise
     # silently stop trading.
-    scheduler.add_job(run_scheduler_heartbeat, CronTrigger(
+    _add_job(scheduler, run_scheduler_heartbeat, CronTrigger(
         minute="*/5", timezone=WIB), id="scheduler_heartbeat",
         name="Scheduler Heartbeat", replace_existing=True)
 

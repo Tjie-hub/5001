@@ -74,3 +74,24 @@ def test_cycle_dedup_guard_sends_telegram_only_once_per_run_date(ft_db, repo, mo
     jobs_mod.run_forward_test_cycle(db_path=ft_db, run_date="2026-06-27")   # dup -> no 2nd send
 
     assert len(sent) == 2   # one for 06-26, one for 06-27; the repeat 06-27 sent nothing new
+
+
+def test_forward_test_cycle_marks_skipped_on_duplicate_run(ft_db, monkeypatch):
+    from unittest.mock import MagicMock
+    import scheduler.jobs as jobs_mod
+
+    conn = sqlite3.connect(ft_db)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS _job_sentinel "
+        "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))"
+    )
+    conn.execute("INSERT INTO _job_sentinel VALUES ('forward_test_cycle', '2026-06-26')")
+    conn.commit()
+    conn.close()
+
+    fake_handle = MagicMock()
+    monkeypatch.setattr(jobs_mod, "current_job", lambda: fake_handle)
+
+    jobs_mod.run_forward_test_cycle(db_path=ft_db, run_date="2026-06-26")
+
+    fake_handle.mark_skipped.assert_called_once_with("duplicate_run")
