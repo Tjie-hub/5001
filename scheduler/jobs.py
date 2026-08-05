@@ -1270,9 +1270,24 @@ def run_eod_trade_plan():
                 tp.record_snapshot(_snap_conn, date_str, "eod", [])
             except Exception as e:
                 logging.warning(f"[eod_trade_plan] watchlist snapshot/diff error (fail-soft): {e}")
+
+        # Additive: persistent multi-day active-watchlist section, appended to
+        # the SAME message below (never a second send_telegram call) -- see
+        # the identical hook in the main path further down for the full
+        # rationale. Own connection + own try/except so a bug here can never
+        # block the existing empty-plan message.
+        pw_section = ""
+        try:
+            from engine import persistent_watchlist as pw
+            with db_connect(DB_PATH) as _pw_conn:
+                pw_result = pw.update_watchlist(_pw_conn, date_str, set())
+            pw_section = "\n\n" + pw.build_message(date_str, pw_result)
+        except Exception as e:
+            logging.warning(f"[eod_trade_plan] persistent watchlist error (fail-soft): {e}")
+
         send_telegram(tp.build_message([], regime, now.strftime('%d/%m'), degraded=False,
                                        vpin_summary=vpin_summary, diff=diff,
-                                       watchlist_size=len(cands)))
+                                       watchlist_size=len(cands)) + pw_section)
         logger.info(f"[{now_str}] EOD trade plan: all candidates vetoed by edge pre-screen — empty plan sent")
         return
 
@@ -1340,11 +1355,30 @@ def run_eod_trade_plan():
         except Exception as e:
             logging.warning(f"[eod_trade_plan] watchlist snapshot/diff error (fail-soft): {e}")
 
+    # Additive: persistent multi-day active-watchlist section (engine.
+    # persistent_watchlist), appended to the END of the SAME Trade Plan
+    # message below -- distinct from the standalone pre-firm
+    # watchlist_report message above (that one is its OWN send_telegram
+    # call); this one is text concatenated onto tp.build_message()'s
+    # existing output, per spec: "Do not remove or reorder the existing
+    # Trade Plan section." Own connection + own try/except so a bug here
+    # can never block the existing Trade Plan message; today's APPROVED
+    # tickers (`ranked`) are exactly what drives the persistent state.
+    pw_section = ""
+    try:
+        from engine import persistent_watchlist as pw
+        with db_connect(DB_PATH) as _pw_conn:
+            pw_result = pw.update_watchlist(
+                _pw_conn, date_str, {c["ticker"] for c in ranked})
+        pw_section = "\n\n" + pw.build_message(date_str, pw_result)
+    except Exception as e:
+        logging.warning(f"[eod_trade_plan] persistent watchlist error (fail-soft): {e}")
+
     try:
         send_telegram(tp.build_message(ranked, regime, now.strftime('%d/%m'),
                                        degraded=degraded, vpin_summary=vpin_summary,
                                        provider_line=p_line, diff=diff,
-                                       watchlist_size=len(cands)))
+                                       watchlist_size=len(cands)) + pw_section)
     except Exception as e:
         logger.warning(f"[eod_trade_plan] Telegram error: {e}")
 
