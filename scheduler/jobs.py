@@ -1257,6 +1257,23 @@ def run_eod_trade_plan():
     finally:
         conn.close()
 
+    # Additive: standalone pre-firm candidate Watchlist Update report. Snapshots
+    # `cands` — the full merged long-candidate universe BEFORE select_top/firm
+    # review — distinct from tp.record_snapshot's post-approval "eod" strategy
+    # snapshot below. Reporting-only: reads already-computed candidates/regime,
+    # never feeds back into candidate generation or firm evaluation. Rides the
+    # dedup guard above (one run per calendar day), so it's restart-safe and
+    # never double-sends.
+    try:
+        from engine import watchlist_report as wr
+        reasons = {c["ticker"]: c["reason"] for c in cands if c.get("reason")}
+        with db_connect(DB_PATH) as _wl_conn:
+            wl_diff = wr.diff_snapshot(_wl_conn, date_str, cands)
+            wr.record_snapshot(_wl_conn, date_str, cands, regime=regime[0])
+        send_telegram(wr.build_message(date_str, wl_diff, len(cands), reasons=reasons))
+    except Exception as e:
+        logging.warning(f"[eod_trade_plan] watchlist update report error (fail-soft): {e}")
+
     if not cands:
         logger.info(f"[{now_str}] EOD trade plan: no long candidates — skipped")
         return
