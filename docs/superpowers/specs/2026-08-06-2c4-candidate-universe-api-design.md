@@ -44,21 +44,44 @@ premover_mode` (a different, unrelated paper-trading toggle route), not these.
 Per the original [Business Output Audit](2026-08-06-2c-business-apis-audit.md),
 `candidate_watchlist_snapshot` (`engine.watchlist_report`) is the canonical pre-firm candidate
 universe — the one with `record_snapshot`/`diff_snapshot`, matching the brief's suggested
-`current`/`{date}`/`diff` shape exactly (the same shape 2C-1 already established for
-watchlist_snapshot). The consumer audit surfaced three *additional*, narrower candidate sources
-that don't share that shape (no diff concept, different tables) — kept as clearly separate,
-named sub-resources under the same `/api/v1/candidates/*` namespace rather than forced into the
-`current`/`{date}`/`diff` shape they don't fit ("adjust endpoint names if the audit reveals a
-better fit").
+`current`/`{date}` shape (the same shape 2C-1 already established for watchlist_snapshot). The
+consumer audit surfaced three *additional*, narrower candidate sources that don't share that
+shape (no diff concept, different tables) — kept as clearly separate, named sub-resources under
+the same `/api/v1/candidates/*` namespace rather than forced into a shape they don't fit
+("adjust endpoint names if the audit reveals a better fit").
 
-## New read-only helper (one)
+### `diff` dropped from scope — structural finding, not a narrowing choice
 
-`screener.reversal_filter.get_current_watchlist(db_path) -> tuple[str | None, list[dict]]` —
-moves the legacy route's branching (persisted `reversal_watchlist` for the latest `scan_date`
-if the table has rows, else a live `scan_reversals()` of the latest `daily_screen` date) into
-the module that already owns `scan_reversals`/`run_scan`. This is the route's *existing* logic
-relocated, not new business logic, and not a second copy — the legacy route is deleted in the
-same change.
+Unlike `trade_plan.diff_watchlist` (2C-1) — whose "current" side only needs already-persisted
+`ticker`/`confidence`/`sources`, so a persisted snapshot can be re-hydrated into its `ranked`
+argument — `watchlist_report.diff_snapshot`'s "current" side **always recomputes**
+`candidate_score(c)` from the live `candidates` argument (`current = {c["ticker"]:
+candidate_score(c) for c in candidates}`), and `candidate_score()` reads `c["conviction"]` and
+`c["vol_ratio"]` directly (`KeyError` if absent). `candidate_watchlist_snapshot` persists only
+the *already-computed* `score` column — `conviction`/`vol_ratio`/`premkt_conf` (the raw scoring
+inputs) are never stored anywhere. There is no way to reconstruct a valid `candidates` argument
+from persisted data alone, so `diff_snapshot()` cannot be called against a past date the way
+`diff_watchlist()` could. Writing a second comparison purely over stored `score` values would
+duplicate `diff_snapshot`'s set-difference/movement-threshold algorithm outside the function
+that owns it — exactly what this task rules out ("do not duplicate business rules" / "if a
+metric is not already tracked, omit it rather than introducing new engine logic": the raw
+per-candidate scoring inputs simply aren't tracked). **`GET /api/v1/candidates/diff` is
+therefore not implemented in this task.** `current`/`{date}` (read-only content, no
+recomputation) are unaffected and ship as designed below.
+
+## New read-only helpers (two)
+
+- `engine.watchlist_report.get_snapshot(conn, date_str) -> list[dict]` — the persisted
+  `candidate_watchlist_snapshot` rows for one date, rank order. Same shape/purpose as 2C-1's
+  `trade_plan.get_snapshot` (a straight `SELECT`), added because `watchlist_report.py` had a
+  writer (`record_snapshot`) and an inventory reader (`list_snapshot_inventory`, 2C-2) but no
+  content reader yet.
+- `screener.reversal_filter.get_current_watchlist(db_path) -> tuple[str | None, list[dict]]` —
+  moves the legacy route's branching (persisted `reversal_watchlist` for the latest `scan_date`
+  if the table has rows, else a live `scan_reversals()` of the latest `daily_screen` date) into
+  the module that already owns `scan_reversals`/`run_scan`. This is the route's *existing*
+  logic relocated, not new business logic, and not a second copy — the legacy route is deleted
+  in the same change.
 
 ## Endpoints
 
@@ -66,10 +89,7 @@ same change.
   axis, unlike watchlist_snapshot)* — current pre-firm candidate universe. `404
   NO_CANDIDATE_DATA` if nothing has ever been snapshotted.
 - `GET /api/v1/candidates/{date}` — that date's snapshot. `404 NO_CANDIDATE_DATA` if none.
-- `GET /api/v1/candidates/diff?date=X` — `diff_snapshot()`'s native "vs most recent prior"
-  semantics (same caveat as 2C-1's watchlist diff — not arbitrary two-date comparison). `200`
-  with `"diff": null` if `date` has no prior snapshot; `404 NO_CANDIDATE_DATA` if `date` itself
-  has none.
+  (No `diff` endpoint — see the structural finding above.)
 - `GET /api/v1/candidates/screening?date=` (default today) — `screener.db.get_screen_results()`
   verbatim. Empty list (not 404) for a date with no rows — a quiet day is valid, not missing.
 - `GET /api/v1/candidates/reversal-watchlist?date=&direction=` — `date` omitted uses
@@ -78,7 +98,7 @@ same change.
   `direction` filters `long`/`short` client-side exactly as the legacy route did.
 - `GET /api/v1/candidates/premover-watchlist?min_score=&days=&pattern_type=` —
   `engine.premover_detector.get_watchlist()` verbatim, same defaults (`min_score=50, days=5`).
-- All six: `VIEWER` (matches every legacy entry being replaced — none were more restrictive).
+- All five: `VIEWER` (matches every legacy entry being replaced — none were more restrictive).
 
 ## Data contract
 
