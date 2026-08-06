@@ -1,19 +1,23 @@
-"""Tests for routes/status.py — the Production Status Registry's HTTP API.
+"""Tests for routes/v1/status.py -- the Production Status Registry migrated
+onto the API v1 envelope (Production Engine Phase 2, Workstream A Task 1).
 
-Read-only endpoints over engine.job_status's job_execution_log table. Follows
-the same standalone-blueprint test pattern as tests/test_chart_routes.py:
-temp DB + monkeypatched DB_PATH + a minimal Flask app registering only this
-blueprint (no scheduler init / other blueprint side effects).
+Ports the coverage from tests/test_status_routes.py (deleted once
+routes/status.py is removed in Task 6) onto the new /api/v1/status/* paths
+and the standard ok()/ApiError envelope. Unlike the old fixture, DB_PATH is
+swapped via monkeypatching the `config` module attribute directly (not
+env + module reload) -- api_v1_bp is a shared singleton blueprint across
+routes/v1/*.py, so reloading routes.v1.status per test would re-decorate the
+same long-lived blueprint object and register duplicate routes.
 """
 import sqlite3
+import uuid
 
 import pytest
 
 
 def _seed(db_path, **overrides):
     """Insert one job_execution_log row exactly as engine.job_status.ensure_
-    job_status_table's schema expects. Mirrors tests/engine/test_job_status.py's
-    own _seed_row helper, duplicated locally to keep this file independent."""
+    job_status_table's schema expects."""
     from engine.job_status import ensure_job_status_table
 
     defaults = dict(
@@ -24,7 +28,6 @@ def _seed(db_path, **overrides):
     )
     defaults.update(overrides)
     if defaults["run_id"] is None:
-        import uuid
         defaults["run_id"] = uuid.uuid4().hex
 
     conn = sqlite3.connect(db_path)
@@ -47,18 +50,13 @@ def client(tmp_path, monkeypatch):
     db = tmp_path / "wf.db"
     sqlite3.connect(db).close()  # file must exist; schema created lazily per-call
 
-    monkeypatch.setenv("DB_PATH", str(db))
-    import importlib
     import config
-    importlib.reload(config)
-    import engine.job_status as job_status_mod
-    importlib.reload(job_status_mod)
-    from routes import status as status_mod
-    importlib.reload(status_mod)
+    monkeypatch.setattr(config, "DB_PATH", str(db))
 
     from flask import Flask
+    from routes.v1 import api_v1_bp
     app = Flask(__name__)
-    app.register_blueprint(status_mod.status_bp)
+    app.register_blueprint(api_v1_bp)
     return app.test_client(), str(db)
 
 
@@ -68,9 +66,9 @@ class TestJobsRunning:
         _seed(db, job_name="job_a", status="running", completed_at=None)
         _seed(db, job_name="job_b", status="success")
 
-        resp = c.get("/api/status/jobs/running")
+        resp = c.get("/api/v1/status/jobs/running")
         assert resp.status_code == 200
-        data = resp.get_json()
+        data = resp.get_json()["data"]
         assert [j["job_name"] for j in data["running"]] == ["job_a"]
         assert data["count"] == 1
 
@@ -78,17 +76,17 @@ class TestJobsRunning:
         c, db = client
         _seed(db, job_name="job_a", status="success")
 
-        resp = c.get("/api/status/jobs/running")
+        resp = c.get("/api/v1/status/jobs/running")
         assert resp.status_code == 200
-        data = resp.get_json()
+        data = resp.get_json()["data"]
         assert data["running"] == []
         assert data["count"] == 0
 
     def test_empty_database(self, client):
         c, _ = client
-        resp = c.get("/api/status/jobs/running")
+        resp = c.get("/api/v1/status/jobs/running")
         assert resp.status_code == 200
-        assert resp.get_json() == {"running": [], "count": 0}
+        assert resp.get_json()["data"] == {"running": [], "count": 0}
 
 
 class TestJobsLatest:
@@ -98,17 +96,17 @@ class TestJobsLatest:
         _seed(db, job_name="job_a", started_at="2026-08-02 09:00:00")
         _seed(db, job_name="job_b", started_at="2026-08-01 10:00:00")
 
-        resp = c.get("/api/status/jobs/latest")
+        resp = c.get("/api/v1/status/jobs/latest")
         assert resp.status_code == 200
-        data = resp.get_json()
+        data = resp.get_json()["data"]
         by_job = {j["job_name"]: j["started_at"] for j in data["jobs"]}
         assert by_job == {"job_a": "2026-08-02 09:00:00", "job_b": "2026-08-01 10:00:00"}
 
     def test_empty_database(self, client):
         c, _ = client
-        resp = c.get("/api/status/jobs/latest")
+        resp = c.get("/api/v1/status/jobs/latest")
         assert resp.status_code == 200
-        assert resp.get_json() == {"jobs": []}
+        assert resp.get_json()["data"] == {"jobs": []}
 
 
 class TestJobsFailed:
@@ -117,9 +115,9 @@ class TestJobsFailed:
         _seed(db, job_name="job_a", status="failed", error_message="boom")
         _seed(db, job_name="job_b", status="success")
 
-        resp = c.get("/api/status/jobs/failed")
+        resp = c.get("/api/v1/status/jobs/failed")
         assert resp.status_code == 200
-        data = resp.get_json()
+        data = resp.get_json()["data"]
         assert [j["job_name"] for j in data["failed"]] == ["job_a"]
         assert data["failed"][0]["error_message"] == "boom"
 
@@ -128,18 +126,18 @@ class TestJobsFailed:
         _seed(db, job_name="job_a", status="failed", started_at="2026-08-01 09:00:00")
         _seed(db, job_name="job_b", status="failed", started_at="2026-08-03 09:00:00")
 
-        resp = c.get("/api/status/jobs/failed?since=2026-08-02+00:00:00")
+        resp = c.get("/api/v1/status/jobs/failed?since=2026-08-02+00:00:00")
         assert resp.status_code == 200
-        data = resp.get_json()
+        data = resp.get_json()["data"]
         assert [j["job_name"] for j in data["failed"]] == ["job_b"]
 
     def test_empty_when_none_failed(self, client):
         c, db = client
         _seed(db, job_name="job_a", status="success")
 
-        resp = c.get("/api/status/jobs/failed")
+        resp = c.get("/api/v1/status/jobs/failed")
         assert resp.status_code == 200
-        assert resp.get_json() == {"failed": []}
+        assert resp.get_json()["data"] == {"failed": []}
 
 
 class TestJobsHistory:
@@ -148,41 +146,42 @@ class TestJobsHistory:
         for i in range(5):
             _seed(db, job_name=f"job_{i}", started_at=f"2026-08-0{i+1} 09:00:00")
 
-        resp = c.get("/api/status/jobs/history")
+        resp = c.get("/api/v1/status/jobs/history")
         assert resp.status_code == 200
-        data = resp.get_json()
+        data = resp.get_json()["data"]
         assert len(data["history"]) == 5
-        # newest first
-        assert data["history"][0]["job_name"] == "job_4"
+        assert data["history"][0]["job_name"] == "job_4"  # newest first
 
     def test_respects_limit_param(self, client):
         c, db = client
         for i in range(5):
             _seed(db, job_name=f"job_{i}", started_at=f"2026-08-0{i+1} 09:00:00")
 
-        resp = c.get("/api/status/jobs/history?limit=2")
+        resp = c.get("/api/v1/status/jobs/history?limit=2")
         assert resp.status_code == 200
-        data = resp.get_json()
+        data = resp.get_json()["data"]
         assert len(data["history"]) == 2
         assert data["history"][0]["job_name"] == "job_4"
 
     def test_empty_database(self, client):
         c, _ = client
-        resp = c.get("/api/status/jobs/history")
+        resp = c.get("/api/v1/status/jobs/history")
         assert resp.status_code == 200
-        assert resp.get_json() == {"history": []}
+        assert resp.get_json()["data"] == {"history": []}
 
-    def test_malformed_limit_returns_400(self, client):
+    def test_malformed_limit_returns_400_error_envelope(self, client):
         c, _ = client
-        resp = c.get("/api/status/jobs/history?limit=not-a-number")
+        resp = c.get("/api/v1/status/jobs/history?limit=not-a-number")
         assert resp.status_code == 400
         data = resp.get_json()
-        assert "error" in data
+        assert data["ok"] is False
+        assert data["error"]["code"] == "INVALID_LIMIT"
 
-    def test_negative_limit_returns_400(self, client):
+    def test_negative_limit_returns_400_error_envelope(self, client):
         c, _ = client
-        resp = c.get("/api/status/jobs/history?limit=-5")
+        resp = c.get("/api/v1/status/jobs/history?limit=-5")
         assert resp.status_code == 400
+        assert resp.get_json()["error"]["code"] == "INVALID_LIMIT"
 
 
 class TestSummary:
@@ -193,28 +192,40 @@ class TestSummary:
         _seed(db, job_name="job_c", status="skipped")
         _seed(db, job_name="job_d", status="running", completed_at=None)
 
-        resp = c.get("/api/status/summary")
+        resp = c.get("/api/v1/status/summary")
         assert resp.status_code == 200
-        data = resp.get_json()
-        assert data == {"total": 4, "success": 1, "failed": 1, "skipped": 1, "running": 1}
+        assert resp.get_json()["data"] == {
+            "total": 4, "success": 1, "failed": 1, "skipped": 1, "running": 1,
+        }
 
     def test_empty_database_all_zero(self, client):
         c, _ = client
-        resp = c.get("/api/status/summary")
+        resp = c.get("/api/v1/status/summary")
         assert resp.status_code == 200
-        assert resp.get_json() == {"total": 0, "success": 0, "failed": 0,
-                                   "skipped": 0, "running": 0}
+        assert resp.get_json()["data"] == {
+            "total": 0, "success": 0, "failed": 0, "skipped": 0, "running": 0,
+        }
 
 
 class TestResponseShape:
     def test_no_internal_db_fields_leaked(self, client):
-        """Response must not expose the raw autoincrement `id` primary key —
+        """Response must not expose the raw autoincrement `id` primary key --
         run_id is the public identifier."""
         c, db = client
         _seed(db, job_name="job_a")
 
-        resp = c.get("/api/status/jobs/history")
-        row = resp.get_json()["history"][0]
+        resp = c.get("/api/v1/status/jobs/history")
+        row = resp.get_json()["data"]["history"][0]
         assert "id" not in row
         assert row["run_id"]
         assert row["job_name"] == "job_a"
+
+    def test_every_response_carries_v1_meta(self, client):
+        c, db = client
+        _seed(db, job_name="job_a")
+
+        resp = c.get("/api/v1/status/summary")
+        meta = resp.get_json()["meta"]
+        assert meta["api_version"] == "v1"
+        assert "request_id" in meta
+        assert "timestamp" in meta

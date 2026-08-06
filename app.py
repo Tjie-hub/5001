@@ -22,7 +22,7 @@ from routes.screener import screener_main_bp
 from routes.backtest import backtest_bp
 from routes.portfolio import portfolio_bp
 from routes.chart import chart_bp
-from routes.status import status_bp
+from routes.v1 import api_v1_bp
 from utils.logging_config import setup_logging
 import threading
 
@@ -40,7 +40,7 @@ app.register_blueprint(screener_main_bp)
 app.register_blueprint(backtest_bp)
 app.register_blueprint(portfolio_bp)
 app.register_blueprint(chart_bp)
-app.register_blueprint(status_bp)
+app.register_blueprint(api_v1_bp)
 
 # Security hardening: auth endpoints + authorization middleware. AUTH_MODE=off
 # (the default) keeps behavior identical to the pre-hardening app.

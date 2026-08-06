@@ -83,10 +83,11 @@ POLICY = {
     # --- chart ---
     "/api/chart/<ticker>/indicators": VIEWER, "/api/chart/<ticker>/delta": VIEWER,
     "/api/chart/tv/sync": OPERATOR, "/api/chart/tv/status": VIEWER,
-    # --- production status registry (read-only job health) ---
-    "/api/status/jobs/running": VIEWER, "/api/status/jobs/latest": VIEWER,
-    "/api/status/jobs/failed": VIEWER, "/api/status/jobs/history": VIEWER,
-    "/api/status/summary": VIEWER,
+    # --- API v1 (Production Engine Phase 2, Workstream A) ---
+    "/api/v1/": VIEWER, "/api/v1/openapi.json": VIEWER,
+    "/api/v1/status/jobs/running": VIEWER, "/api/v1/status/jobs/latest": VIEWER,
+    "/api/v1/status/jobs/failed": VIEWER, "/api/v1/status/jobs/history": VIEWER,
+    "/api/v1/status/summary": VIEWER,
 }
 
 
