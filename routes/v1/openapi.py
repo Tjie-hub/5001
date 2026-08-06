@@ -80,6 +80,15 @@ _PATHS = {
         "sectors_app_mode, agent_firm_enabled, agent_firm_enforce, "
         "agent_firm_governor_enabled}",
     ),
+    "/api/v1/health": _get(
+        "Aggregated operational health -- deterministic, no new probes "
+        "(reuses scheduler/metrics/configuration/release from "
+        "2B-1/2B-2/2B-3 plus a minimal DB connectivity check)",
+        "Standard envelope wrapping {overall: healthy|degraded|unavailable, "
+        "components: {database, scheduler, metrics, configuration, release}}"
+        " -- always HTTP 200, health state lives in the body, matching the "
+        "existing /health route's convention",
+    ),
 }
 
 
