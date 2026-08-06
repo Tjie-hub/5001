@@ -69,8 +69,12 @@ def init_security(app):
                         request.method, rule, role, required)
             return None
         status = 401 if role is None else 403
-        return jsonify({"error": "unauthorized" if status == 401 else "forbidden",
-                        "required": required}), status
+        message = "unauthorized" if status == 401 else "forbidden"
+        if request.path.startswith("/api/v1/"):
+            from routes.v1.envelope import err
+            code = "UNAUTHORIZED" if status == 401 else "FORBIDDEN"
+            return err(code, message, details={"required": required}, status=status)
+        return jsonify({"error": message, "required": required}), status
 
     @app.after_request
     def _audit_mutations(response):
