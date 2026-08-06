@@ -67,6 +67,19 @@ _PATHS = {
         "agent_decisions_today, ohlcv_tickers_today, market_risk_score, "
         "avg_vpin_today, last_scan_at}",
     ),
+    "/api/v1/config": _get(
+        "Build/release identity and static operational facts (read-only, "
+        "allowlisted -- never secrets)",
+        "Standard envelope wrapping {version, release_source, git_sha?, "
+        "built_at?, database_backend, timezone, logging_level}",
+    ),
+    "/api/v1/config/runtime": _get(
+        "Runtime mode / feature-flag surface (read-only, allowlisted -- "
+        "never secrets)",
+        "Standard envelope wrapping {auth_mode, edge_score_mode, "
+        "sectors_app_mode, agent_firm_enabled, agent_firm_enforce, "
+        "agent_firm_governor_enabled}",
+    ),
 }
 
 

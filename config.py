@@ -39,6 +39,17 @@ def edge_mode() -> str:
     return os.getenv("EDGE_SCORE_MODE", EDGE_SCORE_MODE).strip().lower()
 
 
+def sectors_app_mode() -> str:
+    """Current sectors.app overlay mode (re-read from env each call).
+
+    scheduler/scanner.py reads SECTORS_APP_MODE inline for its own
+    off/shadow/enforce dispatch (unchanged, still the source of truth for
+    that behavior) -- this getter exists only so other code (e.g. the API
+    v1 config endpoints) has a proper service-layer accessor instead of
+    reading os.getenv directly, mirroring edge_mode()'s exact pattern."""
+    return os.getenv("SECTORS_APP_MODE", "off").strip().lower()
+
+
 class ConfigError(RuntimeError):
     """Mandatory configuration is missing or invalid — refuse to start."""
 

@@ -92,6 +92,7 @@ POLICY = {
     "/api/v1/scheduler/jobs/<job_id>": VIEWER,
     "/api/v1/metrics": VIEWER, "/api/v1/metrics/jobs": VIEWER,
     "/api/v1/metrics/engine": VIEWER,
+    "/api/v1/config": VIEWER, "/api/v1/config/runtime": VIEWER,
 }
 
 
