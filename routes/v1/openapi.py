@@ -89,6 +89,36 @@ _PATHS = {
         " -- always HTTP 200, health state lives in the body, matching the "
         "existing /health route's convention",
     ),
+    "/api/v1/watchlists/current": _get(
+        "The latest firm-approved watchlist snapshot (optional ?strategy=, "
+        "default 'eod'; also 'premarket')",
+        "Standard envelope wrapping {strategy, date, watchlist: [...]}; "
+        "404 NO_WATCHLIST_DATA if the strategy has no snapshot at all",
+    ),
+    "/api/v1/watchlists/history": _get(
+        "Every date with a persisted watchlist snapshot for a strategy, "
+        "newest first (optional ?strategy=)",
+        "Standard envelope wrapping {strategy, dates: [...], count}",
+    ),
+    "/api/v1/watchlists/{date}": _get(
+        "The watchlist snapshot for one exact date (optional ?strategy=)",
+        "Standard envelope wrapping {strategy, date, watchlist: [...]}; "
+        "404 NO_WATCHLIST_DATA if that date has no snapshot",
+    ),
+    "/api/v1/watchlists/diff": _get(
+        "Diff for ?date= against its most recent prior snapshot (optional "
+        "?strategy=) -- diff_watchlist()'s native semantics, not an "
+        "arbitrary two-date comparison",
+        "Standard envelope wrapping {strategy, date, diff}; diff is null "
+        "(not an error) when date has no prior snapshot to compare against; "
+        "400 MISSING_DATE if ?date= is absent; 404 NO_WATCHLIST_DATA if "
+        "?date= itself has no snapshot",
+    ),
+    "/api/v1/watchlists/persistent": _get(
+        "The multi-day accumulated approved-ticker watchlist (optional "
+        "?status=active|removed|all, default active)",
+        "Standard envelope wrapping {status, watchlist: [...], count}",
+    ),
 }
 
 

@@ -16,7 +16,9 @@ from engine.trade_plan import (
     fallback_rank,
     gather_long_candidates,
     get_regime,
+    get_snapshot,
     get_vpin_gate,
+    list_snapshot_dates,
     provider_line,
     rank_approved,
     record_snapshot,
@@ -410,6 +412,55 @@ class TestWatchlistSnapshotDiff:
         record_snapshot(c, "2026-06-23", "eod", ranked)   # re-run same day
         n = c.execute("SELECT COUNT(*) FROM watchlist_snapshot").fetchone()[0]
         assert n == 1
+
+
+class TestWatchlistSnapshotReads:
+    """get_snapshot / list_snapshot_dates -- read-only additions for the API
+    v1 Watchlist endpoints (Production Engine Phase 2, Workstream 2C Task
+    2C-1). Pure SELECTs over the same table record_snapshot/diff_watchlist
+    already own; no new business rule."""
+
+    def _db(self):
+        return sqlite3.connect(":memory:")
+
+    def _ranked(self, *rows):
+        return [{"ticker": t, "confidence": conf, "conviction": conv,
+                 "confluence": len(src), "sources": src}
+                for t, conf, conv, src in rows]
+
+    def test_get_snapshot_returns_rows_in_rank_order(self):
+        c = self._db()
+        record_snapshot(c, "2026-06-23", "eod",
+                        self._ranked(("AKRA", 0.80, 40.0, ["R"]), ("CPIN", 0.60, 78.1, ["R", "S"])))
+
+        rows = get_snapshot(c, "2026-06-23", "eod")
+        assert [r["ticker"] for r in rows] == ["AKRA", "CPIN"]
+        assert rows[0]["rank"] == 1
+        assert rows[0]["confidence"] == 0.80
+        assert rows[0]["sources"] == ["R"]
+        assert rows[1]["sources"] == ["R", "S"]
+
+    def test_get_snapshot_empty_when_no_data(self):
+        c = self._db()
+        assert get_snapshot(c, "2026-06-23", "eod") == []
+
+    def test_get_snapshot_isolates_by_strategy(self):
+        c = self._db()
+        record_snapshot(c, "2026-06-23", "eod", self._ranked(("CPIN", 0.80, 78.1, ["R"])))
+        assert get_snapshot(c, "2026-06-23", "premarket") == []
+
+    def test_list_snapshot_dates_newest_first(self):
+        c = self._db()
+        record_snapshot(c, "2026-06-20", "eod", self._ranked(("OLD", 0.5, 10.0, ["S"])))
+        record_snapshot(c, "2026-06-23", "eod", self._ranked(("CPIN", 0.6, 78.1, ["R"])))
+        record_snapshot(c, "2026-06-22", "premarket", self._ranked(("AKRA", 0.7, 40.0, ["R"])))
+
+        assert list_snapshot_dates(c, "eod") == ["2026-06-23", "2026-06-20"]
+        assert list_snapshot_dates(c, "premarket") == ["2026-06-22"]
+
+    def test_list_snapshot_dates_empty_when_no_data(self):
+        c = self._db()
+        assert list_snapshot_dates(c, "eod") == []
 
     def test_build_message_renders_added_removed_and_moves(self):
         diff = {

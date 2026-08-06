@@ -131,6 +131,30 @@ def update_watchlist(conn: sqlite3.Connection, date_str: str,
     }
 
 
+def list_watchlist(conn: sqlite3.Connection, status: str = "active") -> list[dict[str, Any]]:
+    """The persisted persistent_watchlist rows, ordered by consecutive_days
+    descending then ticker. `status`: "active" (default), "removed", or
+    "all". Read-only counterpart to update_watchlist -- added for the API
+    v1 Watchlist endpoints (Workstream 2C Task 2C-1); no new business rule,
+    a straight SELECT over the same table."""
+    ensure_table(conn)
+    if status == "all":
+        where, params = "", ()
+    else:
+        where, params = "WHERE status=?", (status.upper(),)
+    rows = conn.execute(
+        f"SELECT ticker, first_added_date, last_seen_date, status, "
+        f"consecutive_days, total_appearances FROM persistent_watchlist "
+        f"{where} ORDER BY consecutive_days DESC, ticker ASC",
+        params,
+    ).fetchall()
+    return [
+        {"ticker": t, "first_added_date": fa, "last_seen_date": ls, "status": s,
+         "consecutive_days": cd, "total_appearances": ta}
+        for t, fa, ls, s, cd, ta in rows
+    ]
+
+
 def build_message(date_str: str, result: dict[str, Any]) -> str:
     """Telegram HTML section for the persistent multi-day watchlist, meant to
     be appended after engine.trade_plan.build_message()'s existing output

@@ -94,6 +94,9 @@ POLICY = {
     "/api/v1/metrics/engine": VIEWER,
     "/api/v1/config": VIEWER, "/api/v1/config/runtime": VIEWER,
     "/api/v1/health": VIEWER,
+    "/api/v1/watchlists/current": VIEWER, "/api/v1/watchlists/history": VIEWER,
+    "/api/v1/watchlists/diff": VIEWER, "/api/v1/watchlists/persistent": VIEWER,
+    "/api/v1/watchlists/<date_str>": VIEWER,
 }
 
 

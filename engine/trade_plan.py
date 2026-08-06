@@ -239,6 +239,40 @@ def record_snapshot(conn: sqlite3.Connection, date_str: str, strategy: str,
     conn.commit()
 
 
+def get_snapshot(conn: sqlite3.Connection, date_str: str, strategy: str) -> list[dict[str, Any]]:
+    """The persisted watchlist_snapshot rows for one (date, strategy), rank
+    order, sources JSON-decoded. Read-only counterpart to record_snapshot --
+    added for the API v1 Watchlist endpoints (Workstream 2C Task 2C-1); no
+    new business rule, a straight SELECT over the same table."""
+    ensure_watchlist_snapshot_table(conn)
+    rows = conn.execute(
+        "SELECT ticker, rank, confidence, conviction, confluence, sources "
+        "FROM watchlist_snapshot WHERE strategy=? AND date=? ORDER BY rank",
+        (strategy, date_str),
+    ).fetchall()
+    out = []
+    for ticker, rank, confidence, conviction, confluence, sources_json in rows:
+        try:
+            sources = json.loads(sources_json) if sources_json else []
+        except (ValueError, TypeError):
+            sources = []
+        out.append({"ticker": ticker, "rank": rank, "confidence": confidence,
+                    "conviction": conviction, "confluence": confluence, "sources": sources})
+    return out
+
+
+def list_snapshot_dates(conn: sqlite3.Connection, strategy: str) -> list[str]:
+    """Every date with a persisted watchlist_snapshot row for `strategy`,
+    newest first. Enumeration only, same table -- added alongside
+    get_snapshot for the API v1 Watchlist endpoints."""
+    ensure_watchlist_snapshot_table(conn)
+    rows = conn.execute(
+        "SELECT DISTINCT date FROM watchlist_snapshot WHERE strategy=? ORDER BY date DESC",
+        (strategy,),
+    ).fetchall()
+    return [r[0] for r in rows]
+
+
 def diff_watchlist(conn: sqlite3.Connection, date_str: str, strategy: str,
                    ranked: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
     """Diff today's ranked watchlist against the most recent prior `strategy`

@@ -13,7 +13,12 @@ import sqlite3
 
 import pytest
 
-from engine.persistent_watchlist import build_message, ensure_table, update_watchlist
+from engine.persistent_watchlist import (
+    build_message,
+    ensure_table,
+    list_watchlist,
+    update_watchlist,
+)
 
 
 def _row(conn, ticker):
@@ -297,3 +302,44 @@ class TestBuildMessage:
         msg = build_message("2026-08-04", result)
         assert "<b>EVIL</b>" not in msg
         assert "&lt;b&gt;EVIL&lt;/b&gt;" in msg
+
+
+class TestListWatchlist:
+    """list_watchlist -- read-only addition for the API v1 Watchlist
+    endpoints (Production Engine Phase 2, Workstream 2C Task 2C-1). A
+    straight SELECT over the same table update_watchlist already owns; no
+    new business rule."""
+
+    def test_defaults_to_active_only(self, conn):
+        update_watchlist(conn, "2026-08-04", ["BBCA", "TLKM"])
+        update_watchlist(conn, "2026-08-05", ["BBCA"])  # TLKM now REMOVED
+
+        rows = list_watchlist(conn)
+        assert {r["ticker"] for r in rows} == {"BBCA"}
+
+    def test_status_all_includes_removed(self, conn):
+        update_watchlist(conn, "2026-08-04", ["BBCA", "TLKM"])
+        update_watchlist(conn, "2026-08-05", ["BBCA"])
+
+        rows = list_watchlist(conn, status="all")
+        assert {r["ticker"] for r in rows} == {"BBCA", "TLKM"}
+
+    def test_status_removed_only(self, conn):
+        update_watchlist(conn, "2026-08-04", ["BBCA", "TLKM"])
+        update_watchlist(conn, "2026-08-05", ["BBCA"])
+
+        rows = list_watchlist(conn, status="removed")
+        assert [r["ticker"] for r in rows] == ["TLKM"]
+
+    def test_ordered_by_consecutive_days_descending(self, conn):
+        update_watchlist(conn, "2026-08-01", ["BBCA"])
+        update_watchlist(conn, "2026-08-02", ["BBCA", "TLKM"])
+        update_watchlist(conn, "2026-08-03", ["BBCA", "TLKM"])
+
+        rows = list_watchlist(conn)
+        assert [r["ticker"] for r in rows] == ["BBCA", "TLKM"]
+        assert rows[0]["consecutive_days"] == 3
+        assert rows[1]["consecutive_days"] == 2
+
+    def test_empty_when_no_rows(self, conn):
+        assert list_watchlist(conn) == []
