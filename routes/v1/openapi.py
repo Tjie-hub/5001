@@ -174,6 +174,25 @@ _PATHS = {
         "GET /api/premover/watchlist",
         "Standard envelope wrapping {count, watchlist: [...]}",
     ),
+    "/api/v1/version": _get(
+        "API/build/release version identity",
+        "Standard envelope wrapping {api_version, release_version, "
+        "release_source, git_sha?, built_at?, openapi_url}",
+    ),
+    "/api/v1/capabilities": _get(
+        "Feature/capability flags -- what this server currently has "
+        "enabled",
+        "Standard envelope wrapping {auth_mode, edge_score_mode, "
+        "sectors_app_mode, agent_firm_enabled, agent_firm_enforce, "
+        "agent_firm_governor_enabled, resource_groups: [...]}",
+    ),
+    "/api/v1/resources": _get(
+        "The full /api/v1 resource catalog, grouped by top-level "
+        "resource -- read directly from this same _PATHS table, so it "
+        "can never drift from the real route set",
+        "Standard envelope wrapping {resources: [{name, endpoints: "
+        "[{path, methods}]}]}",
+    ),
 }
 
 

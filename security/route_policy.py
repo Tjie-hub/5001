@@ -102,6 +102,8 @@ POLICY = {
     "/api/v1/candidates/screening": VIEWER,
     "/api/v1/candidates/reversal-watchlist": VIEWER,
     "/api/v1/candidates/premover-watchlist": VIEWER,
+    "/api/v1/version": VIEWER, "/api/v1/capabilities": VIEWER,
+    "/api/v1/resources": VIEWER,
 }
 
 
