@@ -90,6 +90,8 @@ POLICY = {
     "/api/v1/status/summary": VIEWER,
     "/api/v1/scheduler": VIEWER, "/api/v1/scheduler/jobs": VIEWER,
     "/api/v1/scheduler/jobs/<job_id>": VIEWER,
+    "/api/v1/metrics": VIEWER, "/api/v1/metrics/jobs": VIEWER,
+    "/api/v1/metrics/engine": VIEWER,
 }
 
 

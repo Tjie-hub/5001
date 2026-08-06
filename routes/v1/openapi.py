@@ -51,6 +51,22 @@ _PATHS = {
         "A single scheduler job by id",
         "Standard envelope wrapping one job; 404 if job_id is unregistered",
     ),
+    "/api/v1/metrics": _get(
+        "Operational metrics rollup",
+        "Standard envelope wrapping {jobs, engine, scheduler} -- same data as "
+        "the three /metrics/* endpoints below, combined",
+    ),
+    "/api/v1/metrics/jobs": _get(
+        "Job execution metrics",
+        "Standard envelope wrapping {total, success, failed, skipped, running} "
+        "-- identical data source to /api/v1/status/summary",
+    ),
+    "/api/v1/metrics/engine": _get(
+        "Engine-level operational metrics",
+        "Standard envelope wrapping {open_trades, signals_today_*, "
+        "agent_decisions_today, ohlcv_tickers_today, market_risk_score, "
+        "avg_vpin_today, last_scan_at}",
+    ),
 }
 
 
