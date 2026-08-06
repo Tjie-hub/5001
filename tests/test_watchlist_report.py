@@ -15,6 +15,7 @@ from engine.watchlist_report import (
     build_message,
     diff_snapshot,
     ensure_table,
+    get_snapshot,
     list_snapshot_inventory,
     record_snapshot,
 )
@@ -232,3 +233,27 @@ class TestListSnapshotInventory:
 
     def test_empty_when_no_data(self, conn):
         assert list_snapshot_inventory(conn) == []
+
+
+class TestGetSnapshot:
+    """get_snapshot -- read-only addition for the API v1 Candidate
+    Universe endpoints (Production Engine Phase 2, Workstream 2C Task
+    2C-4). A straight SELECT over the same table record_snapshot already
+    owns; no new business rule."""
+
+    def test_returns_rows_in_rank_order(self, conn):
+        record_snapshot(conn, "2026-08-05", _cands("GPSO", "ADRO"), regime="BULL")
+
+        rows = get_snapshot(conn, "2026-08-05")
+        assert [r["ticker"] for r in rows] == ["GPSO", "ADRO"]
+        assert rows[0]["rank"] == 1
+        assert rows[0]["status"] == "ACTIVE"
+        assert rows[0]["regime"] == "BULL"
+
+    def test_empty_when_no_data_that_date(self, conn):
+        assert get_snapshot(conn, "2026-08-05") == []
+
+    def test_isolated_by_date(self, conn):
+        record_snapshot(conn, "2026-08-04", _cands("OLD"))
+        record_snapshot(conn, "2026-08-05", _cands("NEW"))
+        assert [r["ticker"] for r in get_snapshot(conn, "2026-08-04")] == ["OLD"]

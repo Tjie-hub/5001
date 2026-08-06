@@ -145,6 +145,35 @@ _PATHS = {
         "Same shape as GET /api/v1/reports; 404 NO_REPORT_DATA if the "
         "forward-test cycle never ran that date",
     ),
+    "/api/v1/candidates": _get(
+        "The latest pre-firm candidate universe snapshot",
+        "Standard envelope wrapping {date, candidates: [...]}; 404 "
+        "NO_CANDIDATE_DATA if nothing has ever been snapshotted",
+    ),
+    "/api/v1/candidates/{date}": _get(
+        "The pre-firm candidate universe snapshot for one exact date",
+        "Standard envelope wrapping {date, candidates: [...]}; 404 "
+        "NO_CANDIDATE_DATA if that date has no snapshot",
+    ),
+    "/api/v1/candidates/screening": _get(
+        "Daily technical/VPIN screening output (optional ?date=, default "
+        "today) -- coexists with the still-consumed legacy "
+        "GET /api/screener/results, same underlying data",
+        "Standard envelope wrapping {date, results: [...], count}",
+    ),
+    "/api/v1/candidates/reversal-watchlist": _get(
+        "Next-day delta-reversal day-trade candidates (optional ?date=, "
+        "?direction=long|short) -- migrated from the removed legacy "
+        "GET /api/screener/reversal",
+        "Standard envelope wrapping {scan_date, count, long, short, "
+        "results: [...]}",
+    ),
+    "/api/v1/candidates/premover-watchlist": _get(
+        "Pre-mover breakout candidates (optional ?min_score=, ?days=, "
+        "?pattern_type=) -- migrated from the removed legacy "
+        "GET /api/premover/watchlist",
+        "Standard envelope wrapping {count, watchlist: [...]}",
+    ),
 }
 
 

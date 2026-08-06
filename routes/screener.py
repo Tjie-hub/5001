@@ -1,5 +1,4 @@
 import logging
-import sqlite3
 import threading
 
 import pandas as pd
@@ -595,17 +594,6 @@ def api_ohlcv_cache(ticker):
         conn.close()
 
 
-@screener_main_bp.route('/api/premover/watchlist', methods=['GET'])
-def api_premover_watchlist():
-    from engine.premover_detector import get_watchlist
-    min_score    = int(request.args.get('min_score', 50))
-    days         = int(request.args.get('days', 5))
-    pattern_type = request.args.get('pattern_type', None)
-    items = get_watchlist(DB_PATH, min_score=min_score, days=days,
-                          pattern_type=pattern_type)
-    return jsonify({'count': len(items), 'watchlist': items})
-
-
 @screener_main_bp.route('/api/premover/run', methods=['POST'])
 def api_premover_run():
     from engine.premover_detector import run_scan
@@ -623,65 +611,3 @@ def api_premover_run():
                     'message': 'Pre-mover scan running. Check /api/premover/watchlist for results.'})
 
 
-@screener_main_bp.route('/api/screener/reversal', methods=['GET'])
-def api_reversal_watchlist():
-    """Next-day delta-reversal watchlist for liquid day trades.
-
-    Default: the most recent persisted EOD scan (written by the 16:30 job).
-    ?date=YYYY-MM-DD runs a fresh scan of that EOD date instead.
-    ?direction=long|short filters the result.
-    """
-    import json as _json
-    from screener.reversal_filter import scan_reversals, run_scan
-
-    date_arg = request.args.get('date')
-    direction = request.args.get('direction')
-
-    if date_arg:
-        scan_date = date_arg
-        results = run_scan(scan_date, DB_PATH)
-    else:
-        conn = db_connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        try:
-            row = conn.execute(
-                "SELECT MAX(scan_date) FROM reversal_watchlist"
-            ).fetchone() if _table_exists(conn, 'reversal_watchlist') else None
-            scan_date = row[0] if row else None
-            if scan_date:
-                stored = conn.execute(
-                    "SELECT * FROM reversal_watchlist WHERE scan_date=? "
-                    "ORDER BY conviction DESC", (scan_date,)
-                ).fetchall()
-                results = []
-                for r in stored:
-                    d = dict(r)
-                    try:
-                        d['reasons'] = _json.loads(d.get('reasons') or '[]')
-                    except Exception:
-                        d['reasons'] = []
-                    results.append(d)
-            else:
-                # Nothing persisted yet — live scan of the latest EOD.
-                scan_date = conn.execute("SELECT MAX(date) FROM daily_screen").fetchone()[0]
-                results = scan_reversals(conn, scan_date) if scan_date else []
-        finally:
-            conn.close()
-
-    if direction:
-        results = [r for r in results if r.get('direction') == direction]
-
-    longs = sum(1 for r in results if r.get('direction') == 'long')
-    return jsonify({
-        'scan_date': scan_date,
-        'count': len(results),
-        'long': longs,
-        'short': len(results) - longs,
-        'results': results,
-    })
-
-
-def _table_exists(conn, name: str) -> bool:
-    return conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
-    ).fetchone() is not None

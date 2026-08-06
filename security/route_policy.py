@@ -67,8 +67,7 @@ POLICY = {
     "/api/strategy/list": VIEWER,
     "/api/strategy/markers/<path:strategy>/<ticker>": VIEWER,
     "/api/ticker/<ticker>/ohlcv": VIEWER,
-    "/api/premover/watchlist": VIEWER, "/api/premover/run": OPERATOR,
-    "/api/screener/reversal": VIEWER,
+    "/api/premover/run": OPERATOR,
     # --- flow / market / dashboard ---
     "/api/flow/monitor": VIEWER, "/api/flow/check": OPERATOR,
     "/api/broker-flow/<ticker>": VIEWER, "/api/broker-flow/dates/<ticker>": VIEWER,
@@ -99,6 +98,10 @@ POLICY = {
     "/api/v1/watchlists/<date_str>": VIEWER,
     "/api/v1/snapshots": VIEWER, "/api/v1/snapshots/<date_str>": VIEWER,
     "/api/v1/reports": VIEWER, "/api/v1/reports/<date_str>": VIEWER,
+    "/api/v1/candidates": VIEWER, "/api/v1/candidates/<date_str>": VIEWER,
+    "/api/v1/candidates/screening": VIEWER,
+    "/api/v1/candidates/reversal-watchlist": VIEWER,
+    "/api/v1/candidates/premover-watchlist": VIEWER,
 }
 
 

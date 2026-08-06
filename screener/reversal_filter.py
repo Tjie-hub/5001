@@ -300,6 +300,48 @@ def run_scan(screen_date: Optional[str] = None, db_path: str = _DB_PATH) -> list
         conn.close()
 
 
+def _table_exists(conn, name: str) -> bool:
+    return conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
+    ).fetchone() is not None
+
+
+def get_current_watchlist(db_path: str = _DB_PATH) -> tuple[Optional[str], list[dict]]:
+    """The current reversal watchlist: the persisted reversal_watchlist for
+    its latest scan_date if any rows exist, else a live scan of the latest
+    daily_screen date. Migrated from the legacy GET /api/screener/reversal
+    route (removed, no active consumers -- Workstream 2C Task 2C-4 consumer
+    audit) -- same branching, same behavior, relocated here rather than
+    duplicated in a route."""
+    conn = _get_conn(db_path)
+    try:
+        scan_date = None
+        if _table_exists(conn, "reversal_watchlist"):
+            row = conn.execute("SELECT MAX(scan_date) FROM reversal_watchlist").fetchone()
+            scan_date = row[0] if row else None
+
+        if scan_date:
+            rows = conn.execute(
+                "SELECT * FROM reversal_watchlist WHERE scan_date=? ORDER BY conviction DESC",
+                (scan_date,),
+            ).fetchall()
+            results = []
+            for r in rows:
+                d = dict(r)
+                try:
+                    d["reasons"] = json.loads(d.get("reasons") or "[]")
+                except (ValueError, TypeError):
+                    d["reasons"] = []
+                results.append(d)
+            return scan_date, results
+
+        scan_date = _latest_screen_date(conn)
+        results = scan_reversals(conn, scan_date) if scan_date else []
+        return scan_date, results
+    finally:
+        conn.close()
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # OUTPUT
 # ═══════════════════════════════════════════════════════════════════════════════

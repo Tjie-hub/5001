@@ -15,9 +15,11 @@ import sqlite3
 import pytest
 
 from screener.reversal_filter import (
+    _get_conn,
     classify_reversal,
-    scan_reversals,
+    get_current_watchlist,
     persist_watchlist,
+    scan_reversals,
 )
 
 
@@ -277,3 +279,74 @@ def test_persist_watchlist_is_idempotent():
         "SELECT COUNT(*) FROM reversal_watchlist WHERE scan_date=?", ("2026-06-09",)
     ).fetchone()[0]
     assert count == len(results)
+
+
+class TestGetCurrentWatchlist:
+    """get_current_watchlist -- migrated from the legacy /api/screener/reversal
+    route (removed, no active consumers found during the Workstream 2C
+    Task 2C-4 consumer audit). Same persisted-or-live branching, relocated
+    into the module that already owns scan_reversals/run_scan."""
+
+    def _seed(self, path):
+        conn = sqlite3.connect(path)
+        conn.executescript(
+            """
+            CREATE TABLE daily_screen (date TEXT, ticker TEXT, close INTEGER, delta INTEGER);
+            CREATE TABLE stockbit_flow (ticker TEXT, trade_date TEXT, smart_money TEXT,
+                verdict TEXT, net_value INTEGER);
+            CREATE TABLE idx_tickers (ticker TEXT, in_lq45 INTEGER, in_idx30 INTEGER, in_idx80 INTEGER);
+            CREATE TABLE ohlcv (ticker TEXT, date TEXT, high REAL, low REAL, close REAL);
+            """
+        )
+        conn.executemany(
+            "INSERT INTO daily_screen VALUES (?,?,?,?)",
+            [("2026-06-08", "BRPT", 1390, -506_000_000),
+             ("2026-06-09", "BRPT", 1580, +567_000_000)],
+        )
+        conn.executemany(
+            "INSERT INTO stockbit_flow VALUES (?,?,?,?,?)",
+            [("BRPT", "2026-06-09", "ACCUMULATION", "BULLISH", 79_000_000_000)],
+        )
+        conn.executemany(
+            "INSERT INTO idx_tickers VALUES (?,?,?,?)",
+            [("BRPT", 1, 0, 1)],
+        )
+        conn.executemany(
+            "INSERT INTO ohlcv VALUES (?,?,?,?,?)",
+            [("BRPT", "2026-05-12", 2310, 1375, 2000),
+             ("BRPT", "2026-06-09", 1600, 1375, 1580)],
+        )
+        conn.commit()
+        conn.close()
+
+    def test_falls_back_to_live_scan_when_nothing_persisted(self, tmp_path):
+        db = str(tmp_path / "wf.db")
+        self._seed(db)
+
+        scan_date, results = get_current_watchlist(db)
+        assert scan_date == "2026-06-09"
+        assert [r["ticker"] for r in results] == ["BRPT"]
+
+    def test_prefers_persisted_watchlist_when_available(self, tmp_path):
+        db = str(tmp_path / "wf.db")
+        self._seed(db)
+        conn = _get_conn(db)
+        results = scan_reversals(conn, "2026-06-09")
+        persist_watchlist(conn, "2026-06-09", results)
+        conn.close()
+
+        scan_date, out = get_current_watchlist(db)
+        assert scan_date == "2026-06-09"
+        assert [r["ticker"] for r in out] == ["BRPT"]
+        assert "reasons" in out[0]  # reasons JSON-decoded, not a raw string
+
+    def test_empty_when_nothing_scanned_or_persisted(self, tmp_path):
+        db = str(tmp_path / "wf.db")
+        conn = sqlite3.connect(db)
+        conn.executescript("CREATE TABLE daily_screen (date TEXT, ticker TEXT)")
+        conn.commit()
+        conn.close()
+
+        scan_date, results = get_current_watchlist(db)
+        assert scan_date is None
+        assert results == []

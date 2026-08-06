@@ -114,6 +114,25 @@ def diff_snapshot(conn: sqlite3.Connection, date_str: str,
             "retained": retained, "movements": movements}
 
 
+def get_snapshot(conn: sqlite3.Connection, date_str: str) -> list[dict[str, Any]]:
+    """The persisted candidate_watchlist_snapshot rows for one date, rank
+    order -- the content read for the API v1 Candidate Universe endpoints
+    (Workstream 2C Task 2C-4). A straight SELECT over the same table
+    record_snapshot already owns; no new business rule."""
+    ensure_table(conn)
+    rows = conn.execute(
+        "SELECT ticker, status, score, rank, sector, industry, regime, "
+        "entry_type, risk_score FROM candidate_watchlist_snapshot "
+        "WHERE date=? ORDER BY rank",
+        (date_str,),
+    ).fetchall()
+    return [
+        {"ticker": t, "status": s, "score": sc, "rank": r, "sector": sec,
+         "industry": ind, "regime": reg, "entry_type": et, "risk_score": rs}
+        for t, s, sc, r, sec, ind, reg, et, rs in rows
+    ]
+
+
 def list_snapshot_inventory(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     """Ticker count per date, newest first -- the metadata layer for the
     API v1 Snapshot endpoints (Workstream 2C Task 2C-2). A GROUP BY over
