@@ -19,6 +19,10 @@ _PATHS = {
         "API root / liveness metadata",
         "Standard envelope with name/version/status",
     ),
+    "/api/v1/openapi.json": _get(
+        "This OpenAPI spec itself",
+        "Standard envelope wrapping {openapi, info, paths}",
+    ),
     "/api/v1/status/jobs/running": _get(
         "Jobs currently executing",
         "Standard envelope wrapping {running: [...], count}",
