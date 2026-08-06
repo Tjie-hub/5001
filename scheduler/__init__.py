@@ -12,6 +12,19 @@ import logging
 
 WIB = pytz.timezone("Asia/Jakarta")
 logger = logging.getLogger(__name__)
+
+# The live BackgroundScheduler instance, reachable from outside start_scheduler()
+# -- every caller (app.py's __main__ block, gunicorn.conf.py's post_worker_init
+# hook) discards start_scheduler()'s return value, so this is the only handle a
+# request (e.g. GET /api/v1/scheduler) has to it. None before start_scheduler()
+# has run in this process.
+_scheduler_instance = None
+
+
+def get_scheduler():
+    """The live BackgroundScheduler set by start_scheduler(), or None if it
+    hasn't run yet in this process."""
+    return _scheduler_instance
 from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, Phase 5)
 DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN")
@@ -379,8 +392,8 @@ def start_scheduler():
     logger.info("  📊 SIGNAL REPORT: 16:00")
     logger.info("  📰 NEWS FETCH: 08:00 pre-market, 17:00 EOD")
     logger.info("  🏛️ BROKER FLOW: 20:15 (after Stockbit EOD publish)")
-    logger.info("  🏢 CORPORATE ACTIONS: 20:20 (dividend/rups/split/bonus/warrant/rightissue)")
     logger.info("  🧾 OWNERSHIP COMPOSITION: monthly, day 5 09:00 (major holders + investor buckets)")
+    logger.info("  🏢 CORPORATE ACTIONS: 20:20 (dividend/rups/split/bonus/warrant/rightissue)")
     logger.info("  📅 BROKER PERIOD SUMMARY: 20:30 Fri only (7d/1mo/3mo accumulation)")
     logger.info("  📈 STOCKBIT SCREENER: 17:05 (guru templates → stockbit_screener_results)")
     logger.info("  🔍 PRE-MOVER EOD: 16:30 (setup watchlist scan)")
@@ -388,6 +401,8 @@ def start_scheduler():
     logger.info("  🌅 PREMARKET FIRM: 08:35 pre-market (unified watchlist → agent firm)")
     logger.info("  📋 EOD TRADE PLAN: 16:40 (all long sources → agent firm → 1 ranked msg)")
     logger.info("  🧪 FORWARD-TEST CYCLE: 18:30 (ingest signals → open/exit shadow positions)")
+    global _scheduler_instance
+    _scheduler_instance = scheduler
     return scheduler
 
 

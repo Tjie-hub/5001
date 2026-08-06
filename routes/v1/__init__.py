@@ -21,3 +21,4 @@ def api_root():
 
 from routes.v1 import openapi  # noqa: E402,F401 -- registers /openapi.json on api_v1_bp
 from routes.v1 import status  # noqa: E402,F401 -- registers /status/* on api_v1_bp
+from routes.v1 import scheduler  # noqa: E402,F401 -- registers /scheduler* on api_v1_bp

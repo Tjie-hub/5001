@@ -88,6 +88,8 @@ POLICY = {
     "/api/v1/status/jobs/running": VIEWER, "/api/v1/status/jobs/latest": VIEWER,
     "/api/v1/status/jobs/failed": VIEWER, "/api/v1/status/jobs/history": VIEWER,
     "/api/v1/status/summary": VIEWER,
+    "/api/v1/scheduler": VIEWER, "/api/v1/scheduler/jobs": VIEWER,
+    "/api/v1/scheduler/jobs/<job_id>": VIEWER,
 }
 
 

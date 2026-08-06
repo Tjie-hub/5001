@@ -39,6 +39,18 @@ _PATHS = {
         "Aggregate job counts by status",
         "Standard envelope wrapping {total, success, failed, skipped, running}",
     ),
+    "/api/v1/scheduler": _get(
+        "Live scheduler status",
+        "Standard envelope wrapping {available, state, timezone, job_count}",
+    ),
+    "/api/v1/scheduler/jobs": _get(
+        "All registered scheduler jobs, with next run + last run",
+        "Standard envelope wrapping {jobs: [...], count}",
+    ),
+    "/api/v1/scheduler/jobs/{job_id}": _get(
+        "A single scheduler job by id",
+        "Standard envelope wrapping one job; 404 if job_id is unregistered",
+    ),
 }
 
 
