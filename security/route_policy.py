@@ -98,6 +98,7 @@ POLICY = {
     "/api/v1/watchlists/diff": VIEWER, "/api/v1/watchlists/persistent": VIEWER,
     "/api/v1/watchlists/<date_str>": VIEWER,
     "/api/v1/snapshots": VIEWER, "/api/v1/snapshots/<date_str>": VIEWER,
+    "/api/v1/reports": VIEWER, "/api/v1/reports/<date_str>": VIEWER,
 }
 
 

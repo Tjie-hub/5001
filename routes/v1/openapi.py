@@ -133,6 +133,18 @@ _PATHS = {
         "Standard envelope wrapping {date, snapshots: [...], count}; 404 "
         "NO_SNAPSHOT_DATA if that date has no snapshot of any type",
     ),
+    "/api/v1/reports": _get(
+        "The most recent Forward-Testing report (not necessarily today -- "
+        "the latest date a report was actually generated)",
+        "Standard envelope wrapping {date, new_positions, closed_trades, "
+        "active_positions, active_candidates, win_loss, best_trades, "
+        "worst_trades}; 404 NO_REPORT_DATA if no report has ever run",
+    ),
+    "/api/v1/reports/{date}": _get(
+        "The Forward-Testing report for one exact date",
+        "Same shape as GET /api/v1/reports; 404 NO_REPORT_DATA if the "
+        "forward-test cycle never ran that date",
+    ),
 }
 
 

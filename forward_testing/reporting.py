@@ -86,6 +86,74 @@ def best_worst_trades(trades: list[dict], n: int = BEST_WORST_N) -> tuple[list[d
     return best, worst
 
 
+# ── Report-existence reads (new for API v1, Workstream 2C Task 2C-3) ───────
+#
+# report_exists/latest_report_date read _job_sentinel(job='forward_test_
+# cycle', run_date) -- the dedup guard scheduler.jobs.run_forward_test_cycle
+# already writes on every real run, never read anywhere before this. The
+# data functions above happily return [] for any date whether or not a
+# report was ever generated, so this is the only existing signal for "was a
+# report actually produced" vs. "trivially computable with zero activity."
+
+def _ensure_job_sentinel_table(c) -> None:
+    """Defensive guard for a table scheduler.jobs.run_forward_test_cycle
+    creates inline on its first real run -- a fresh DB where the cycle has
+    never run yet has no _job_sentinel table at all, which should read as
+    "no report exists," not an OperationalError."""
+    c.execute("CREATE TABLE IF NOT EXISTS _job_sentinel "
+             "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))")
+
+
+def report_exists(db_path: str, run_date: str) -> bool:
+    with ft_get_db(db_path) as c:
+        _ensure_job_sentinel_table(c)
+        row = c.execute(
+            "SELECT 1 FROM _job_sentinel WHERE job='forward_test_cycle' AND run_date=?",
+            (run_date,),
+        ).fetchone()
+        return row is not None
+
+
+def latest_report_date(db_path: str) -> Optional[str]:
+    with ft_get_db(db_path) as c:
+        _ensure_job_sentinel_table(c)
+        row = c.execute(
+            "SELECT MAX(run_date) FROM _job_sentinel WHERE job='forward_test_cycle'"
+        ).fetchone()
+        return row[0] if row else None
+
+
+def build_forward_test_data(db_path: str, run_date: str, repo: Any = None) -> dict:
+    """The same six-function assembly build_forward_test_report() does,
+    returning structured data instead of rendering Telegram text -- the API
+    v1 Report endpoint's data contract (Workstream 2C Task 2C-3).
+
+    repo: inject an FTRepo for tests; defaults to a fresh FTRepo(db_path).
+    """
+    if repo is None:
+        from forward_testing.storage.repo import FTRepo
+        repo = FTRepo(db_path)
+
+    new_positions = get_positions_opened_on(db_path, run_date)
+    closed_trades = get_trades_closed_on(db_path, run_date)
+    active_positions = repo.get_open_shadow_positions()
+    active_candidates = get_active_candidate_count(repo)
+    all_trades = get_all_closed_trades(db_path)
+    win_loss = win_loss_summary(all_trades)
+    best, worst = best_worst_trades(all_trades)
+
+    return {
+        "date": run_date,
+        "new_positions": new_positions,
+        "closed_trades": closed_trades,
+        "active_positions": active_positions,
+        "active_candidates": active_candidates,
+        "win_loss": win_loss,
+        "best_trades": best,
+        "worst_trades": worst,
+    }
+
+
 # ── Telegram message builder ────────────────────────────────────────────────
 
 def _fmt_position(p: dict) -> str:

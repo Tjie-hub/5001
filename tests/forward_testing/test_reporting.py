@@ -17,12 +17,15 @@ from forward_testing.positions.market_data import MarketDataResolver
 from forward_testing.positions.shadow_manager import ShadowPositionManager
 from forward_testing.reporting import (
     best_worst_trades,
+    build_forward_test_data,
     build_forward_test_message,
     build_forward_test_report,
     get_active_candidate_count,
     get_all_closed_trades,
     get_positions_opened_on,
     get_trades_closed_on,
+    latest_report_date,
+    report_exists,
     win_loss_summary,
 )
 from tests.forward_testing.conftest import seed_ohlcv, seed_signal
@@ -237,3 +240,78 @@ class TestHistoricalReplay:
         assert "Active Positions: 0" in msg_close_day
         assert "TP" in msg_close_day.split("🔴 CLOSED")[1]
         assert "1/1 win" in msg_close_day and "100% WR" in msg_close_day
+
+
+def _mark_report_ran(db_path, run_date):
+    """Seed the _job_sentinel dedup guard row scheduler.jobs.run_forward_test_cycle
+    writes on a real run -- the only existing signal that a report was
+    actually generated for a date (vs. trivially computable-but-never-run)."""
+    conn = sqlite3.connect(db_path)
+    conn.execute("CREATE TABLE IF NOT EXISTS _job_sentinel "
+                 "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))")
+    conn.execute("INSERT INTO _job_sentinel VALUES ('forward_test_cycle', ?)", (run_date,))
+    conn.commit()
+    conn.close()
+
+
+class TestReportExistsAndLatestReportDate:
+    """report_exists / latest_report_date -- read-only additions for the API
+    v1 Report endpoints (Production Engine Phase 2, Workstream 2C Task
+    2C-3). Read the _job_sentinel row run_forward_test_cycle already
+    writes; no new business rule."""
+
+    def test_report_exists_false_when_never_run(self, ft_db):
+        assert report_exists(ft_db, "2026-08-05") is False
+
+    def test_report_exists_true_after_sentinel_written(self, ft_db):
+        _mark_report_ran(ft_db, "2026-08-05")
+        assert report_exists(ft_db, "2026-08-05") is True
+
+    def test_report_exists_is_per_date(self, ft_db):
+        _mark_report_ran(ft_db, "2026-08-01")
+        assert report_exists(ft_db, "2026-08-05") is False
+
+    def test_latest_report_date_none_when_never_run(self, ft_db):
+        assert latest_report_date(ft_db) is None
+
+    def test_latest_report_date_returns_most_recent(self, ft_db):
+        _mark_report_ran(ft_db, "2026-08-01")
+        _mark_report_ran(ft_db, "2026-08-05")
+        assert latest_report_date(ft_db) == "2026-08-05"
+
+
+class TestBuildForwardTestData:
+    """build_forward_test_data -- the same six-function assembly
+    build_forward_test_report already does, returning structured data
+    instead of rendering Telegram text."""
+
+    def test_shape_matches_what_the_message_builder_consumes(self, ft_db, repo):
+        data = build_forward_test_data(ft_db, "2026-07-28", repo=repo)
+        assert set(data) == {
+            "date", "new_positions", "closed_trades", "active_positions",
+            "active_candidates", "win_loss", "best_trades", "worst_trades",
+        }
+        assert data["date"] == "2026-07-28"
+        assert data["new_positions"] == []
+        assert data["closed_trades"] == []
+        assert data["active_positions"] == []
+        assert data["active_candidates"] == 0
+        assert data["win_loss"] is None
+        assert data["best_trades"] == [] and data["worst_trades"] == []
+
+    def test_reflects_real_opened_and_closed_positions(self, ft_db, repo):
+        sid = repo.insert_signal("2026-07-27", "BBCA", "TFB", "SHADOW")
+        _open_position(repo, sid, "BBCA", "2026-07-28")
+        _close_trade(repo, sid, "BBCA", "2026-07-28", "2026-07-29", 100.0, 106.0, "TP", 1)
+
+        data_open_day = build_forward_test_data(ft_db, "2026-07-28", repo=repo)
+        assert [p["ticker"] for p in data_open_day["new_positions"]] == ["BBCA"]
+
+        data_close_day = build_forward_test_data(ft_db, "2026-07-29", repo=repo)
+        assert [t["ticker"] for t in data_close_day["closed_trades"]] == ["BBCA"]
+        assert data_close_day["win_loss"]["wins"] == 1
+        assert data_close_day["best_trades"][0]["ticker"] == "BBCA"
+
+    def test_defaults_repo_when_not_injected(self, ft_db):
+        data = build_forward_test_data(ft_db, "2026-07-28")
+        assert data["active_positions"] == []
