@@ -114,6 +114,18 @@ def diff_snapshot(conn: sqlite3.Connection, date_str: str,
             "retained": retained, "movements": movements}
 
 
+def list_snapshot_inventory(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Ticker count per date, newest first -- the metadata layer for the
+    API v1 Snapshot endpoints (Workstream 2C Task 2C-2). A GROUP BY over
+    the same table record_snapshot already owns; no new business rule."""
+    ensure_table(conn)
+    rows = conn.execute(
+        "SELECT date, COUNT(*) FROM candidate_watchlist_snapshot "
+        "GROUP BY date ORDER BY date DESC"
+    ).fetchall()
+    return [{"date": d, "ticker_count": n} for d, n in rows]
+
+
 def build_message(date_str: str, diff: Optional[dict[str, Any]],
                   watchlist_size: int,
                   reasons: Optional[dict[str, str]] = None) -> str:

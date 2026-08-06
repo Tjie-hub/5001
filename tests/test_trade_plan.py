@@ -19,6 +19,7 @@ from engine.trade_plan import (
     get_snapshot,
     get_vpin_gate,
     list_snapshot_dates,
+    list_snapshot_inventory,
     provider_line,
     rank_approved,
     record_snapshot,
@@ -461,6 +462,29 @@ class TestWatchlistSnapshotReads:
     def test_list_snapshot_dates_empty_when_no_data(self):
         c = self._db()
         assert list_snapshot_dates(c, "eod") == []
+
+    def test_list_snapshot_inventory_counts_per_strategy_and_date(self):
+        c = self._db()
+        record_snapshot(c, "2026-08-04", "eod",
+                        self._ranked(("AKRA", 0.8, 40.0, ["R"]), ("CPIN", 0.6, 78.1, ["R"])))
+        record_snapshot(c, "2026-08-04", "premarket",
+                        self._ranked(("CPIN", 0.6, 78.1, ["R"])))
+
+        rows = list_snapshot_inventory(c)
+        by_key = {(r["strategy"], r["date"]): r["ticker_count"] for r in rows}
+        assert by_key == {("eod", "2026-08-04"): 2, ("premarket", "2026-08-04"): 1}
+
+    def test_list_snapshot_inventory_newest_first(self):
+        c = self._db()
+        record_snapshot(c, "2026-08-01", "eod", self._ranked(("OLD", 0.5, 10.0, ["S"])))
+        record_snapshot(c, "2026-08-05", "eod", self._ranked(("NEW", 0.6, 78.1, ["R"])))
+
+        rows = list_snapshot_inventory(c)
+        assert [r["date"] for r in rows] == ["2026-08-05", "2026-08-01"]
+
+    def test_list_snapshot_inventory_empty_when_no_data(self):
+        c = self._db()
+        assert list_snapshot_inventory(c) == []
 
     def test_build_message_renders_added_removed_and_moves(self):
         diff = {

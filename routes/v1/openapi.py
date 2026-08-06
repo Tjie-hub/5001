@@ -119,6 +119,20 @@ _PATHS = {
         "?status=active|removed|all, default active)",
         "Standard envelope wrapping {status, watchlist: [...], count}",
     ),
+    "/api/v1/snapshots": _get(
+        "Snapshot inventory/metadata across every snapshot-producing table "
+        "(watchlist_snapshot + candidate_watchlist_snapshot) -- not "
+        "content, see /api/v1/watchlists/* for that (optional "
+        "?type=watchlist|candidate_universe, ?strategy=eod|premarket)",
+        "Standard envelope wrapping {snapshots: [{type, strategy, date, "
+        "ticker_count}], count}",
+    ),
+    "/api/v1/snapshots/{date}": _get(
+        "Snapshot inventory/metadata for one exact date (optional ?type=, "
+        "?strategy=)",
+        "Standard envelope wrapping {date, snapshots: [...], count}; 404 "
+        "NO_SNAPSHOT_DATA if that date has no snapshot of any type",
+    ),
 }
 
 

@@ -26,3 +26,4 @@ from routes.v1 import metrics  # noqa: E402,F401 -- registers /metrics* on api_v
 from routes.v1 import config  # noqa: E402,F401 -- registers /config* on api_v1_bp
 from routes.v1 import health  # noqa: E402,F401 -- registers /health on api_v1_bp
 from routes.v1 import watchlists  # noqa: E402,F401 -- registers /watchlists* on api_v1_bp
+from routes.v1 import snapshots  # noqa: E402,F401 -- registers /snapshots* on api_v1_bp

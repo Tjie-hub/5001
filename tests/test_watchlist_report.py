@@ -15,6 +15,7 @@ from engine.watchlist_report import (
     build_message,
     diff_snapshot,
     ensure_table,
+    list_snapshot_inventory,
     record_snapshot,
 )
 
@@ -207,3 +208,27 @@ class TestTelegramFormatting:
                 "retained": ["GPSO"], "movements": {"GPSO": (2.10, 3.40)}}
         msg = build_message("2026-08-04", diff, 1)
         assert "2.10" in msg and "3.40" in msg
+
+
+class TestListSnapshotInventory:
+    """list_snapshot_inventory -- read-only addition for the API v1
+    Snapshot metadata endpoints (Production Engine Phase 2, Workstream 2C
+    Task 2C-2). A GROUP BY over the same table record_snapshot already
+    owns; no new business rule."""
+
+    def test_counts_tickers_per_date(self, conn):
+        record_snapshot(conn, "2026-08-04", _cands("GPSO", "ADRO"))
+        record_snapshot(conn, "2026-08-05", _cands("GPSO", "ADRO", "TLKM"))
+
+        rows = list_snapshot_inventory(conn)
+        by_date = {r["date"]: r["ticker_count"] for r in rows}
+        assert by_date == {"2026-08-04": 2, "2026-08-05": 3}
+
+    def test_newest_first(self, conn):
+        record_snapshot(conn, "2026-08-01", _cands("OLD"))
+        record_snapshot(conn, "2026-08-05", _cands("NEW"))
+        rows = list_snapshot_inventory(conn)
+        assert [r["date"] for r in rows] == ["2026-08-05", "2026-08-01"]
+
+    def test_empty_when_no_data(self, conn):
+        assert list_snapshot_inventory(conn) == []

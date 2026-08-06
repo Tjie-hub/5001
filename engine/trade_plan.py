@@ -273,6 +273,19 @@ def list_snapshot_dates(conn: sqlite3.Connection, strategy: str) -> list[str]:
     return [r[0] for r in rows]
 
 
+def list_snapshot_inventory(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Ticker count per (strategy, date), every strategy, newest date first
+    -- the metadata layer for the API v1 Snapshot endpoints (Workstream 2C
+    Task 2C-2). A GROUP BY over the same table get_snapshot/record_snapshot
+    already own; no new business rule."""
+    ensure_watchlist_snapshot_table(conn)
+    rows = conn.execute(
+        "SELECT strategy, date, COUNT(*) FROM watchlist_snapshot "
+        "GROUP BY strategy, date ORDER BY date DESC, strategy"
+    ).fetchall()
+    return [{"strategy": s, "date": d, "ticker_count": n} for s, d, n in rows]
+
+
 def diff_watchlist(conn: sqlite3.Connection, date_str: str, strategy: str,
                    ranked: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
     """Diff today's ranked watchlist against the most recent prior `strategy`
