@@ -1,21 +1,18 @@
 /**
- * Application root — Phase 9 Workstream A placeholder.
+ * Application root — Phase 9 Workstream B.
  *
- * Deliberately empty. Workstream A's exit criterion is that the five quality
- * gates pass on an *empty application*; there is no shell, no routing and no
- * workspace here by design.
- *
- * Replaced by the Application Shell in Workstream B (tasks B7–B10:
- * Global Header, Global Sidebar, Active Workspace, Status Footer).
- * Do not grow this file — it is scaffolding, not architecture.
- *
- * The single <main> landmark and <h1> exist only so the axe-core harness
- * (A7) has a valid document to assert against.
+ * Composes the provider stack (ADR-003 §16.1) with the route table. Everything
+ * of substance lives in app/providers and app/router; this file stays a
+ * two-line composition so there is never a temptation to put logic in it.
  */
+import { AppProviders } from './app/providers/app-providers'
+import { AppRoutes } from './app/router/app-router'
+import './app/shell/shell-theme.placeholder.css'
+
 export default function App() {
   return (
-    <main>
-      <h1>Production Decision OS</h1>
-    </main>
+    <AppProviders>
+      <AppRoutes />
+    </AppProviders>
   )
 }

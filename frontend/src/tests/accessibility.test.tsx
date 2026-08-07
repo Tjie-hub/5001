@@ -17,11 +17,14 @@ import App from '../App'
 import { expectNoAccessibilityViolations, runAxe } from './axe'
 
 describe('accessibility harness', () => {
-  it('reports no WCAG 2.2 AA violations for the empty application', async () => {
+  // Scans the whole application shell (Workstream B): header, sidebar,
+  // workspace region, footer. Slower than the empty app it replaced, hence the
+  // explicit timeout — axe walks a real tree under jsdom.
+  it('reports no WCAG 2.2 AA violations for the application shell', async () => {
     const { container } = render(<App />)
 
     await expectNoAccessibilityViolations(container)
-  })
+  }, 30_000)
 
   it('detects a deliberate violation (image without alt text)', async () => {
     const { container } = render(

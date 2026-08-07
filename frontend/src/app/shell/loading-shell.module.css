@@ -1,0 +1,34 @@
+/**
+ * Application loading placeholder — Phase 9 Workstream B (B10).
+ *
+ * Placeholder geometry only. Phase 6 P6-32 skeleton components — which must
+ * preserve the dimensions of the content they stand in for — are Workstream C.
+ */
+
+.region {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.bar,
+.barShort,
+.block {
+  background: var(--shell-surface);
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+}
+
+.bar {
+  height: 1.5rem;
+  width: 40%;
+}
+
+.barShort {
+  height: 0.875rem;
+  width: 25%;
+}
+
+.block {
+  height: 10rem;
+}

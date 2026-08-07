@@ -1,0 +1,68 @@
+/**
+ * Global Sidebar — Phase 9 Workstream B (B3).
+ * Zone A, Phase 4 P4-03 §3. Workspace navigation ONLY.
+ */
+
+.sidebar {
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--shell-gap) 0;
+  background: var(--shell-surface);
+  border-inline-end: 1px solid var(--shell-border);
+}
+
+.group {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.5rem;
+}
+
+/* The two frozen separators (Phase 4 P4-03 §4). Visual grouping only —
+   they introduce no hierarchy; all seven workspaces stay peers (P4-02 §3). */
+.group + .group {
+  margin-block-start: 0.5rem;
+  padding-block-start: 0.5rem;
+  border-block-start: 1px solid var(--shell-border);
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--shell-radius);
+  border-inline-start: 3px solid transparent;
+  color: var(--shell-text);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.link:hover {
+  background: var(--shell-surface-raised);
+}
+
+/* Active state carries THREE cues — border, weight and aria-current — because
+   Phase 6 P6-45 forbids communicating state through colour alone. */
+.link[aria-current='page'] {
+  background: var(--shell-surface-raised);
+  border-inline-start-color: var(--shell-accent);
+  font-weight: 600;
+}
+
+.marker {
+  flex: none;
+  width: 1.25rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--shell-text-muted);
+}
+
+.link[aria-current='page'] .marker {
+  color: var(--shell-accent);
+}
+
+.responsibility {
+  margin-inline-start: auto;
+  font-size: 0.6875rem;
+  color: var(--shell-text-muted);
+}

@@ -1,0 +1,49 @@
+/**
+ * Bottom navigation — Phase 9 Workstream B (B3, B11). Mobile only.
+ */
+
+.nav {
+  height: 100%;
+}
+
+.list {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 0.25rem;
+  border: 0;
+  border-block-start: 3px solid transparent;
+  background: none;
+  color: var(--shell-text-muted);
+  font-family: inherit;
+  font-size: 0.625rem;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Active state uses border + weight + colour + aria-current, never colour
+   alone (Phase 6 P6-45). */
+.link[aria-current='page'] {
+  border-block-start-color: var(--shell-accent);
+  color: var(--shell-text);
+  font-weight: 700;
+}

@@ -1,0 +1,47 @@
+/**
+ * Route not found — Phase 9 Workstream B (B2, B7).
+ */
+
+.container {
+  max-width: 34rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 600;
+}
+
+.message {
+  margin: 0.5rem 0 0;
+  color: var(--shell-text-muted);
+}
+
+.path {
+  padding: 0.0625rem 0.25rem;
+  border-radius: 3px;
+  background: var(--shell-surface);
+  color: var(--shell-text);
+  font-size: 0.8125rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-start: 1rem;
+}
+
+.action {
+  padding: 0.4375rem 0.75rem;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+  background: var(--shell-surface);
+  color: var(--shell-text);
+  font-size: 0.8125rem;
+  text-decoration: none;
+}
+
+.action:hover {
+  background: var(--shell-surface-raised);
+}

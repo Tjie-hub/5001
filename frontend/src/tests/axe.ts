@@ -31,15 +31,31 @@ const JSDOM_UNSUPPORTED_RULES = {
   'color-contrast': { enabled: false },
 } as const
 
+/**
+ * axe-core refuses to run two analyses at once ("Axe is already running").
+ * Vitest happily runs tests concurrently within a worker, so calls are chained
+ * through a single promise. Serialising here rather than forcing tests to be
+ * sequential keeps the constraint where it belongs — with the library that has
+ * it — instead of leaking into every suite that wants an a11y assertion.
+ */
+let axeQueue: Promise<unknown> = Promise.resolve()
+
 export async function runAxe(
   container: ElementContext,
   options: RunOptions = {},
 ): Promise<AxeResults> {
-  return axe.run(container, {
-    runOnly: { type: 'tag', values: [...WCAG_22_AA_TAGS] },
-    rules: { ...JSDOM_UNSUPPORTED_RULES, ...options.rules },
-    ...options,
-  })
+  const run = axeQueue.then(() =>
+    axe.run(container, {
+      runOnly: { type: 'tag', values: [...WCAG_22_AA_TAGS] },
+      rules: { ...JSDOM_UNSUPPORTED_RULES, ...options.rules },
+      ...options,
+    }),
+  )
+
+  // Keep the chain alive even when a run rejects.
+  axeQueue = run.catch(() => undefined)
+
+  return run
 }
 
 /** Format violations into something a failing test can be read from. */

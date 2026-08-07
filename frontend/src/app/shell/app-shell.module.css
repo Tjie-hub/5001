@@ -1,0 +1,170 @@
+/**
+ * Application shell layout grid — Phase 9 Workstream B (B1, B11).
+ *
+ * Layout is frozen by Phase 5 v1.1 §2:
+ *
+ *   +------------------------------------------------+
+ *   | Global Header                                  |
+ *   +----------------+-------------------------------+
+ *   | Global Sidebar | Active Workspace              |
+ *   +----------------+-------------------------------+
+ *   | Status Footer                                  |
+ *   +------------------------------------------------+
+ *
+ * Responsive behaviour is frozen by Phase 4 P4-03 §14 / P4-14 §14 and Phase 6
+ * Appendix H:
+ *
+ *   Desktop  persistent sidebar
+ *   Tablet   collapsible sidebar
+ *   Mobile   navigation drawer + bottom navigation
+ *
+ * P4-14 §14 and NP-14: responsive layouts change presentation only. Navigation
+ * hierarchy, workspace ownership, route identity and terminology are identical
+ * on every device.
+ *
+ * Breakpoint values are PROVISIONAL (blocker U-1 — no tokens exist). Workstream C
+ * replaces them.
+ */
+
+.shell {
+  display: grid;
+  grid-template-areas:
+    'header header'
+    'sidebar main'
+    'footer footer';
+  grid-template-columns: var(--shell-sidebar-width) 1fr;
+  grid-template-rows: var(--shell-header-height) 1fr var(--shell-footer-height);
+  min-height: 100dvh;
+}
+
+.header {
+  grid-area: header;
+}
+.sidebar {
+  grid-area: sidebar;
+}
+.main {
+  grid-area: main;
+  min-width: 0;
+  overflow-y: auto;
+  padding: var(--shell-gap);
+}
+.footer {
+  grid-area: footer;
+}
+
+/* Skip link — keyboard users reach the workspace without traversing the
+   sidebar on every navigation (Phase 6 P6-43, WCAG 2.4.1). */
+.skipLink {
+  position: absolute;
+  left: -9999px;
+  z-index: 100;
+  padding: 0.5rem 0.75rem;
+  background: var(--shell-accent);
+  color: var(--shell-accent-contrast);
+  border-radius: var(--shell-radius);
+  text-decoration: none;
+}
+
+.skipLink:focus {
+  left: 0.5rem;
+  top: 0.5rem;
+}
+
+/* Backdrop for the mobile drawer. Hidden at desktop and tablet. */
+.backdrop {
+  display: none;
+}
+
+/* Bottom navigation is mobile-only (Phase 6 Appendix H). */
+.bottomNav {
+  display: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Tablet — collapsible sidebar. Hierarchy unchanged.
+   --------------------------------------------------------------------------- */
+@media (max-width: 79.99rem) {
+  .shell {
+    grid-template-columns: auto 1fr;
+  }
+
+  .shell[data-sidebar='collapsed'] {
+    grid-template-areas:
+      'header header'
+      'main main'
+      'footer footer';
+    grid-template-columns: 1fr;
+  }
+
+  .shell[data-sidebar='collapsed'] .sidebar {
+    display: none;
+  }
+
+  .shell[data-sidebar='expanded'] {
+    grid-template-columns: var(--shell-sidebar-width) 1fr;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Mobile — drawer navigation plus persistent bottom navigation.
+   --------------------------------------------------------------------------- */
+@media (max-width: 47.99rem) {
+  .shell {
+    grid-template-areas:
+      'header'
+      'main'
+      'footer';
+    grid-template-columns: 1fr;
+    grid-template-rows:
+      var(--shell-header-height) 1fr auto
+      var(--shell-bottomnav-height);
+    padding-bottom: 0;
+  }
+
+  .main {
+    padding-bottom: calc(var(--shell-gap) + var(--shell-bottomnav-height));
+  }
+
+  /* Sidebar becomes an off-canvas drawer. */
+  .sidebar {
+    position: fixed;
+    inset-block: var(--shell-header-height) 0;
+    inset-inline-start: 0;
+    z-index: 40;
+    width: min(80vw, var(--shell-sidebar-width));
+    transform: translateX(-100%);
+    transition: transform 160ms ease;
+  }
+
+  .shell[data-sidebar='expanded'] .sidebar {
+    display: block;
+    transform: translateX(0);
+  }
+
+  .shell[data-sidebar='collapsed'] .sidebar {
+    display: block;
+    transform: translateX(-100%);
+    visibility: hidden;
+  }
+
+  .shell[data-sidebar='expanded'] .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgb(0 0 0 / 45%);
+    border: 0;
+  }
+
+  .bottomNav {
+    display: block;
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: 20;
+    height: var(--shell-bottomnav-height);
+    background: var(--shell-surface);
+    border-block-start: 1px solid var(--shell-border);
+  }
+}

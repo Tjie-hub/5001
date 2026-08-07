@@ -1,0 +1,140 @@
+/**
+ * Global Header — Phase 9 Workstream B (B4).
+ * Zone B, Phase 4 P4-03 §3. Identical across all workspaces.
+ */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: 100%;
+  padding-inline: 0.75rem;
+  background: var(--shell-surface);
+  border-block-end: 1px solid var(--shell-border);
+}
+
+.title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.titleLink {
+  color: var(--shell-text);
+  text-decoration: none;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.search {
+  flex: 0 1 20rem;
+  min-width: 0;
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+  background: var(--shell-bg);
+  color: var(--shell-text-muted);
+  font-size: 0.8125rem;
+  text-decoration: none;
+  text-align: start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search:hover {
+  color: var(--shell-text);
+}
+
+.status {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3125rem;
+  font-size: 0.75rem;
+  color: var(--shell-text-muted);
+  white-space: nowrap;
+}
+
+.statusLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.625rem;
+}
+
+.statusValue {
+  color: var(--shell-text);
+  font-weight: 600;
+}
+
+.action {
+  flex: none;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+  background: var(--shell-bg);
+  color: var(--shell-text);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.action:hover:not(:disabled) {
+  background: var(--shell-surface-raised);
+}
+
+.action:disabled {
+  cursor: not-allowed;
+  color: var(--shell-text-muted);
+}
+
+/* Sidebar toggle is irrelevant on desktop, where the sidebar is persistent
+   (Phase 6 Appendix H). */
+.toggle {
+  display: none;
+}
+
+@media (max-width: 79.99rem) {
+  .toggle {
+    display: inline-flex;
+  }
+}
+
+/* Below tablet, status placeholders are dropped from the header rather than
+   truncated. They remain available in the Status Footer, so no information is
+   lost — presentation adapts, content does not (P4-14 §17). */
+@media (max-width: 61.99rem) {
+  .status {
+    display: none;
+  }
+}
+
+/*
+ * Mobile — "Simplified Toolbar" (Phase 4 P4-14 §17, Phase 6 P6-23
+ * "Overflow-first toolbar").
+ *
+ * The two disabled placeholders are dropped at this width. They have no
+ * function yet, so nothing is hidden — P6-40's "no hidden functionality" rule
+ * is about capability, not empty affordances.
+ *
+ * WHEN THEY GAIN FUNCTION (Workstream D; account depends on U-4) they must be
+ * RELOCATED into an overflow menu or the drawer, not left dropped. Removing a
+ * working control on mobile would violate P6-40 outright.
+ */
+@media (max-width: 47.99rem) {
+  .search {
+    flex-basis: auto;
+    flex-shrink: 1;
+  }
+
+  .title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .action:disabled {
+    display: none;
+  }
+}

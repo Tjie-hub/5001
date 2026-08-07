@@ -1,0 +1,80 @@
+/**
+ * Route table — Phase 9 Workstream B (B2, B7).
+ *
+ * Implements Phase 4 Appendix B's canonical routes. Every workspace owns
+ * exactly one canonical root (P4-06 §4); no route has two owners (P4-06 §17);
+ * no nested workspaces (P4-06 §3).
+ *
+ * NO LOADERS. React Router's data APIs would fetch outside the frozen chain in
+ * Phase 7 v1.1 §8 (Component → ViewModel → Domain Adapter → Repository →
+ * Server State → API Client). Data access arrives in Workstream E through the
+ * Repository seam, and ADR-003 puts caching in TanStack Query — not in the
+ * router. The router resolves URLs; it does not fetch.
+ *
+ * Route elements are the generic WorkspaceShellPage. Workstream D replaces each
+ * one with the real workspace built inside its own domain directory.
+ */
+import { Navigate, Route, Routes } from 'react-router'
+import { useParams } from 'react-router'
+import { AppShell } from '../shell/app-shell'
+import { WorkspaceShellPage } from '../shell/workspace-shell-page'
+import { UrlNormalizationGuard } from './url-normalization-guard'
+import { NotFoundPage } from './not-found-page'
+import { getWorkspace, ROUTE_PATHS, type WorkspaceId } from './workspaces'
+
+function WorkspaceRoute({ id }: { id: WorkspaceId }) {
+  return <WorkspaceShellPage workspace={getWorkspace(id)} />
+}
+
+/**
+ * Ticker is the one workspace whose canonical route carries a resource
+ * identifier. The symbol is read from the URL — Resource State is owned by the
+ * Router (ADR-001 §3), never mirrored into component state.
+ */
+function TickerRoute() {
+  const { symbol } = useParams<{ symbol: string }>()
+
+  return <WorkspaceShellPage workspace={getWorkspace('ticker')} resourceId={symbol} />
+}
+
+export function AppRoutes() {
+  return (
+    <>
+      <UrlNormalizationGuard />
+
+      <Routes>
+        <Route element={<AppShell />}>
+          {/*
+            Phase 4 Appendix B registers `/` as Home, but P4-02 §3 defines no
+            Home workspace and Appendix A gives it no screens. UI-001 makes
+            Decision Center the primary operational workspace, so `/` resolves
+            there. REPLACE, so Back never lands on an empty root.
+          */}
+          <Route path={ROUTE_PATHS.home} element={<Navigate to={ROUTE_PATHS.decision} replace />} />
+
+          <Route path={ROUTE_PATHS.decision} element={<WorkspaceRoute id="decision" />} />
+          <Route path={ROUTE_PATHS.portfolio} element={<WorkspaceRoute id="portfolio" />} />
+          <Route path={ROUTE_PATHS.watchlist} element={<WorkspaceRoute id="watchlist" />} />
+          <Route path={ROUTE_PATHS.market} element={<WorkspaceRoute id="market" />} />
+          <Route path={ROUTE_PATHS.search} element={<WorkspaceRoute id="search" />} />
+          <Route path={ROUTE_PATHS.settings} element={<WorkspaceRoute id="settings" />} />
+
+          {/*
+            `/ticker` carries no symbol. It exists because NP-03 requires every
+            workspace to be directly reachable from Global Navigation, and the
+            sidebar cannot link to a parameterised route. It renders the Ticker
+            workspace with no instrument selected — a legitimate empty state
+            under P4-14 §10, not a dead end.
+
+            Flagged for owner ruling: Phase 4 Appendix B registers only
+            /ticker/:symbol. This is the same gap family as ADR-002.
+          */}
+          <Route path={ROUTE_PATHS.ticker} element={<WorkspaceRoute id="ticker" />} />
+          <Route path={ROUTE_PATHS.tickerSymbol} element={<TickerRoute />} />
+
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Routes>
+    </>
+  )
+}

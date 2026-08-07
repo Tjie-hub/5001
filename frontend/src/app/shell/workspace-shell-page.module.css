@@ -1,0 +1,79 @@
+/**
+ * Workspace shell page — Phase 9 Workstream B (B6).
+ *
+ * Region NAMES follow the frozen layout specification; layout here is generic
+ * on purpose. Per-workspace layout is Workstream D's, and Phase 8 v1.1 §6
+ * forbids optimising individual workspaces during shell work.
+ */
+
+.page {
+  max-width: 80rem;
+}
+
+.pageHeader {
+  margin-block-end: var(--shell-gap);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 600;
+}
+
+.title:focus-visible {
+  outline: 2px solid var(--shell-focus);
+  outline-offset: 4px;
+}
+
+.resource {
+  color: var(--shell-text-muted);
+  font-weight: 400;
+}
+
+.purpose {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--shell-text-muted);
+}
+
+.contentRegion {
+  padding: 1.5rem;
+  border: 1px dashed var(--shell-border);
+  border-radius: var(--shell-radius);
+  background: var(--shell-surface);
+}
+
+.regions {
+  display: grid;
+  gap: var(--shell-gap);
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  margin-block-start: var(--shell-gap);
+}
+
+.region {
+  padding: 0.875rem;
+  border: 1px dashed var(--shell-border);
+  border-radius: var(--shell-radius);
+}
+
+.regionTitle {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--shell-text-muted);
+}
+
+.placeholder {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--shell-text-muted);
+}
+
+/* Phase 6 Appendix H — mobile collapses to a single column. Presentation only. */
+@media (max-width: 47.99rem) {
+  .regions {
+    grid-template-columns: 1fr;
+  }
+}
