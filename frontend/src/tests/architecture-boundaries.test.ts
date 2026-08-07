@@ -14,7 +14,7 @@
  *
  * If a guard is removed or weakened, a test here fails. That is the point.
  */
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { ESLint } from 'eslint'
 
 // cwd defaults to the process working directory, which is the frontend package
@@ -38,6 +38,14 @@ async function expectAllowed(filePath: string, code: string) {
   const ruleIds = await lintAs(filePath, code)
   expect(ruleIds, `expected ${filePath} to be allowed for:\n${code}`).not.toContain(RESTRICTED)
 }
+
+// ESLint compiles the flat config and boots typescript-eslint on the first
+// lintText call — a one-off cost of several seconds that would otherwise land
+// on whichever test happens to run first and time it out. Absorb it here so
+// the individual assertions stay fast and the suite is not order-dependent.
+beforeAll(async () => {
+  await lintAs('src/tests/__warmup__.ts', 'export const warmup = true\n')
+}, 60_000)
 
 describe('ADR-001 §4 — cross-workspace imports', () => {
   it('blocks a workspace importing another workspace (market → portfolio)', async () => {
