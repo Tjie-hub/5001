@@ -1,0 +1,112 @@
+name: frontend
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+
+# Cancel in-progress runs on the same ref when a new commit is pushed.
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  # The four required gates from Phase 7 v1.1 §18 / Phase 8 v1.1 §3.1.
+  # All four must pass before merge; they are Phase 9 acceptance criteria
+  # AC-1 (test), AC-2 (lint), AC-3 (typecheck) and AC-4 (build).
+  #
+  # Run as separate steps rather than one script so a failure names the gate
+  # it broke. `if: always()` is deliberately NOT used — a lint failure should
+  # stop the job, matching the local pre-merge contract.
+  gates:
+    name: quality gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Format check
+        run: npm run format:check
+
+  # End-to-end and accessibility. Kept out of the required gates because it
+  # needs a browser download and a live server, and Workstream A has no
+  # journeys to assert yet. Promoted to required in Workstream F, once the
+  # Phase 7 v1.1 §17 critical journeys exist.
+  e2e:
+    name: end-to-end (non-blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npm run e2e:install
+
+      - name: Run Playwright
+        run: npm run e2e
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
+  # Deployment
+  #
+  # TODO(ADR-005): no deployment stage until the deployment and environment
+  # strategy exists. Phase 7 v1.0's outline sections 57-58 (Environment
+  # Strategy, Deployment Pipeline) were dropped rather than answered in v1.1,
+  # so there is no build target, hosting model, environment configuration, or
+  # decision on how this relates to the existing gunicorn/systemd release
+  # pipeline. Tracked as blocker U-8.
+  #
+  # Also unresolved before anything ships: ADR-006 (legacy Flask UI
+  # disposition) — the app currently serves seven Jinja templates on :5001 and
+  # no cutover plan exists.
