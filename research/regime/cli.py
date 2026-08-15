@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import sys
 
-from data.db import connect as db_connect
+from research.db import connect_research
 from research.regime.config import load_config
 from research.regime.profile import build_profile
 from research.regime.storage import (ensure_profile_tables, persist_profile,
@@ -18,7 +18,7 @@ from research.regime.storage import (ensure_profile_tables, persist_profile,
 def _build(strategy_fn: str) -> None:
     from research.regime.collect import collect_tagged_trades, corpus_fingerprint
     cfg = load_config()
-    with db_connect() as conn:
+    with connect_research() as conn:
         ensure_profile_tables(conn)
         trades = collect_tagged_trades(conn, strategy_fn, cfg)
         fp = corpus_fingerprint(trades)
@@ -32,7 +32,7 @@ def _build(strategy_fn: str) -> None:
 
 
 def _query(strategy_fn: str) -> None:
-    with db_connect() as conn:
+    with connect_research() as conn:
         ensure_profile_tables(conn)
         prof = load_latest_profile(conn, strategy_fn)
     if prof is None:
