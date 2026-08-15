@@ -51,3 +51,9 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # Weekly restore drill (audit P-3: "a backup is not complete unless a restore
 # has been verified") — Sunday 09:00 on the newest backup.
 0 9 * * 0 cd $D && $W db_restore_drill sh -c 'venv/bin/python3 -m scripts.db_restore "$(ls -t ~/backups/idx-walkforward-5001/*.db.zst | head -1)"'
+
+# Backup/restore-drill dead-man's-switch (P1-2): cron_wrap.sh alerts on a job
+# firing and FAILING, but not on a job silently never firing at all (a ~36h
+# backup gap already happened once, 2026-07-25/26, and went undetected until
+# manually noticed). Checks the three jobs above's own cron_wrap.sh log mtimes.
+0 7 * * * cd $D && $W backup_heartbeat_check venv/bin/python3 scripts/check_backup_heartbeat.py
