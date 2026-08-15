@@ -12,6 +12,7 @@ import sqlite3
 import pandas as pd
 import pytest
 
+import research.db as research_db
 import research.jobs as jobs
 import research.walkforward_multi as wfm
 
@@ -40,6 +41,11 @@ def tmp_db(tmp_path, monkeypatch):
     monkeypatch.setattr(jobs, "DB_PATH", db)
     monkeypatch.setattr(jobs, "_load_ohlcv_bulk", lambda final_only=False: {"AAA": _mini_df(), "BBB": _mini_df()})
     monkeypatch.setattr(jobs, "send_telegram", lambda *a, **k: None)
+    # R-5: track_run() now defaults to connect_research(); without this, the
+    # real data/research.db (and read-only-attached data/walkforward.db) get
+    # hit instead of this fixture's tmp db.
+    monkeypatch.setattr(research_db, "RESEARCH_DB_PATH", str(tmp_path / "research.db"))
+    monkeypatch.setattr(research_db, "PROD_DB_PATH", db)
     return db
 
 

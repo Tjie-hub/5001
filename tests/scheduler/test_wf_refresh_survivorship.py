@@ -19,9 +19,15 @@ def _df(n=400, seed=1):
 
 @pytest.fixture()
 def wf_db(tmp_path, monkeypatch):
+    import research.db as research_db
     import research.jobs as jobs
     db = str(tmp_path / "wf.db")
     monkeypatch.setattr(jobs, "DB_PATH", db)
+    # R-5: track_run() now defaults to connect_research(); without this, the
+    # real data/research.db (and read-only-attached data/walkforward.db) get
+    # hit instead of this fixture's tmp db.
+    monkeypatch.setattr(research_db, "RESEARCH_DB_PATH", str(tmp_path / "research.db"))
+    monkeypatch.setattr(research_db, "PROD_DB_PATH", db)
     conn = sqlite3.connect(db)
     conn.execute("CREATE TABLE idx_tickers (ticker TEXT PRIMARY KEY, status TEXT)")
     conn.execute("INSERT INTO idx_tickers VALUES ('LIVE','active')")
