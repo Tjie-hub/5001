@@ -160,9 +160,34 @@ def _add_job(scheduler, func, trigger, **kwargs):
     APScheduler job id (kwargs['id']) — unique per registered cron slot, so a
     function registered multiple times at different times of day (e.g.
     run_flow_fetch) gets one row per slot, not one shared row per function.
+
+    P1-1: every one of start_scheduler()'s ~20 registrations funnels through
+    this single function, so isolating failures here (rather than at each of
+    the ~20 call sites) protects all of them at once. Before this, a bad
+    registration (malformed trigger, duplicate id, etc.) raised straight out
+    of start_scheduler(), aborting the whole worker boot -- every job after
+    the failing one in registration order silently never got registered, and
+    the process either crash-looped or came up with an unknown-incomplete
+    job set. Now a bad registration is logged loudly, alerted, and skipped;
+    every other job still registers.
     """
     job_id = kwargs.get("id") or getattr(func, "__name__", "unnamed_job")
-    scheduler.add_job(wrap_scheduled(func, job_id), trigger, **kwargs)
+    try:
+        scheduler.add_job(wrap_scheduled(func, job_id), trigger, **kwargs)
+    except Exception:
+        logger.exception(
+            f"[scheduler] failed to register job {job_id!r} -- it will NOT "
+            f"run until this is fixed and the service is restarted. "
+            f"Continuing to register remaining jobs."
+        )
+        try:
+            send_telegram(
+                f"🔴 Scheduler failed to register job '{job_id}' at "
+                f"startup -- it will NOT run until fixed + restarted. "
+                f"Other jobs registered normally. See logs."
+            )
+        except Exception:
+            pass
 
 
 def _make_job_error_listener(scheduler, rate_limiter: "JobErrorRateLimiter" = None):
