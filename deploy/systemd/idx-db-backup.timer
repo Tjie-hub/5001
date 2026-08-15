@@ -1,0 +1,13 @@
+# Persistent=true is the whole point of this migration (P2-6): if the
+# laptop is asleep/off at 21:30, systemd runs the job shortly after it next
+# wakes instead of silently skipping until tomorrow's slot. Vanilla cron has
+# no equivalent -- a missed fire time is just gone.
+[Unit]
+Description=Timer for IDX nightly DB backup (walkforward.db)
+
+[Timer]
+OnCalendar=*-*-* 21:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

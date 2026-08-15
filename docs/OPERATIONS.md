@@ -95,23 +95,37 @@ ORDER BY ts DESC LIMIT 20;
 
 ## Backup & restore
 
-Nightly cron (21:30) runs `python -m scripts.db_backup`:
+**Since 2026-08-15 (P2-6): these 3 jobs run on systemd `--user` timers, not cron** — source of
+truth `deploy/systemd/` (`README.md` has install/verify/uninstall). Vanilla cron has no catch-up
+semantics: a fire time missed while this box (a laptop that suspends/reboots on its own schedule)
+was asleep is silently skipped, not retried. That's exactly what caused the weekly restore drill
+to go 27 days (2026-07-19 → 2026-08-15) without actually running, discovered only via the P1-2
+dead-man's-switch. Every `.timer` sets `Persistent=true`, so a missed fire runs shortly after the
+next boot/wake instead. All 3 still route through `scripts/cron_wrap.sh` under the same job names
+(`db_backup`, `db_backup_research`, `db_restore_drill`) — per-job logs, Telegram alert-on-failure,
+and the dead-man's-switch below all keep working unmodified; only the trigger mechanism changed.
+
+Nightly (21:30) runs `python -m scripts.db_backup`:
 snapshot via SQLite online-backup API (WAL-safe while the app writes) →
 `PRAGMA integrity_check` + per-table row counts **before** compression →
 zstd → `.meta.json` → retention prune (**7 daily + 4 weekly**).
 Destination: `~/backups/idx-walkforward-5001/` (override: `BACKUP_DIR`).
-A failed verification deletes the snapshot and exits non-zero → cron alert.
+A failed verification deletes the snapshot and exits non-zero → alert.
 
-Since 2026-07-21 (R-5 Tier-1 split): a second nightly cron (21:35) backs up `data/research.db`
+Since 2026-07-21 (R-5 Tier-1 split): a second nightly job (21:35) backs up `data/research.db`
 the same way, with `--prefix research` so its retention pool never interleaves with
 `walkforward-*` backups. Restore drills (`scripts.db_restore`) are single-DB by design; run the
 drill against whichever backup you need to verify by passing its exact filename.
 
-Weekly restore drill (Sunday 09:00, cron): `python -m scripts.db_restore
+Weekly restore drill (Sunday 09:00): `python -m scripts.db_restore
 <newest backup>` — decompress, integrity check, row-count match vs meta,
 touch nothing. **A backup is not considered good until this has passed.**
 First full drill on the real 3.2 GB DB passed 2026-07-10 (52 tables,
-24,003,548 rows verified).
+24,003,548 rows verified). The drill's glob is prefix-scoped to
+`walkforward-*.db.zst` (P2-6, 2026-08-15) — a bare `*.db.zst` picks the
+newest backup of *either* prefix sharing the directory, so the
+much-smaller `research-*` backup silently made a real drill run verify the
+wrong, non-critical file while reporting "RESTORE VERIFIED OK."
 
 Real restore:
 
@@ -221,6 +235,11 @@ Every job runs through `scripts/cron_wrap.sh`: per-job log at
 `logs/cron_<job>.log` + Telegram alert on ANY nonzero exit — a missing
 script alarms instead of failing silently for weeks (audit P-4).
 `tests/test_cron_contract.py` asserts every referenced script exists.
+
+The two DB backups and the weekly restore drill moved to systemd `--user` timers
+(`deploy/systemd/`) — see **Backup & restore** above for why. Everything else stays on cron.
+`tests/test_systemd_timers_contract.py` covers those 3; `test_cron_contract.py` asserts they
+aren't also still scheduled on cron (double-run guard).
 
 ## Telegram operational reporting (Production Engine Phases 1–3, 2026-07-28)
 

@@ -1,0 +1,9 @@
+# IDX — nightly research.db backup (R-5 Tier-1 split). Moved off vanilla
+# cron 2026-08-15 alongside idx-db-backup (P2-6 follow-up).
+[Unit]
+Description=IDX nightly DB backup (research.db, R-5)
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/idx-walkforward-5001
+ExecStart=%h/idx-walkforward-5001/scripts/cron_wrap.sh db_backup_research venv/bin/python3 -m scripts.db_backup --db data/research.db --prefix research

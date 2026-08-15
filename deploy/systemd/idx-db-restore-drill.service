@@ -1,0 +1,16 @@
+# IDX — weekly restore drill. Moved off vanilla cron 2026-08-15 (P2-6): a
+# missed Sunday 09:00 fire (laptop asleep/off) was silently skipped for a
+# full week with no retry, which is exactly what happened 2026-07-19 to
+# 2026-08-15. Persistent=true on the paired .timer fixes that.
+#
+# Glob is prefix-scoped to walkforward-*.db.zst (P2-6, same date): a bare
+# *.db.zst picks the newest backup of EITHER prefix sharing the backup dir,
+# so R-5's research.db backup silently made a real drill run verify the
+# wrong, tiny, non-critical file while reporting success.
+[Unit]
+Description=IDX weekly restore drill (verify-only, touches nothing)
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/idx-walkforward-5001
+ExecStart=%h/idx-walkforward-5001/scripts/cron_wrap.sh db_restore_drill sh -c 'venv/bin/python3 -m scripts.db_restore "$(ls -t ~/backups/idx-walkforward-5001/walkforward-*.db.zst | head -1)"'

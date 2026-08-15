@@ -1,0 +1,9 @@
+# IDX — nightly walkforward.db backup (P2-6 follow-up: moved off vanilla cron
+# 2026-08-15). Install as a --user unit: see deploy/systemd/README.md.
+[Unit]
+Description=IDX nightly DB backup (walkforward.db)
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/idx-walkforward-5001
+ExecStart=%h/idx-walkforward-5001/scripts/cron_wrap.sh db_backup venv/bin/python3 -m scripts.db_backup

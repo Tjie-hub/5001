@@ -27,20 +27,20 @@ def test_dead_jobs_are_gone():
         assert not any(dead in l for l in JOB_LINES), f"{dead} still scheduled"
 
 
-def test_restore_drill_targets_walkforward_backups_specifically():
-    """Found 2026-08-15 running the drill by hand: a bare `*.db.zst | head
-    -1` glob picks the newest backup of EITHER prefix sharing the backup
-    dir. R-5's research.db backup (added same session) landing after the
-    last walkforward.db one made the drill silently verify the wrong, tiny,
-    non-critical file while reporting "RESTORE VERIFIED OK" -- the
-    production-critical database was never actually tested that run."""
-    drill_lines = [l for l in JOB_LINES if "db_restore_drill" in l]
-    assert len(drill_lines) == 1
-    assert "walkforward-*.db.zst" in drill_lines[0], (
-        "restore-drill glob must be prefix-scoped to walkforward-*.db.zst, "
-        "not a bare *.db.zst that can match a different backup family's "
-        "file (e.g. research-*.db.zst)"
-    )
+def test_db_backup_and_restore_drill_are_not_double_scheduled():
+    """P2-6 (2026-08-15): db_backup, db_backup_research, and db_restore_drill
+    moved from cron to systemd --user timers (deploy/systemd/) so a missed
+    fire time (this box sleeps/reboots on its own schedule) catches up via
+    Persistent=true instead of silently skipping for a full cycle. If any of
+    the three ever reappear here too, both cron AND systemd would fire them
+    -- see tests/test_systemd_timers_contract.py for the systemd-side checks,
+    including the prefix-scoping fix (bare *.db.zst vs walkforward-*.db.zst)
+    found while running the drill by hand that day."""
+    for job in ("db_backup", "db_backup_research", "db_restore_drill"):
+        assert not any(job in l for l in JOB_LINES), (
+            f"{job} is scheduled on both cron (deploy/crontab) and systemd "
+            f"(deploy/systemd/) -- remove it from one"
+        )
 
 
 def test_all_referenced_scripts_exist():

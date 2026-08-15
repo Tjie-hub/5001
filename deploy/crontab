@@ -41,23 +41,15 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # not harmful; this makes cadence match the documented monthly intent.
 0 10 1-7 * * [ "$(date +\%u)" = "7" ] && cd $D && $W research_roller venv/bin/python3 -m research.cli roller
 
-# Nightly DB backup + verification + retention prune (audit P-3) — 21:30,
-# after the 21:00 OHLCV reconciliation. Runs daily incl. weekends (cheap).
-30 21 * * * cd $D && $W db_backup venv/bin/python3 -m scripts.db_backup
-
-# R-5: research.db (Tier-1 discovery tables) backed up on its own retention pool
-35 21 * * * cd $D && $W db_backup_research venv/bin/python3 -m scripts.db_backup --db data/research.db --prefix research
-
-# Weekly restore drill (audit P-3: "a backup is not complete unless a restore
-# has been verified") — Sunday 09:00 on the newest walkforward.db backup.
-# R-5 (2026-08-15) added a second, much-smaller research.db backup prefix
-# into the same directory -- the old bare `*.db.zst | head -1` glob picks
-# the newest file of EITHER prefix, so a research.db backup landing after
-# the last walkforward.db one made the drill silently verify the wrong,
-# tiny, non-critical file while reporting "RESTORE VERIFIED OK". Confirmed
-# by hand: exactly this happened on 2026-08-15's catch-up drill run.
-# Prefix-scoped so it can never again drift onto the wrong backup family.
-0 9 * * 0 cd $D && $W db_restore_drill sh -c 'venv/bin/python3 -m scripts.db_restore "$(ls -t ~/backups/idx-walkforward-5001/walkforward-*.db.zst | head -1)"'
+# Nightly DB backup (walkforward.db + research.db) and the weekly restore
+# drill moved OFF cron to systemd --user timers on 2026-08-15 (P2-6):
+# vanilla cron has no catch-up semantics, so a fire time missed while this
+# box (a laptop that suspends/reboots on its own schedule) was asleep is
+# silently skipped, not retried -- exactly what caused the weekly drill to
+# go 27 days (2026-07-19 to 2026-08-15) without actually running.
+# Source of truth: deploy/systemd/ (README.md has install/verify/uninstall).
+# The dead-man's-switch below is unaffected -- it reads the same
+# cron_wrap.sh log files regardless of which trigger wrote them.
 
 # Backup/restore-drill dead-man's-switch (P1-2): cron_wrap.sh alerts on a job
 # firing and FAILING, but not on a job silently never firing at all (a ~36h

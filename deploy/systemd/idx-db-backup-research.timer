@@ -1,0 +1,9 @@
+[Unit]
+Description=Timer for IDX nightly DB backup (research.db, R-5)
+
+[Timer]
+OnCalendar=*-*-* 21:35:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
