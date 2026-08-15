@@ -71,8 +71,7 @@ def refresh_wf_scores():
         print("[WF] refresh_wf_scores: another run is in progress — skipped")
         return
     try:
-      with track_run("wf-refresh", params={"final_only": True, "adjusted": True},
-                     db_path=DB_PATH) as run:
+      with track_run("wf-refresh", params={"final_only": True, "adjusted": True}) as run:
         # Survivorship (item 2.4): score EVERY ticker in the corpus, not just
         # currently-active idx_tickers — a name that later delists must keep
         # its real (often losing) history in wf_scores. _refresh_backtest_cache
@@ -189,8 +188,7 @@ def _refresh_backtest_cache():
         from engine.regime_filter import detect_regime
         from datetime import date
         today = date.today().isoformat()
-        with track_run("backtest-cache", params={"final_only": True, "adjusted": True},
-                       db_path=DB_PATH) as run:
+        with track_run("backtest-cache", params={"final_only": True, "adjusted": True}) as run:
             conn = db_connect(DB_PATH)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS backtest_cache (
@@ -243,8 +241,7 @@ def run_backtest_roller():
     now_str = datetime.now(WIB).strftime('%H:%M')
     print(f"[{now_str}] Backtest roller dimulai...")
     try:
-        with track_run("roller", params={"include_partial": True},
-                       db_path=DB_PATH) as run:
+        with track_run("roller", params={"include_partial": True}) as run:
             summary = roll_all(include_partial=True)
             n_exported = export_meta_dataset()
             run.metrics.update({"new_complete": summary["new_complete"],

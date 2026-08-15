@@ -335,18 +335,26 @@ def _seed_wf_corpus(db):
 
 
 def test_refresh_wf_scores_stamps_run_id(monkeypatch):
+    import research.db as research_db
     import research.jobs as jobs
     with tempfile.TemporaryDirectory() as tmp:
         db = os.path.join(tmp, "t.db")
+        research = os.path.join(tmp, "research.db")
         _seed_wf_corpus(db)
         monkeypatch.setattr(jobs, "DB_PATH", db)
         monkeypatch.setattr("data.loaders.DB_PATH", db)
         monkeypatch.setattr(jobs, "send_telegram", lambda *a, **k: None)
+        monkeypatch.setattr(research_db, "RESEARCH_DB_PATH", research)
+        monkeypatch.setattr(research_db, "PROD_DB_PATH", db)
         jobs.refresh_wf_scores()
-        conn = sqlite3.connect(db)
-        run = conn.execute(
+        # research_runs lives in the R-5 split (research.db); wf_scores/wf_edge
+        # are Tier 2 and stay in the prod DB.
+        rconn = sqlite3.connect(research)
+        run = rconn.execute(
             "SELECT run_id, status, dataset_fingerprint FROM research_runs "
             "WHERE kind='wf-refresh'").fetchone()
+        rconn.close()
+        conn = sqlite3.connect(db)
         wf_run_ids = {r[0] for r in conn.execute(
             "SELECT DISTINCT run_id FROM wf_scores").fetchall()}
         edge_run_ids = {r[0] for r in conn.execute(
@@ -358,17 +366,23 @@ def test_refresh_wf_scores_stamps_run_id(monkeypatch):
 
 
 def test_refresh_backtest_cache_stamps_run_id(monkeypatch):
+    import research.db as research_db
     import research.jobs as jobs
     with tempfile.TemporaryDirectory() as tmp:
         db = os.path.join(tmp, "t.db")
+        research = os.path.join(tmp, "research.db")
         _seed_wf_corpus(db)
         monkeypatch.setattr(jobs, "DB_PATH", db)
         monkeypatch.setattr("data.loaders.DB_PATH", db)
+        monkeypatch.setattr(research_db, "RESEARCH_DB_PATH", research)
+        monkeypatch.setattr(research_db, "PROD_DB_PATH", db)
         jobs._refresh_backtest_cache()
-        conn = sqlite3.connect(db)
-        run = conn.execute(
+        rconn = sqlite3.connect(research)
+        run = rconn.execute(
             "SELECT run_id, status FROM research_runs "
             "WHERE kind='backtest-cache'").fetchone()
+        rconn.close()
+        conn = sqlite3.connect(db)
         cache_run_ids = {r[0] for r in conn.execute(
             "SELECT DISTINCT run_id FROM backtest_cache").fetchall()}
         conn.close()
