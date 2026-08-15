@@ -546,92 +546,112 @@ def check_all_open_trades():
     total_alerts = 0
 
     for trade in open_trades:
-        strategy = (trade.get('strategy') or '').strip().lower()
+        try:
+            strategy = (trade.get('strategy') or '').strip().lower()
 
-        if strategy == 'swing trend':
-            result = _evaluate_swing_trend(trade)
-            # Persist trailing state even when not closing
-            if result.get('new_sl') or result.get('new_highest') or result.get('new_adx_peak'):
+            if strategy == 'swing trend':
+                result = _evaluate_swing_trend(trade)
+                # Persist trailing state even when not closing
+                if result.get('new_sl') or result.get('new_highest') or result.get('new_adx_peak'):
+                    try:
+                        conn = get_db()
+                        conn.execute(
+                            "UPDATE paper_trades SET sl_price=?, highest_seen=?, adx_peak=? WHERE id=?",
+                            (result.get('new_sl') or trade['sl_price'],
+                             result.get('new_highest') or trade.get('highest_seen'),
+                             result.get('new_adx_peak') or trade.get('adx_peak'),
+                             trade['id'])
+                        )
+                        conn.commit(); conn.close()
+                    except Exception as e:
+                        logger.error(f"[monitor] trail update failed: {e}")
+
+                # Agent exit review: probabilistic closes give agent a veto
+                if (result['action'] == 'CLOSE'
+                        and result.get('reason') in ('R3_ADX_FADE', 'R4_DISTRIBUTION')
+                        and not _agent_confirms_exit(trade, result)):
+                    logger.info(
+                        f"[monitor] Agent overrode {result['reason']} exit for "
+                        f"{trade['ticker']} — holding position"
+                    )
+                    result = {**result, 'action': 'HOLD'}
+
+                if result['action'] == 'CLOSE':
+                    cur = _get_current_price(trade['ticker']) or float(trade.get('sl_price') or trade['entry_price'])
+                    try:
+                        close_trade(int(trade['id']), float(cur), result['reason'], notify=False)
+                        logger.info(f"[monitor] Auto-closed {trade['ticker']} ({result['reason']})")
+                    except Exception as e:
+                        logger.error(f"[monitor] close_trade failed: {e}")
+                    if result.get('message'):
+                        send_telegram(result['message'])
+                        try:
+                            log_trade_alert(trade['ticker'], trade['id'], result['reason'], result['message'])
+                        except Exception:
+                            pass
+                        total_alerts += 1
+                continue
+
+            # Non-swing: check for stop loss / TP, alerts, and trailing stop
+            result = _check_trade(trade)
+
+            # Persist trailing stop update if SL or highest_seen changed
+            if result.get('trail_update'):
+                tu = result['trail_update']
                 try:
                     conn = get_db()
                     conn.execute(
-                        "UPDATE paper_trades SET sl_price=?, highest_seen=?, adx_peak=? WHERE id=?",
-                        (result.get('new_sl') or trade['sl_price'],
-                         result.get('new_highest') or trade.get('highest_seen'),
-                         result.get('new_adx_peak') or trade.get('adx_peak'),
-                         trade['id'])
+                        "UPDATE paper_trades SET sl_price=?, highest_seen=? WHERE id=?",
+                        (tu['new_sl'], tu['new_highest'], trade['id'])
                     )
                     conn.commit(); conn.close()
                 except Exception as e:
                     logger.error(f"[monitor] trail update failed: {e}")
 
-            # Agent exit review: probabilistic closes give agent a veto
-            if (result['action'] == 'CLOSE'
-                    and result.get('reason') in ('R3_ADX_FADE', 'R4_DISTRIBUTION')
-                    and not _agent_confirms_exit(trade, result)):
-                logger.info(
-                    f"[monitor] Agent overrode {result['reason']} exit for "
-                    f"{trade['ticker']} — holding position"
-                )
-                result = {**result, 'action': 'HOLD'}
-
-            if result['action'] == 'CLOSE':
-                cur = _get_current_price(trade['ticker']) or float(trade.get('sl_price') or trade['entry_price'])
+            # Auto-close at the kernel's decision: reason and gap-aware fill come
+            # straight from evaluate_exit (plan 1B — unified taxonomy, item 1.9).
+            if result['should_close']:
+                _reason = result.get('exit_reason') or 'STOPPED_OUT'
+                cur = (result.get('exit_price')
+                       or _get_current_price(trade['ticker'])
+                       or float(trade.get('sl_price') or trade['entry_price']))
                 try:
-                    close_trade(int(trade['id']), float(cur), result['reason'], notify=False)
-                    logger.info(f"[monitor] Auto-closed {trade['ticker']} ({result['reason']})")
+                    close_trade(int(trade['id']), float(cur), _reason, notify=False)
+                    logger.info(f"[monitor] Auto-closed {trade['ticker']} ({_reason})")
                 except Exception as e:
                     logger.error(f"[monitor] close_trade failed: {e}")
-                if result.get('message'):
-                    send_telegram(result['message'])
-                    try:
-                        log_trade_alert(trade['ticker'], trade['id'], result['reason'], result['message'])
-                    except Exception:
-                        pass
-                    total_alerts += 1
-            continue
 
-        # Non-swing: check for stop loss / TP, alerts, and trailing stop
-        result = _check_trade(trade)
-
-        # Persist trailing stop update if SL or highest_seen changed
-        if result.get('trail_update'):
-            tu = result['trail_update']
+            # Process all alerts (including stop loss alert)
+            for alert in result['alerts']:
+                logger.info(f"[monitor] Alert {alert['alert_type']} for {alert['ticker']}")
+                try:
+                    log_trade_alert(
+                        alert['ticker'], alert['trade_id'],
+                        alert['alert_type'], alert['message']
+                    )
+                except Exception:
+                    pass
+                send_telegram(alert['message'])
+                total_alerts += 1
+        except Exception:
+            # P1-4: an unhandled exception evaluating/closing/alerting on one
+            # trade must not abort monitoring for every trade after it in
+            # this tick -- isolate per-trade, log loudly with a traceback,
+            # alert once, and move on. The swing-trend branch's `continue`
+            # above still exits this try normally on its own happy path.
+            logger.exception(
+                f"[monitor] unhandled error monitoring trade "
+                f"{trade.get('id')} ({trade.get('ticker')}) -- skipping, "
+                f"continuing to next trade"
+            )
             try:
-                conn = get_db()
-                conn.execute(
-                    "UPDATE paper_trades SET sl_price=?, highest_seen=? WHERE id=?",
-                    (tu['new_sl'], tu['new_highest'], trade['id'])
-                )
-                conn.commit(); conn.close()
-            except Exception as e:
-                logger.error(f"[monitor] trail update failed: {e}")
-
-        # Auto-close at the kernel's decision: reason and gap-aware fill come
-        # straight from evaluate_exit (plan 1B — unified taxonomy, item 1.9).
-        if result['should_close']:
-            _reason = result.get('exit_reason') or 'STOPPED_OUT'
-            cur = (result.get('exit_price')
-                   or _get_current_price(trade['ticker'])
-                   or float(trade.get('sl_price') or trade['entry_price']))
-            try:
-                close_trade(int(trade['id']), float(cur), _reason, notify=False)
-                logger.info(f"[monitor] Auto-closed {trade['ticker']} ({_reason})")
-            except Exception as e:
-                logger.error(f"[monitor] close_trade failed: {e}")
-
-        # Process all alerts (including stop loss alert)
-        for alert in result['alerts']:
-            logger.info(f"[monitor] Alert {alert['alert_type']} for {alert['ticker']}")
-            try:
-                log_trade_alert(
-                    alert['ticker'], alert['trade_id'],
-                    alert['alert_type'], alert['message']
+                send_telegram(
+                    f"⚠️ Monitor error on {trade.get('ticker')} "
+                    f"(trade id={trade.get('id')}): exception during this "
+                    f"tick's evaluation, will retry next cycle. See logs."
                 )
             except Exception:
                 pass
-            send_telegram(alert['message'])
-            total_alerts += 1
 
     logger.info(f"[monitor] Done. {total_alerts} alert(s) sent.")
     return total_alerts
