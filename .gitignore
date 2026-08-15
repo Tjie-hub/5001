@@ -63,3 +63,16 @@ memory/
 # git worktrees (superpowers:using-git-worktrees)
 .worktrees/
 data/reports/
+
+# Windows test venv (idx-windows-test-venv memory) -- 11k+ files, never committed
+.winvenv/
+
+# MCP/tool session state (regenerated automatically)
+.playwright-mcp/
+.deepseek/
+
+# Syncthing folder markers
+.stfolder/
+
+# Session scratch working files
+scratchpad/
