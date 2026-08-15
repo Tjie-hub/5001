@@ -7,8 +7,8 @@
 #   CURRENT_LINK  (default ~/idx-walkforward-current)    symlink systemd runs
 #   PROJECT_DIR   (default: repo containing this script) source checkout
 #   SHARED_PATHS  space-separated mutable paths symlinked into each release
-#                 (default: ".env venv logs walkforward.db flow.db
-#                  idx_data.db .stockbit_token")
+#                 (default: ".env venv logs data/walkforward.db
+#                  data/research.db .stockbit_token")
 #   ALLOW_DIRTY_RELEASE=1  override the uncommitted-changes guard below
 #                 (documented escape hatch for a deliberate manual smoke
 #                  build; never set this for a real deploy)
@@ -20,10 +20,19 @@ set -euo pipefail
 PROJECT_DIR="${PROJECT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 RELEASES_DIR="${RELEASES_DIR:-$HOME/releases/idx-walkforward}"
 CURRENT_LINK="${CURRENT_LINK:-$HOME/idx-walkforward-current}"
-SHARED_PATHS="${SHARED_PATHS-.env venv logs walkforward.db flow.db idx_data.db .stockbit_token}"
-# NOTE: data/ is a tracked code package (data/db.py) so it ships inside the
-# release read-only; the production DB must therefore be reached via an
-# absolute DB_PATH in .env (validate_config aborts startup otherwise).
+SHARED_PATHS="${SHARED_PATHS-.env venv logs data/walkforward.db data/research.db .stockbit_token}"
+# NOTE: data/ is a tracked code package (data/db.py) so its .py files ship
+# inside the release read-only via git archive; the two DB files above are
+# gitignored, so this symlink is what actually makes them appear in $DEST/data/.
+# Production also sets an absolute DB_PATH/RESEARCH_DB_PATH in .env (required by
+# validate_config), which is the primary mechanism and works independent of this
+# symlink -- but if either is ever left at its relative default, this symlink is
+# the only thing standing between that misconfiguration and a release booting
+# against an empty DB. Matches config.py's real default (data/walkforward.db)
+# and research/db.py's (data/research.db), not the old bare "walkforward.db"
+# that never matched anything on disk. flow.db/idx_data.db were dropped -- dead
+# names from before the single-DB_PATH consolidation (TODO.md R10); nothing in
+# the codebase reads/writes them.
 
 cd "$PROJECT_DIR"
 GIT_SHA=$(git rev-parse HEAD)
@@ -65,6 +74,7 @@ EOF
 # shared mutable state lives outside the release and is symlinked in
 for p in $SHARED_PATHS; do
     if [ -e "$PROJECT_DIR/$p" ] && [ ! -e "$DEST/$p" ]; then
+        mkdir -p "$(dirname "$DEST/$p")"  # SHARED_PATHS entries may be nested (data/*.db)
         ln -s "$PROJECT_DIR/$p" "$DEST/$p"
     fi
 done

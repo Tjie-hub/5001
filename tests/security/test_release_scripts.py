@@ -130,3 +130,34 @@ def test_shared_paths_symlinked_not_copied(tmp_path):
     rel = (tmp_path / "current").resolve()
     assert (rel / "walkforward.db").is_symlink()
     assert (rel / "walkforward.db").resolve() == shared_db.resolve()
+
+
+def test_default_shared_paths_covers_real_db_locations(tmp_path):
+    """P1-9: SHARED_PATHS' default must match config.py's real DB_PATH
+    default (data/walkforward.db) and research/db.py's RESEARCH_DB_PATH
+    default (data/research.db), not a bare "walkforward.db" that never
+    matches anything on disk."""
+    src = _mk_repo(tmp_path)
+    (src / "data").mkdir()
+    # data/ ships as a tracked code package in the real repo (data/db.py etc.),
+    # which is what makes $DEST/data/ exist for `ln -s` to land in below --
+    # mirror that here rather than relying on the gitignored DB files alone.
+    (src / "data" / "db.py").write_text("# placeholder\n")
+    subprocess.run(["git", "add", "data/db.py"], cwd=src, check=True)
+    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-qm", "add data package"], cwd=src, check=True)
+    walkforward_db = src / "data" / "walkforward.db"
+    walkforward_db.write_text("prod-db")
+    research_db = src / "data" / "research.db"
+    research_db.write_text("research-db")
+    env = dict(os.environ)
+    env.update(RELEASES_DIR=str(tmp_path / "releases"),
+               CURRENT_LINK=str(tmp_path / "current"),
+               PROJECT_DIR=str(src))
+    env.pop("SHARED_PATHS", None)  # exercise the script's own default
+    subprocess.run([RELEASE], env=env, check=True, capture_output=True)
+    rel = (tmp_path / "current").resolve()
+    assert (rel / "data" / "walkforward.db").is_symlink()
+    assert (rel / "data" / "walkforward.db").resolve() == walkforward_db.resolve()
+    assert (rel / "data" / "research.db").is_symlink()
+    assert (rel / "data" / "research.db").resolve() == research_db.resolve()
