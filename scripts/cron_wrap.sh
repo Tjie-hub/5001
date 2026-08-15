@@ -28,6 +28,31 @@ if [ "$rc" -ne 0 ]; then
     TAIL=$(tail -n 5 "$LOG")
     MSG="🚨 CRON FAIL [$JOB] rc=$rc on $(hostname)
 $TAIL"
+    # Redact configured secrets (utils.logging_config.redact_secrets) before
+    # this ever reaches Telegram -- the last 5 log lines can contain
+    # anything the wrapped job printed, including a leaked secret value
+    # (P1-7: this was the one outbound alert path the Python redaction
+    # mechanism never covered). Reuses the venv's real implementation
+    # instead of a second, drift-prone bash reimplementation. Fails open to
+    # unredacted-but-sent (not silently dropped) if the venv/import isn't
+    # available -- e.g. local test environments -- since a missed alert
+    # reintroduces the exact silent-cron-failure risk this wrapper exists
+    # to close (see header comment).
+    PYBIN="$DIR/venv/bin/python3"
+    if [ -x "$PYBIN" ]; then
+        REDACTED=$(cd "$DIR" && "$PYBIN" -c "
+import sys
+from utils.logging_config import redact_secrets
+sys.stdout.write(redact_secrets(sys.stdin.read()))
+" <<<"$MSG" 2>>"$LOG")
+        if [ -n "$REDACTED" ]; then
+            MSG="$REDACTED"
+        else
+            echo "[$(date '+%F %T')] REDACTION FAILED for $JOB -- sending unredacted" >> "$LOG"
+        fi
+    else
+        echo "[$(date '+%F %T')] REDACTION SKIPPED for $JOB (no venv at $PYBIN)" >> "$LOG"
+    fi
     if [ -n "$TOKEN" ] && [ -n "$CHAT" ]; then
         curl -fsS --max-time 10 "$API_BASE/bot$TOKEN/sendMessage" \
             --data-urlencode "chat_id=$CHAT" \

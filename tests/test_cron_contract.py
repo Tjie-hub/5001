@@ -1,8 +1,11 @@
 """Cron reliability (hardening Phase 4 / audit P-4): the canonical crontab in
 deploy/crontab must reference only scripts that exist, wrap every job in
 cron_wrap.sh, and the wrapper must log + alert on failure."""
+import http.server
+import os
 import re
 import subprocess
+import threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -71,3 +74,69 @@ def test_wrapper_missing_script_is_a_loud_failure(tmp_path):
     assert r.returncode != 0
     log = (tmp_path / "cron_gone.log").read_text()
     assert "ALERT SKIPPED (no telegram creds)" in log
+
+
+class _CapturingHandler(http.server.BaseHTTPRequestHandler):
+    """Minimal mock Telegram API: records the POST body, always 200s."""
+    captured = []
+
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", 0))
+        self.__class__.captured.append(self.rfile.read(length).decode())
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(b'{"ok":true,"result":{}}')
+
+    def log_message(self, *args):
+        pass  # keep test output quiet
+
+
+def test_cron_wrap_redacts_secret_before_telegram_send(tmp_path):
+    """P1-7: cron_wrap.sh's shell-based Telegram alert was the one outbound
+    path never covered by utils.logging_config.redact_secrets(). A wrapped
+    job's last 5 log lines can contain anything it printed -- including a
+    leaked secret value -- and that used to go straight to Telegram
+    unredacted. Requires the real project venv (redact_secrets imports
+    flask); skips rather than false-passes when unavailable, since this
+    checkout may not have one (see scripts/release.sh's own SHARED_PATHS
+    test for the same Windows-checkout caveat)."""
+    repo_root = Path(__file__).resolve().parents[1]
+    pybin_unix = repo_root / "venv" / "bin" / "python3"
+    if not pybin_unix.exists():
+        import pytest
+        pytest.skip("no venv/bin/python3 on this checkout (see cron_wrap.sh's "
+                    "PYBIN fallback) -- validate on a real Linux checkout")
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), _CapturingHandler)
+    _CapturingHandler.captured = []
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.handle_request, daemon=True)
+    thread.start()
+
+    secret = "supersecret-zai-key-0123456789"
+    env_file = tmp_path / "test.env"
+    env_file.write_text("TELEGRAM_TOKEN=faketoken123\nTELEGRAM_CHAT_ID=99999\n")
+    env = dict(os.environ)
+    env.update(
+        PATH=os.environ.get("PATH", ""),
+        CRON_WRAP_LOG_DIR=str(tmp_path),
+        CRON_WRAP_ENV=str(env_file),
+        CRON_WRAP_API_BASE=f"http://127.0.0.1:{port}",
+        ZAI_API_KEY=secret,
+    )
+    r = subprocess.run(
+        [WRAP, "leakjob", "sh", "-c", f"echo 'boom: {secret}'; exit 1"],
+        env=env, capture_output=True, text=True,
+    )
+    assert r.returncode == 1
+    thread.join(timeout=10)
+
+    assert len(_CapturingHandler.captured) == 1, "alert was not sent"
+    body = _CapturingHandler.captured[0]
+    assert secret not in body, "raw secret leaked into the Telegram payload"
+    assert "%5BREDACTED%5D" in body or "[REDACTED]" in body
+
+    log = (tmp_path / "cron_leakjob.log").read_text()
+    assert "REDACTION SKIPPED" not in log
+    assert "REDACTION FAILED" not in log
