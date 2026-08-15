@@ -108,6 +108,35 @@ def test_prune_keeps_only_newest_backup_per_day(tmp_path):
     assert not morning.exists() and evening.exists()
 
 
+def test_run_backup_honors_custom_prefix(tmp_path):
+    db = tmp_path / "research.db"
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE hypotheses (hypothesis_id TEXT)")
+    conn.commit()
+    conn.close()
+
+    dest = tmp_path / "backups"
+    out = db_backup.run_backup(db, dest, prefix="research")
+    assert out.name.startswith("research-")
+    assert not out.name.startswith("walkforward-")
+
+
+def test_prune_only_considers_matching_prefix(tmp_path):
+    dest = tmp_path / "backups"
+    dest.mkdir()
+    ts = datetime.datetime(2026, 7, 1, 21, 30)
+    (dest / f"walkforward-{ts:%Y%m%d-%H%M%S}.db.gz").write_bytes(b"x")
+    (dest / f"walkforward-{ts:%Y%m%d-%H%M%S}.meta.json").write_text("{}")
+    (dest / f"research-{ts:%Y%m%d-%H%M%S}.db.gz").write_bytes(b"x")
+    (dest / f"research-{ts:%Y%m%d-%H%M%S}.meta.json").write_text("{}")
+
+    deleted = db_backup.prune(dest, keep_daily=0, keep_weekly=0, prefix="walkforward")
+
+    assert any("walkforward-" in p.name for p in deleted)
+    assert not any("research-" in p.name for p in deleted)
+    assert (dest / f"research-{ts:%Y%m%d-%H%M%S}.db.gz").exists()
+
+
 def test_restore_verify_roundtrip(src_db, tmp_path):
     dest = tmp_path / "backups"
     backup = db_backup.run_backup(src_db, dest)

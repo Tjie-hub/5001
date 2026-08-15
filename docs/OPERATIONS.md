@@ -102,6 +102,11 @@ zstd → `.meta.json` → retention prune (**7 daily + 4 weekly**).
 Destination: `~/backups/idx-walkforward-5001/` (override: `BACKUP_DIR`).
 A failed verification deletes the snapshot and exits non-zero → cron alert.
 
+Since 2026-07-21 (R-5 Tier-1 split): a second nightly cron (21:35) backs up `data/research.db`
+the same way, with `--prefix research` so its retention pool never interleaves with
+`walkforward-*` backups. Restore drills (`scripts.db_restore`) are single-DB by design; run the
+drill against whichever backup you need to verify by passing its exact filename.
+
 Weekly restore drill (Sunday 09:00, cron): `python -m scripts.db_restore
 <newest backup>` — decompress, integrity check, row-count match vs meta,
 touch nothing. **A backup is not considered good until this has passed.**

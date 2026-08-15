@@ -45,6 +45,9 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # after the 21:00 OHLCV reconciliation. Runs daily incl. weekends (cheap).
 30 21 * * * cd $D && $W db_backup venv/bin/python3 -m scripts.db_backup
 
+# R-5: research.db (Tier-1 discovery tables) backed up on its own retention pool
+35 21 * * * cd $D && $W db_backup_research venv/bin/python3 -m scripts.db_backup --db data/research.db --prefix research
+
 # Weekly restore drill (audit P-3: "a backup is not complete unless a restore
 # has been verified") — Sunday 09:00 on the newest backup.
 0 9 * * 0 cd $D && $W db_restore_drill sh -c 'venv/bin/python3 -m scripts.db_restore "$(ls -t ~/backups/idx-walkforward-5001/*.db.zst | head -1)"'

@@ -38,14 +38,16 @@ logger = logging.getLogger("db_backup")
 DEFAULT_DB = Path(__file__).resolve().parents[1] / "data" / "walkforward.db"
 DEFAULT_DEST = Path.home() / "backups" / "idx-walkforward-5001"
 
-_BACKUP_RE = re.compile(r"^walkforward-(\d{8})-(\d{6})\.db\.(zst|gz)$")
+def _backup_re(prefix: str) -> re.Pattern:
+    return re.compile(rf"^{re.escape(prefix)}-(\d{{8}})-(\d{{6}})\.db\.(zst|gz)$")
 
 
-def snapshot(db_path: Path, dest_dir: Path, now: datetime.datetime | None = None) -> Path:
+def snapshot(db_path: Path, dest_dir: Path, now: datetime.datetime | None = None,
+            prefix: str = "walkforward") -> Path:
     """Consistent point-in-time copy via the sqlite3 online-backup API."""
     now = now or datetime.datetime.now()
     dest_dir.mkdir(parents=True, exist_ok=True)
-    out = dest_dir / f"walkforward-{now:%Y%m%d-%H%M%S}.db"
+    out = dest_dir / f"{prefix}-{now:%Y%m%d-%H%M%S}.db"
     src = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     dst = sqlite3.connect(out)
     try:
@@ -109,20 +111,24 @@ def compress(path: Path) -> Path:
     return out
 
 
-def _parse_backups(dest_dir: Path) -> list[tuple[datetime.datetime, Path]]:
+def _parse_backups(dest_dir: Path, prefix: str = "walkforward") -> list[tuple[datetime.datetime, Path]]:
     found = []
+    pattern = _backup_re(prefix)
     for p in dest_dir.iterdir():
-        m = _BACKUP_RE.match(p.name)
+        m = pattern.match(p.name)
         if m:
             ts = datetime.datetime.strptime(m.group(1) + m.group(2), "%Y%m%d%H%M%S")
             found.append((ts, p))
     return sorted(found)
 
 
-def prune(dest_dir: Path, keep_daily: int = 7, keep_weekly: int = 4) -> list[Path]:
+def prune(dest_dir: Path, keep_daily: int = 7, keep_weekly: int = 4,
+         prefix: str = "walkforward") -> list[Path]:
     """Keep newest per-day for keep_daily days + newest per-ISO-week for
-    keep_weekly weeks; delete the rest (and their .meta.json). Returns deleted."""
-    backups = _parse_backups(dest_dir)
+    keep_weekly weeks; delete the rest (and their .meta.json). Returns deleted.
+    Only considers files matching `prefix` -- other DBs' backups in the same
+    dest_dir are untouched."""
+    backups = _parse_backups(dest_dir, prefix=prefix)
     newest_per_day: dict[datetime.date, Path] = {}
     newest_per_week: dict[tuple[int, int], Path] = {}
     for ts, p in backups:  # sorted ascending → last write wins = newest
@@ -146,10 +152,10 @@ def prune(dest_dir: Path, keep_daily: int = 7, keep_weekly: int = 4) -> list[Pat
 
 
 def run_backup(db_path: Path, dest_dir: Path, keep_daily: int = 7,
-               keep_weekly: int = 4) -> Path:
+               keep_weekly: int = 4, prefix: str = "walkforward") -> Path:
     """Full cycle: snapshot → verify → meta → compress → prune."""
     logger.info("backup starting: %s → %s", db_path, dest_dir)
-    snap = snapshot(db_path, dest_dir)
+    snap = snapshot(db_path, dest_dir, prefix=prefix)
     try:
         meta = verify(snap)
     except Exception:
@@ -158,7 +164,7 @@ def run_backup(db_path: Path, dest_dir: Path, keep_daily: int = 7,
         raise
     compressed = compress(snap)
     write_meta(compressed, meta)
-    prune(dest_dir, keep_daily=keep_daily, keep_weekly=keep_weekly)
+    prune(dest_dir, keep_daily=keep_daily, keep_weekly=keep_weekly, prefix=prefix)
     logger.info("backup complete: %s", compressed.name)
     return compressed
 
@@ -172,9 +178,12 @@ def main(argv=None) -> int:
                     default=Path(os.getenv("BACKUP_DIR", DEFAULT_DEST)))
     ap.add_argument("--keep-daily", type=int, default=7)
     ap.add_argument("--keep-weekly", type=int, default=4)
+    ap.add_argument("--prefix", default=None,
+                    help="backup filename prefix (default: walkforward)")
     args = ap.parse_args(argv)
     try:
-        run_backup(args.db, args.dest, args.keep_daily, args.keep_weekly)
+        run_backup(args.db, args.dest, keep_daily=args.keep_daily,
+                  keep_weekly=args.keep_weekly, prefix=args.prefix or "walkforward")
     except Exception as e:
         logger.error("backup failed: %s", e)
         return 1
