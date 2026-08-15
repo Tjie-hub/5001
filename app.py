@@ -107,6 +107,29 @@ def health():
         result["macro_panic_state"] = _macro_panic_state()
     except Exception as e:
         result["event_guard"] = {"active": False, "error": str(e)}
+    try:
+        from scheduler import get_scheduler
+        sch = get_scheduler()
+        if sch is None:
+            # Not yet started in this process (e.g. under pytest, where
+            # start_scheduler() is deliberately stubbed out) -- distinct
+            # from a scheduler that started and then stopped/paused, which
+            # IS a real anomaly (see below). Doesn't fail overall status:
+            # a bare "unavailable" here is ambiguous, not unambiguously bad.
+            result["scheduler"] = {"state": "unavailable"}
+        else:
+            _state_names = {0: "stopped", 1: "running", 2: "paused"}
+            state = _state_names.get(sch.state, "unknown")
+            result["scheduler"] = {"state": state, "job_count": len(sch.get_jobs())}
+            if state != "running":
+                # start_scheduler() only sets the module-level instance AFTER
+                # .start() succeeds, so reaching this branch means something
+                # stopped/paused it post-boot -- an unambiguous liveness
+                # failure a plain "status: ok" would otherwise hide.
+                result["status"] = "error"
+    except Exception as e:
+        result["scheduler"] = {"state": "error", "error": str(e)}
+        result["status"] = "error"
     return jsonify(result)
 
 

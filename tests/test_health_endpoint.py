@@ -96,3 +96,59 @@ def test_health_open_trades_zero_when_none(client):
     resp = c.get("/health")
     data = json.loads(resp.data)
     assert data["open_trades"] == 0
+
+
+def test_health_scheduler_unavailable_does_not_fail_status(client):
+    """P1-6: no scheduler in this process (the fixture stubs start_scheduler
+    to a no-op) is ambiguous, not an unambiguous failure -- overall status
+    must stay 'ok', matching every other test in this file."""
+    c, _ = client
+    resp = c.get("/health")
+    data = json.loads(resp.data)
+    assert data["scheduler"] == {"state": "unavailable"}
+    assert data["status"] == "ok"
+
+
+def test_health_scheduler_stopped_fails_overall_status(client, monkeypatch):
+    """P1-6: a scheduler instance that exists but isn't running is the
+    unambiguous case -- start_scheduler() only publishes the instance after
+    .start() succeeds, so 'present but stopped/paused' means something
+    stopped it post-boot. This is the silent-failure gap the item names:
+    'a deploy where scheduler-start silently fails currently reports ok'."""
+    c, _ = client
+
+    class _FakeJob:
+        pass
+
+    class _FakeScheduler:
+        state = 0  # APScheduler STATE_STOPPED
+
+        def get_jobs(self):
+            return []
+
+    monkeypatch.setattr("scheduler.get_scheduler", lambda: _FakeScheduler(),
+                         raising=False)
+    resp = c.get("/health")
+    data = json.loads(resp.data)
+    assert data["scheduler"]["state"] == "stopped"
+    assert data["status"] == "error"
+
+
+def test_health_scheduler_running_reports_state_and_job_count(client, monkeypatch):
+    c, _ = client
+
+    class _FakeJob:
+        pass
+
+    class _FakeScheduler:
+        state = 1  # APScheduler STATE_RUNNING
+
+        def get_jobs(self):
+            return [_FakeJob(), _FakeJob()]
+
+    monkeypatch.setattr("scheduler.get_scheduler", lambda: _FakeScheduler(),
+                         raising=False)
+    resp = c.get("/health")
+    data = json.loads(resp.data)
+    assert data["scheduler"] == {"state": "running", "job_count": 2}
+    assert data["status"] == "ok"
