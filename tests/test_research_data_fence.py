@@ -2,7 +2,15 @@
 data products — ONLY research/ may write them. Production reads are unchanged
 and allowed; this fence covers the WRITE side. DAO exception: engine/wf_edge.py
 holds the table's write SQL, but its data-write fn is only callable from
-research/ (rule W2)."""
+research/ (rule W2).
+
+R-5 (2026-07-21): the Tier-1 subset of RESEARCH_TABLES (gate_decisions,
+gate_evidence, regime_profiles, regime_profile_cells, hypotheses,
+hypothesis_links, failure_registry) additionally has a PHYSICAL boundary now
+-- see tests/test_research_db_physical_fence.py and research/db.py. This
+static source-scan stays as belt-and-suspenders for the Tier-2 tables
+(wf_scores/wf_edge/backtest_cache), which remain in walkforward.db by design.
+"""
 import re
 from pathlib import Path
 
