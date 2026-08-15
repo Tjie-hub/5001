@@ -49,8 +49,15 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 35 21 * * * cd $D && $W db_backup_research venv/bin/python3 -m scripts.db_backup --db data/research.db --prefix research
 
 # Weekly restore drill (audit P-3: "a backup is not complete unless a restore
-# has been verified") — Sunday 09:00 on the newest backup.
-0 9 * * 0 cd $D && $W db_restore_drill sh -c 'venv/bin/python3 -m scripts.db_restore "$(ls -t ~/backups/idx-walkforward-5001/*.db.zst | head -1)"'
+# has been verified") — Sunday 09:00 on the newest walkforward.db backup.
+# R-5 (2026-08-15) added a second, much-smaller research.db backup prefix
+# into the same directory -- the old bare `*.db.zst | head -1` glob picks
+# the newest file of EITHER prefix, so a research.db backup landing after
+# the last walkforward.db one made the drill silently verify the wrong,
+# tiny, non-critical file while reporting "RESTORE VERIFIED OK". Confirmed
+# by hand: exactly this happened on 2026-08-15's catch-up drill run.
+# Prefix-scoped so it can never again drift onto the wrong backup family.
+0 9 * * 0 cd $D && $W db_restore_drill sh -c 'venv/bin/python3 -m scripts.db_restore "$(ls -t ~/backups/idx-walkforward-5001/walkforward-*.db.zst | head -1)"'
 
 # Backup/restore-drill dead-man's-switch (P1-2): cron_wrap.sh alerts on a job
 # firing and FAILING, but not on a job silently never firing at all (a ~36h

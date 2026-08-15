@@ -27,6 +27,22 @@ def test_dead_jobs_are_gone():
         assert not any(dead in l for l in JOB_LINES), f"{dead} still scheduled"
 
 
+def test_restore_drill_targets_walkforward_backups_specifically():
+    """Found 2026-08-15 running the drill by hand: a bare `*.db.zst | head
+    -1` glob picks the newest backup of EITHER prefix sharing the backup
+    dir. R-5's research.db backup (added same session) landing after the
+    last walkforward.db one made the drill silently verify the wrong, tiny,
+    non-critical file while reporting "RESTORE VERIFIED OK" -- the
+    production-critical database was never actually tested that run."""
+    drill_lines = [l for l in JOB_LINES if "db_restore_drill" in l]
+    assert len(drill_lines) == 1
+    assert "walkforward-*.db.zst" in drill_lines[0], (
+        "restore-drill glob must be prefix-scoped to walkforward-*.db.zst, "
+        "not a bare *.db.zst that can match a different backup family's "
+        "file (e.g. research-*.db.zst)"
+    )
+
+
 def test_all_referenced_scripts_exist():
     """'Detect missing scripts' — the failure mode that ran silently for weeks."""
     missing = []
