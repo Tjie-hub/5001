@@ -106,6 +106,50 @@ class TestRedactSecrets:
         text = redact_secrets("firstlongtoken and secondlongtoken both present")
         assert "firstlongtoken" not in text and "secondlongtoken" not in text
 
+    def test_masks_stockbit_token_from_file(self, tmp_path, monkeypatch):
+        """P1-5: the Stockbit JWT lives in .stockbit_token (a file), not an
+        env var, so it was structurally invisible to the _SECRET_VARS loop
+        no matter how it was configured."""
+        import utils.logging_config as lc
+        (tmp_path / ".stockbit_token").write_text("stockbitjwtvalue12345")
+        monkeypatch.setattr(lc, "__file__",
+                            str(tmp_path / "utils" / "logging_config.py"))
+        text = lc.redact_secrets("Bearer stockbitjwtvalue12345 rejected")
+        assert "stockbitjwtvalue12345" not in text
+        assert "[REDACTED]" in text
+
+    def test_missing_stockbit_token_file_is_not_an_error(self, tmp_path, monkeypatch):
+        import utils.logging_config as lc
+        monkeypatch.setattr(lc, "__file__",
+                            str(tmp_path / "utils" / "logging_config.py"))
+        assert lc.redact_secrets("clean text") == "clean text"
+
+
+class TestRedactAndTruncate:
+    """P1-5: truncate-before-redact ordering bug -- truncating raw exception
+    text before redact_secrets() ever sees it can cut a secret mid-string, so
+    the later redact_secrets() call inside send_telegram() no longer finds
+    the *complete* value to match and a partial fragment survives."""
+
+    def test_redacts_before_truncating(self, monkeypatch):
+        from utils.logging_config import redact_and_truncate
+        monkeypatch.setenv("ZAI_API_KEY", "supersecretzaikey1234567890")
+        # The raw secret straddles the naive truncation boundary (char 20);
+        # str(e)[:20] would leave "supersecretzaikey123" -- a still-partially
+        # -identifying fragment -- unredacted.
+        text = "prefix supersecretzaikey1234567890 suffix"
+        result = redact_and_truncate(text, 20)
+        assert "supersecretzaikey" not in result
+
+    def test_truncates_to_the_given_limit(self, monkeypatch):
+        from utils.logging_config import redact_and_truncate
+        result = redact_and_truncate("x" * 500, 50)
+        assert len(result) == 50
+
+    def test_clean_text_behaves_like_plain_slicing(self, monkeypatch):
+        from utils.logging_config import redact_and_truncate
+        assert redact_and_truncate("hello world", 5) == "hello"
+
 
 class TestSecretRedactionFilter:
     """The logging.Filter now delegates to redact_secrets() — verify the

@@ -13,6 +13,7 @@ from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, 
 DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 
 from utils.telegram import send_telegram  # noqa: E402
+from utils.logging_config import redact_and_truncate  # noqa: E402
 from data.db import connect as db_connect  # noqa: E402
 from scheduler.state import _regime_clf_cache  # noqa: E402  — dict; _sector_scores_cache handled inside _get_sector_scores_cached via scheduler.state ref
 from scheduler.utils import get_all_tickers, _load_ohlcv_bulk, fetch_latest  # noqa: E402
@@ -1521,7 +1522,7 @@ def scheduled_multi_strategy_scan():
         except Exception as e:
             logger.warning(f"[{time_str}] Flow fetch error: {e}")
             from engine.fail_open_alarm import fail_open_alarm
-            fail_open_alarm("flow_batch", f"flow fetch failed: {str(e)[:120]}",
+            fail_open_alarm("flow_batch", f"flow fetch failed: {redact_and_truncate(str(e), 120)}",
                             count=len(intersection_results))
             for r in intersection_results:
                 r['flow'] = {'score': None, 'verdict': 'UNAVAILABLE', 'confirmed': False}

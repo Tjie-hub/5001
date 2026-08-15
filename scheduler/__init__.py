@@ -32,6 +32,7 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # Re-export send_telegram so callers doing `from scheduler import send_telegram` keep working
 from utils.telegram import send_telegram  # noqa: F401
+from utils.logging_config import redact_and_truncate  # noqa: F401
 
 # Re-export utils
 from scheduler.utils import (  # noqa: F401
@@ -120,7 +121,7 @@ def format_job_error_alert(job_id: str, job_name: Optional[str], exception: Base
            f"suppressed since last alert)</i>" if suppressed else "")
     return (f"🔴 <b>Scheduler Job Failed</b>\n\n"
             f"<b>{name}</b> (<code>{job_id}</code>)\n"
-            f"<code>{str(exception)[:300]}</code>{tail}")
+            f"<code>{redact_and_truncate(str(exception), 300)}</code>{tail}")
 
 
 class JobErrorRateLimiter:

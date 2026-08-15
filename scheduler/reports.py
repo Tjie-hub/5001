@@ -13,6 +13,7 @@ from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, 
 DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 
 from utils.telegram import send_telegram  # noqa: E402
+from utils.logging_config import redact_and_truncate  # noqa: E402
 from data.db import connect as db_connect  # noqa: E402
 
 
@@ -126,7 +127,7 @@ def daily_fetch_report():
 
     except Exception as e:
         logger.warning(f"[daily_fetch_report] Error: {e}")
-        send_telegram(f"🔴 <b>Fetch Report Error</b>\n\n<code>{str(e)[:150]}</code>")
+        send_telegram(f"🔴 <b>Fetch Report Error</b>\n\n<code>{redact_and_truncate(str(e), 150)}</code>")
 
 
 def open_trades_status_report():
@@ -297,7 +298,7 @@ def open_trades_status_report():
 
     except Exception as e:
         logger.warning(f"[open_trades_status_report] Error: {e}")
-        send_telegram(f"🔴 <b>Open Trades Report Error</b>\n\n<code>{str(e)[:150]}</code>")
+        send_telegram(f"🔴 <b>Open Trades Report Error</b>\n\n<code>{redact_and_truncate(str(e), 150)}</code>")
 
 
 def flow_broker_report():
@@ -334,7 +335,7 @@ def flow_broker_report():
         try:
             flow_data = get_flow_batch(tickers, token=None, delay=0.8)
         except Exception as e:
-            send_telegram(f"🔴 <b>Flow Report Error</b>\n\n<code>{str(e)[:150]}</code>")
+            send_telegram(f"🔴 <b>Flow Report Error</b>\n\n<code>{redact_and_truncate(str(e), 150)}</code>")
             return
 
         # News-spike lookup for the signal tickers (built by 17:00 news fetch)
@@ -460,7 +461,7 @@ def flow_broker_report():
               f"{len(spike_map)} news-spike)")
     except Exception as e:
         logging.error(f"flow_broker_report error: {e}")
-        send_telegram(f"🔴 <b>Flow Report Error</b>\n\n<code>{str(e)[:150]}</code>")
+        send_telegram(f"🔴 <b>Flow Report Error</b>\n\n<code>{redact_and_truncate(str(e), 150)}</code>")
 
 
 def auto_trade_status_report():
@@ -509,4 +510,4 @@ def auto_trade_status_report():
         logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Auto-trade status report sent")
     except Exception as e:
         logging.error(f"auto_trade_status_report error: {e}")
-        send_telegram(f"🔴 <b>Auto-Trade Status Error</b>\n\n<code>{str(e)[:150]}</code>")
+        send_telegram(f"🔴 <b>Auto-Trade Status Error</b>\n\n<code>{redact_and_truncate(str(e), 150)}</code>")

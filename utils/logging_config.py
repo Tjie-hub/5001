@@ -90,12 +90,41 @@ def redact_secrets(text: str) -> str:
     (security hardening Phase 3; extracted as a standalone function for RC1
     fix R-4 so outbound Telegram alerts can reuse the exact same redaction
     logic as log lines, instead of a second implementation). Values are read
-    from env at call time so rotation needs no restart of the caller."""
+    from env at call time so rotation needs no restart of the caller.
+
+    Also masks the Stockbit JWT (P1-5): unlike every other secret here, it
+    lives in a file (.stockbit_token, per auto_token.py's TOKEN_FILE), not an
+    env var, so it was structurally invisible to the _SECRET_VARS loop above
+    no matter how it was configured -- any exception embedding the bearer
+    token (e.g. a failed request whose headers get stringified) went out to
+    Telegram/logs unredacted. Fail-soft: a missing/unreadable token file is
+    not an error here, matching this function's existing posture."""
     for var in _SECRET_VARS:
         for val in (v.strip() for v in os.getenv(var, "").split(",")):
             if len(val) >= 8 and val in text:
                 text = text.replace(val, "[REDACTED]")
+    try:
+        token_path = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), ".stockbit_token")
+        with open(token_path, "r", encoding="utf-8") as f:
+            token = f.read().strip()
+        if len(token) >= 8 and token in text:
+            text = text.replace(token, "[REDACTED]")
+    except OSError:
+        pass
     return text
+
+
+def redact_and_truncate(text: str, limit: int) -> str:
+    """redact_secrets() BEFORE truncating, never after (P1-5). Truncating
+    first (the `str(e)[:200]`-style pattern used at 10+ call sites building
+    outbound Telegram alerts) can cut a secret value off mid-string -- the
+    later redact_secrets() call inside send_telegram() then no longer finds
+    the *complete* value to match against, so a partial, still-identifying
+    fragment of the secret survives in the truncated text unredacted. Use
+    this instead of `text[:limit]` anywhere truncated exception/error text
+    might reach an outbound alert or log line."""
+    return redact_secrets(text)[:limit]
 
 
 class SecretRedactionFilter(logging.Filter):

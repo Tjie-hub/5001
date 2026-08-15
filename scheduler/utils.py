@@ -15,6 +15,7 @@ TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 from utils.telegram import send_telegram  # noqa: E402
+from utils.logging_config import redact_and_truncate  # noqa: E402
 from data.db import connect as db_connect  # noqa: E402
 from engine.indicators import IndicatorCache
 
@@ -93,7 +94,7 @@ def fetch_latest():
         send_telegram(
             f"🔴 <b>OHLCV Fetch GAGAL</b>\n\n"
             f"<b>{len(tickers)} tickers</b> @ {now_str}\n"
-            f"<code>{str(e)[:150]}</code>"
+            f"<code>{redact_and_truncate(str(e), 150)}</code>"
         )
 
 # _load_ohlcv_bulk moved to data/loaders.py in M2 (re-exported above).

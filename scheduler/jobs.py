@@ -14,6 +14,7 @@ from config import DB_PATH as _DEFAULT_DB_PATH  # single path authority (audit, 
 DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 
 from utils.telegram import send_telegram  # noqa: E402
+from utils.logging_config import redact_and_truncate  # noqa: E402
 from data.db import connect as db_connect  # noqa: E402
 from engine.heartbeat import write_heartbeat  # noqa: E402
 from engine.job_status import current_job  # noqa: E402
@@ -102,7 +103,7 @@ def run_flow_fetch():
             send_telegram(
                 f"🔴 <b>Flow Fetch GAGAL</b>\n\n"
                 f"Sesi pertama ({now_str}) error:\n"
-                f"<code>{str(e)[:200]}</code>\n\n"
+                f"<code>{redact_and_truncate(str(e), 200)}</code>\n\n"
                 f"Signal scan 15:35 akan berjalan <b>tanpa flow data</b>."
             )
 
@@ -211,7 +212,7 @@ def run_broker_flow_fetch():
             )
     except Exception as e:
         logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow fetch error: {e}")
-        send_telegram(f"🔴 <b>Broker Flow Fetch Error</b>\n<code>{str(e)[:200]}</code>")
+        send_telegram(f"🔴 <b>Broker Flow Fetch Error</b>\n<code>{redact_and_truncate(str(e), 200)}</code>")
 
 
 def run_broker_period_summary_fetch():
@@ -594,7 +595,7 @@ def run_news_fetch():
         logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] News fetch error: {e}")
         send_telegram(
             f"🔴 <b>News Fetch GAGAL</b>\n\n"
-            f"<code>{str(e)[:200]}</code>"
+            f"<code>{redact_and_truncate(str(e), 200)}</code>"
         )
 
 
@@ -701,7 +702,7 @@ def run_premover_eod():
               f"{len(new_setups)} new setups.")
     except Exception as e:
         logger.warning(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan error: {e}")
-        send_telegram(f"🔴 <b>Pre-mover Scan Error</b>\n<code>{str(e)[:200]}</code>")
+        send_telegram(f"🔴 <b>Pre-mover Scan Error</b>\n<code>{redact_and_truncate(str(e), 200)}</code>")
         return
 
     mode = get_premover_mode()
@@ -729,7 +730,7 @@ def run_premover_eod():
             summary_rows.append({'ticker': ticker, 'score': score,
                                   'pattern': pattern,
                                   'would_trade': False,
-                                  'skip_reason': f'error:{str(exc)[:80]}'})
+                                  'skip_reason': f'error:{redact_and_truncate(str(exc), 80)}'})
 
     # summary_rows available for analysis; Telegram suppressed per config
 
