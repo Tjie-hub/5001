@@ -148,6 +148,35 @@ def test_track_run_records_error_and_reraises():
     assert "boom" in error
 
 
+def test_track_run_without_db_path_uses_the_research_split(tmp_path, monkeypatch):
+    """No explicit db_path -> research_runs must land in RESEARCH_DB_PATH, and
+    reads (dataset fingerprint) must still resolve against the real prod DB."""
+    import research.db as research_db
+
+    prod = tmp_path / "walkforward.db"
+    research = tmp_path / "research.db"
+    _mkdb(str(prod)).close()
+
+    monkeypatch.setattr(research_db, "RESEARCH_DB_PATH", str(research))
+    monkeypatch.setattr(research_db, "PROD_DB_PATH", str(prod))
+    monkeypatch.setattr(tracking, "DB_PATH", str(prod))
+
+    with track_run("study") as run:
+        run.metrics["x"] = 1
+
+    check = sqlite3.connect(str(research))
+    rows = check.execute("SELECT run_id, kind, status FROM research_runs").fetchall()
+    check.close()
+    assert len(rows) == 1
+    assert rows[0][1] == "study"
+    assert rows[0][2] == "DONE"
+
+    prod_check = sqlite3.connect(str(prod))
+    names = {r[0] for r in prod_check.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    prod_check.close()
+    assert "research_runs" not in names  # never touched the prod file
+
+
 def test_runs_are_append_only():
     with tempfile.TemporaryDirectory() as tmp:
         db = os.path.join(tmp, "t.db")

@@ -28,6 +28,7 @@ from datetime import datetime
 from importlib import metadata
 
 from data.db import connect as db_connect
+from research.db import connect_research
 
 DB_PATH = os.getenv("DB_PATH", os.path.join(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))), "data", "walkforward.db"))
@@ -168,11 +169,19 @@ def track_run(kind: str, params: dict = None, db_path: str = None):
     INSERTs a RUNNING row up front (fingerprint + git commit captured before
     the work), yields a RunHandle, and finalizes to DONE/ERROR on exit.
     Exceptions propagate after being recorded.
+
+    db_path is an explicit single-file override (existing hermetic-test
+    convention): when given, research_runs lives in that one file alongside
+    ohlcv/corporate_actions, exactly as before the R-5 split. When omitted
+    (the real production call), research_runs is written through
+    research.db.connect_research() -- the R-5 Tier-1 physical split.
     """
-    db_path = db_path or DB_PATH
+    def _connect():
+        return db_connect(db_path) if db_path else connect_research()
+
     run = RunHandle(uuid.uuid4().hex)
     started = time.monotonic()
-    conn = db_connect(db_path)
+    conn = _connect()
     try:
         ensure_research_runs_table(conn)
         fp = dataset_fingerprint(conn)
@@ -189,7 +198,7 @@ def track_run(kind: str, params: dict = None, db_path: str = None):
         conn.close()
 
     def _finalize(status, error=None):
-        conn = db_connect(db_path)
+        conn = _connect()
         try:
             conn.execute(
                 "UPDATE research_runs SET finished_at=?, duration_s=?, "
