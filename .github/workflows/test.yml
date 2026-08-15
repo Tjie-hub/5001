@@ -33,3 +33,66 @@ jobs:
         # The suite is hermetic: it builds its own temp SQLite DBs and never
         # needs the gitignored data/walkforward.db, so no fixtures are required.
         run: python -m pytest -q
+
+  release-smoke:
+    # P1-1O: tests/security/test_release_scripts.py already exercises
+    # scripts/release.sh's mechanics (symlinks, manifest, rollback) via
+    # subprocess, but only against a tiny synthetic fake repo (one
+    # hello.py). It never proves release.sh works against the REAL repo --
+    # e.g. that `git archive HEAD` actually captures the real application
+    # tree intact and that the built release's Python is syntactically
+    # sound. This job builds a real release from this checkout's HEAD and
+    # verifies exactly that, independent of the pytest job above.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build a real release from HEAD
+        env:
+          RELEASES_DIR: ${{ runner.temp }}/releases
+          CURRENT_LINK: ${{ runner.temp }}/current
+        run: |
+          scripts/release.sh
+          echo "RELEASES_DIR=${RELEASES_DIR}" >> "$GITHUB_ENV"
+          echo "CURRENT_LINK=${CURRENT_LINK}" >> "$GITHUB_ENV"
+
+      - name: Verify the release is a real, complete copy of this checkout
+        run: |
+          set -euo pipefail
+          REL="$(readlink -f "$CURRENT_LINK")"
+          test -f "$REL/app.py"
+          test -f "$REL/release.json"
+          test -f "$REL/scheduler/__init__.py"
+          # release.json must record the exact commit this job checked out.
+          GOT_SHA=$(python3 -c "import json; print(json.load(open('$REL/release.json'))['git_sha'])")
+          test "$GOT_SHA" = "$(git rev-parse HEAD)"
+          # Byte-identical to git HEAD's tracked content, not just present --
+          # a stale/partial `git archive` would still pass the two checks above.
+          diff <(git show HEAD:app.py) "$REL/app.py"
+          # Immutable: release.sh's own documented guarantee.
+          test ! -w "$REL/app.py"
+
+      - name: Verify the release's Python is syntactically sound
+        # Would catch a truncated/corrupted archive step that a file-existence
+        # check alone would miss. PYTHONPYCACHEPREFIX redirects .pyc output
+        # away from the release dir -- release.sh's own `chmod -R a-w` (the
+        # immutability guarantee just verified above) means py_compile can't
+        # write __pycache__/ alongside the source without it.
+        env:
+          PYTHONPYCACHEPREFIX: ${{ runner.temp }}/pycache
+        run: python3 -m py_compile $(find "$(readlink -f "$CURRENT_LINK")" -name "*.py" -not -path "*/venv/*" -not -path "*/.git/*")
+
+      - name: Verify rollback.sh --list sees this release
+        run: |
+          set -euo pipefail
+          OUT=$(RELEASES_DIR="$RELEASES_DIR" CURRENT_LINK="$CURRENT_LINK" scripts/rollback.sh --list)
+          echo "$OUT" | grep -q "^\*"
+
+      # No manual cleanup: the runner is ephemeral and destroyed after this
+      # job regardless. (release.sh's chmod -R a-w on $DEST also removes
+      # write permission from the release's *directories*, not just its
+      # files -- rm -rf without a prior `chmod -R u+w` would itself fail
+      # with a wall of "Permission denied", confirmed by hand while writing
+      # this job. Worth knowing if this ever needs manual cleanup outside CI:
+      # see the not-yet-built retention/pruning backlog item, P3-8.)
