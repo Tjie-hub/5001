@@ -7,6 +7,7 @@ import json
 import sys
 
 from data.db import connect
+from research.db import connect_research
 from research.knowledge import backfill, ingest, storage, trace
 from research.knowledge.models import Hypothesis
 
@@ -15,7 +16,8 @@ def main(argv=None) -> int:
     argv = argv if argv is not None else sys.argv[1:]
     p = argparse.ArgumentParser(prog="knowledge",
                                 description="Phase E research knowledge base")
-    p.add_argument("--db", default="walkforward.db", help="sqlite path")
+    p.add_argument("--db", default=None, help="sqlite path (single-file override; "
+                   "default: the R-5 research/production split)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     rh = sub.add_parser("record-hypothesis")
@@ -34,7 +36,7 @@ def main(argv=None) -> int:
     sub.add_parser("backfill")
 
     args = p.parse_args(argv)
-    conn = connect(args.db)
+    conn = connect(args.db) if args.db else connect_research()
     storage.ensure_knowledge_tables(conn)
 
     if args.cmd == "record-hypothesis":
