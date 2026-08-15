@@ -35,6 +35,8 @@ out/
 
 # Local backup files
 *.bak
+*.bak-shm
+*.bak-wal
 *.bak2
 *.backup*
 

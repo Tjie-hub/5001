@@ -25,6 +25,13 @@ REQUIRED_PATTERNS = [
     "*.sync-conflict-*.db-wal",
     "*.sync-conflict-*.db-shm",
     "logs/",
+    # Added 2026-08-15 (P1-11): aside-copy snapshots (*.corrupt_*.bak,
+    # *.pre_recovery_cutover_*.bak) don't end in *.db, so the patterns
+    # above miss them -- found sitting unexcluded, multi-GB, eligible for
+    # sync neither device needs.
+    "*.bak",
+    "*.bak-wal",
+    "*.bak-shm",
 ]
 
 

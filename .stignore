@@ -10,6 +10,17 @@
 *.sync-conflict-*.db-wal
 *.sync-conflict-*.db-shm
 
+// Point-in-time DB snapshots (recovery aside-copies, pre-cutover backups)
+// don't end in *.db so the patterns above miss them -- found 2026-08-15
+// while repairing data/walkforward.db (P1-11): both the fresh
+// walkforward.db.corrupt_pre_p1-11_repair_*.bak(-wal/-shm) this repair
+// produced and the pre-existing walkforward.db.pre_recovery_cutover_*.bak
+// from the 2026-07-29 incident were sitting unexcluded, eligible for
+// Syncthing to sync multi-GB static artifacts neither device needs.
+*.bak
+*.bak-wal
+*.bak-shm
+
 // High-churn, fully regenerable logs -- not needed for cross-device sync,
 // and were themselves generating sync-conflict files.
 logs/
