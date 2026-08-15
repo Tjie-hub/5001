@@ -13,3 +13,20 @@
 // High-churn, fully regenerable logs -- not needed for cross-device sync,
 // and were themselves generating sync-conflict files.
 logs/
+
+// Dev tooling / build artifacts -- not needed for cross-device sync.
+venv
+.venv
+.winvenv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.playwright_state
+**/node_modules
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.cache
+**/*.tmp
+**/dive_smoketest*
+out/dive_smoketest*
