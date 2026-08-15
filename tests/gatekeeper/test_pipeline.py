@@ -69,6 +69,36 @@ def test_run_gate_watchlists_nr7_representative_candidate(tmp_path):
     assert d.forward_test_rule is None                 # not promoted
 
 
+def test_run_gate_without_db_path_persists_through_research_split(tmp_path, monkeypatch):
+    import sqlite3
+    import research.db as research_db
+
+    prod = tmp_path / "walkforward.db"
+    research = tmp_path / "research.db"
+    conn = sqlite3.connect(prod)
+    conn.execute("CREATE TABLE ohlcv (ticker TEXT, date TEXT, close REAL, "
+                 "volume REAL, is_final INTEGER DEFAULT 1)")
+    conn.commit()
+    conn.close()
+
+    monkeypatch.setattr(research_db, "RESEARCH_DB_PATH", str(research))
+    monkeypatch.setattr(research_db, "PROD_DB_PATH", str(prod))
+    monkeypatch.setattr(pipeline, "DB_PATH", str(prod))
+
+    d = pipeline.run_gate(_candidate([2.0] * 20, [0.05, 0.06]), CFG)
+
+    check = sqlite3.connect(research)
+    counts = (check.execute("SELECT COUNT(*) FROM gate_decisions").fetchone()[0],
+              check.execute("SELECT COUNT(*) FROM research_runs").fetchone()[0])
+    check.close()
+    assert counts == (1, 1)
+
+    prod_check = sqlite3.connect(prod)
+    names = {r[0] for r in prod_check.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    prod_check.close()
+    assert "gate_decisions" not in names
+
+
 def test_run_gate_rejects_when_sample_insufficient(tmp_path):
     d = pipeline.run_gate(_candidate([2.0] * 20, [0.05, 0.06]),
                           CFG, db_path=str(tmp_path / "g.db"))
