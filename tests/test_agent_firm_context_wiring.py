@@ -6,7 +6,8 @@ before calling evaluate_staged().
 Scope: producer wiring only (docs/agent_firm/ADR-AF-001..004, AF2_ARCHITECTURE_CERTIFICATION.md).
 These tests assert:
   - context objects are populated with real data from a hermetic DB (producer mapping works)
-  - the legacy path (engine.agent_firm.firm._build_context/_market_ctx) is untouched
+  - (stale as of WP3 -- engine.agent_firm.firm._build_context() was deleted, not left
+    untouched; kept here only as a historical note, not an active assertion)
   - a broken/unreadable DB fails open — candidates still reach evaluate_staged() with empty
     (default) context, exactly matching pre-WP2 behavior — no runtime regression
   - backward compatibility: evaluate_staged() itself is never called differently
