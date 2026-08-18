@@ -13,6 +13,17 @@ guard for the `.stignore` incident that recurred this session (P1-12), and front
 (P2-11). See `Audit/R5_TIER1_DB_SPLIT_CLOSURE_REPORT.md` and this session's transcript for full
 evidence trails.
 
+**Amended 2026-08-18** — Housekeeping pass (Operations Dashboard / Job History session, step 0):
+this doc had drifted stale again after the very next session closed nearly the entire P1 list
+without updating it here. Verified against `git log` and the actual diff (not just the commit
+message) for each: **P1-1, P1-2, P1-4, P1-5, P1-6, P1-7, P1-9, P1-10 are all DONE**
+(`20ca93a`, `48ed038`, `dccfac2`, `4a204a5`, `a95c289`, `2418726`, `fc89490`, `e80cb9c`, all
+2026-08-15) — struck through below. Also confirms P1-8 (design doc), P1-11, P1-12, P2-3, and P2-6
+were already correctly marked done. Net: **P0 and P1 are now fully closed**; this milestone's own
+entry criteria (`Audit/PRODUCTION_ENGINE_NEXT_MILESTONE.md`) are satisfied. Operations Dashboard /
+Job History (Job History slice) is delivered this session — see the new entry under "Explicitly Not
+Backlogged" below and `Audit/PRODUCTION_ENGINE_NEXT_MILESTONE.md`'s own update.
+
 ---
 
 ## P0 — RESOLVED (verified live 2026-08-15)
@@ -33,18 +44,65 @@ necessarily ADR-AF-002-related, since ADR-AF-002 is already merged into the work
 
 | # | Item | Rationale | Source |
 |---|---|---|---|
-| P1-1 | Restructure `start_scheduler()`'s ~20 `add_job()` calls for per-job failure isolation | One bad job registration currently crashes the entire worker boot | Reconciliation Part 2, item 3 |
-| P1-2 | Add a cron dead-man's-switch for backup/restore-drill cadence | A ~36h gap already occurred once (2026-07-25/26) and went undetected until manually noticed | Reconciliation Part 2, item 4 |
+| ~~P1-1~~ | ~~Restructure `start_scheduler()`'s ~20 `add_job()` calls for per-job failure isolation~~ | **DONE**, commit `20ca93a` (2026-08-15) — `scheduler/__init__.py::_add_job()` wraps `scheduler.add_job()` in try/except, logs+alerts (best-effort Telegram), and continues registering the rest. Verified against the actual diff, not just the message. | Reconciliation Part 2, item 3 |
+| ~~P1-2~~ | ~~Add a cron dead-man's-switch for backup/restore-drill cadence~~ | **DONE**, commit `48ed038` (2026-08-15) — reuses `engine.heartbeat`'s `heartbeat_status()` pattern over each backup cron's `cron_wrap.sh` log mtime; covers all 3 backup-related crons with cadence+slack thresholds. | Reconciliation Part 2, item 4 |
 | ~~P1-3~~ | ~~Land the already-written `_write_token_atomic()` hardening~~ | **DONE**, commit `88165a6` (2026-08-04) — `auto_token.py:173-182` (tmpfile+rename+chmod 0600), called at `auto_token.py:604`. Verified present at HEAD. | Reconciliation Part 2, item 5 |
-| P1-4 | Add per-trade exception isolation + alert to `monitor.py`'s SL/TP evaluation loop | An unhandled exception on trade N currently aborts monitoring for every trade after N in that tick, silently | Reconciliation Part 2, item 6 |
-| P1-5 | Extend redaction: fix the Stockbit-JWT structural gap and the truncate-before-redact ordering at 10+ call sites | A secret embedded in an exception message can still leak unredacted today; RC1-C2 already closed a *related* but narrower gap | Reconciliation Part 2, item 7 |
-| P1-6 | Add a scheduler-liveness check to `/health` | A deploy where scheduler-start silently fails currently reports "ok" and passes the deploy gate | Reconciliation Part 2, item 8 |
-| P1-7 | Redact `cron_wrap.sh`'s shell-based Telegram crash alert | The one outbound alert path never covered by the Python redaction mechanism | Reconciliation Part 2, item 11 |
-| ~~P1-8~~ | ~~Write the Operations Dashboard / Job History design document~~ | **DONE** — `docs/superpowers/specs/2026-08-15-operations-dashboard-job-history-design.md`. Data inventory found most of the backend already exists (2B-1/2B-2 scheduler+metrics APIs, `/api/agent/audit`); net-new work is one provider-failover endpoint + an AF2 metric query mapping pass + two frontend domain pages (both `domains/*` and `design-system/charts/` confirmed empty scaffolds, not populated as originally assumed). Incorporates the AF2 monitoring plan's 9 metrics and its own recommended layout verbatim; 2 of the 9 explicitly deferred (blocked on P2-4/P2-5 instrumentation, not yet built) | Reconciliation Part 1 |
-| P1-9 | Fix `scripts/release.sh`'s `SHARED_PATHS` default to match the real `DB_PATH` default | Silently symlinks nothing on a stock configuration today | Reconciliation Part 2, item 9 |
-| P1-10 | Exercise `scripts/release.sh` end-to-end in CI, not just via unit tests of its logic | No integration-level coverage of the actual release mechanism exists today | Reconciliation Part 2, item 10 |
+| ~~P1-4~~ | ~~Add per-trade exception isolation + alert to `monitor.py`'s SL/TP evaluation loop~~ | **DONE**, commit `dccfac2` (2026-08-15) — wraps the full per-trade loop body in try/except, logs with trade id/ticker + traceback, Telegram-alerts, continues to the next trade. | Reconciliation Part 2, item 6 |
+| ~~P1-5~~ | ~~Extend redaction: fix the Stockbit-JWT structural gap and the truncate-before-redact ordering at 10+ call sites~~ | **DONE**, commit `4a204a5` (2026-08-15) — `redact_secrets()` now also reads `.stockbit_token` (fail-soft); 13 call sites across `scheduler/{jobs,__init__,scanner,utils,reports}.py` fixed to redact before truncating. | Reconciliation Part 2, item 7 |
+| ~~P1-6~~ | ~~Add a scheduler-liveness check to `/health`~~ | **DONE**, commit `a95c289` (2026-08-15) — `app.py::health()` adds a `scheduler` field via `scheduler.get_scheduler()`; distinguishes "unavailable" (no scheduler in this process) from "not running" (flips overall `status` to `error`). Verified against the actual diff. | Reconciliation Part 2, item 8 |
+| ~~P1-7~~ | ~~Redact `cron_wrap.sh`'s shell-based Telegram crash alert~~ | **DONE**, commit `2418726` (2026-08-15) — shells out to the venv's real `redact_secrets()` via `python3 -c` before sending; fails open (unredacted-but-sent) rather than silently dropping the alert if the venv is unavailable. | Reconciliation Part 2, item 11 |
+| ~~P1-8~~ | ~~Write the Operations Dashboard / Job History design document~~ | **DONE** — `docs/superpowers/specs/2026-08-15-operations-dashboard-job-history-design.md`. Data inventory found most of the backend already exists (2B-1/2B-2 scheduler+metrics APIs, `/api/agent/audit`); net-new work is one provider-failover endpoint + an AF2 metric query mapping pass + two frontend domain pages (both `domains/*` and `design-system/charts/` confirmed empty scaffolds, not populated as originally assumed). Incorporates the AF2 monitoring plan's 9 metrics and its own recommended layout verbatim; 2 of the 9 explicitly deferred (blocked on P2-4/P2-5 instrumentation, not yet built). **Job History half implemented 2026-08-18 — see below.** | Reconciliation Part 1 |
+| ~~P1-9~~ | ~~Fix `scripts/release.sh`'s `SHARED_PATHS` default to match the real `DB_PATH` default~~ | **DONE**, commit `fc89490` (2026-08-15) — default now `data/walkforward.db data/research.db`, dropped two dead names, added `mkdir -p` before the symlink loop. | Reconciliation Part 2, item 9 |
+| ~~P1-10~~ | ~~Exercise `scripts/release.sh` end-to-end in CI, not just via unit tests of its logic~~ | **DONE**, commit `e80cb9c` (2026-08-15) — new release-smoke CI job builds a real release from HEAD and verifies file identity, immutability, byte-compiles every `.py`, and `rollback.sh --list` sees it. | Reconciliation Part 2, item 10 |
 | ~~P1-11~~ | ~~Repair local `data/walkforward.db`'s corrupt `ticks` table~~ | **DONE.** Installed `sqlite3` CLI (winget, `SQLite.SQLite`, user-approved), ran the incident doc's Phase 5 recovery plan: copied the corrupted file, `sqlite3 <copy> ".recover" \| sqlite3 recovered.db` (~30min on the 3.3GB file), `PRAGMA integrity_check` → `ok`. Per-table row-count diff against the original found only `ticks` differed (12,694,770 vs 12,692,028); traced the gap to `.recover`'s own `lost_and_found` table (3,011 orphaned rows, all on the exact corrupted page range 804034–805321 from the original incident) — manually re-inserted the 2,099 fully-populated ones (`INSERT OR IGNORE`, respecting the `UNIQUE(date,ticker,time)` constraint; 57 were already-reattached duplicates), closing the gap to 643 rows (0.005%, attributable to 855 genuinely-incomplete `lost_and_found` fragments). Re-ran `integrity_check` (`ok`) and confirmed the date range matches the documented pre-incident range (`2026-04-18`–`2026-07-29`) exactly. Swapped into place (`data/walkforward.db`), corrupted original moved aside (not deleted) as `walkforward.db.corrupt_pre_p1-11_repair_20260815T174834.bak`. Found and fixed a related gap while doing this: the `.bak`/`.bak-wal`/`.bak-shm` aside-copy naming (this file and the pre-existing `.pre_recovery_cutover_*.bak` from the original incident) wasn't covered by any `.stignore` pattern — added `*.bak`/`*.bak-wal`/`*.bak-shm` and extended the P1-12 guard test to require them | This session, 2026-08-15 |
-| P1-12 | **Add a check that `.stignore` still contains the corruption-hardening block** (`*.db`/`*.db-wal`/`*.db-shm`/`*.db-journal`/`*.sync-conflict-*`/`logs/`, from commit `520800c`) — e.g. a pre-commit hook, a `pytest` file-content assertion, or periodic Syncthing REST-API config check | This session found `.stignore`'s corruption-hardening rules had been silently overwritten in the working tree (wholesale replacement with an unrelated dev-tooling ignore list, zero overlap), re-exposing both `walkforward.db` and the newly-split `research.db` to the exact WAL-sync race that caused the 2026-07-29 incident. Fixed this session (rules restored + merged with the dev-tooling additions), but nothing currently prevents a repeat | This session, 2026-08-15 |
+| ~~P1-12~~ | ~~**Add a check that `.stignore` still contains the corruption-hardening block**~~ (`*.db`/`*.db-wal`/`*.db-shm`/`*.db-journal`/`*.sync-conflict-*`/`logs/`, from commit `520800c`) | **DONE**, commit `4c0fa0d` (2026-08-15) — CI guard test added. This session found `.stignore`'s corruption-hardening rules had been silently overwritten in the working tree, re-exposing both `walkforward.db` and `research.db` to the exact WAL-sync race that caused the 2026-07-29 incident; rules restored + merged, and this test now fails CI if that regresses | This session, 2026-08-15 |
+
+---
+
+## Operations Dashboard / Job History — delivery status (2026-08-18)
+
+P0 and P1 fully closed above satisfies this milestone's own entry criteria
+(`Audit/PRODUCTION_ENGINE_NEXT_MILESTONE.md` §"Entry Criteria"). Delivered this session, narrower
+than the full design doc scope (design doc §6 exit criteria 1-4) — the Job History slice only,
+per the design doc's own finding that it "has zero backend gaps — pure frontend work over
+already-frozen API":
+
+- **Backend:** no new endpoints needed. `GET /api/v1/scheduler`, `/scheduler/jobs`,
+  `/scheduler/jobs/<id>` (`routes/v1/scheduler.py`) and `/api/v1/status/jobs/{history,failed,
+  latest,running}`, `/status/summary` (`routes/v1/status.py` over `engine/job_status.py`'s
+  `job_execution_log`) already existed, tested, and classified VIEWER in
+  `security/route_policy.py`. One small additive change: `job_name` query-param filter on
+  `/status/jobs/history` (`engine/job_status.py::get_recent_jobs()`, `routes/v1/status.py`) for
+  the per-job drill-down, with its own tests (`tests/engine/test_job_status.py`,
+  `tests/test_v1_status_routes.py`).
+- **Frontend:** `frontend/src/domains/operations/` (scheduler banner, sortable job table,
+  job-detail drill-down with execution history + failure reason) + `frontend/src/api/{client,
+  operations}.ts` + `frontend/src/models/operations.ts`. All 4 quality gates pass (lint, typecheck,
+  test — 125/125, build). **Deliberately not registered in the frozen 7-workspace registry**
+  (`app/router/workspaces.ts` — adding an 8th workspace requires an ADR per that file's own
+  docstring, and this is an ops/engineering surface, not a trading-decision workspace). Mounted as
+  a standalone route (`/internal/operations`, same pattern as `NotFoundPage`), reachable by direct
+  URL only — not linked from Zone A/B nav, both of which have their own frozen, enumerated content
+  lists. See `frontend/src/domains/operations/operations-page.tsx`'s docstring and this session's
+  report for the full rationale — this is a flagged deviation from the design doc's own (incorrect)
+  assumption that `domains/decision/`'s empty scaffold could double as the Agent Firm ops page.
+- **Verified against real production data**, not just fixtures: SSH-queried the live
+  `job_execution_log` (2,403 real rows) and curled the live `/api/v1/*` endpoints directly; then
+  tunneled the live API into a local `npm run dev` and rendered the real page against it
+  (screenshot-verified 46 real scheduler jobs, real cron triggers, real execution history). This
+  caught one real bug before it shipped: the job-detail drill-down was filtering history by
+  `job.name` (APScheduler's human-readable display string, e.g. "Premarket Firm Scan 08:35")
+  instead of `job.job_id` (the actual key `job_execution_log.job_name` uses, e.g.
+  `premarket_firm_scan`) — invisible to unit tests whose fixtures happened to use the same string
+  for both fields. Fixed, and the fixtures were changed to use distinct id/name values so this bug
+  class stays caught.
+- **Deferred, not built:** `domains/decision/` (Agent Firm operational view, design doc §3's other
+  half), the new provider-failover endpoint (§4.1), and the AF2 metric query mapping (§4.2) — all
+  larger, separate pieces of the design doc's full scope, and the `domains/decision/` piece
+  specifically needs an owner decision on where it belongs given the frozen-workspace conflict
+  above (that scaffold is reserved for the real trading-decision "Decision Center" workspace).
+  Not deployed to production — that's a separate, higher-risk step for the repo owner to trigger
+  (`scripts/release.sh` + `systemctl --user restart`), not something this session did unilaterally.
 
 ---
 

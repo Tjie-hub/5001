@@ -26,6 +26,20 @@ export default defineConfig({
     },
   },
 
+  // Dev-only: the src/api client fetches relative /api/v1/* paths so the
+  // same code works unproxied once frontend and Flask share an origin in
+  // production (deployment strategy still undecided -- README's U-8/ADR-005).
+  // In `npm run dev`, proxy those paths to the local Flask app (app.py /
+  // start.sh dev, port 5001) instead of requiring CORS wiring on the backend.
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:5001',
+        changeOrigin: true,
+      },
+    },
+  },
+
   test: {
     environment: 'jsdom',
     globals: true,

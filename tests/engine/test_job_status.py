@@ -425,6 +425,31 @@ def test_get_recent_jobs_empty_db_returns_empty_list(tmp_path):
     assert get_recent_jobs(db_path=db_path) == []
 
 
+def test_get_recent_jobs_filters_by_job_name(tmp_path):
+    from engine.job_status import get_recent_jobs
+
+    db_path = str(tmp_path / "test.db")
+    _seed_row(db_path, job_name="job_a", started_at="2026-08-01 09:00:00")
+    _seed_row(db_path, job_name="job_b", started_at="2026-08-02 09:00:00")
+    _seed_row(db_path, job_name="job_a", started_at="2026-08-03 09:00:00")
+
+    recent = get_recent_jobs(db_path=db_path, job_name="job_a")
+    assert len(recent) == 2
+    assert all(r["job_name"] == "job_a" for r in recent)
+    assert recent[0]["started_at"] == "2026-08-03 09:00:00"  # newest first
+
+
+def test_get_recent_jobs_job_name_filter_respects_limit(tmp_path):
+    from engine.job_status import get_recent_jobs
+
+    db_path = str(tmp_path / "test.db")
+    for i in range(5):
+        _seed_row(db_path, job_name="job_a", started_at=f"2026-08-0{i+1} 09:00:00")
+
+    recent = get_recent_jobs(db_path=db_path, job_name="job_a", limit=2)
+    assert len(recent) == 2
+
+
 def test_get_status_summary_counts_by_status(tmp_path):
     from engine.job_status import get_status_summary
 

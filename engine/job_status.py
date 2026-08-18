@@ -296,9 +296,12 @@ _RECENT_JOBS_DEFAULT_LIMIT = 50
 _RECENT_JOBS_MAX_LIMIT = 500
 
 
-def get_recent_jobs(limit: int = _RECENT_JOBS_DEFAULT_LIMIT, db_path: str = None):
-    """Most recent `limit` rows (any status, any job), newest first. `limit`
-    is clamped to [1, _RECENT_JOBS_MAX_LIMIT] so a careless caller can't force
+def get_recent_jobs(limit: int = _RECENT_JOBS_DEFAULT_LIMIT, db_path: str = None,
+                     job_name: str = None):
+    """Most recent `limit` rows, newest first, optionally restricted to one
+    `job_name` (Operations Dashboard job-detail drill-down: the per-job
+    execution history behind a single row of /scheduler/jobs). `limit` is
+    clamped to [1, _RECENT_JOBS_MAX_LIMIT] so a careless caller can't force
     an unbounded table scan/response."""
     db_path = db_path or DB_PATH
     limit = max(1, min(int(limit), _RECENT_JOBS_MAX_LIMIT))
@@ -306,9 +309,15 @@ def get_recent_jobs(limit: int = _RECENT_JOBS_DEFAULT_LIMIT, db_path: str = None
     conn.row_factory = sqlite3.Row
     try:
         ensure_job_status_table(conn)
-        rows = conn.execute(
-            "SELECT * FROM job_execution_log ORDER BY id DESC LIMIT ?", (limit,)
-        ).fetchall()
+        if job_name is not None:
+            rows = conn.execute(
+                "SELECT * FROM job_execution_log WHERE job_name=? "
+                "ORDER BY id DESC LIMIT ?", (job_name, limit)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM job_execution_log ORDER BY id DESC LIMIT ?", (limit,)
+            ).fetchall()
         return [_row_to_dict(r) for r in rows]
     finally:
         conn.close()

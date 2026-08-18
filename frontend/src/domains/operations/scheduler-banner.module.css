@@ -1,0 +1,18 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+  background: var(--shell-surface);
+  font-size: 0.8125rem;
+}
+
+.detail {
+  color: var(--shell-text-muted);
+}
+
+.unavailable {
+  color: var(--shell-text-muted);
+}

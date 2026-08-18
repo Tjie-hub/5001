@@ -171,3 +171,38 @@ deliverable of the milestone itself, not assumed here.
   workstream the roadmap doesn't explicitly require, resolving the 11 items is a decision for
   whoever owns the Production Engine roadmap next, not an action this transition report takes
   unilaterally.
+
+---
+
+## Update, 2026-08-18 — entry criteria now satisfied; Job History slice delivered
+
+The 11 items this report's "Ready to begin: NO" was gated on are now **all closed** — verified
+against `git log` and each commit's actual diff (not just its message), not assumed from a report
+claim; see `Audit/PRODUCTION_ENGINE_BACKLOG.md`'s 2026-08-18 amendment for the per-commit trail
+(`20ca93a`, `48ed038`, `dccfac2`, `4a204a5`, `a95c289`, `2418726`, `fc89490`, `e80cb9c`, all
+2026-08-15, plus `92f7b09`/`4c0fa0d` for P1-11/P1-12). This milestone's own entry criteria
+(§"Entry Criteria" above) are therefore now met.
+
+Given that, this session implemented and shipped the **Job History** half of the milestone —
+`frontend/src/domains/operations/` over the already-frozen `/api/v1/scheduler*` and
+`/api/v1/status/jobs/*` APIs, verified against real production data (SSH-queried
+`job_execution_log`, live-API curls, and a browser render against the live server tunneled into a
+local dev build — see `Audit/PRODUCTION_ENGINE_BACKLOG.md`'s delivery-status entry for the full
+verification trail and the one real bug it caught before shipping). All 4 frontend quality gates
+pass; backend changes are covered by their own tests.
+
+**Not yet started:** the Agent Firm operations half (`domains/decision/` per the design doc §3) —
+this needs an explicit owner decision first, not just implementation time. The design doc assumed
+`domains/decision/`'s empty scaffold could hold the Agent Firm operational view, but that scaffold
+is `app/router/workspaces.ts`'s frozen "Decision Center" trading-decision workspace (Decide:
+"Evaluate, prioritise and act on investment recommendations"), not an ops/monitoring surface — the
+design doc's own naming coincidence ("decision" meaning two different things) doesn't resolve
+which one the folder is for. Also not started: the new provider-failover endpoint (§4.1) and the
+AF2 metric query mapping (§4.2). Job History's own route (`/internal/operations`) sidesteps this
+same frozen-workspace question by not claiming workspace status at all — see that page's own
+docstring for why that works for Job History specifically but doesn't transfer to
+`domains/decision/`, which the design doc explicitly ties to the existing `decision` scaffold name.
+
+**Also not done, deliberately:** deployment to production. Implementation is in the working tree,
+tested, and buildable; shipping it to the live server is a separate, higher-risk action
+(`scripts/release.sh` + `systemctl --user restart`) for the repo owner to trigger.

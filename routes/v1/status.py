@@ -56,10 +56,11 @@ def status_jobs_failed():
 
 @api_v1_bp.route("/status/jobs/history", methods=["GET"])
 def status_jobs_history():
-    """Recent execution history (any status, any job), newest first.
+    """Recent execution history, newest first.
 
     Query params:
-      limit -- max rows to return (default 50); must be a positive integer.
+      limit    -- max rows to return (default 50); must be a positive integer.
+      job_name -- optional; restrict history to one job (Job History drill-down).
     """
     raw_limit = request.args.get("limit", "50")
     try:
@@ -70,7 +71,8 @@ def status_jobs_history():
     if limit <= 0:
         raise ApiError("INVALID_LIMIT", 400, "limit must be a positive integer")
 
-    rows = job_status.get_recent_jobs(limit=limit, db_path=config.DB_PATH)
+    job_name = request.args.get("job_name")
+    rows = job_status.get_recent_jobs(limit=limit, db_path=config.DB_PATH, job_name=job_name)
     return ok({"history": [_public(r) for r in rows]})
 
 

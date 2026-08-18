@@ -169,6 +169,18 @@ class TestJobsHistory:
         assert resp.status_code == 200
         assert resp.get_json()["data"] == {"history": []}
 
+    def test_job_name_filter(self, client):
+        c, db = client
+        _seed(db, job_name="job_a", started_at="2026-08-01 09:00:00")
+        _seed(db, job_name="job_b", started_at="2026-08-02 09:00:00")
+        _seed(db, job_name="job_a", started_at="2026-08-03 09:00:00")
+
+        resp = c.get("/api/v1/status/jobs/history?job_name=job_a")
+        assert resp.status_code == 200
+        data = resp.get_json()["data"]
+        assert len(data["history"]) == 2
+        assert all(j["job_name"] == "job_a" for j in data["history"])
+
     def test_malformed_limit_returns_400_error_envelope(self, client):
         c, _ = client
         resp = c.get("/api/v1/status/jobs/history?limit=not-a-number")
