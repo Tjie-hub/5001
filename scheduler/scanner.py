@@ -270,6 +270,17 @@ def scan_momentum_signals():
         logging.info("[scan_momentum] 'momentum' disabled — scan skipped.")
         return []
 
+    # T7 production-execution-boundary audit: the disabled-list check above is
+    # config that can be silently flipped; this scan must also independently
+    # clear real Edge Registry admission before it may auto-open anything, the
+    # same requirement now applied to the counter-trend book. No registry
+    # entry exists for "Momentum Following" today, so this blocks by design.
+    from engine.registry_loader import registry_governance
+    if not isinstance(registry_governance("Momentum Following"), set):
+        logging.info("[scan_momentum] 'Momentum Following' has no Edge Registry "
+                     "admission — scan skipped.")
+        return []
+
     # Pre-compute sector scores once for entire scan (1-hour TTL cache)
     _sector_scores = _get_sector_scores_cached()
 
@@ -858,8 +869,21 @@ def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
 
     candidates = list(_REGIME_STRATEGY_MAP.get(sub_band, []))
 
-    counter_trend = [c for c in candidates if c in _COUNTER_TREND_BOOK]
+    counter_trend_candidates = [c for c in candidates if c in _COUNTER_TREND_BOOK]
     wf_candidates = [c for c in candidates if c not in _COUNTER_TREND_BOOK]
+
+    # Counter-trend book (Crash Recovery, Panic Rebound): the own-signal-checker
+    # bypass alone is no longer sufficient (T7 production-execution-boundary
+    # audit) -- each strategy must also clear real Edge Registry admission
+    # (APPROVED, ticker in its frozen universe) like any other governed
+    # strategy. Neither has a gate_decision/registry entry today, so both are
+    # currently excluded; this is a deliberate behavior change, not a bug.
+    from engine.registry_loader import registry_governance
+    counter_trend = []
+    for c in counter_trend_candidates:
+        gov = registry_governance(c)
+        if isinstance(gov, set) and ticker in gov:
+            counter_trend.append(c)
 
     selected = []
     if wf_candidates:
@@ -874,7 +898,11 @@ def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
         except Exception:
             selected = []
 
-    if not selected and not counter_trend:
+    # The broad per-ticker fallback only applies when this regime's map has NO
+    # counter-trend candidate at all -- NOT merely when none passed admission,
+    # or losing admission would silently widen selection to the unrestricted
+    # wf_scores-consistency fallback (off the regime map entirely).
+    if not selected and not counter_trend_candidates:
         selected = get_ticker_best_strategies(ticker, min_consistency)
 
     result = selected + [c for c in counter_trend if c not in selected]

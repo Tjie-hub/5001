@@ -132,3 +132,24 @@ def test_momentum_scan_skips_when_momentum_disabled(monkeypatch):
     monkeypatch.setattr(scanner, "get_all_tickers", lambda: [])
     out = scanner.scan_momentum_signals()
     assert out == []
+
+
+def test_momentum_scan_skips_without_registry_admission(monkeypatch):
+    """T7 production-execution-boundary audit: even when 'momentum' is NOT in
+    the disabled list, scan_momentum_signals must not auto-open without real
+    Edge Registry admission for the Momentum Following book -- defense in
+    depth against silently re-enabling live trading by editing the disabled
+    list alone. Today it has no registry entry at all, so this always blocks."""
+    import engine.calendar_filter as cal
+    import scheduler.scanner as scanner
+    import engine.registry_loader as rl
+    monkeypatch.setattr(cal, "is_trading_day", lambda: (True, "trading day"))
+    monkeypatch.setattr(cal, "is_blackout_day", lambda: (False, ""))
+    monkeypatch.setattr(scanner, "_get_disabled_strategies", lambda: set())   # NOT disabled
+    monkeypatch.setattr(rl, "registry_governance", lambda s: None)           # no admission
+
+    def _must_not_reach(*a, **k):
+        raise AssertionError("scan proceeded past the registry admission gate")
+    monkeypatch.setattr(scanner, "get_all_tickers", _must_not_reach)
+    out = scanner.scan_momentum_signals()
+    assert out == []

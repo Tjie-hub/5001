@@ -94,18 +94,22 @@ def test_bull_excludes_negative_edge_candidate(wf_db):
     assert "momentum" not in result
 
 
-def test_bear_returns_counter_trend_book(wf_db):
-    """BEAR regime → counter-trend book (Crash Recovery, Panic Rebound) always
-    present; momentum-family never appears. Liquidity Sweep is in the BEAR map
-    but NOT the counter-trend book, so it is edge-gated: absent without a
-    positive wf_edge row, present with one."""
+def test_bear_counter_trend_excluded_without_registry_admission(wf_db, monkeypatch):
+    """BEAR regime -- counter-trend book (Crash Recovery, Panic Rebound) must NOT
+    trade without real Edge Registry admission (T7 production-execution-boundary
+    fix): the strategy's own signal checker is no longer sufficient by itself,
+    since neither has a gate_decision or registry entry today. Liquidity Sweep
+    is in the BEAR map but NOT the counter-trend book, so it stays edge-gated
+    as before: absent without a positive wf_edge row, present with one."""
+    import engine.registry_loader as rl
+    monkeypatch.setattr(rl, "registry_governance", lambda s: None)
     from scheduler.scanner import adaptive_strategy_selector
     _insert_edge(wf_db, "BEAR_T", "Trend Following Breakout", 1.5)   # off-map for BEAR
     _insert_edge(wf_db, "BEAR_T", "momentum", 1.0)                   # off-map for BEAR
 
     df = _make_regime_df(adx_val=30, ma_slope_val=-2.5)
     result = adaptive_strategy_selector("BEAR_T", df)
-    assert set(result) == {"Crash Recovery", "Panic Rebound"}, result
+    assert "Crash Recovery" not in result and "Panic Rebound" not in result
 
     # Once it earns a positive edge, it joins the BEAR candidates.
     _insert_edge(wf_db, "BEAR_T", "Liquidity Sweep", 0.8)
@@ -113,15 +117,33 @@ def test_bear_returns_counter_trend_book(wf_db):
     assert "Liquidity Sweep" in result2, result2
 
 
-def test_sideways_routes_panic_rebound(wf_db):
-    """SIDEWAYS regime → Panic Rebound (counter-trend) present; trend-following
-    strategies must not appear even with a positive edge (off the sideways map)."""
+def test_bear_counter_trend_included_once_registry_admits(wf_db, monkeypatch):
+    """Once Crash Recovery clears real Registry admission (a frozen universe
+    including the ticker), it is selected; Panic Rebound stays excluded until
+    it separately clears admission -- proves the gate is per-strategy, not a
+    blanket book-level bypass."""
+    import engine.registry_loader as rl
+    monkeypatch.setattr(rl, "registry_governance",
+                        lambda s: {"BEAR_T"} if s == "Crash Recovery" else None)
+    from scheduler.scanner import adaptive_strategy_selector
+    df = _make_regime_df(adx_val=30, ma_slope_val=-2.5)
+    result = adaptive_strategy_selector("BEAR_T", df)
+    assert "Crash Recovery" in result
+    assert "Panic Rebound" not in result
+
+
+def test_sideways_panic_rebound_excluded_without_registry_admission(wf_db, monkeypatch):
+    """SIDEWAYS regime -- Panic Rebound (counter-trend) must NOT trade without
+    real Registry admission; trend-following strategies must not appear even
+    with a positive edge (off the sideways map)."""
+    import engine.registry_loader as rl
+    monkeypatch.setattr(rl, "registry_governance", lambda s: None)
     from scheduler.scanner import adaptive_strategy_selector
     _insert_edge(wf_db, "FLAT_T", "Trend Following Breakout", 1.2)   # off-map for SIDEWAYS
 
     df = _make_regime_df(adx_val=15, ma_slope_val=0.2)
     result = adaptive_strategy_selector("FLAT_T", df)
-    assert "Panic Rebound" in result
+    assert "Panic Rebound" not in result
     assert "Trend Following Breakout" not in result
 
 
