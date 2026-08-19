@@ -7,6 +7,14 @@ intentionally empty** — there is no shell, no routing, no design system and no
 workspace yet. Workstream A's exit criterion is that the quality gates pass on
 an empty application.
 
+**ADR-008 update:** scheduler/job-history/system-status information (formerly
+a standalone, unreachable `/internal/operations` route) is now owned by the
+Settings workspace, under its already-frozen "System Information" / "Support &
+Diagnostics" regions — see
+`docs/OneDrive_2026-08-07/Frontend arch/ADR-008_OPERATIONS_DASHBOARD_SETTINGS_PLACEMENT.md`
+and `src/domains/settings/settings-page.tsx`. Not an eighth workspace; the
+frozen seven-workspace list is unchanged.
+
 ## Governing documents
 
 All under `docs/OneDrive_2026-08-07/Frontend arch/`. Read before changing

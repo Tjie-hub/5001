@@ -23,16 +23,21 @@ interface JobDetailPanelProps {
  * 08:35" vs. id "premarket_firm_scan") that never appears in
  * job_execution_log at all. Caught by live-data verification against
  * production, not by the unit tests — their fixtures happened to use the
- * same string for both fields. */
+ * same string for both fields.
+ *
+ * Heading levels bumped h2→h3 / h3→h4 on the ADR-008 move into Settings:
+ * this panel now nests under Settings' own h2 region title ("Support &
+ * Diagnostics"), one level deeper than when it sat directly under the
+ * former Operations page's h1. */
 export function JobDetailPanel({ job }: JobDetailPanelProps) {
   const { data: history, loading, error, refresh } = useJobHistory(job.job_id)
 
   return (
     <section className={cx(styles['panel'])} aria-labelledby="job-detail-title">
       <div className={cx(styles['header'])}>
-        <h2 id="job-detail-title" className={cx(styles['title'])}>
+        <h3 id="job-detail-title" className={cx(styles['title'])}>
           {job.name}
-        </h2>
+        </h3>
         <button type="button" className={cx(styles['refreshButton'])} onClick={refresh}>
           Refresh
         </button>
@@ -53,7 +58,7 @@ export function JobDetailPanel({ job }: JobDetailPanelProps) {
         </div>
       </dl>
 
-      <h3 className={cx(styles['subtitle'])}>Recent executions</h3>
+      <h4 className={cx(styles['subtitle'])}>Recent executions</h4>
 
       {loading ? <p className={cx(styles['status'])}>Loading history…</p> : null}
       {error ? (

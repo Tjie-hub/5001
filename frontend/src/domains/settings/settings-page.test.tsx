@@ -1,8 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { OperationsPage } from './operations-page'
+import { SettingsPage } from './settings-page'
 import type { JobExecution, SchedulerJob, SchedulerStatus } from '@models/operations'
+
+/**
+ * Relocated from the former domains/operations/operations-page.test.tsx
+ * (ADR-008: scheduler/job-history/system-status information is owned by
+ * Settings' System Information / Support & Diagnostics regions, not a
+ * standalone Operations workspace). Behavior asserted is unchanged from the
+ * original test — only the render target and heading/region structure
+ * reflect the new placement.
+ */
 
 const mockStatus: SchedulerStatus = {
   available: true,
@@ -80,12 +89,21 @@ vi.mock('@api/operations', () => ({
   getJobHistory: vi.fn(() => Promise.resolve({ history: mockHistory })),
 }))
 
-describe('OperationsPage', () => {
-  it('renders the scheduler banner and job table from real endpoint shapes', async () => {
-    render(<OperationsPage />)
+describe('SettingsPage', () => {
+  it('renders the Settings heading', async () => {
+    render(<SettingsPage />)
+
+    expect(await screen.findByRole('heading', { level: 1, name: /Settings/ })).toBeVisible()
+  })
+
+  it('renders scheduler status under System Information and the job table under Support & Diagnostics', async () => {
+    render(<SettingsPage />)
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: /Operations · Job History/ }),
+      await screen.findByRole('heading', { level: 2, name: 'System Information' }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Support & Diagnostics' }),
     ).toBeVisible()
 
     await waitFor(() => {
@@ -99,13 +117,13 @@ describe('OperationsPage', () => {
 
   it('drills into a job to show its failure history and error message', async () => {
     const user = userEvent.setup()
-    render(<OperationsPage />)
+    render(<SettingsPage />)
 
     const jobLink = await screen.findByRole('button', { name: 'EOD Trade Plan 16:40' })
     await user.click(jobLink)
 
     expect(
-      await screen.findByRole('heading', { level: 2, name: 'EOD Trade Plan 16:40' }),
+      await screen.findByRole('heading', { level: 3, name: 'EOD Trade Plan 16:40' }),
     ).toBeVisible()
 
     await waitFor(() => {
@@ -131,7 +149,7 @@ describe('OperationsPage', () => {
     })
     vi.mocked(operationsApi.getSchedulerJobs).mockResolvedValueOnce({ jobs: [], count: 0 })
 
-    render(<OperationsPage />)
+    render(<SettingsPage />)
 
     expect(await screen.findByText(/Scheduler unavailable in this process/)).toBeVisible()
   })

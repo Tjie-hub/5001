@@ -1,12 +1,15 @@
 /**
- * Operations / Job History data hooks.
+ * Scheduler / job-history data hooks — Settings' System Information /
+ * Support & Diagnostics regions (relocated from domains/operations/hooks.ts
+ * under ADR-008; behavior unchanged, only the owning workspace changed).
  *
  * Domain-local, not src/hooks/ (that directory is cross-cutting presentation
  * hooks only — job/scheduler fetching is this workspace's own concern, the
  * ADR-003 §16.2 "workspace adapter" role). Plain fetch-on-mount + manual
- * refresh, no polling/websocket loop: the design doc explicitly scopes v1 to
- * "polling on page load / manual refresh... no live-tailing requirement was
- * stated anywhere in the milestone's source documents" (§5).
+ * refresh, no polling/websocket loop: the original design doc explicitly
+ * scoped this to "polling on page load / manual refresh... no live-tailing
+ * requirement was stated anywhere in the milestone's source documents" (§5),
+ * unchanged by the ADR-008 relocation.
  *
  * Not built on @tanstack/react-query: ADR-003 is still PROPOSED and the
  * library isn't installed yet. This is the smallest working data layer for

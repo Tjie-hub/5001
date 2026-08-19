@@ -21,7 +21,7 @@ import { WorkspaceShellPage } from '../shell/workspace-shell-page'
 import { UrlNormalizationGuard } from './url-normalization-guard'
 import { NotFoundPage } from './not-found-page'
 import { getWorkspace, ROUTE_PATHS, type WorkspaceId } from './workspaces'
-import { OperationsPage } from '@domains/operations/operations-page'
+import { SettingsPage } from '@domains/settings/settings-page'
 
 function WorkspaceRoute({ id }: { id: WorkspaceId }) {
   return <WorkspaceShellPage workspace={getWorkspace(id)} />
@@ -58,7 +58,17 @@ export function AppRoutes() {
           <Route path={ROUTE_PATHS.watchlist} element={<WorkspaceRoute id="watchlist" />} />
           <Route path={ROUTE_PATHS.market} element={<WorkspaceRoute id="market" />} />
           <Route path={ROUTE_PATHS.search} element={<WorkspaceRoute id="search" />} />
-          <Route path={ROUTE_PATHS.settings} element={<WorkspaceRoute id="settings" />} />
+          {/*
+            Settings — ADR-008 (docs/OneDrive_2026-08-07/Frontend arch/
+            ADR-008_OPERATIONS_DASHBOARD_SETTINGS_PLACEMENT.md): scheduler/
+            job-history/system-status information (formerly the standalone,
+            unreachable /internal/operations route) is owned here, under
+            Settings' own already-frozen "System Information" / "Support &
+            Diagnostics" regions — not a new eighth workspace. See
+            domains/settings/settings-page.tsx docstring for the full
+            rationale.
+          */}
+          <Route path={ROUTE_PATHS.settings} element={<SettingsPage />} />
 
           {/*
             `/ticker` carries no symbol. It exists because NP-03 requires every
@@ -72,21 +82,6 @@ export function AppRoutes() {
           */}
           <Route path={ROUTE_PATHS.ticker} element={<WorkspaceRoute id="ticker" />} />
           <Route path={ROUTE_PATHS.tickerSymbol} element={<TickerRoute />} />
-
-          {/*
-            Operations Dashboard / Job History — an internal ops/engineering
-            surface ("is the scheduler alive and did today's jobs run"), not
-            a trading decision workspace. Deliberately NOT one of the seven
-            frozen workspaces in workspaces.ts (adding an eighth requires an
-            ADR per that file's own docstring, and this page's
-            responsibility doesn't map onto Decide/Evaluate/Observe/
-            Investigate/Understand/Discover/Configure anyway). Mounted here
-            directly, same pattern as NotFoundPage below: reachable by
-            direct URL, not linked from Zone A/B (both frozen, enumerated
-            content lists — see operations-page.tsx's own docstring for the
-            full rationale).
-          */}
-          <Route path="/internal/operations" element={<OperationsPage />} />
 
           <Route path="*" element={<NotFoundPage />} />
         </Route>
