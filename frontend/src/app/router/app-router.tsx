@@ -21,6 +21,7 @@ import { WorkspaceShellPage } from '../shell/workspace-shell-page'
 import { UrlNormalizationGuard } from './url-normalization-guard'
 import { NotFoundPage } from './not-found-page'
 import { getWorkspace, ROUTE_PATHS, type WorkspaceId } from './workspaces'
+import { DecisionPage } from '@domains/decision/decision-page'
 import { SettingsPage } from '@domains/settings/settings-page'
 
 function WorkspaceRoute({ id }: { id: WorkspaceId }) {
@@ -53,7 +54,13 @@ export function AppRoutes() {
           */}
           <Route path={ROUTE_PATHS.home} element={<Navigate to={ROUTE_PATHS.decision} replace />} />
 
-          <Route path={ROUTE_PATHS.decision} element={<WorkspaceRoute id="decision" />} />
+          {/*
+            Decision Center — the first Workstream D workspace built (see
+            domains/decision/decision-page.tsx docstring). Every other
+            workspace below except Settings is still the generic placeholder
+            shell; these are the two overrides.
+          */}
+          <Route path={ROUTE_PATHS.decision} element={<DecisionPage />} />
           <Route path={ROUTE_PATHS.portfolio} element={<WorkspaceRoute id="portfolio" />} />
           <Route path={ROUTE_PATHS.watchlist} element={<WorkspaceRoute id="watchlist" />} />
           <Route path={ROUTE_PATHS.market} element={<WorkspaceRoute id="market" />} />

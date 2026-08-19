@@ -7,6 +7,16 @@ intentionally empty** — there is no shell, no routing, no design system and no
 workspace yet. Workstream A's exit criterion is that the quality gates pass on
 an empty application.
 
+**Decision Center update:** this claim is stale for Decision Center specifically
+— Workstream B (Shell + Router) is also complete, and Decision Center's
+Executive Summary region is real: it reads live scheduler, Edge Registry
+admission, and current-watchlist state through `/api/v1/*`
+(`src/domains/decision/decision-page.tsx`, `hooks.ts`), not a placeholder. The
+other five still-placeholder workspaces (Portfolio, Watchlist, Ticker, Market,
+Search) are unaffected by this milestone. See this repo's CLAUDE.md
+Decision-Making Hierarchy on trusting running-system state over a document's
+self-report.
+
 **ADR-008 update:** scheduler/job-history/system-status information (formerly
 a standalone, unreachable `/internal/operations` route) is now owned by the
 Settings workspace, under its already-frozen "System Information" / "Support &
@@ -32,6 +42,8 @@ anything structural.
 | Phase 9 Implementation v1.1           | NOT STARTED          | Execution record                        |
 | ADR-001                               | APPROVED             | Framework, state layers, domain diagram |
 | ADR-003                               | PROPOSED             | Server State architecture               |
+| ADR-005                               | PROPOSED             | Deployment strategy                     |
+| ADR-006                               | PROPOSED             | Legacy Flask UI disposition             |
 
 ## Commands
 
@@ -107,7 +119,7 @@ These block later workstreams and are tracked in Phase 9 v1.1 §7:
 | Blocker                                   | Blocks                                     |
 | ----------------------------------------- | ------------------------------------------ |
 | U-1 design token values do not exist      | Workstream C entirely                      |
-| U-2 backend API covers ~1 of 8 domains    | Workspaces 5–10                            |
+| U-2 backend API covers ~1 of 8 domains (stale 2026-08-06 claim — `/api/v1/*` now covers status/scheduler/watchlists/candidates/snapshots/reports/registry/metrics/config/health; still no write endpoints, see U-3) | Workspaces 5–10 |
 | U-3 zero write endpoints                  | Decision Center, Settings                  |
 | U-4 no identity layer                     | Auth, Portfolio, Decision Center, Settings |
 | U-6 Ticker route model (ADR-002)          | Ticker                                     |

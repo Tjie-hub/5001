@@ -197,6 +197,14 @@ _PATHS = {
         "Standard envelope wrapping {resources: [{name, endpoints: "
         "[{path, methods}]}]}",
     ),
+    "/api/v1/registry/status": _get(
+        "Edge Registry admission summary -- approved/shadow strategy "
+        "counts and entries, read through the same engine.registry_loader "
+        "cache every production admission check uses",
+        "Standard envelope wrapping {hash, approved, shadow, entries: "
+        "[{id, version, status, strategy_fn, regimes}], skipped_count, "
+        "debt_count, violation_count}",
+    ),
 }
 
 

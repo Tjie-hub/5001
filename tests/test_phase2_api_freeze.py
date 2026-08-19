@@ -9,6 +9,12 @@ This supersedes nothing -- tests/test_v1_operational_apis_freeze.py (2B)
 and tests/test_v1_business_apis_freeze.py (2C) stay as their own
 per-workstream regression guards. This file is the whole-surface view: if
 Phase 2's API contract is ever broken, this is the file that catches it.
+
+Post-freeze addition (2026-08-19, Production Panel fix): /api/v1/registry/
+status was added after the 2026-08-06 freeze date to back the Decision
+Center Executive Summary (routes/v1/registry.py) -- deliberately extending
+this inventory rather than treating the freeze as closed to new read-only
+endpoints, same pattern as any future v1 addition should follow.
 """
 import importlib
 import sqlite3
@@ -55,6 +61,7 @@ API_V1_ENDPOINTS = [
     ("/api/v1/candidates/screening", VIEWER),
     ("/api/v1/candidates/reversal-watchlist", VIEWER),
     ("/api/v1/candidates/premover-watchlist", VIEWER),
+    ("/api/v1/registry/status", VIEWER),
 ]
 
 # GET-able paths only (excludes dynamic <param> rules, which aren't
