@@ -252,11 +252,51 @@ strategy that's already aligned.
 
 ---
 
-## 9. Remaining T7 scope (not started this session)
+## 9. Invariant #9 (admission auditability) — closed for the live governed path
 
-Invariants #1-8 are addressed by §2-8 above (modulo the two open decisions in §4.3/§4.4). #5
+**Finding:** `paper_trades` recorded `strategy` (the strategy_fn) and `entry_date`, but nothing
+tied a trade back to which registry state or which admission decision authorized it. The only way
+to answer "what evidence/registry entry justified this trade" was manual `git log`/`git show`
+archaeology on `registry/edge_registry.yaml`, correlated by guessing which commit was live on
+`entry_date`.
+
+**Fix (no duplicate registry — both values are read straight off the existing `get_registry()`):**
+1. `engine/registry_loader.py::admission_path(strategy_fn)` — classifies the current admission
+   state as one of `UNREGISTERED` / `SHADOW` / `APPROVED_DEBT` (via `_LIFECYCLE_DEBT`) /
+   `APPROVED_CLEAN`. Tested against a real production-registry case (`"NR7 Breakout"` →
+   `APPROVED_DEBT`, matching its known grandfather status) plus synthetic SHADOW/clean cases.
+2. `paper_trade.py` — two new nullable columns on `paper_trades` (idempotent `ALTER TABLE`
+   migration, matching this codebase's existing pattern): `admission_path`, `registry_hash` (the
+   `get_registry()['hash']` at the moment of admission — a git short-hash or content hash an
+   auditor can `git show` directly, no need to guess a date-correlated commit). `open_trade()`
+   gained matching optional kwargs, both `None` by default so existing callers (manual API,
+   premover) are unaffected.
+3. `scheduler/scanner.py`'s Step 7 governed auto-open call site now computes and passes both
+   values for every trade it opens.
+
+**Not wired:** `scan_momentum_signals()`'s auto-open call site (already always blocked — see §4.2)
+was deliberately left unwired. That function's `open_trade()` call doesn't pass an explicit
+`strategy=`, so the strategy actually attributed to the trade is resolved *inside* `open_trade()`
+(`get_best_strategy_for_ticker()`), which the caller can't know before calling — computing
+`admission_path("Momentum Following")` there would attribute the wrong strategy's admission state
+to the trade. Forcing a mismatched fit would make the audit trail actively misleading rather than
+merely incomplete; left as `NULL`, consistent with the rest of this document's "smallest correct
+fix" discipline. `run_premover_eod()`'s `open_trade(strategy=None, ...)` call is likewise
+unaffected — untouched per the standing instruction not to modify premover.
+
+**Verification gap acknowledged:** `scheduler/scanner.py`'s Step 7 wiring (4 new lines inside
+`scheduled_multi_strategy_scan()`, a very large function with no existing full-integration test —
+none of this repo's scan functions have one) is verified by direct code review and by unit tests
+of its two components (`admission_path()` correctness; `open_trade()` correctly storing whatever
+it's given) rather than by one true end-to-end test through the real scan function. Both
+components are independently proven correct; only their wiring at that specific call site rests on
+manual verification.
+
+---
+
+## 10. Remaining T7 scope (not started this session)
+
+Invariants #1-9 are addressed by §2-9 above (modulo the two open decisions in §4.3/§4.4). #5
 (exceptions explicit/governed) is partial — counter-trend/momentum/premover are each now
-explicitly classified, not silently ungoverned. #9 (admission auditability — every production
-admission explainable after the fact: strategy/edge/evidence/registry entry/admission
-decision/execution model/when) and #10 (capital/promotion semantics vs. the authoritative SSOT
-docs) are not yet investigated.
+explicitly classified, not silently ungoverned. #10 (capital/promotion semantics vs. the
+authoritative SSOT docs) is not yet investigated.

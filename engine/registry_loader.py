@@ -209,6 +209,36 @@ def registry_governance(strategy_fn):
     return 'SHADOW' if matches else None
 
 
+def admission_path(strategy_fn):
+    """Human-readable classification of why `strategy_fn` is (or isn't)
+    currently admitted -- for post-hoc auditability (T7 invariant #9).
+
+    One of:
+      'UNREGISTERED'    -- no registry entry at all
+      'SHADOW'          -- registry-governed, not (yet) APPROVED
+      'APPROVED_DEBT'   -- APPROVED via a _LIFECYCLE_DEBT grandfather
+                           exception (no clean evidence receipt)
+      'APPROVED_CLEAN'  -- APPROVED with a fully valid evidence receipt
+
+    Callers (e.g. scheduler.scanner's auto-open) record this alongside
+    get_registry()['hash'] on the resulting trade so any admission can be
+    traced back to the exact registry state that authorized it, without a
+    second registry -- both values are read straight off get_registry().
+    """
+    r = get_registry()
+    matches = [e for e in r['entries'] if e['strategy_fn'] == strategy_fn]
+    if not matches:
+        return 'UNREGISTERED'
+    approved = [e for e in matches if e['status'] == 'APPROVED']
+    if not approved:
+        return 'SHADOW'
+    debt_idents = {d[0] for d in r['debt']}
+    for e in approved:
+        if f"{e['id']}_v{e['version']}" in debt_idents:
+            return 'APPROVED_DEBT'
+    return 'APPROVED_CLEAN'
+
+
 def startup_summary():
     r = get_registry()
     n_app = sum(1 for e in r['entries'] if e['status'] == 'APPROVED')

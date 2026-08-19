@@ -130,6 +130,14 @@ def init_paper_table():
         conn.execute("ALTER TABLE paper_trades ADD COLUMN highest_seen REAL")
     if 'atr14' not in cols:
         conn.execute("ALTER TABLE paper_trades ADD COLUMN atr14 REAL")
+    # T7 invariant #9 (admission auditability): which Edge Registry admission
+    # decision authorized this trade, and the registry state (get_registry()
+    # ['hash']) it was made under -- optional (NULL for callers that aren't
+    # registry-governed, e.g. manual API opens or premover).
+    if 'admission_path' not in cols:
+        conn.execute("ALTER TABLE paper_trades ADD COLUMN admission_path TEXT")
+    if 'registry_hash' not in cols:
+        conn.execute("ALTER TABLE paper_trades ADD COLUMN registry_hash TEXT")
     # premover_auto_log: shadow/enforce evaluation records
     conn.execute("""
         CREATE TABLE IF NOT EXISTS premover_auto_log (
@@ -281,7 +289,8 @@ def get_best_strategy_for_ticker(ticker: str) -> str:
 def open_trade(ticker: str, entry_price: float, strategy: str = None,
                sl_atr_mult: float = 2.0, min_rr: float = 2.0,
                sl_price: float = None, tp_price: float = None, notify: bool = True,
-               lots_multiplier: float = 1.0):
+               lots_multiplier: float = 1.0,
+               admission_path: str = None, registry_hash: str = None):
     # Default to the backtest-optimal strategy for this ticker, not a blanket
     # 'Momentum Following'. Explicit callers (swing screener, manual API) win.
     strategy = strategy or get_best_strategy_for_ticker(ticker)
@@ -434,9 +443,9 @@ def open_trade(ticker: str, entry_price: float, strategy: str = None,
     conn = get_db()
     conn.execute("""
         INSERT INTO paper_trades
-        (ticker, strategy, entry_date, entry_price, lots, capital_used, tp_price, sl_price, exit_rules, highest_seen, atr14, status)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?, 'OPEN')
-    """, (ticker, strategy, now, entry_price, lots, capital_used, tp_price, sl_price, exit_rules_json, entry_price, atr))
+        (ticker, strategy, entry_date, entry_price, lots, capital_used, tp_price, sl_price, exit_rules, highest_seen, atr14, admission_path, registry_hash, status)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, 'OPEN')
+    """, (ticker, strategy, now, entry_price, lots, capital_used, tp_price, sl_price, exit_rules_json, entry_price, atr, admission_path, registry_hash))
     conn.commit()
     trade_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     conn.close()

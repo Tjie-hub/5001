@@ -167,6 +167,35 @@ def test_registry_governance_returns_none_when_not_registered(tmp_path, monkeypa
     rl._reset_cache()
 
 
+def test_admission_path_shadow(tmp_path, monkeypatch):
+    monkeypatch.setattr(rl, "fail_open_alarm", lambda *a, **k: None)
+    man_dir = tmp_path / "registry" / "manifests"
+    man_dir.mkdir(parents=True)
+    (man_dir / "x.yaml").write_text(yaml.safe_dump(
+        {"evidence": {"gate_decision": {"final_state": "PROMOTE_TO_FORWARD_TEST"}}}))
+    path = _mk_registry(tmp_path, [_entry(id="SH_EDGE", status="SHADOW",
+                                          strategy_fn="Shadowy")])
+    monkeypatch.setattr(rl, "REGISTRY_PATH", path)
+    rl._reset_cache()
+    assert rl.admission_path("Shadowy") == "SHADOW"
+    rl._reset_cache()
+
+
+def test_admission_path_approved_clean(tmp_path, monkeypatch):
+    monkeypatch.setattr(rl, "fail_open_alarm", lambda *a, **k: None)
+    man_dir = tmp_path / "registry" / "manifests"
+    man_dir.mkdir(parents=True)
+    (man_dir / "x.yaml").write_text(yaml.safe_dump(
+        {"evidence": {"gate_decision": {"final_state": "PROMOTE_TO_FORWARD_TEST"},
+                      "forward": {"verdict": "GO", "n": 17, "exp_pct": 0.63}}}))
+    path = _mk_registry(tmp_path, [_entry(id="CLEAN_EDGE", strategy_fn="Clean Strategy")])
+    monkeypatch.setattr(rl, "REGISTRY_PATH", path)
+    monkeypatch.setattr(rl, "_LIFECYCLE_DEBT", {})   # not grandfathered
+    rl._reset_cache()
+    assert rl.admission_path("Clean Strategy") == "APPROVED_CLEAN"
+    rl._reset_cache()
+
+
 def test_startup_banner_helper_never_raises(monkeypatch):
     # announce_registry logs + telegrams best-effort; must never raise.
     monkeypatch.setattr(rl, "get_registry",

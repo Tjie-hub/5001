@@ -1731,6 +1731,12 @@ def scheduled_multi_strategy_scan():
                 # Record the strategy whose signal triggered this trade —
                 # accurate per-strategy P&L attribution depends on it.
                 _ot_kwargs = {'strategy': first_strategy}
+                # T7 invariant #9: record which admission decision and
+                # registry state authorized this trade, so it's explainable
+                # after the fact without git archaeology.
+                from engine.registry_loader import admission_path as _adm_path, get_registry as _get_reg
+                _ot_kwargs['admission_path'] = _adm_path(first_strategy)
+                _ot_kwargs['registry_hash'] = _get_reg()['hash']
                 if _is_counter_trend:
                     # Use the strategy's own levels: SL = signal/resume low,
                     # TP = retracement target. Generic ATR levels misprice

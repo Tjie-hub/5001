@@ -103,6 +103,21 @@ def test_startup_summary_reports_debt_and_violations():
 # already proves this for the regime map; nothing proved it for the Edge
 # Registry itself before this test. ─────────────────────────────────────
 
+from engine.registry_loader import admission_path
+
+
+def test_admission_path_unregistered_strategy():
+    assert admission_path("Totally Made Up Strategy") == "UNREGISTERED"
+
+
+def test_admission_path_approved_via_debt_grandfather():
+    # Real production registry: NR7_BULL is APPROVED but only loads via the
+    # _LIFECYCLE_DEBT grandfather exception (no clean evidence receipt).
+    _reset_cache()
+    assert admission_path("NR7 Breakout") == "APPROVED_DEBT"
+    _reset_cache()
+
+
 def test_every_registry_entry_strategy_fn_has_a_live_production_checker():
     from engine.strategy_specs import SPECS
     from engine.strategies import _CHECKER_DISPATCH
