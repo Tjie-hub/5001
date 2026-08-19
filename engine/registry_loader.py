@@ -128,7 +128,8 @@ def load_registry(path=None, engine_versions=None):
             man_path = os.path.join(os.path.dirname(path), e['manifest'])
             try:
                 with open(man_path, 'r') as f:
-                    manifest = yaml.safe_load(f) or {}
+                    loaded = yaml.safe_load(f)
+                manifest = loaded if isinstance(loaded, dict) else {}
             except Exception:
                 manifest = {}
         # else: no manifest -> empty -> validate_evidence flags the missing receipt
@@ -144,6 +145,7 @@ def load_registry(path=None, engine_versions=None):
                 fail_open_alarm("edge_registry",
                                 f"{ident} lifecycle-unverified — {'; '.join(reasons)}",
                                 count=1, notify=False)
+                continue                   # unverified & ungrandfathered: do not load
         entries.append(e)
     return {'entries': entries, 'skipped': skipped,
             'violations': violations, 'debt': debt, 'hash': _registry_hash(path)}
@@ -172,6 +174,25 @@ def approved_universe(strategy_fn):
         if e['strategy_fn'] == strategy_fn and e['status'] == 'APPROVED':
             return e['universe']
     return None
+
+
+def registry_governance(strategy_fn):
+    """Governance state of `strategy_fn` in the currently loaded registry.
+
+    Returns the frozen ticker universe (set) if APPROVED; the sentinel string
+    'SHADOW' if the strategy is registry-governed but not (yet) APPROVED —
+    callers MUST exclude it outright rather than fall back to an ungoverned
+    path, per the T7 invariant that a SHADOW strategy can never reach live
+    execution via a fallback. Returns None only when the strategy has no
+    registry entry at all — including when the registry itself failed to load
+    (get_registry() then degrades to an empty entries list) — which is the
+    sole case where legacy/ungoverned handling is safe.
+    """
+    matches = [e for e in get_registry()['entries'] if e['strategy_fn'] == strategy_fn]
+    for e in matches:
+        if e['status'] == 'APPROVED':
+            return e['universe']
+    return 'SHADOW' if matches else None
 
 
 def startup_summary():

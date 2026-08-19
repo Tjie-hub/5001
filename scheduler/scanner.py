@@ -651,18 +651,20 @@ def _edge_selectable(conn, ticker: str, candidates) -> list:
     """
     if candidates is not None and not candidates:
         return []
-    from engine.registry_loader import approved_universe
+    from engine.registry_loader import registry_governance
     governed, ungoverned = [], []
     if candidates is None:
         ungoverned = None          # legacy: scan every strategy in wf_edge
     else:
         for s in candidates:
-            uni = approved_universe(s)
-            if uni is not None:
-                if ticker in uni:
+            gov = registry_governance(s)
+            if gov is None:
+                ungoverned.append(s)      # no registry entry at all -> legacy path
+            elif gov != 'SHADOW':
+                if ticker in gov:
                     governed.append(s)
-            else:
-                ungoverned.append(s)
+            # else: SHADOW -- governed but not APPROVED; excluded outright,
+            # never falls back to the ungoverned legacy path (T7.P1.WS4.01)
     result = list(governed)
     if ungoverned is None or ungoverned:
         sql = ("SELECT strategy FROM wf_edge "

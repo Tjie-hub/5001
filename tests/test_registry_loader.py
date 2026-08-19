@@ -72,12 +72,98 @@ def test_approved_universe_and_summary(tmp_path, monkeypatch):
     monkeypatch.setattr(rl, "fail_open_alarm", lambda *a, **k: "")
     path = _mk_registry(tmp_path, [_entry(), _entry(id="X_S", status="SHADOW",
                                                     strategy_fn="Xs")])
+    man_dir = tmp_path / "registry" / "manifests"
+    man_dir.mkdir(parents=True)
+    valid_evidence = {"evidence": {
+        "gate_decision": {"final_state": "PROMOTE_TO_FORWARD_TEST"},
+        "forward": {"verdict": "GO", "n": 17, "exp_pct": 0.63}}}
+    (man_dir / "x.yaml").write_text(yaml.safe_dump(valid_evidence))
     monkeypatch.setattr(rl, "REGISTRY_PATH", path)
     rl._reset_cache()
     assert rl.approved_universe("NR7 Breakout") == {"AAAA", "BBBB"}
     assert rl.approved_universe("nonexistent") is None
     s = rl.startup_summary()
     assert "1 approved" in s and "1 shadow" in s and "0 skipped" in s
+    rl._reset_cache()
+
+
+def test_unverified_violation_entry_is_excluded_from_entries(tmp_path, monkeypatch):
+    # An APPROVED entry with no valid evidence receipt, and not in the grandfathered
+    # _LIFECYCLE_DEBT allowlist, must be REJECTED (excluded from entries), not just
+    # flagged as a violation while still loading.
+    alarms = []
+    monkeypatch.setattr(rl, "fail_open_alarm", lambda *a, **k: alarms.append(a) or "")
+    path = _mk_registry(tmp_path, [_entry(id="FAKE_EDGE")])
+    r = rl.load_registry(path=path)
+    assert r["entries"] == []
+    assert len(r["violations"]) == 1
+    assert r["violations"][0][0] == "FAKE_EDGE_v1"
+    assert r["debt"] == []
+
+
+def test_valid_evidence_entry_loads_via_real_manifest(tmp_path, monkeypatch):
+    # Positive path, end-to-end through load_registry (not just validate_evidence
+    # in isolation): a SHADOW entry backed by a real on-disk manifest with a
+    # genuine PROMOTE receipt must load cleanly, outside the debt allowlist.
+    monkeypatch.setattr(rl, "fail_open_alarm", lambda *a, **k: None)
+    path = _mk_registry(tmp_path, [_entry(id="REAL_EDGE", status="SHADOW",
+                                          strategy_fn="Real")])
+    man_dir = tmp_path / "registry" / "manifests"
+    man_dir.mkdir(parents=True)
+    (man_dir / "x.yaml").write_text(yaml.safe_dump(
+        {"evidence": {"gate_decision": {"final_state": "PROMOTE_TO_FORWARD_TEST"}}}))
+    r = rl.load_registry(path=path)
+    assert [e['id'] for e in r['entries']] == ['REAL_EDGE']
+    assert r['violations'] == [] and r['debt'] == []
+
+
+def test_malformed_manifest_yaml_rejects_only_that_entry(tmp_path, monkeypatch):
+    # A manifest that parses but isn't a mapping (e.g. a YAML list) must not
+    # crash load_registry for the whole file -- it must reject just that entry.
+    monkeypatch.setattr(rl, "fail_open_alarm", lambda *a, **k: None)
+    path = _mk_registry(tmp_path, [_entry(id="BAD_MANIFEST", status="SHADOW",
+                                          strategy_fn="Bad"),
+                                   _entry(id="OK_EDGE", status="SHADOW",
+                                          strategy_fn="Ok", manifest="manifests/ok.yaml")])
+    man_dir = tmp_path / "registry" / "manifests"
+    man_dir.mkdir(parents=True)
+    (man_dir / "x.yaml").write_text(yaml.safe_dump(["not", "a", "mapping"]))
+    (man_dir / "ok.yaml").write_text(yaml.safe_dump(
+        {"evidence": {"gate_decision": {"final_state": "PROMOTE_TO_FORWARD_TEST"}}}))
+    r = rl.load_registry(path=path)
+    assert [e['id'] for e in r['entries']] == ['OK_EDGE']
+    assert any(v[0] == 'BAD_MANIFEST_v1' for v in r['violations'])
+
+
+def test_registry_governance_returns_universe_for_approved(tmp_path, monkeypatch):
+    monkeypatch.setattr(rl, "fail_open_alarm", lambda *a, **k: None)
+    path = _mk_registry(tmp_path, [_entry()])   # NR7_BULL, debt-grandfathered APPROVED
+    monkeypatch.setattr(rl, "REGISTRY_PATH", path)
+    rl._reset_cache()
+    assert rl.registry_governance("NR7 Breakout") == {"AAAA", "BBBB"}
+    rl._reset_cache()
+
+
+def test_registry_governance_returns_shadow_sentinel_for_shadow_only(tmp_path, monkeypatch):
+    monkeypatch.setattr(rl, "fail_open_alarm", lambda *a, **k: None)
+    man_dir = tmp_path / "registry" / "manifests"
+    man_dir.mkdir(parents=True)
+    (man_dir / "x.yaml").write_text(yaml.safe_dump(
+        {"evidence": {"gate_decision": {"final_state": "PROMOTE_TO_FORWARD_TEST"}}}))
+    path = _mk_registry(tmp_path, [_entry(id="SH_EDGE", status="SHADOW",
+                                          strategy_fn="Shadowy")])
+    monkeypatch.setattr(rl, "REGISTRY_PATH", path)
+    rl._reset_cache()
+    assert rl.registry_governance("Shadowy") == "SHADOW"
+    rl._reset_cache()
+
+
+def test_registry_governance_returns_none_when_not_registered(tmp_path, monkeypatch):
+    monkeypatch.setattr(rl, "fail_open_alarm", lambda *a, **k: None)
+    path = _mk_registry(tmp_path, [_entry()])
+    monkeypatch.setattr(rl, "REGISTRY_PATH", path)
+    rl._reset_cache()
+    assert rl.registry_governance("nonexistent") is None
     rl._reset_cache()
 
 

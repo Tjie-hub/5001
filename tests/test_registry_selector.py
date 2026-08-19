@@ -22,7 +22,7 @@ def wfdb(tmp_path):
 
 def _govern(monkeypatch, universe):
     import scheduler.scanner  # noqa: F401  (ensure module imported)
-    monkeypatch.setattr(rl, "approved_universe",
+    monkeypatch.setattr(rl, "registry_governance",
                         lambda s: set(universe) if s == "NR7 Breakout" else None)
 
 
@@ -53,6 +53,29 @@ def test_ungoverned_strategy_keeps_live_query(wfdb, monkeypatch):
 
 
 def test_registry_unavailable_falls_back_to_legacy(wfdb, monkeypatch):
-    monkeypatch.setattr(rl, "approved_universe", lambda s: None)   # not governed
+    monkeypatch.setattr(rl, "registry_governance", lambda s: None)   # no entry at all
     out = _edge_selectable(wfdb, "AAAA", ["NR7 Breakout"])
     assert out == ["NR7 Breakout"]                    # legacy path still works
+
+
+def test_shadow_strategy_excluded_never_falls_back_to_legacy(wfdb, monkeypatch):
+    # T7.P1.WS4.01: a SHADOW-governed strategy must never fall through to the
+    # ungoverned legacy wf_edge query, even though it has positive expectancy
+    # there (AAAA/"NR7 Breakout" = +2.0 in the wfdb fixture).
+    monkeypatch.setattr(rl, "registry_governance",
+                        lambda s: "SHADOW" if s == "NR7 Breakout" else None)
+    assert _edge_selectable(wfdb, "AAAA", ["NR7 Breakout"]) == []
+
+
+def test_shadow_demotion_from_approved_strictly_reduces_reach(wfdb, monkeypatch):
+    # Critical safety invariant: APPROVED -> SHADOW must never WIDEN production
+    # reach. Simulate the demotion by flipping the same strategy's governance
+    # state and confirm the selectable set shrinks to empty, not to the wider
+    # legacy wf_edge set.
+    monkeypatch.setattr(rl, "registry_governance",
+                        lambda s: {"AAAA"} if s == "NR7 Breakout" else None)
+    approved_out = set(_edge_selectable(wfdb, "AAAA", ["NR7 Breakout"]))
+    monkeypatch.setattr(rl, "registry_governance",
+                        lambda s: "SHADOW" if s == "NR7 Breakout" else None)
+    shadow_out = set(_edge_selectable(wfdb, "AAAA", ["NR7 Breakout"]))
+    assert shadow_out.issubset(approved_out) and shadow_out == set()
