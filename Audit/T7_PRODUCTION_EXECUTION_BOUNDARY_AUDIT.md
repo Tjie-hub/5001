@@ -201,13 +201,62 @@ Registry.
 
 ---
 
-## 7. Remaining T7 scope (not started this session)
+## 8. Invariant #7 (execution-model compatibility) — closed for `NR7_BULL`
 
-Invariants #1-6 and #8 are addressed by §2-6 above (modulo the two open decisions in §4.3/§4.4).
-#5 (exceptions explicit/governed) is partial — counter-trend/momentum/premover are each now
-explicitly classified, not silently ungoverned. #7 (execution-model compatibility — bar
-convention, entry delay, price, timestamp, scan frequency, partial-bar handling between research
-backtest and production scan), #9 (admission auditability — every production admission
-explainable after the fact: strategy/edge/evidence/registry entry/admission decision/execution
-model/when), and #10 (capital/promotion semantics vs. the authoritative SSOT docs) are in
-progress / not yet investigated.
+Compared research's backtest execution model against production's live scan on bar finality,
+entry timing, price, signal timestamp, scan frequency, and partial-bar handling.
+
+**Finding — currently aligned, not by accident:** research (`research/jobs.py`) loads OHLCV with
+`final_only=True` (partial bars excluded); production's live scan (`scheduler/scanner.py:1438`)
+defaults to `final_only=False` — partial bars *are* the signal input during intraday scans, by
+documented design (`data/loaders.py`). This is a real, system-wide asymmetry. For `NR7_BULL`
+specifically it is benign: `check_nr7_signal()` (`engine/strategies.py`) takes its signal from
+`df.iloc[-2]` — a prior, already-closed bar — and prices entry off `df.iloc[-1]`'s `open`, which is
+fixed at market open and doesn't mutate intraday even if that bar is still "partial." This exactly
+mirrors the research side's own convention (`raw_entry = row['open']`, the bar *after* the signal
+bar). The 5x/day intraday scan cadence (`scheduler/__init__.py:258-263`) vs. research's once-daily
+evaluation is also immaterial for NR7: since both fields it reads (yesterday's `high`, today's
+`open`) are fixed by the time any of the 5 daily scans run, the signal condition can't flip
+mid-session — there is no "detected late, priced early" scenario. **This is a property of this
+one checker, verified by reading it — not a system-wide guarantee.** Any future registry-governed
+strategy whose live checker reads `high`/`low`/`close` off the still-forming last bar without an
+`is_final` check would have a genuine look-ahead gap research's `final_only=True` convention
+doesn't share.
+
+**The real gap:** `engine/registry_loader.py`'s `requires{}`/`ENGINE_VERSIONS` compatibility gate —
+the mechanism that exists precisely to catch this kind of drift — has been touched in exactly one
+commit since its introduction (`git log -p --all -- engine/registry_loader.py`) and nothing
+verifies it tracks anything real. Its four fields *were* defined with real meaning in the original
+design spec (`docs/superpowers/specs/2026-07-07-research-production-separation-design.md:176-185`)
+but that definition was never carried into the code as a comment, and no test enforces the
+"bump on any semantic change" discipline the spec itself states. Separately,
+`registry/manifests/NR7_BULL_v1.yaml` already pins a `config_hash` (sha256 of the research-side
+`strategy_nr7_breakout` source) — verified this session to still match exactly — but nothing
+re-verifies it, and the live checker (`check_nr7_signal`) has no equivalent pin at all.
+
+**Fix applied (smallest correct, no architecture change):**
+1. `engine/registry_loader.py` — added the four fields' real definitions as a comment on
+   `ENGINE_VERSIONS`, sourced verbatim from the design spec, plus the "bump on semantic change"
+   rule and a pointer to the new drift test.
+2. `tests/test_t7_execution_model_pinning.py` — two source-hash regression tests: (a) the
+   manifest's pinned `config_hash` still matches the current `strategy_nr7_breakout` source, (b) a
+   newly-pinned hash for the live `check_nr7_signal` source (not previously covered by any
+   mechanism). Either failing means a future edit changed the execution-model assumptions
+   NR7_BULL's evidence relied on — the test docstring instructs *not* to just update the pinned
+   hash, but to first determine whether the evidence still holds.
+
+This directly operationalizes the fork research's evidence-backed recommendation (option C: the
+`requires{}` version-pin mechanism is the right *shape* of fix, it just needed real content and
+enforcement) over inventing a new mechanism or forcing a change to either side's code for a
+strategy that's already aligned.
+
+---
+
+## 9. Remaining T7 scope (not started this session)
+
+Invariants #1-8 are addressed by §2-8 above (modulo the two open decisions in §4.3/§4.4). #5
+(exceptions explicit/governed) is partial — counter-trend/momentum/premover are each now
+explicitly classified, not silently ungoverned. #9 (admission auditability — every production
+admission explainable after the fact: strategy/edge/evidence/registry entry/admission
+decision/execution model/when) and #10 (capital/promotion semantics vs. the authoritative SSOT
+docs) are not yet investigated.

@@ -18,6 +18,20 @@ from engine.fail_open_alarm import fail_open_alarm
 
 logger = logging.getLogger(__name__)
 
+# Execution-model compatibility pins (spec §6, docs/superpowers/specs/
+# 2026-07-07-research-production-separation-design.md:176-185). Each field
+# must be bumped whenever the semantics it names change, so a registry
+# entry's `requires{}` (frozen at approval time) stops matching and the
+# entry is skipped rather than silently admitted under a different
+# execution model (T7 invariant #7) -- e.g. a 1B-style exit-kernel change
+# bumps exit_kernel: 1 -> 2. As of 2026-08-19 (T7 audit) this has never
+# been bumped since introduction and nothing previously enforced the
+# discipline; see tests/test_t7_execution_model_pinning.py for a
+# source-hash-based drift check on the one live registry entry.
+#   data_schema:    the OHLCV corpus basis (1 = post-2A raw-basis corpus)
+#   exit_kernel:    SL/TP/exit semantics (1 = post-1B unified kernel)
+#   regime_model:   detect_regime()'s BULL/BEAR/SIDEWAYS + ADX sub-band logic
+#   engine_version: overall engine semantics (1 = post-Phase-3 engine)
 ENGINE_VERSIONS = {'data_schema': 1, 'exit_kernel': 1,
                    'regime_model': 1, 'engine_version': 1}
 
