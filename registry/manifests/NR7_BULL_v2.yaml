@@ -1,0 +1,42 @@
+# registry/manifests/NR7_BULL_v2.yaml — demotion record (T7 invariant #10, D-029).
+# v1 (APPROVED, 2026-07-04) is preserved UNCHANGED and superseded, not deleted --
+# see registry/manifests/NR7_BULL_v1.yaml for the original approval record this
+# entry's artifacts/evidence_summary are carried forward from (same underlying
+# strategy source; config_hash unchanged).
+approval:
+  strategy: NR7_BULL
+  version: 2
+  status: SHADOW
+  demoted_by: tjie
+  demotion_date: "2026-08-19"
+  decision: >
+    DEMOTED from APPROVED to SHADOW. docs/research_os/EVIDENCE_MODEL.md §5.1 requires
+    confidence C3 (evidence tier E5 + reproducibility X3) before any capital may follow
+    a claim. §8's own worked example, applied explicitly to this strategy, scores it
+    K3/K4 (class) / E3-ish (tier) / C1 (confidence) / X2 (reproducibility) and concludes
+    verbatim: "No capital. C3 requires E5+X3; the claim has neither." No PROMOTE
+    gate_decision receipt exists for NR7 Breakout (Phase C gate=REJECT, shadow N=0 --
+    same underlying fact v1's _LIFECYCLE_DEBT entry already recorded). No new evidence
+    was produced or fabricated to justify this demotion or any future re-promotion --
+    it corrects an inconsistency between the registry's prior APPROVED status and the
+    institution's own canonical Evidence Model. Full governance record:
+    docs/roadmap/DECISION_LOG.md D-029.
+artifacts:
+  walkforward: docs/superpowers/results/2026-07-07-nr7-generalization-study.md
+  universe: artifacts/NR7_BULL_v1_tickers.json
+  report: docs/superpowers/results/2026-07-07-regime-edge-scan.md
+  config_hash: "8845c57b918a67ed513e67357d89f5f60388ce61105c20d8d496e303eab87a08"  # sha256 of strategy_nr7_breakout source -- unchanged, same underlying strategy as v1
+  code_commit: "1e401a8d1e6bad1f4470ddd67fed257912066a56"  # freeze commit (unchanged from v1)
+  corpus_snapshot: {as_of: "2026-07-07", basis: "raw is_final (Phase 2A)", history: "5y"}
+evidence_summary:
+  oos: {exp_net_pct: 1.18, n_trades: 346, win_pct: 54.0, regime: BULL}
+  pooled_44_ticker: {exp_net_pct: 1.75, n_trades: 1061}
+  robustness: {universe_generalization: "FAIL (T1 -0.001%)", regime_stratification: "BULL PASS", sideways: "REJECTED"}
+  shadow: {from: "2026-07-04", trades: 0, verdict: pending}
+  evidence_model_score:
+    class: "K3/K4"
+    tier: "E3-ish"
+    confidence: "C1"
+    reproducibility: "X2"
+    verdict: "No capital. C3 requires E5+X3; the claim has neither."
+    source: "docs/research_os/EVIDENCE_MODEL.md §8"

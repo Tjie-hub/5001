@@ -32,10 +32,16 @@ def _entry(**kw):
 def test_valid_entry_loads_with_universe(tmp_path, monkeypatch):
     monkeypatch.setattr(rl, "fail_open_alarm", lambda *a, **k: "")
     path = _mk_registry(tmp_path, [_entry()])
+    man_dir = tmp_path / "registry" / "manifests"
+    man_dir.mkdir(parents=True)
+    (man_dir / "x.yaml").write_text(yaml.safe_dump(
+        {"evidence": {"gate_decision": {"final_state": "PROMOTE_TO_FORWARD_TEST"},
+                      "forward": {"verdict": "GO", "n": 17, "exp_pct": 0.63}}}))
     r = rl.load_registry(path=path)
     assert len(r["entries"]) == 1 and r["skipped"] == []
     assert r["entries"][0]["universe"] == {"AAAA", "BBBB"}
     assert r["hash"]
+    assert r["violations"] == [] and r["debt"] == []
 
 
 def test_candidate_status_ignored_silently(tmp_path, monkeypatch):
@@ -137,7 +143,12 @@ def test_malformed_manifest_yaml_rejects_only_that_entry(tmp_path, monkeypatch):
 
 def test_registry_governance_returns_universe_for_approved(tmp_path, monkeypatch):
     monkeypatch.setattr(rl, "fail_open_alarm", lambda *a, **k: None)
-    path = _mk_registry(tmp_path, [_entry()])   # NR7_BULL, debt-grandfathered APPROVED
+    path = _mk_registry(tmp_path, [_entry()])
+    man_dir = tmp_path / "registry" / "manifests"
+    man_dir.mkdir(parents=True)
+    (man_dir / "x.yaml").write_text(yaml.safe_dump(
+        {"evidence": {"gate_decision": {"final_state": "PROMOTE_TO_FORWARD_TEST"},
+                      "forward": {"verdict": "GO", "n": 17, "exp_pct": 0.63}}}))
     monkeypatch.setattr(rl, "REGISTRY_PATH", path)
     rl._reset_cache()
     assert rl.registry_governance("NR7 Breakout") == {"AAAA", "BBBB"}

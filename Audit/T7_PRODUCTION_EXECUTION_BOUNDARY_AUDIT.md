@@ -356,21 +356,58 @@ for capital* is squarely a scientific-method question the Research OS's `EVIDENC
 — by the hierarchy's own stated rule, on that question the Research OS wins, and its answer for
 NR7_BULL, in its own words, is "No capital."
 
-**This is not resolved here.** Per explicit instruction (invariant #10: "inspect the authoritative
-SSOT documents before making any capital/promotion decision... document the exact dependency and do
-not guess") no code was changed and NR7_BULL's live status was not altered. The decision this
-surfaces — whether to demote NR7_BULL out of live capital pending real C3 evidence, formally amend
-`RESEARCH_MASTER_PLAN.md`'s invariant #10 to explicitly declare it exempt from the Evidence Model's
-capital bar (a dated, superseding `DECISION_LOG.md` entry per governance convention), or something
-else — is an owner/governance decision, not an engineering one, and is the one genuine remaining
-blocker to declaring T7 complete.
+**RESOLVED 2026-08-19 — owner decision: DEMOTE.** The owner ruled `NR7_BULL` demoted from
+`APPROVED` to `SHADOW`. Full governance record: `docs/roadmap/DECISION_LOG.md` **D-029**. Executed
+as the smallest safe change consistent with the registry's own stated convention ("entries are
+IMMUTABLE once status leaves CANDIDATE; changes = new version," `registry/edge_registry.yaml:2`):
+
+- `registry/edge_registry.yaml` v1 (APPROVED) → `status: SUPERSEDED` (a `_LIFECYCLE` state;
+  excluded from `entries`, preserved byte-for-byte as the permanent historical approval record).
+  v2 (SHADOW) added — same `strategy_fn`/`regimes`/`universe_artifact`/`requires`, pointing to a
+  new manifest.
+- `registry/manifests/NR7_BULL_v2.yaml` (new) — carries v1's `artifacts`/`evidence_summary`
+  forward **unchanged** (same `config_hash`, same underlying strategy source), plus a `demotion:`
+  block recording the Evidence Model's §8 verdict verbatim and the decision date. **No evidence
+  fabricated or modified.**
+- `engine/registry_loader.py::_LIFECYCLE_DEBT` rekeyed `("NR7_BULL", 1)` → `("NR7_BULL", 2)`,
+  reason text updated to record the demotion. **Necessary, not incidental:** removing the debt
+  entry outright (a literal reading of "terminate the grandfathered exception") was checked and
+  found to be actively unsafe — without it, v2 fails `validate_evidence()` as an un-grandfathered
+  violation and is *excluded from `entries` entirely*, which makes `registry_governance()` return
+  `None` (not `'SHADOW'`) for "NR7 Breakout," which `_edge_selectable()` treats as *unregistered*
+  and falls back to the **legacy, receipt-free `wf_edge>0` path** (§4.4) — re-exposing it to live
+  trading through a *worse*, ungoverned channel than the one just closed. Keeping the debt entry
+  (updated to reflect SHADOW, not APPROVED) is what keeps it visibly loaded and excluded, rather
+  than invisible and re-exposed.
+- `docs/RESEARCH_MASTER_PLAN.md` — minimal dated amendment (top-of-file note + two inline notes at
+  the existing NR7_BULL mentions); no rewrite, no invariant renumbering.
+
+**Production verified post-change:** `registry_governance("NR7 Breakout")` returns the `'SHADOW'`
+sentinel; `_edge_selectable()` excludes it for a ticker actually in its former APPROVED universe,
+even against a positive legacy `wf_edge` row (proving the exclusion, not mere universe
+non-membership) — `tests/test_registry_lifecycle.py::test_nr7_breakout_excluded_from_live_selection_after_demotion`.
+`startup_summary()` now reports **0 approved, 1 shadow** — zero registry entries currently
+authorize live capital. `scheduler/jobs.py::run_phase5_bull_watch()` (the NR7-specific monitor)
+verified to degrade safely to a no-op, no crash. Shadow/research tracking is untouched and
+functional (nothing in `forward_testing`/`research_runs`/the gatekeeper reads registry `status` as
+a precondition). Fixed three pre-existing test fixtures (`test_registry_loader.py` ×2,
+`test_nr7_live_pipeline_e2e.py`) that had fragile, undetected coupling to the real production
+`_LIFECYCLE_DEBT` key matching their synthetic entries — now self-contained with their own valid
+evidence. Full suite: **2418 passed**, same 3 pre-existing unrelated failures.
+
+This closes T7 invariant #10. **No other strategies changed; the Evidence Model was not weakened;
+no new capital tier was created; no exception was invented; the promotion architecture was not
+redesigned** — only `NR7_BULL`'s own status, in response to its own evidence.
 
 ---
 
-## 11. Remaining T7 scope
+## 11. T7 status — COMPLETE
 
-Invariants #1-9 are addressed by §2-9 above (modulo the two open engineering decisions in
-§4.3/§4.4, both non-blocking for T7's own admission-mechanism scope). #5 (exceptions
-explicit/governed) is partial — counter-trend/momentum/premover are each now explicitly
-classified, not silently ungoverned. #10 is investigated and found to be a genuine, currently
-unresolved contradiction (§10) — the sole blocker to T7 completion.
+All 10 invariants are addressed. #1-9 by §2-9; #10 by §10 (owner decision executed, D-029). Two
+non-blocking engineering decisions remain open by explicit instruction, not oversight: §4.3
+(premover EOD — no `strategy_fn` concept to admit through the Registry schema; already dormant,
+mode='off') and §4.4 (`wf_edge` dual-use as both research data and a legacy production
+authorization channel — documented, deliberately unchanged pending its own governance call).
+Neither affects any strategy currently reaching live execution: as of D-029, `registry/
+edge_registry.yaml` has **zero APPROVED entries** — no strategy in this system currently holds
+Registry-authorized live-capital status.

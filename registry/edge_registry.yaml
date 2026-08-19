@@ -3,7 +3,7 @@
 # Promotion / suspension / rollback = git commit (PR + CI + manual merge).
 - id: NR7_BULL
   version: 1
-  status: APPROVED
+  status: SUPERSEDED
   strategy_fn: "NR7 Breakout"
   regimes: [BULL_MODERATE, BULL_STRONG]
   universe_artifact: artifacts/NR7_BULL_v1_tickers.json
@@ -16,4 +16,20 @@
     exit_kernel: 1
     regime_model: 1
     engine_version: 1
-  changelog: "v1 — M1 freeze of the live config approved after the Phase-2 recompute (PR #12) and generalization study (PR #18)."
+  changelog: "v1 — M1 freeze of the live config approved after the Phase-2 recompute (PR #12) and generalization study (PR #18). SUPERSEDED 2026-08-19 by v2 (D-029): demoted APPROVED -> SHADOW per the Evidence Model's C3/E5+X3 capital bar, which this entry's evidence never satisfied. This record is preserved unchanged as the permanent historical account of the original approval; see registry/manifests/NR7_BULL_v1.yaml."
+- id: NR7_BULL
+  version: 2
+  status: SHADOW
+  strategy_fn: "NR7 Breakout"
+  regimes: [BULL_MODERATE, BULL_STRONG]
+  universe_artifact: artifacts/NR7_BULL_v1_tickers.json
+  risk_category: breakout-long
+  owner: tjie
+  approved: "2026-08-19"
+  manifest: manifests/NR7_BULL_v2.yaml
+  requires:
+    data_schema: 1
+    exit_kernel: 1
+    regime_model: 1
+    engine_version: 1
+  changelog: "v2 — DEMOTED from v1's APPROVED to SHADOW 2026-08-19 (D-029, T7 invariant #10 owner decision): the Evidence Model (docs/research_os/EVIDENCE_MODEL.md §5.1/§8) requires C3 (E5+X3) before capital; NR7_BULL's own worked-example score (K3/K4/E3-ish/C1/X2) concludes 'No capital'. Same underlying strategy/universe/requires as v1 -- only the lifecycle status and its governing manifest changed. No evidence fabricated or modified."

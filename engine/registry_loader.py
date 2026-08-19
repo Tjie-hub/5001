@@ -52,10 +52,20 @@ _FORWARD_BAR = {'min_n': 15, 'go_exp': 0.50}
 # Pre-existing APPROVED/SHADOW entries that predate R-10 enforcement. NEW violations are
 # NOT added here — they fail CI. Entries are removed as they remediate, never added.
 _LIFECYCLE_DEBT = {
-    ("NR7_BULL", 1): {
-        "reason": "APPROVED 2026-07-04 under the pre-Phase-C generalization bar; "
-                  "Phase C gate=REJECT and shadow N=0. Governs on legacy grounds.",
-        "remediation": "Phase 5 forward test (phase5_tracker); deadline 2027-01-08.",
+    ("NR7_BULL", 2): {
+        "reason": "DEMOTED from APPROVED to SHADOW 2026-08-19 (D-029, T7 invariant #10 "
+                  "owner decision, docs/roadmap/DECISION_LOG.md): the Evidence Model "
+                  "requires C3 (E5+X3) before capital; NR7_BULL's own worked-example "
+                  "score (K3/K4/E3-ish/C1/X2, docs/research_os/EVIDENCE_MODEL.md §8) "
+                  "concludes 'No capital'. No PROMOTE gate_decision receipt exists "
+                  "(Phase C gate=REJECT, shadow N=0) -- this entry grandfathers "
+                  "SHADOW-LOADING ONLY (visibility/tracking); it authorizes no capital, "
+                  "and SHADOW status structurally cannot produce live execution "
+                  "regardless (registry_governance()/_edge_selectable()).",
+        "remediation": "A real Phase C PROMOTE gate_decision would let this load "
+                       "cleanly without grandfathering; absent that, retire the entry "
+                       "by this deadline. Re-promotion to APPROVED additionally "
+                       "requires C3 (E5+X3) evidence, never fabricated.",
         "deadline": "2027-01-08",
     },
 }

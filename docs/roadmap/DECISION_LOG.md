@@ -393,6 +393,40 @@ These are the statistical hypothesis families that govern **admissibility, multi
 
 ---
 
+## 2d. Production admission decisions — T7 Production Admission audit, 2026-08-19
+
+### D-029 · NR7_BULL demoted APPROVED → SHADOW — the Evidence Model's C3 capital bar was never satisfied
+**Status:** ACCEPTED · **Date:** 2026-08-19 · **Type:** Production admission governance · **Approval authority:** Owner
+
+**Strategy:** `NR7_BULL` (registry ID; `strategy_fn: "NR7 Breakout"`) · **Previous status:** APPROVED (v1, since 2026-07-04) · **New status:** SHADOW (v2) · **Owner decision:** DEMOTE
+
+**Decision:** `NR7_BULL` is demoted from `APPROVED` to `SHADOW`. `registry/edge_registry.yaml`'s v1 entry (APPROVED) is marked `SUPERSEDED` — a `_LIFECYCLE` state, preserved unchanged as the permanent historical record of the original 2026-07-04 approval, per `registry/manifests/NR7_BULL_v1.yaml`. A new v2 entry (SHADOW) is admitted in its place via `engine/registry_loader.py`'s `_LIFECYCLE_DEBT` grandfather (rekeyed `("NR7_BULL", 2)`), which — as SHADOW — structurally cannot produce live capital execution (`registry_governance()`/`_edge_selectable()`, T7 invariant #4/#8, verified this session). No strategy in `registry/edge_registry.yaml` is currently `APPROVED`.
+
+**Reason:** [[EVIDENCE_MODEL]] §5.1 requires confidence **C3** (evidence tier **E5** + reproducibility **X3**) before any capital may follow a claim. §8's own worked example, applying the model explicitly to this strategy, scores it:
+
+| Axis | Score |
+|---|---|
+| Evidence class | K3/K4 |
+| Evidence tier (E) | **E3-ish** — absent E5 |
+| Confidence (C) | C1 |
+| Reproducibility (X) | **X2** — absent X3 |
+
+and concludes verbatim: *"Verdict. No capital. C3 requires E5+X3; the claim has neither."* This is a direct, unresolved contradiction with the strategy's prior `APPROVED` (live-capital) status in the Edge Registry — found during the T7 Production Admission audit (`Audit/T7_PRODUCTION_EXECUTION_BOUNDARY_AUDIT.md` §10) when comparing what `engine/registry_loader.py::validate_evidence()` actually enforces (receipt *existence* — a `gate_decision.final_state` flag and `forward.{verdict,n,exp_pct}` thresholds) against what the Evidence Model requires (evidence *class/tier/confidence/reproducibility*, which the registry schema does not record or check at all).
+
+**Why receipt-binding (R-10) did not already prevent this:** `docs/RESEARCH_MASTER_PLAN.md` v3's invariant #10 ("every promoted edge has forward-test evidence... `NR7_BULL` is the sole, dated, deadlined exception") governs whether a receipt *exists* — a narrower, different question from what confidence tier the receipt's contents *support* (Evidence Model §5.1). Both were simultaneously true: `NR7_BULL` had a receipt (grandfathered, invariant #10 satisfied) and that receipt's evidence did not clear the capital bar (Evidence Model's own §8 verdict). Per CLAUDE.md's Decision-Making Hierarchy: v3 governs disputes about its own receipt-binding mechanism; the Research OS governs disputes about scientific-method/evidence-sufficiency, and on that question its answer — applied to this exact strategy — is unambiguous.
+
+**No evidence fabricated or modified.** This decision does not manufacture E5/X3 evidence to justify demotion, nor does it alter `NR7_BULL`'s recorded backtest/forward-test results (`registry/manifests/NR7_BULL_v1.yaml`, preserved byte-for-byte; `registry/manifests/NR7_BULL_v2.yaml` carries the same `artifacts`/`evidence_summary` forward unchanged, plus the demotion record). The strategy is not deleted or retired — it remains SHADOW-tracked and available for future evidence development; re-promotion to APPROVED requires actual C3 (E5+X3) evidence, never fabricated.
+
+**Compounding structural finding (not actioned here):** [[01_SCIENTIFIC_FOUNDATION]] ADR-L1-007 declares independent/adversarial review structurally unmet at the institution's current one-researcher headcount. Since C3 requires X3 (independent reproduction by someone other than the claim's author), **no claim can currently reach C3 under any evidence accumulated**, regardless of how much data supports any other axis, until headcount reaches ≥2 with an enforceable OOS firewall (ADR-L1-007's own revisit condition). This is a standing constraint on **all** future APPROVED promotions, not specific to `NR7_BULL` — recorded here as context, not resolved; no other registry entries exist to which it currently applies.
+
+**Consequences:** Production verified post-change: `registry_governance("NR7 Breakout")` returns the `'SHADOW'` sentinel (not a frozen universe); `_edge_selectable()` excludes it from live selection for a ticker in its former APPROVED universe even against a positive legacy `wf_edge` row (`tests/test_registry_lifecycle.py::test_nr7_breakout_excluded_from_live_selection_after_demotion`); `startup_summary()` now reports **0 approved, 1 shadow**. `scheduler/jobs.py::run_phase5_bull_watch()` (the NR7-specific regime-band monitor, keyed to `approved_universe()`) degrades safely to a no-op — verified by direct call, no crash. Shadow/research tracking (forward_testing, `research_runs`, gatekeeper) is untouched and remains functional — nothing in that pipeline reads registry `status` as a precondition. Full regression suite: 2418 passed (3 pre-existing, unrelated failures unchanged).
+
+**Files changed:** `registry/edge_registry.yaml` (v1→SUPERSEDED, v2 SHADOW added), `registry/manifests/NR7_BULL_v2.yaml` (new), `engine/registry_loader.py` (`_LIFECYCLE_DEBT` rekeyed + reason updated), `tests/test_registry_lifecycle.py`, `tests/test_registry_loader.py`, `tests/test_nr7_live_pipeline_e2e.py` (fixture updates + new production-verification tests), this entry, and `docs/RESEARCH_MASTER_PLAN.md` (dated amendment, invariant #10 exception description only — no rewrite).
+
+**Related:** [[EVIDENCE_MODEL]] §3, §5.1, §8 · [[01_SCIENTIFIC_FOUNDATION]] ADR-L1-007 · `docs/RESEARCH_MASTER_PLAN.md` §5 invariant #10 · `Audit/T7_PRODUCTION_EXECUTION_BOUNDARY_AUDIT.md` §10 · D-022 (custody), D-024 (G-8/G-9 gate scope)
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

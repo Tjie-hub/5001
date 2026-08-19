@@ -12,6 +12,11 @@ it remains readable for history only.
 **Trigger:** (1) implementation reality since the v2 freeze — Phases C and D are
 built, R-10 is closed, Phase E is in flight; (2) an adversarial design review
 (2026-07-14) that identified four vulnerabilities in the frozen architecture.
+**Amended:** 2026-08-19 — `NR7_BULL` demoted `APPROVED` → `SHADOW` (owner decision,
+[[DECISION_LOG]] D-029): the Evidence Model's C3 (E5+X3) capital bar was never
+satisfied for this strategy (its own §8 worked example concludes "No capital").
+Invariant #10's grandfather exception (below and §5) now describes a SHADOW-only,
+non-capital admission, not a live-capital one; no other invariant or phase changes.
 
 > **What v3 changes and what it does not.** The roadmap keeps **exactly** the
 > eight phases A–H — no phase is added, removed, or reordered, so this document
@@ -83,6 +88,8 @@ Recorded per v2 §13 (no silent divergence — every post-freeze fact is logged 
    receipt (SHADOW ⇒ Phase C PROMOTE receipt; APPROVED ⇒ additionally a Phase 5
    GO receipt). `NR7_BULL` is grandfathered via a shrink-only `_LIFECYCLE_DEBT`
    list with deadline 2027-01-08. Invariant #10's known exception is now fenced.
+   **Amended 2026-08-19 (D-029):** demoted `APPROVED` → `SHADOW` — the grandfather
+   now admits SHADOW-loading only (no capital); see the top-of-file amendment note.
 4. **Phase E in flight** (2026-07-14). Three new append-only tables
    (`hypotheses`, `hypothesis_links`, `failure_registry`); the only mutable
    surface is `hypotheses.status/notes` via the `set_status()` gateway.
@@ -259,7 +266,9 @@ accept an evidence-free promotion-track status.
 
 Invariants 1–10 carry forward from v2 §9 with these status updates:
 #10 forward-test evidence — **ENFORCED** (R-10 closed; NR7_BULL debt fenced,
-deadline 2027-01-08). #8 rejected-hypothesis preservation — lands with Phase E
+deadline 2027-01-08; **amended 2026-08-19, D-029: demoted APPROVED → SHADOW, no
+capital** — receipt-binding alone was never sufficient for the Evidence Model's
+capital bar). #8 rejected-hypothesis preservation — lands with Phase E
 completion (in flight).
 
 | # | New invariant | Status |

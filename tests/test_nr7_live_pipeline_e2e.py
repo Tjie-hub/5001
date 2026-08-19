@@ -104,6 +104,9 @@ def drill_env(tmp_path, monkeypatch):
                   requires=dict(data_schema=1, exit_kernel=1, regime_model=1,
                                 engine_version=1), changelog="drill")]
     (reg / "edge_registry.yaml").write_text(yaml.safe_dump(entry))
+    (reg / "m.yaml").write_text(yaml.safe_dump(
+        {"evidence": {"gate_decision": {"final_state": "PROMOTE_TO_FORWARD_TEST"},
+                      "forward": {"verdict": "GO", "n": 17, "exp_pct": 0.63}}}))
     monkeypatch.setattr(rl, "REGISTRY_PATH", str(reg / "edge_registry.yaml"))
     rl._reset_cache()
     yield {"db": db, "df": df}
