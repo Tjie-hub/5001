@@ -294,9 +294,83 @@ manual verification.
 
 ---
 
-## 10. Remaining T7 scope (not started this session)
+## 10. Invariant #10 (capital/promotion semantics vs. authoritative SSOT) — BLOCKING FINDING
 
-Invariants #1-9 are addressed by §2-9 above (modulo the two open decisions in §4.3/§4.4). #5
-(exceptions explicit/governed) is partial — counter-trend/momentum/premover are each now
-explicitly classified, not silently ungoverned. #10 (capital/promotion semantics vs. the
-authoritative SSOT docs) is not yet investigated.
+Per instruction, this section documents the exact dependency rather than making the capital
+decision it implies — this is not resolved and code was deliberately not changed.
+
+**The chain the SSOT docs specify:** `docs/research_os/EVIDENCE_MODEL.md` §3/§5.1 — capital
+requires confidence **C3**, which requires evidence **tier E5 + reproducibility X3** (a severe
+pre-registered OOS test, surviving realistic friction, stable across regimes, **and**
+independently reproduced from specification alone by someone other than the author). C2
+("survived a severe test, not yet independent of its author or its family") explicitly licenses
+only "Shadow deployment; **no capital**" (§3 table). C1 licenses "Continued study; **no capital**."
+
+**What `validate_evidence()` actually checks** (`engine/registry_loader.py:52-73`): SHADOW needs
+`gate_decision.final_state == 'PROMOTE_TO_FORWARD_TEST'`; APPROVED additionally needs
+`forward.verdict=='GO'` with `n>=15` and `exp_pct>=0.50`. **Neither check inspects evidence class
+(K1-K7), tier (E0-E7), confidence (C0-C4), or reproducibility (X0-X4) at all** — the registry
+manifest schema has no field for any of these four axes. The code enforces *receipt existence*;
+the Evidence Model gates on *what the receipt's evidence is actually worth*.
+
+**The exact contradiction, verified against primary sources:**
+
+`docs/research_os/EVIDENCE_MODEL.md` §8 is a worked example applying the model to **this specific
+strategy** — Program P0's NR7 BULL finding — and its own table scores it **K3/K4, E3-ish, C1, X2**,
+concluding in the document's own words:
+
+> **Verdict.** No capital. C3 requires E5+X3; the claim has neither.
+
+Yet `registry/edge_registry.yaml`'s `NR7_BULL` entry is `status: APPROVED`, loaded via
+`_LIFECYCLE_DEBT`'s grandfather exception (`engine/registry_loader.py:40-47`, reason: "Phase C
+gate=REJECT and shadow N=0. Governs on legacy grounds"), and — per §2-9 above, verified this
+session — is genuinely production-capable and live: `registry_governance("NR7 Breakout")` returns
+its frozen universe, `_edge_selectable()` admits it, and it can and does reach `open_trade()`
+through the real scan pipeline. **This is real capital currently at risk under evidence the
+institution's own canonical, worked-example-confirmed Evidence Model states plainly does not meet
+its own bar for capital.**
+
+Compounding this: `docs/Phase_A_Scientific_Foundation/01_SCIENTIFIC_FOUNDATION.md` ADR-L1-007
+("Declare the single-researcher review deficit; do not absorb it") declares adversarial/independent
+review **structurally unmet** with the institution's current one-researcher headcount, revisit
+condition "headcount reaches ≥2 with an enforceable OOS firewall." Since C3 requires X3
+(independent reproduction by someone other than the claim's author) and the Evidence Model's own
+X-axis definition requires exactly the independence ADR-L1-007 says is currently impossible, **no
+claim in this institution can reach C3 — and therefore no strategy can be honestly capital-eligible
+— under current staffing, regardless of how much evidence accumulates on any other axis.** This is
+a structural ceiling the registry's admission gate has no mechanism to detect: `validate_evidence()`
+cannot fail on a C3/X3 requirement it never checks.
+
+**Why this isn't resolved by RESEARCH_MASTER_PLAN v3 invariant #10:** `docs/RESEARCH_MASTER_PLAN.md`
+(line 84-85) states NR7_BULL's grandfather via `_LIFECYCLE_DEBT` "fences" invariant #10 ("every
+promoted edge has forward-test evidence"). That invariant is about *receipt-binding* (does a
+receipt exist, R-10) — a different, narrower question than *what evidence class/tier/confidence the
+receipt's contents support* (Evidence Model §5.1). Both statements can be — and are — true
+simultaneously: NR7_BULL has a receipt (v3's invariant #10 is satisfied) and that receipt's
+evidence does not clear the capital bar (Evidence Model's C3/§8 verdict is also correctly applied).
+Per CLAUDE.md's own Decision-Making Hierarchy (§2): "*On a conflict about a mechanism already built
+and frozen in `docs/RESEARCH_MASTER_PLAN.md` v3, v3 wins. On a conflict about scientific method or
+institutional governance, the Research OS wins.*" Receipt-binding is v3's mechanism (v3 wins on
+disputes about *how* a receipt is created/bound); whether a given receipt's evidence is *sufficient
+for capital* is squarely a scientific-method question the Research OS's `EVIDENCE_MODEL.md` governs
+— by the hierarchy's own stated rule, on that question the Research OS wins, and its answer for
+NR7_BULL, in its own words, is "No capital."
+
+**This is not resolved here.** Per explicit instruction (invariant #10: "inspect the authoritative
+SSOT documents before making any capital/promotion decision... document the exact dependency and do
+not guess") no code was changed and NR7_BULL's live status was not altered. The decision this
+surfaces — whether to demote NR7_BULL out of live capital pending real C3 evidence, formally amend
+`RESEARCH_MASTER_PLAN.md`'s invariant #10 to explicitly declare it exempt from the Evidence Model's
+capital bar (a dated, superseding `DECISION_LOG.md` entry per governance convention), or something
+else — is an owner/governance decision, not an engineering one, and is the one genuine remaining
+blocker to declaring T7 complete.
+
+---
+
+## 11. Remaining T7 scope
+
+Invariants #1-9 are addressed by §2-9 above (modulo the two open engineering decisions in
+§4.3/§4.4, both non-blocking for T7's own admission-mechanism scope). #5 (exceptions
+explicit/governed) is partial — counter-trend/momentum/premover are each now explicitly
+classified, not silently ungoverned. #10 is investigated and found to be a genuine, currently
+unresolved contradiction (§10) — the sole blocker to T7 completion.
