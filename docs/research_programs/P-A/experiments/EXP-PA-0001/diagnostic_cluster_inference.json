@@ -1,0 +1,879 @@
+{
+  "diagnostic_id": "EXP-PA-0001-DIAG-CLUSTER-INFERENCE",
+  "purpose": "post-hoc small-G (G=13) cluster inference robustness check; informational only, does not alter the sealed REFUTED verdict of EXP-PA-0001",
+  "run_utc": "2026-08-19T07:17:07.491320+00:00",
+  "source_results_json": "results.json",
+  "source_results_sha256": "27dac1eca2a3563eb740747f6371b2a1e5508ef68478b7f117fb6f0a05c98309",
+  "source_verdict_unchanged": {
+    "test1_pass": false,
+    "test2_pass": false,
+    "verdict": "REFUTED",
+    "proposed_f_mode": "F2 \u00b7 Prediction failure",
+    "rule": "REFUTED iff Test 1 fails OR Test 2 fails (HARNESS_SPEC \u00a72, applied verbatim)"
+  },
+  "alpha": 0.05,
+  "samples": {
+    "ALL": {
+      "observed": {
+        "n": 180,
+        "n_clusters": 13,
+        "mean": 0.007260577445898505,
+        "se": 0.005026209848406153,
+        "t": 1.4445432373264093,
+        "df": 12,
+        "t_crit": 2.1788128296672284,
+        "ci95": [
+          -0.0036905930564085972,
+          0.018211747948205605
+        ],
+        "excludes_zero": false,
+        "p_asymptotic": 0.1741866896713241
+      },
+      "wild_cluster_bootstrap": {
+        "p_wcb": 0.179443359375,
+        "n_sign_vectors": 8192,
+        "n_ge_obs": 1470
+      },
+      "asymptotic_vs_exact_agree_at_alpha": true,
+      "leave_one_cluster_out": [
+        {
+          "dropped_review_date": "2022-08-01",
+          "n": 169,
+          "n_clusters": 12,
+          "mean": 0.005731628511495325,
+          "se": 0.0050438723712469226,
+          "t": 1.136354786486871,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.005369859727015377,
+            0.016833116750006028
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.27995875772322076
+        },
+        {
+          "dropped_review_date": "2023-02-01",
+          "n": 163,
+          "n_clusters": 12,
+          "mean": 0.005246297713441017,
+          "se": 0.0049996907996031174,
+          "t": 1.0493244329944313,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.005757947541532145,
+            0.01625054296841418
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.31653668953235364
+        },
+        {
+          "dropped_review_date": "2023-08-01",
+          "n": 167,
+          "n_clusters": 12,
+          "mean": 0.006607858992732806,
+          "se": 0.005359117423667743,
+          "t": 1.2330125411229433,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.005187478927948433,
+            0.018403196913414046
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.2432718492964794
+        },
+        {
+          "dropped_review_date": "2024-02-01",
+          "n": 155,
+          "n_clusters": 12,
+          "mean": 0.010711069018071317,
+          "se": 0.004522251664438923,
+          "t": 2.368525640069667,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            0.0007576602144415343,
+            0.0206644778217011
+          ],
+          "excludes_zero": true,
+          "p_asymptotic": 0.03724876299233428
+        },
+        {
+          "dropped_review_date": "2024-05-02",
+          "n": 169,
+          "n_clusters": 12,
+          "mean": 0.005250615117443514,
+          "se": 0.004824446613564488,
+          "t": 1.088335209820916,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.0053679202846662845,
+            0.015869150519553312
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.29971746662982385
+        },
+        {
+          "dropped_review_date": "2024-08-01",
+          "n": 174,
+          "n_clusters": 12,
+          "mean": 0.0074679370520554685,
+          "se": 0.005222887808888414,
+          "t": 1.4298482612141092,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.004027561508131466,
+            0.018963435612242403
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.18054339316696263
+        },
+        {
+          "dropped_review_date": "2024-11-01",
+          "n": 168,
+          "n_clusters": 12,
+          "mean": 0.007460084669617577,
+          "se": 0.005409380402270234,
+          "t": 1.3791015079077622,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.004445881321069746,
+            0.0193660506603049
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.19525784736605528
+        },
+        {
+          "dropped_review_date": "2025-02-03",
+          "n": 165,
+          "n_clusters": 12,
+          "mean": 0.005802384042434235,
+          "se": 0.005193944601379363,
+          "t": 1.117143998973976,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.005629410947539825,
+            0.017234179032408294
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.2877393486522598
+        },
+        {
+          "dropped_review_date": "2025-05-02",
+          "n": 174,
+          "n_clusters": 12,
+          "mean": 0.007833393003889527,
+          "se": 0.005210741069758004,
+          "t": 1.5033164954890619,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.0036353707637278698,
+            0.01930215677150692
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.16091303983846736
+        },
+        {
+          "dropped_review_date": "2025-08-01",
+          "n": 168,
+          "n_clusters": 12,
+          "mean": 0.007588535937311852,
+          "se": 0.005408386604203888,
+          "t": 1.4031053052704026,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.004315242718579316,
+            0.019492314593203018
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.18817680383054317
+        },
+        {
+          "dropped_review_date": "2025-11-03",
+          "n": 157,
+          "n_clusters": 12,
+          "mean": 0.008389784162970272,
+          "se": 0.005695890395744148,
+          "t": 1.4729539334603323,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.004146786071571089,
+            0.020926354397511632
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.1687922838312009
+        },
+        {
+          "dropped_review_date": "2026-02-02",
+          "n": 169,
+          "n_clusters": 12,
+          "mean": 0.008570415886784864,
+          "se": 0.005253114331582014,
+          "t": 1.631492357830297,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.002991610801291858,
+            0.020132442574861586
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.1310581698166947
+        },
+        {
+          "dropped_review_date": "2026-05-04",
+          "n": 162,
+          "n_clusters": 12,
+          "mean": 0.007990024542090053,
+          "se": 0.005582141311850961,
+          "t": 1.4313547607845618,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.004296185646828385,
+            0.020276234731008494
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.1801212885047101
+        }
+      ],
+      "jackknife_flags": {
+        "any_single_cluster_drives_result": true,
+        "flips": [
+          {
+            "dropped_review_date": "2024-02-01",
+            "sign_flip": false,
+            "ci_status_change": true,
+            "mean": 0.010711069018071317,
+            "ci95": [
+              0.0007576602144415343,
+              0.0206644778217011
+            ]
+          }
+        ]
+      }
+    },
+    "ADD": {
+      "observed": {
+        "n": 82,
+        "n_clusters": 13,
+        "mean": 0.01891078754471612,
+        "se": 0.005614827294646492,
+        "t": 3.368008765424857,
+        "df": 12,
+        "t_crit": 2.1788128296672284,
+        "ci95": [
+          0.006677129798774608,
+          0.031144445290657637
+        ],
+        "excludes_zero": true,
+        "p_asymptotic": 0.005590758798661065
+      },
+      "wild_cluster_bootstrap": {
+        "p_wcb": 0.01318359375,
+        "n_sign_vectors": 8192,
+        "n_ge_obs": 108
+      },
+      "asymptotic_vs_exact_agree_at_alpha": true,
+      "leave_one_cluster_out": [
+        {
+          "dropped_review_date": "2022-08-01",
+          "n": 77,
+          "n_clusters": 12,
+          "mean": 0.01710698078999838,
+          "se": 0.005796490363793449,
+          "t": 2.951265285775944,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            0.004348991518674815,
+            0.029864970061321945
+          ],
+          "excludes_zero": true,
+          "p_asymptotic": 0.013179540634081765
+        },
+        {
+          "dropped_review_date": "2023-02-01",
+          "n": 74,
+          "n_clusters": 12,
+          "mean": 0.016482246267416782,
+          "se": 0.00579834353943527,
+          "t": 2.8425784287044973,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            0.0037201781840065246,
+            0.02924431435082704
+          ],
+          "excludes_zero": true,
+          "p_asymptotic": 0.016007860787767524
+        },
+        {
+          "dropped_review_date": "2023-08-01",
+          "n": 76,
+          "n_clusters": 12,
+          "mean": 0.019780836240100495,
+          "se": 0.0059539034028578105,
+          "t": 3.3223307302241256,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            0.006676383205791343,
+            0.032885289274409646
+          ],
+          "excludes_zero": true,
+          "p_asymptotic": 0.006803121668841284
+        },
+        {
+          "dropped_review_date": "2024-02-01",
+          "n": 74,
+          "n_clusters": 12,
+          "mean": 0.018321852148742268,
+          "se": 0.006245596848294702,
+          "t": 2.933563051503215,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            0.0045753861697305186,
+            0.032068318127754014
+          ],
+          "excludes_zero": true,
+          "p_asymptotic": 0.013603452573929663
+        },
+        {
+          "dropped_review_date": "2024-05-02",
+          "n": 77,
+          "n_clusters": 12,
+          "mean": 0.019115643078109437,
+          "se": 0.005984278938701049,
+          "t": 3.1943101706851067,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            0.005944333940179486,
+            0.03228695221603939
+          ],
+          "excludes_zero": true,
+          "p_asymptotic": 0.008540743557625841
+        },
+        {
+          "dropped_review_date": "2024-08-01",
+          "n": 79,
+          "n_clusters": 12,
+          "mean": 0.019464759769367432,
+          "se": 0.005788165658820471,
+          "t": 3.362854644580787,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            0.006725093050151532,
+            0.032204426488583335
+          ],
+          "excludes_zero": true,
+          "p_asymptotic": 0.006331808001992164
+        },
+        {
+          "dropped_review_date": "2024-11-01",
+          "n": 76,
+          "n_clusters": 12,
+          "mean": 0.019170939112635378,
+          "se": 0.006057254041459577,
+          "t": 3.1649554371366406,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            0.005839012856477746,
+            0.03250286536879301
+          ],
+          "excludes_zero": true,
+          "p_asymptotic": 0.00899912879351192
+        },
+        {
+          "dropped_review_date": "2025-02-03",
+          "n": 74,
+          "n_clusters": 12,
+          "mean": 0.0187330287722156,
+          "se": 0.006251326724773989,
+          "t": 2.9966484871086108,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            0.004973951420103781,
+            0.032492106124327416
+          ],
+          "excludes_zero": true,
+          "p_asymptotic": 0.01215241844619158
+        },
+        {
+          "dropped_review_date": "2025-05-02",
+          "n": 79,
+          "n_clusters": 12,
+          "mean": 0.02075804692268449,
+          "se": 0.005413121268566381,
+          "t": 3.834764804406845,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            0.00884384734079346,
+            0.03267224650457552
+          ],
+          "excludes_zero": true,
+          "p_asymptotic": 0.0027714829658665326
+        },
+        {
+          "dropped_review_date": "2025-08-01",
+          "n": 77,
+          "n_clusters": 12,
+          "mean": 0.018878278670641162,
+          "se": 0.00600210875874898,
+          "t": 3.145274340976114,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            0.005667726363378612,
+            0.032088830977903715
+          ],
+          "excludes_zero": true,
+          "p_asymptotic": 0.009320358997615213
+        },
+        {
+          "dropped_review_date": "2025-11-03",
+          "n": 72,
+          "n_clusters": 12,
+          "mean": 0.019177188139640613,
+          "se": 0.006393041164336247,
+          "t": 2.999697271874468,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            0.005106199409081561,
+            0.03324817687019967
+          ],
+          "excludes_zero": true,
+          "p_asymptotic": 0.012086377253932232
+        },
+        {
+          "dropped_review_date": "2026-02-02",
+          "n": 77,
+          "n_clusters": 12,
+          "mean": 0.022409434002858927,
+          "se": 0.004438682879176334,
+          "t": 5.048667501792185,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            0.012639958855438987,
+            0.032178909150278864
+          ],
+          "excludes_zero": true,
+          "p_asymptotic": 0.00037285480877179166
+        },
+        {
+          "dropped_review_date": "2026-05-04",
+          "n": 72,
+          "n_clusters": 12,
+          "mean": 0.01610385301143026,
+          "se": 0.0057670934572978,
+          "t": 2.7923690036706637,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            0.003410565895056219,
+            0.0287971401278043
+          ],
+          "excludes_zero": true,
+          "p_asymptotic": 0.01751217594297469
+        }
+      ],
+      "jackknife_flags": {
+        "any_single_cluster_drives_result": false,
+        "flips": []
+      }
+    },
+    "DELETE": {
+      "observed": {
+        "n": 98,
+        "n_clusters": 13,
+        "mean": -0.0024875575347448097,
+        "se": 0.008535255199012303,
+        "t": -0.2914450097558499,
+        "df": 12,
+        "t_crit": 2.1788128296672284,
+        "ci95": [
+          -0.02108428106683673,
+          0.016109165997347113
+        ],
+        "excludes_zero": false,
+        "p_asymptotic": 0.7756875719994041
+      },
+      "wild_cluster_bootstrap": {
+        "p_wcb": 0.7880859375,
+        "n_sign_vectors": 8192,
+        "n_ge_obs": 6456
+      },
+      "asymptotic_vs_exact_agree_at_alpha": true,
+      "leave_one_cluster_out": [
+        {
+          "dropped_review_date": "2022-08-01",
+          "n": 92,
+          "n_clusters": 12,
+          "mean": -0.003789046765077882,
+          "se": 0.008893792355511545,
+          "t": -0.42603274437026667,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.023364151756495255,
+            0.015786058226339487
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.6783008430959815
+        },
+        {
+          "dropped_review_date": "2023-02-01",
+          "n": 89,
+          "n_clusters": 12,
+          "mean": -0.004095951646044447,
+          "se": 0.009104261225116825,
+          "t": -0.4498939062451921,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.0241342954961243,
+            0.015942392204035406
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.6615236196113455
+        },
+        {
+          "dropped_review_date": "2023-08-01",
+          "n": 91,
+          "n_clusters": 12,
+          "mean": -0.004393748378695152,
+          "se": 0.008806875240623582,
+          "t": -0.4988998093703036,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.023777550090086138,
+            0.014990053332695836
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.6276763196689019
+        },
+        {
+          "dropped_review_date": "2024-02-01",
+          "n": 81,
+          "n_clusters": 12,
+          "mean": 0.003758007886347243,
+          "se": 0.008056008056006585,
+          "t": 0.46648512020109767,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.013973146294501942,
+            0.021489162067196428
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.6499706306245946
+        },
+        {
+          "dropped_review_date": "2024-05-02",
+          "n": 92,
+          "n_clusters": 12,
+          "mean": -0.006353810458331222,
+          "se": 0.00773497564134933,
+          "t": -0.8214389744636389,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.023378377058611403,
+            0.01067075614194896
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.4288408167859567
+        },
+        {
+          "dropped_review_date": "2024-08-01",
+          "n": 95,
+          "n_clusters": 12,
+          "mean": -0.0025083681549723778,
+          "se": 0.008833592033452499,
+          "t": -0.28395789000366745,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.021950973130905053,
+            0.016934236820960295
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.7817163698748947
+        },
+        {
+          "dropped_review_date": "2024-11-01",
+          "n": 92,
+          "n_clusters": 12,
+          "mean": -0.002214099435484085,
+          "se": 0.009144854954884037,
+          "t": -0.2421142212104294,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.022341789482374343,
+            0.017913590611406176
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.8131462806707347
+        },
+        {
+          "dropped_review_date": "2025-02-03",
+          "n": 91,
+          "n_clusters": 12,
+          "mean": -0.004712645737827531,
+          "se": 0.008688533782103157,
+          "t": -0.5423982752457899,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.023835979655191457,
+            0.014410688179536396
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.5983608448898755
+        },
+        {
+          "dropped_review_date": "2025-05-02",
+          "n": 95,
+          "n_clusters": 12,
+          "mean": -0.002914477097003125,
+          "se": 0.008785485646728828,
+          "t": -0.33173773359794817,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.02225120062965137,
+            0.01642224643564512
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.7463219491493699
+        },
+        {
+          "dropped_review_date": "2025-08-01",
+          "n": 91,
+          "n_clusters": 12,
+          "mean": -0.00196432329858218,
+          "se": 0.009256818470729115,
+          "t": -0.2122028540144268,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.02233844338231914,
+            0.01840979678515478
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.8358296706397236
+        },
+        {
+          "dropped_review_date": "2025-11-03",
+          "n": 85,
+          "n_clusters": 12,
+          "mean": -0.0007477815584446091,
+          "se": 0.009851725946096037,
+          "t": -0.07590360943210504,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.022431284167091746,
+            0.020935721050202527
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.9408586880289239
+        },
+        {
+          "dropped_review_date": "2026-02-02",
+          "n": 92,
+          "n_clusters": 12,
+          "mean": -0.003012240579929298,
+          "se": 0.009056923697301988,
+          "t": -0.3325898153284243,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.022946395233773273,
+            0.016921914073914676
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.7456959724803747
+        },
+        {
+          "dropped_review_date": "2026-05-04",
+          "n": 90,
+          "n_clusters": 12,
+          "mean": 0.0014989617666178845,
+          "se": 0.008692422324798369,
+          "t": 0.17244465473583104,
+          "df": 11,
+          "t_crit": 2.200985160091639,
+          "ci95": [
+            -0.01763293077551259,
+            0.020630854308748357
+          ],
+          "excludes_zero": false,
+          "p_asymptotic": 0.8662198211498996
+        }
+      ],
+      "jackknife_flags": {
+        "any_single_cluster_drives_result": true,
+        "flips": [
+          {
+            "dropped_review_date": "2024-02-01",
+            "sign_flip": true,
+            "ci_status_change": false,
+            "mean": 0.003758007886347243,
+            "ci95": [
+              -0.013973146294501942,
+              0.021489162067196428
+            ]
+          },
+          {
+            "dropped_review_date": "2026-05-04",
+            "sign_flip": true,
+            "ci_status_change": false,
+            "mean": 0.0014989617666178845,
+            "ci95": [
+              -0.01763293077551259,
+              0.020630854308748357
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "cluster_descriptives": [
+    {
+      "review_date": "2022-08-01",
+      "n_events": 11,
+      "n_add": 5,
+      "n_delete": 6,
+      "mean_signed_reversal_all": 0.030750792892638244,
+      "mean_signed_reversal_add": 0.046689411567369374,
+      "mean_signed_reversal_delete": 0.017468610663695632
+    },
+    {
+      "review_date": "2023-02-01",
+      "n_events": 17,
+      "n_add": 8,
+      "n_delete": 9,
+      "mean_signed_reversal_all": 0.02657396546887322,
+      "mean_signed_reversal_add": 0.04137479435973502,
+      "mean_signed_reversal_delete": 0.013417673121440503
+    },
+    {
+      "review_date": "2023-08-01",
+      "n_events": 13,
+      "n_add": 6,
+      "n_delete": 7,
+      "mean_signed_reversal_all": 0.01564549911348863,
+      "mean_signed_reversal_add": 0.0078901707365141,
+      "mean_signed_reversal_delete": 0.02229292343660965
+    },
+    {
+      "review_date": "2024-02-01",
+      "n_events": 25,
+      "n_add": 8,
+      "n_delete": 17,
+      "mean_signed_reversal_all": -0.014132470301572962,
+      "mean_signed_reversal_add": 0.02435843995747424,
+      "mean_signed_reversal_delete": -0.032245839835242235
+    },
+    {
+      "review_date": "2024-05-02",
+      "n_events": 11,
+      "n_add": 5,
+      "n_delete": 6,
+      "mean_signed_reversal_all": 0.03814090776488879,
+      "mean_signed_reversal_add": 0.01575601233045914,
+      "mean_signed_reversal_delete": 0.05679498729358018
+    },
+    {
+      "review_date": "2024-08-01",
+      "n_events": 6,
+      "n_add": 3,
+      "n_delete": 3,
+      "mean_signed_reversal_all": 0.0012471488673465295,
+      "mean_signed_reversal_add": 0.004322852295564869,
+      "mean_signed_reversal_delete": -0.0018285545608718093
+    },
+    {
+      "review_date": "2024-11-01",
+      "n_events": 12,
+      "n_add": 6,
+      "n_delete": 6,
+      "mean_signed_reversal_all": 0.004467476313831476,
+      "mean_signed_reversal_add": 0.015615534351072194,
+      "mean_signed_reversal_delete": -0.006680581723409243
+    },
+    {
+      "review_date": "2025-02-03",
+      "n_events": 15,
+      "n_add": 8,
+      "n_delete": 7,
+      "mean_signed_reversal_all": 0.02330070488400546,
+      "mean_signed_reversal_add": 0.020555056190345974,
+      "mean_signed_reversal_delete": 0.026438589105330593
+    },
+    {
+      "review_date": "2025-05-02",
+      "n_events": 6,
+      "n_add": 3,
+      "n_delete": 3,
+      "mean_signed_reversal_all": -0.009351073735841153,
+      "mean_signed_reversal_add": -0.02973370940845083,
+      "mean_signed_reversal_delete": 0.011031561936768526
+    },
+    {
+      "review_date": "2025-08-01",
+      "n_events": 12,
+      "n_add": 5,
+      "n_delete": 7,
+      "mean_signed_reversal_all": 0.0026691585661116324,
+      "mean_signed_reversal_add": 0.019411424205470502,
+      "mean_signed_reversal_delete": -0.009289602604858989
+    },
+    {
+      "review_date": "2025-11-03",
+      "n_events": 23,
+      "n_add": 10,
+      "n_delete": 13,
+      "mean_signed_reversal_all": -0.000447485796721817,
+      "mean_signed_reversal_add": 0.016992703261259776,
+      "mean_signed_reversal_delete": -0.013863015841323038
+    },
+    {
+      "review_date": "2026-02-02",
+      "n_events": 11,
+      "n_add": 5,
+      "n_delete": 6,
+      "mean_signed_reversal_all": -0.01286330405499193,
+      "mean_signed_reversal_add": -0.03496836791068308,
+      "mean_signed_reversal_delete": 0.0055575824914173635
+    },
+    {
+      "review_date": "2026-05-04",
+      "n_events": 18,
+      "n_add": 10,
+      "n_delete": 8,
+      "mean_signed_reversal_all": 0.0006955535801745523,
+      "mean_signed_reversal_add": 0.039120716184374286,
+      "mean_signed_reversal_delete": -0.047335899675075115
+    }
+  ]
+}

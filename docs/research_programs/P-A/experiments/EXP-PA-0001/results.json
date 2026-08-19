@@ -1,0 +1,3823 @@
+{
+  "experiment_id": "EXP-PA-0001",
+  "hypothesis_id": "HYP-PA-0001",
+  "registration_sha256_prefix": "3692e69a",
+  "run_utc": "2026-08-19T07:09:22Z",
+  "spec": {
+    "k_reversal_td": 5,
+    "estimation_window_td": 230,
+    "estimation_gap_td": 20,
+    "alpha": 0.05,
+    "market_index": "IHSG",
+    "sign_convention": {
+      "ADD": -1.0,
+      "DELETE": 1.0
+    },
+    "mde_stat_raw": 0.0497,
+    "mde_stat_haircut": 0.0422
+  },
+  "friction": {
+    "COMMISSION_BUY": 0.0015,
+    "COMMISSION_SELL": 0.0025,
+    "SLIPPAGE": 0.001,
+    "round_trip": 0.006
+  },
+  "resolved_spec_ambiguities": {
+    "return_type": "simple (P_t/P_{t-1} - 1) \u2014 standard event-study convention (MacKinlay 1997); CARs are arithmetic sums of daily ARs",
+    "bar_filter": "is_final = 1 only \u2014 matches the research/backtest convention; live partial bars (is_final=0) are excluded",
+    "event_day_alignment": "t0 = last trading day <= effective_date for that ticker (handles non-trading effective dates and date_precision='month')",
+    "runup_window": "AR summed over [idx_announcement .. idx_effective] inclusive \u2014 descriptive only, never used in the decision",
+    "insufficient_data": "events lacking a full 230td estimation window or a full k=5 reversal window are EXCLUDED and individually reported with a reason \u2014 never imputed, never silently dropped",
+    "cr1_dof": "t-critical uses df = G - 1 (number of review-date clusters minus one)"
+  },
+  "corpus": {
+    "db": "data/walkforward.db",
+    "ohlcv_is_final_rows": 1055598,
+    "range": [
+      "2021-07-05",
+      "2026-07-29"
+    ],
+    "read_only": true
+  },
+  "counts": {
+    "raw_csv_rows": 210,
+    "distinct_events_after_dedup": 192,
+    "measured": 180,
+    "excluded": 12,
+    "measured_add": 82,
+    "measured_delete": 98,
+    "measured_crosschecked": 85,
+    "registration_quoted_raw_N": {
+      "primary": 210,
+      "delete_only": 105,
+      "robustness": 98
+    }
+  },
+  "test1_primary_gross_cr1": {
+    "n": 180,
+    "n_clusters": 13,
+    "mean": 0.007260577445898505,
+    "se": 0.005026209848406153,
+    "t": 1.4445432373264093,
+    "df": 12,
+    "t_crit": 2.1788128296672284,
+    "ci95": [
+      -0.0036905930564085972,
+      0.018211747948205605
+    ],
+    "excludes_zero": false
+  },
+  "test1_secondary_sensitivity_pooled_iid": {
+    "n": 180,
+    "mean": 0.007260577445898505,
+    "se": 0.004078011492759568,
+    "t": 1.780421035789017
+  },
+  "test2_delete_only_net": {
+    "gross_cr1": {
+      "n": 98,
+      "n_clusters": 13,
+      "mean": -0.0024875575347448097,
+      "se": 0.008535255199012303,
+      "t": -0.2914450097558499,
+      "df": 12,
+      "t_crit": 2.1788128296672284,
+      "ci95": [
+        -0.02108428106683673,
+        0.016109165997347113
+      ],
+      "excludes_zero": false
+    },
+    "friction": 0.006,
+    "net_mean": -0.00848755753474481,
+    "net_ci95": [
+      -0.027084281066836732,
+      0.010109165997347113
+    ],
+    "pass": false
+  },
+  "add_side_gross_only": {
+    "n": 82,
+    "n_clusters": 13,
+    "mean": 0.01891078754471612,
+    "se": 0.005614827294646492,
+    "t": 3.368008765424857,
+    "df": 12,
+    "t_crit": 2.1788128296672284,
+    "ci95": [
+      0.006677129798774608,
+      0.031144445290657637
+    ],
+    "excludes_zero": true
+  },
+  "robustness_crosschecked_only": {
+    "n": 85,
+    "n_clusters": 6,
+    "mean": 0.0029382919502485842,
+    "se": 0.004670058944122969,
+    "t": 0.6291766304034073,
+    "df": 5,
+    "t_crit": 2.5705818356363146,
+    "ci95": [
+      -0.009066476742864827,
+      0.014943060643361995
+    ],
+    "excludes_zero": false
+  },
+  "robustness_sign_agreement": true,
+  "decision": {
+    "test1_pass": false,
+    "test2_pass": false,
+    "verdict": "REFUTED",
+    "proposed_f_mode": "F2 \u00b7 Prediction failure",
+    "rule": "REFUTED iff Test 1 fails OR Test 2 fails (HARNESS_SPEC \u00a72, applied verbatim)"
+  },
+  "events": [
+    {
+      "ticker": "ARTO",
+      "event_type": "ADD",
+      "effective_date": "2022-08-01",
+      "announcement_date": "2022-07-27",
+      "review_period": "2022-H2",
+      "indices": [
+        "IDX30",
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2022-08-01",
+      "t0_exact": true,
+      "alpha": -0.0027220644773500403,
+      "beta": 1.8076068036991721,
+      "est_obs": 230,
+      "car_runup": 0.020043477027204243,
+      "car_reversal": -0.0067766938059504135,
+      "signed_reversal": 0.0067766938059504135
+    },
+    {
+      "ticker": "BBTN",
+      "event_type": "DELETE",
+      "effective_date": "2022-08-01",
+      "announcement_date": "2022-07-27",
+      "review_period": "2022-H2",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2022-08-01",
+      "t0_exact": true,
+      "alpha": -5.8949801935921945e-05,
+      "beta": 1.2383300214914996,
+      "est_obs": 230,
+      "car_runup": 0.0032537758562744823,
+      "car_reversal": 0.01625798931040228,
+      "signed_reversal": 0.01625798931040228
+    },
+    {
+      "ticker": "BRIS",
+      "event_type": "ADD",
+      "effective_date": "2022-08-01",
+      "announcement_date": "2022-07-27",
+      "review_period": "2022-H2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2022-08-01",
+      "t0_exact": true,
+      "alpha": -0.003093375818491161,
+      "beta": 1.2358624718998488,
+      "est_obs": 230,
+      "car_runup": -0.004156154576657118,
+      "car_reversal": -0.04795734221277173,
+      "signed_reversal": 0.04795734221277173
+    },
+    {
+      "ticker": "EXCL",
+      "event_type": "DELETE",
+      "effective_date": "2022-08-01",
+      "announcement_date": "2022-07-27",
+      "review_period": "2022-H2",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2022-08-01",
+      "t0_exact": true,
+      "alpha": -0.0003513298179790442,
+      "beta": 1.1863202094968202,
+      "est_obs": 230,
+      "car_runup": -0.002627831314735908,
+      "car_reversal": 0.06804997318826239,
+      "signed_reversal": 0.06804997318826239
+    },
+    {
+      "ticker": "GGRM",
+      "event_type": "DELETE",
+      "effective_date": "2022-08-01",
+      "announcement_date": "2022-07-27",
+      "review_period": "2022-H2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2022-08-01",
+      "t0_exact": true,
+      "alpha": -0.001346819216412229,
+      "beta": 0.5568736420241492,
+      "est_obs": 230,
+      "car_runup": -0.08397061324627,
+      "car_reversal": -0.052318092944117545,
+      "signed_reversal": -0.052318092944117545
+    },
+    {
+      "ticker": "HRUM",
+      "event_type": "ADD",
+      "effective_date": "2022-08-01",
+      "announcement_date": "2022-07-27",
+      "review_period": "2022-H2",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2022-08-01",
+      "t0_exact": true,
+      "alpha": 0.0012805006687017185,
+      "beta": 1.453282124402119,
+      "est_obs": 230,
+      "car_runup": 0.15316556750080793,
+      "car_reversal": -0.1190561863641798,
+      "signed_reversal": 0.1190561863641798
+    },
+    {
+      "ticker": "INDY",
+      "event_type": "ADD",
+      "effective_date": "2022-08-01",
+      "announcement_date": "2022-07-27",
+      "review_period": "2022-H2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2022-08-01",
+      "t0_exact": true,
+      "alpha": 0.0028106415102082173,
+      "beta": 1.2584317742197726,
+      "est_obs": 230,
+      "car_runup": 0.02862565206511149,
+      "car_reversal": -0.004473123345775895,
+      "signed_reversal": 0.004473123345775895
+    },
+    {
+      "ticker": "ITMG",
+      "event_type": "ADD",
+      "effective_date": "2022-08-01",
+      "announcement_date": "2022-07-27",
+      "review_period": "2022-H2",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2022-08-01",
+      "t0_exact": true,
+      "alpha": 0.003217295747739272,
+      "beta": 0.6604894775958119,
+      "est_obs": 230,
+      "car_runup": 0.11747326845377191,
+      "car_reversal": -0.05518371210816901,
+      "signed_reversal": 0.05518371210816901
+    },
+    {
+      "ticker": "MIKA",
+      "event_type": "DELETE",
+      "effective_date": "2022-08-01",
+      "announcement_date": "2022-07-27",
+      "review_period": "2022-H2",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2022-08-01",
+      "t0_exact": true,
+      "alpha": 0.00011287883432808978,
+      "beta": 0.09611699014398421,
+      "est_obs": 230,
+      "car_runup": -0.06967272078981991,
+      "car_reversal": 0.03783100707843308,
+      "signed_reversal": 0.03783100707843308
+    },
+    {
+      "ticker": "PTPP",
+      "event_type": "DELETE",
+      "effective_date": "2022-08-01",
+      "announcement_date": "2022-07-27",
+      "review_period": "2022-H2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2022-08-01",
+      "t0_exact": true,
+      "alpha": 0.00012429821192680988,
+      "beta": 1.238952670686979,
+      "est_obs": 230,
+      "car_runup": -0.023248465326554644,
+      "car_reversal": 0.0327781790631555,
+      "signed_reversal": 0.0327781790631555
+    },
+    {
+      "ticker": "TKIM",
+      "event_type": "DELETE",
+      "effective_date": "2022-08-01",
+      "announcement_date": "2022-07-27",
+      "review_period": "2022-H2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2022-08-01",
+      "t0_exact": true,
+      "alpha": -0.000874509017578667,
+      "beta": 1.0638952479307353,
+      "est_obs": 230,
+      "car_runup": -0.0071881625873625515,
+      "car_reversal": 0.0022126082860380834,
+      "signed_reversal": 0.0022126082860380834
+    },
+    {
+      "ticker": "ACES",
+      "event_type": "ADD",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": -0.003955821823950052,
+      "beta": 0.8028397027155417,
+      "est_obs": 230,
+      "car_runup": 0.0840838723445698,
+      "car_reversal": 0.04415953011251108,
+      "signed_reversal": -0.04415953011251108
+    },
+    {
+      "ticker": "AKRA",
+      "event_type": "ADD",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": 0.0030351071620465576,
+      "beta": 0.8768734905692106,
+      "est_obs": 230,
+      "car_runup": -0.0020607353074883344,
+      "car_reversal": -0.07488983366307801,
+      "signed_reversal": 0.07488983366307801
+    },
+    {
+      "ticker": "AMRT",
+      "event_type": "ADD",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": 0.004113502433991308,
+      "beta": 1.2356161223551105,
+      "est_obs": 230,
+      "car_runup": 0.08587388094142573,
+      "car_reversal": -0.04092897455581836,
+      "signed_reversal": 0.04092897455581836
+    },
+    {
+      "ticker": "BFIN",
+      "event_type": "DELETE",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": -0.0006629566444107528,
+      "beta": 1.0365095347505222,
+      "est_obs": 230,
+      "car_runup": 0.02629025153920733,
+      "car_reversal": 0.06830607676603206,
+      "signed_reversal": 0.06830607676603206
+    },
+    {
+      "ticker": "ERAA",
+      "event_type": "DELETE",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": -0.0015476967485836734,
+      "beta": 0.9550876029518689,
+      "est_obs": 230,
+      "car_runup": 0.1320507830672787,
+      "car_reversal": 0.06992971462529857,
+      "signed_reversal": 0.06992971462529857
+    },
+    {
+      "ticker": "ESSA",
+      "event_type": "ADD",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "IDX30",
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": 0.003997177239988333,
+      "beta": 1.5757445787174698,
+      "est_obs": 230,
+      "car_runup": 0.029293691941013278,
+      "car_reversal": -0.11121235490354167,
+      "signed_reversal": 0.11121235490354167
+    },
+    {
+      "ticker": "HMSP",
+      "event_type": "DELETE",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": -0.00035116525194854066,
+      "beta": 0.5091650947423112,
+      "est_obs": 230,
+      "car_runup": 0.12935579505648281,
+      "car_reversal": 0.020504088927499477,
+      "signed_reversal": 0.020504088927499477
+    },
+    {
+      "ticker": "ICBP",
+      "event_type": "DELETE",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": 0.0008338491243819957,
+      "beta": 0.4144870612627432,
+      "est_obs": 230,
+      "car_runup": -0.009936793811356828,
+      "car_reversal": -0.013198162652667992,
+      "signed_reversal": -0.013198162652667992
+    },
+    {
+      "ticker": "INKP",
+      "event_type": "DELETE",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": 0.0007679918330778259,
+      "beta": 0.7871346800410267,
+      "est_obs": 230,
+      "car_runup": -0.044499846418632215,
+      "car_reversal": 0.0022031491996363636,
+      "signed_reversal": 0.0022031491996363636
+    },
+    {
+      "ticker": "MEDC",
+      "event_type": "ADD",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": 0.003572219838259015,
+      "beta": 0.8651463456277257,
+      "est_obs": 230,
+      "car_runup": -0.014096444846417857,
+      "car_reversal": -0.06470053393453692,
+      "signed_reversal": 0.06470053393453692
+    },
+    {
+      "ticker": "MIKA",
+      "event_type": "DELETE",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": 0.0018317923791302477,
+      "beta": -0.1421650049471476,
+      "est_obs": 230,
+      "car_runup": -0.032895757781076375,
+      "car_reversal": -0.005881108991115584,
+      "signed_reversal": -0.005881108991115584
+    },
+    {
+      "ticker": "MNCN",
+      "event_type": "DELETE",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": -0.0005285863175175437,
+      "beta": 0.5597446702116847,
+      "est_obs": 230,
+      "car_runup": 0.03797003745952903,
+      "car_reversal": -0.0036603449734863287,
+      "signed_reversal": -0.0036603449734863287
+    },
+    {
+      "ticker": "SCMA",
+      "event_type": "ADD",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": -0.0014413280228571194,
+      "beta": 1.4844758932448123,
+      "est_obs": 230,
+      "car_runup": 0.06405430976760709,
+      "car_reversal": -0.03528539638644862,
+      "signed_reversal": 0.03528539638644862
+    },
+    {
+      "ticker": "SIDO",
+      "event_type": "ADD",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": -0.0008372292730002932,
+      "beta": 0.18030744390608347,
+      "est_obs": 230,
+      "car_runup": 0.06457737620880148,
+      "car_reversal": 0.02757729951975569,
+      "signed_reversal": -0.02757729951975569
+    },
+    {
+      "ticker": "SRTG",
+      "event_type": "ADD",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": -0.0002853972185919451,
+      "beta": 1.6908155972823755,
+      "est_obs": 230,
+      "car_runup": 0.010554212262536292,
+      "car_reversal": -0.07571809106672331,
+      "signed_reversal": 0.07571809106672331
+    },
+    {
+      "ticker": "TINS",
+      "event_type": "DELETE",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": -0.0008220555061169037,
+      "beta": 1.1802981511394455,
+      "est_obs": 230,
+      "car_runup": 0.0036250798257896517,
+      "car_reversal": -0.04900172764909494,
+      "signed_reversal": -0.04900172764909494
+    },
+    {
+      "ticker": "WIKA",
+      "event_type": "DELETE",
+      "effective_date": "2023-02-01",
+      "announcement_date": "2023-01-26",
+      "review_period": "2023-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2023-02-01",
+      "t0_exact": true,
+      "alpha": -0.001082249897382704,
+      "beta": 0.9020592236190264,
+      "est_obs": 230,
+      "car_runup": 0.016336130970054895,
+      "car_reversal": 0.03155737284086291,
+      "signed_reversal": 0.03155737284086291
+    },
+    {
+      "ticker": "AALI",
+      "event_type": "DELETE",
+      "effective_date": "2023-08-01",
+      "announcement_date": "2023-07-25",
+      "review_period": "2023-H2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "month",
+      "t0_trading_day": "2023-08-01",
+      "t0_exact": true,
+      "alpha": -0.0007113683394644935,
+      "beta": 0.748321945365226,
+      "est_obs": 230,
+      "car_runup": -0.0667475140503601,
+      "car_reversal": 0.018888009628635776,
+      "signed_reversal": 0.018888009628635776
+    },
+    {
+      "ticker": "AKRA",
+      "event_type": "ADD",
+      "effective_date": "2023-08-01",
+      "announcement_date": "2023-07-25",
+      "review_period": "2023-H2",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "month",
+      "t0_trading_day": "2023-08-01",
+      "t0_exact": true,
+      "alpha": 0.0019005278558637479,
+      "beta": 1.2967761502799517,
+      "est_obs": 230,
+      "car_runup": -0.058807521371437674,
+      "car_reversal": -0.017298937889184362,
+      "signed_reversal": 0.017298937889184362
+    },
+    {
+      "ticker": "BTPS",
+      "event_type": "ADD",
+      "effective_date": "2023-08-01",
+      "announcement_date": "2023-07-25",
+      "review_period": "2023-H2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "month",
+      "t0_trading_day": "2023-08-01",
+      "t0_exact": true,
+      "alpha": -0.0007322981408992471,
+      "beta": 0.8603822219858708,
+      "est_obs": 230,
+      "car_runup": 0.0019093950795176862,
+      "car_reversal": 0.020190928898163065,
+      "signed_reversal": -0.020190928898163065
+    },
+    {
+      "ticker": "GGRM",
+      "event_type": "ADD",
+      "effective_date": "2023-08-01",
+      "announcement_date": "2023-07-25",
+      "review_period": "2023-H2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "month",
+      "t0_trading_day": "2023-08-01",
+      "t0_exact": true,
+      "alpha": 0.0002416950710588624,
+      "beta": 0.7014140205758335,
+      "est_obs": 230,
+      "car_runup": -0.04953169996811459,
+      "car_reversal": -0.07216767486415333,
+      "signed_reversal": 0.07216767486415333
+    },
+    {
+      "ticker": "JKON",
+      "event_type": "ADD",
+      "effective_date": "2023-08-01",
+      "announcement_date": "2023-07-25",
+      "review_period": "2023-H2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "month",
+      "t0_trading_day": "2023-08-01",
+      "t0_exact": true,
+      "alpha": 0.0019190515708581717,
+      "beta": 1.899561502508676,
+      "est_obs": 230,
+      "car_runup": -0.07532709871743733,
+      "car_reversal": -0.022462798546188767,
+      "signed_reversal": 0.022462798546188767
+    },
+    {
+      "ticker": "JPFA",
+      "event_type": "DELETE",
+      "effective_date": "2023-08-01",
+      "announcement_date": "2023-07-25",
+      "review_period": "2023-H2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "month",
+      "t0_trading_day": "2023-08-01",
+      "t0_exact": true,
+      "alpha": -0.0006027084249754838,
+      "beta": 0.5739521258576119,
+      "est_obs": 230,
+      "car_runup": -0.016253360889723335,
+      "car_reversal": 0.02505347644824829,
+      "signed_reversal": 0.02505347644824829
+    },
+    {
+      "ticker": "LSIP",
+      "event_type": "DELETE",
+      "effective_date": "2023-08-01",
+      "announcement_date": "2023-07-25",
+      "review_period": "2023-H2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "month",
+      "t0_trading_day": "2023-08-01",
+      "t0_exact": true,
+      "alpha": -0.00042764962899612634,
+      "beta": 0.8067671144284859,
+      "est_obs": 230,
+      "car_runup": -0.0890619205891108,
+      "car_reversal": 0.028898899884089273,
+      "signed_reversal": 0.028898899884089273
+    },
+    {
+      "ticker": "MAPI",
+      "event_type": "ADD",
+      "effective_date": "2023-08-01",
+      "announcement_date": "2023-07-25",
+      "review_period": "2023-H2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "month",
+      "t0_trading_day": "2023-08-01",
+      "t0_exact": true,
+      "alpha": 0.0034588804518996302,
+      "beta": 0.5503982213545446,
+      "est_obs": 230,
+      "car_runup": 0.03989099738784177,
+      "car_reversal": -0.06316897844517333,
+      "signed_reversal": 0.06316897844517333
+    },
+    {
+      "ticker": "PNBN",
+      "event_type": "ADD",
+      "effective_date": "2023-08-01",
+      "announcement_date": "2023-07-25",
+      "review_period": "2023-H2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "month",
+      "t0_trading_day": "2023-08-01",
+      "t0_exact": true,
+      "alpha": -0.0015572475411819164,
+      "beta": 0.9339543332695392,
+      "est_obs": 230,
+      "car_runup": 0.016427627117463532,
+      "car_reversal": 0.10756643642745213,
+      "signed_reversal": -0.10756643642745213
+    },
+    {
+      "ticker": "TAPG",
+      "event_type": "DELETE",
+      "effective_date": "2023-08-01",
+      "announcement_date": "2023-07-25",
+      "review_period": "2023-H2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "month",
+      "t0_trading_day": "2023-08-01",
+      "t0_exact": true,
+      "alpha": -0.00020374446588742557,
+      "beta": 0.8061552450273893,
+      "est_obs": 230,
+      "car_runup": -0.07220078827027644,
+      "car_reversal": 0.0118850463672526,
+      "signed_reversal": 0.0118850463672526
+    },
+    {
+      "ticker": "TBIG",
+      "event_type": "DELETE",
+      "effective_date": "2023-08-01",
+      "announcement_date": "2023-07-25",
+      "review_period": "2023-H2",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "month",
+      "t0_trading_day": "2023-08-01",
+      "t0_exact": true,
+      "alpha": -0.0013599014657511158,
+      "beta": 0.4076149324953455,
+      "est_obs": 230,
+      "car_runup": -0.06378496311935997,
+      "car_reversal": 0.050033149612757524,
+      "signed_reversal": 0.050033149612757524
+    },
+    {
+      "ticker": "TINS",
+      "event_type": "DELETE",
+      "effective_date": "2023-08-01",
+      "announcement_date": "2023-07-25",
+      "review_period": "2023-H2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "month",
+      "t0_trading_day": "2023-08-01",
+      "t0_exact": true,
+      "alpha": -0.001242383214559886,
+      "beta": 1.2983197668538582,
+      "est_obs": 230,
+      "car_runup": -0.01103184462022843,
+      "car_reversal": -0.0012602484570625287,
+      "signed_reversal": -0.0012602484570625287
+    },
+    {
+      "ticker": "WSKT",
+      "event_type": "DELETE",
+      "effective_date": "2023-08-01",
+      "announcement_date": "2023-07-25",
+      "review_period": "2023-H2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "month",
+      "t0_trading_day": "2023-08-01",
+      "t0_exact": true,
+      "alpha": -0.0038379307222193276,
+      "beta": 1.343172385987289,
+      "est_obs": 230,
+      "car_runup": 0.0254441774323998,
+      "car_reversal": 0.022552130572346625,
+      "signed_reversal": 0.022552130572346625
+    },
+    {
+      "ticker": "ACES",
+      "event_type": "ADD",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": 0.0021230664092286955,
+      "beta": 0.6779458725553861,
+      "est_obs": 230,
+      "car_runup": 0.023353368520294716,
+      "car_reversal": -0.06616308384311821,
+      "signed_reversal": 0.06616308384311821
+    },
+    {
+      "ticker": "AUTO",
+      "event_type": "ADD",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": 0.002322634418817392,
+      "beta": 0.8017329287418811,
+      "est_obs": 230,
+      "car_runup": -0.052852074025983076,
+      "car_reversal": -0.01682002821269333,
+      "signed_reversal": 0.01682002821269333
+    },
+    {
+      "ticker": "AVIA",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": -0.0004526197404200013,
+      "beta": 0.7244236855173187,
+      "est_obs": 230,
+      "car_runup": 0.04372215414661808,
+      "car_reversal": -0.04143038293083676,
+      "signed_reversal": -0.04143038293083676
+    },
+    {
+      "ticker": "DOID",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": 0.000941498125740246,
+      "beta": 1.2858704641390575,
+      "est_obs": 230,
+      "car_runup": -0.05048956100887887,
+      "car_reversal": -0.0870589037746648,
+      "signed_reversal": -0.0870589037746648
+    },
+    {
+      "ticker": "EMTK",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": -0.0028225088072878286,
+      "beta": 1.7726970880315238,
+      "est_obs": 230,
+      "car_runup": -0.038501822975838776,
+      "car_reversal": -0.049220469129350394,
+      "signed_reversal": -0.049220469129350394
+    },
+    {
+      "ticker": "ESSA",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": -0.0021919671730256393,
+      "beta": 1.682238327467631,
+      "est_obs": 230,
+      "car_runup": -0.04009930819320026,
+      "car_reversal": 0.011461352839883542,
+      "signed_reversal": 0.011461352839883542
+    },
+    {
+      "ticker": "GJTL",
+      "event_type": "ADD",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": 0.0027000768432223466,
+      "beta": 1.843703402292867,
+      "est_obs": 230,
+      "car_runup": -0.0048755633157384366,
+      "car_reversal": -0.07424791150852994,
+      "signed_reversal": 0.07424791150852994
+    },
+    {
+      "ticker": "HMSP",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": 0.0002471940841122052,
+      "beta": 0.6093988927087699,
+      "est_obs": 230,
+      "car_runup": -0.04273963332427844,
+      "car_reversal": 0.02615611216892407,
+      "signed_reversal": 0.02615611216892407
+    },
+    {
+      "ticker": "HRUM",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": -0.0011938067926833022,
+      "beta": 1.3212102764394535,
+      "est_obs": 230,
+      "car_runup": 0.011471604109384612,
+      "car_reversal": -0.07586956085928451,
+      "signed_reversal": -0.07586956085928451
+    },
+    {
+      "ticker": "ICBP",
+      "event_type": "ADD",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": 1.804824250126023e-05,
+      "beta": 0.33399735665361524,
+      "est_obs": 230,
+      "car_runup": 0.015480166909482614,
+      "car_reversal": 0.0021929171804876742,
+      "signed_reversal": -0.0021929171804876742
+    },
+    {
+      "ticker": "INDY",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": -0.00289879569649524,
+      "beta": 1.735579710431175,
+      "est_obs": 230,
+      "car_runup": -0.03388194755494626,
+      "car_reversal": -0.026469557106629946,
+      "signed_reversal": -0.026469557106629946
+    },
+    {
+      "ticker": "INKP",
+      "event_type": "ADD",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": -0.0005067689155456025,
+      "beta": 1.5320403754505105,
+      "est_obs": 230,
+      "car_runup": 0.011856543150353997,
+      "car_reversal": 0.0034460977569246883,
+      "signed_reversal": -0.0034460977569246883
+    },
+    {
+      "ticker": "JKON",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": -0.001155825196438582,
+      "beta": 1.5222435013079025,
+      "est_obs": 230,
+      "car_runup": -0.03337600012999336,
+      "car_reversal": 0.008745662109512723,
+      "signed_reversal": 0.008745662109512723
+    },
+    {
+      "ticker": "MAPA",
+      "event_type": "ADD",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": 0.0035341698947309813,
+      "beta": 0.8079294870411122,
+      "est_obs": 230,
+      "car_runup": 0.006210722549354916,
+      "car_reversal": -0.03278935387409142,
+      "signed_reversal": 0.03278935387409142
+    },
+    {
+      "ticker": "MTEL",
+      "event_type": "ADD",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": 0.00011639644215944816,
+      "beta": 0.527265608156078,
+      "est_obs": 230,
+      "car_runup": 0.03674293701616867,
+      "car_reversal": -0.014908135975699243,
+      "signed_reversal": 0.014908135975699243
+    },
+    {
+      "ticker": "OMED",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": 8.329462422019134e-05,
+      "beta": 0.2004424658471678,
+      "est_obs": 230,
+      "car_runup": 0.0005509942201449552,
+      "car_reversal": -0.002989067910320605,
+      "signed_reversal": -0.002989067910320605
+    },
+    {
+      "ticker": "PNBN",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": -0.0007428179846134592,
+      "beta": 1.276932580512155,
+      "est_obs": 230,
+      "car_runup": -0.009540570749447242,
+      "car_reversal": -0.00398538070021268,
+      "signed_reversal": -0.00398538070021268
+    },
+    {
+      "ticker": "RMKE",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": -0.0017805204562337364,
+      "beta": 0.5172120217445189,
+      "est_obs": 230,
+      "car_runup": 0.007259210378375285,
+      "car_reversal": -0.051175792007101664,
+      "signed_reversal": -0.051175792007101664
+    },
+    {
+      "ticker": "SCMA",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": -0.0019144011399593298,
+      "beta": 1.0931302562352707,
+      "est_obs": 230,
+      "car_runup": -0.012397446023889185,
+      "car_reversal": -0.04375591136446451,
+      "signed_reversal": -0.04375591136446451
+    },
+    {
+      "ticker": "SMDR",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": -0.0008022179743165074,
+      "beta": 1.1559168547065937,
+      "est_obs": 230,
+      "car_runup": -0.0773833487228464,
+      "car_reversal": -0.04527219167459968,
+      "signed_reversal": -0.04527219167459968
+    },
+    {
+      "ticker": "TBIG",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": -0.0002951852666048081,
+      "beta": 0.31303726655866143,
+      "est_obs": 230,
+      "car_runup": -0.012196949546612126,
+      "car_reversal": -0.028418361021764232,
+      "signed_reversal": -0.028418361021764232
+    },
+    {
+      "ticker": "TOWR",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": -0.0011053296331897501,
+      "beta": 1.2518951453145526,
+      "est_obs": 230,
+      "car_runup": -0.008171619298322885,
+      "car_reversal": -0.043739557999471504,
+      "signed_reversal": -0.043739557999471504
+    },
+    {
+      "ticker": "TPIA",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": 0.004201465076199988,
+      "beta": 0.4704672954357333,
+      "est_obs": 230,
+      "car_runup": -0.03568345180889371,
+      "car_reversal": -0.0924652339779033,
+      "signed_reversal": -0.0924652339779033
+    },
+    {
+      "ticker": "WIFI",
+      "event_type": "ADD",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": 0.0007817604254963891,
+      "beta": 0.8575084963123876,
+      "est_obs": 230,
+      "car_runup": -0.01295852618229323,
+      "car_reversal": 0.004421978816925871,
+      "signed_reversal": -0.004421978816925871
+    },
+    {
+      "ticker": "WIKA",
+      "event_type": "DELETE",
+      "effective_date": "2024-02-01",
+      "announcement_date": "2024-01-26",
+      "review_period": "2024-H1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-02-01",
+      "t0_exact": true,
+      "alpha": -0.004614409110868162,
+      "beta": 1.9330014006879155,
+      "est_obs": 230,
+      "car_runup": 0.016645041703364193,
+      "car_reversal": -0.0026920338608337428,
+      "signed_reversal": -0.0026920338608337428
+    },
+    {
+      "ticker": "AVIA",
+      "event_type": "ADD",
+      "effective_date": "2024-05-02",
+      "announcement_date": "2024-04-24",
+      "review_period": "2024-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-05-02",
+      "t0_exact": true,
+      "alpha": -0.00035916196985894114,
+      "beta": 0.6838578754760649,
+      "est_obs": 230,
+      "car_runup": -0.07391190094400613,
+      "car_reversal": 0.015906037732662342,
+      "signed_reversal": -0.015906037732662342
+    },
+    {
+      "ticker": "BNGA",
+      "event_type": "ADD",
+      "effective_date": "2024-05-02",
+      "announcement_date": "2024-04-24",
+      "review_period": "2024-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-05-02",
+      "t0_exact": true,
+      "alpha": 0.0019986111163258526,
+      "beta": 0.36624774205384836,
+      "est_obs": 230,
+      "car_runup": -0.026535413959577796,
+      "car_reversal": -0.02968290400461362,
+      "signed_reversal": 0.02968290400461362
+    },
+    {
+      "ticker": "EMTK",
+      "event_type": "DELETE",
+      "effective_date": "2024-05-02",
+      "announcement_date": "2024-04-24",
+      "review_period": "2024-Q2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-05-02",
+      "t0_exact": true,
+      "alpha": -0.002630296945266563,
+      "beta": 1.5035056231539055,
+      "est_obs": 230,
+      "car_runup": 0.033633782194279024,
+      "car_reversal": 0.15461415312382493,
+      "signed_reversal": 0.15461415312382493
+    },
+    {
+      "ticker": "ISAT",
+      "event_type": "ADD",
+      "effective_date": "2024-05-02",
+      "announcement_date": "2024-04-24",
+      "review_period": "2024-Q2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-05-02",
+      "t0_exact": true,
+      "alpha": 0.0023942955816090824,
+      "beta": 0.3649063454662485,
+      "est_obs": 230,
+      "car_runup": -0.014377881585761882,
+      "car_reversal": -0.035937295439943395,
+      "signed_reversal": 0.035937295439943395
+    },
+    {
+      "ticker": "NISP",
+      "event_type": "ADD",
+      "effective_date": "2024-05-02",
+      "announcement_date": "2024-04-24",
+      "review_period": "2024-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-05-02",
+      "t0_exact": true,
+      "alpha": 0.0025943281040400838,
+      "beta": 0.521959268914016,
+      "est_obs": 230,
+      "car_runup": -0.06110067391879155,
+      "car_reversal": -0.031203465856663972,
+      "signed_reversal": 0.031203465856663972
+    },
+    {
+      "ticker": "PANI",
+      "event_type": "ADD",
+      "effective_date": "2024-05-02",
+      "announcement_date": "2024-04-24",
+      "review_period": "2024-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-05-02",
+      "t0_exact": true,
+      "alpha": 0.006918863842029228,
+      "beta": 0.46522581940729407,
+      "est_obs": 230,
+      "car_runup": -0.14966780286558157,
+      "car_reversal": 0.002137565916262963,
+      "signed_reversal": -0.002137565916262963
+    },
+    {
+      "ticker": "PTMP",
+      "event_type": "DELETE",
+      "effective_date": "2024-05-02",
+      "announcement_date": "2024-04-24",
+      "review_period": "2024-Q2",
+      "indices": [
+        "IDX80",
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-05-02",
+      "t0_exact": true,
+      "alpha": 0.003949759831606107,
+      "beta": 0.4492315363991278,
+      "est_obs": 230,
+      "car_runup": -0.22584467287853824,
+      "car_reversal": -3.5962227831911817e-05,
+      "signed_reversal": -3.5962227831911817e-05
+    },
+    {
+      "ticker": "TINS",
+      "event_type": "DELETE",
+      "effective_date": "2024-05-02",
+      "announcement_date": "2024-04-24",
+      "review_period": "2024-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-05-02",
+      "t0_exact": true,
+      "alpha": -0.0005139420583715421,
+      "beta": 0.7699850417313889,
+      "est_obs": 230,
+      "car_runup": -0.1783816238936674,
+      "car_reversal": 0.07522103204409071,
+      "signed_reversal": 0.07522103204409071
+    },
+    {
+      "ticker": "TPIA",
+      "event_type": "DELETE",
+      "effective_date": "2024-05-02",
+      "announcement_date": "2024-04-24",
+      "review_period": "2024-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-05-02",
+      "t0_exact": true,
+      "alpha": 0.003883254558799539,
+      "beta": 2.085968181927962,
+      "est_obs": 230,
+      "car_runup": 0.04427613862133345,
+      "car_reversal": 0.014991275653062934,
+      "signed_reversal": 0.014991275653062934
+    },
+    {
+      "ticker": "TRON",
+      "event_type": "DELETE",
+      "effective_date": "2024-05-02",
+      "announcement_date": "2024-04-24",
+      "review_period": "2024-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-05-02",
+      "t0_exact": true,
+      "alpha": -1.7358538084586415e-05,
+      "beta": 0.8445636654111083,
+      "est_obs": 230,
+      "car_runup": -0.02822889857456071,
+      "car_reversal": -0.06964189445658095,
+      "signed_reversal": -0.06964189445658095
+    },
+    {
+      "ticker": "WIFI",
+      "event_type": "DELETE",
+      "effective_date": "2024-05-02",
+      "announcement_date": "2024-04-24",
+      "review_period": "2024-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-05-02",
+      "t0_exact": true,
+      "alpha": -0.0003122693236161184,
+      "beta": 0.954432392505956,
+      "est_obs": 230,
+      "car_runup": -0.06467655844960733,
+      "car_reversal": 0.16562131962491536,
+      "signed_reversal": 0.16562131962491536
+    },
+    {
+      "ticker": "ASSA",
+      "event_type": "DELETE",
+      "effective_date": "2024-08-01",
+      "announcement_date": "2024-07-25",
+      "review_period": "2024-Q3",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2024-08-01",
+      "t0_exact": true,
+      "alpha": -0.0029625630044189054,
+      "beta": 1.727702827365317,
+      "est_obs": 230,
+      "car_runup": -0.05285605311571761,
+      "car_reversal": 0.000502139789688081,
+      "signed_reversal": 0.000502139789688081
+    },
+    {
+      "ticker": "CMRY",
+      "event_type": "ADD",
+      "effective_date": "2024-08-01",
+      "announcement_date": "2024-07-25",
+      "review_period": "2024-Q3",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2024-08-01",
+      "t0_exact": true,
+      "alpha": 0.0008099726013095789,
+      "beta": 0.4193349694393383,
+      "est_obs": 230,
+      "car_runup": 0.06316812233421948,
+      "car_reversal": -0.01917779866932636,
+      "signed_reversal": 0.01917779866932636
+    },
+    {
+      "ticker": "JSMR",
+      "event_type": "ADD",
+      "effective_date": "2024-08-01",
+      "announcement_date": "2024-07-25",
+      "review_period": "2024-Q3",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2024-08-01",
+      "t0_exact": true,
+      "alpha": 0.0010091548704748983,
+      "beta": 1.0068031049069142,
+      "est_obs": 230,
+      "car_runup": -0.022652128634858458,
+      "car_reversal": 0.003496204481051238,
+      "signed_reversal": -0.003496204481051238
+    },
+    {
+      "ticker": "PTPP",
+      "event_type": "DELETE",
+      "effective_date": "2024-08-01",
+      "announcement_date": "2024-07-25",
+      "review_period": "2024-Q3",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2024-08-01",
+      "t0_exact": true,
+      "alpha": -0.002829674793580293,
+      "beta": 1.3244739533166063,
+      "est_obs": 230,
+      "car_runup": 0.0485987565543357,
+      "car_reversal": -0.028467150621020825,
+      "signed_reversal": -0.028467150621020825
+    },
+    {
+      "ticker": "SILO",
+      "event_type": "ADD",
+      "effective_date": "2024-08-01",
+      "announcement_date": "2024-07-25",
+      "review_period": "2024-Q3",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2024-08-01",
+      "t0_exact": true,
+      "alpha": 0.002191529634175359,
+      "beta": 0.35488551770742904,
+      "est_obs": 230,
+      "car_runup": -0.008228009409939313,
+      "car_reversal": 0.0027130373015805172,
+      "signed_reversal": -0.0027130373015805172
+    },
+    {
+      "ticker": "SRTG",
+      "event_type": "DELETE",
+      "effective_date": "2024-08-01",
+      "announcement_date": "2024-07-25",
+      "review_period": "2024-Q3",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2024-08-01",
+      "t0_exact": true,
+      "alpha": -0.0009957280087856497,
+      "beta": 1.0790824696095265,
+      "est_obs": 230,
+      "car_runup": 0.17498316231281788,
+      "car_reversal": 0.022479347148717316,
+      "signed_reversal": 0.022479347148717316
+    },
+    {
+      "ticker": "ADMR",
+      "event_type": "ADD",
+      "effective_date": "2024-11-01",
+      "announcement_date": "2024-10-25",
+      "review_period": "2024-Q4",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-11-01",
+      "t0_exact": true,
+      "alpha": 0.0004982001569551579,
+      "beta": 0.8716924030676166,
+      "est_obs": 230,
+      "car_runup": 0.004798399536429368,
+      "car_reversal": 0.027816226104144727,
+      "signed_reversal": -0.027816226104144727
+    },
+    {
+      "ticker": "BUKA",
+      "event_type": "DELETE",
+      "effective_date": "2024-11-01",
+      "announcement_date": "2024-10-25",
+      "review_period": "2024-Q4",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-11-01",
+      "t0_exact": true,
+      "alpha": -0.0026444183535115724,
+      "beta": 1.211521331904634,
+      "est_obs": 230,
+      "car_runup": -0.062411725432626644,
+      "car_reversal": -0.007886775170519604,
+      "signed_reversal": -0.007886775170519604
+    },
+    {
+      "ticker": "GGRM",
+      "event_type": "DELETE",
+      "effective_date": "2024-11-01",
+      "announcement_date": "2024-10-25",
+      "review_period": "2024-Q4",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-11-01",
+      "t0_exact": true,
+      "alpha": -0.0020308279878279547,
+      "beta": 0.5580926241297681,
+      "est_obs": 230,
+      "car_runup": -0.08617685001767333,
+      "car_reversal": -0.008276608256163533,
+      "signed_reversal": -0.008276608256163533
+    },
+    {
+      "ticker": "HRUM",
+      "event_type": "DELETE",
+      "effective_date": "2024-11-01",
+      "announcement_date": "2024-10-25",
+      "review_period": "2024-Q4",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-11-01",
+      "t0_exact": true,
+      "alpha": -0.0008902606732571587,
+      "beta": 1.02578860460503,
+      "est_obs": 230,
+      "car_runup": -0.05514119726248365,
+      "car_reversal": -0.011070646992395522,
+      "signed_reversal": -0.011070646992395522
+    },
+    {
+      "ticker": "ITMG",
+      "event_type": "DELETE",
+      "effective_date": "2024-11-01",
+      "announcement_date": "2024-10-25",
+      "review_period": "2024-Q4",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-11-01",
+      "t0_exact": true,
+      "alpha": -0.0002598660256873662,
+      "beta": 0.5309817568122841,
+      "est_obs": 230,
+      "car_runup": 0.009649513527728013,
+      "car_reversal": 0.0071558037107809815,
+      "signed_reversal": 0.0071558037107809815
+    },
+    {
+      "ticker": "MAPI",
+      "event_type": "ADD",
+      "effective_date": "2024-11-01",
+      "announcement_date": "2024-10-25",
+      "review_period": "2024-Q4",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-11-01",
+      "t0_exact": true,
+      "alpha": -0.00047001899799788333,
+      "beta": 0.9757845941610467,
+      "est_obs": 230,
+      "car_runup": -0.046072069544023424,
+      "car_reversal": -0.040612937094734264,
+      "signed_reversal": 0.040612937094734264
+    },
+    {
+      "ticker": "MBMA",
+      "event_type": "ADD",
+      "effective_date": "2024-11-01",
+      "announcement_date": "2024-10-25",
+      "review_period": "2024-Q4",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-11-01",
+      "t0_exact": true,
+      "alpha": -0.0011486014420681793,
+      "beta": 1.4093817339229635,
+      "est_obs": 230,
+      "car_runup": 0.06653012327002705,
+      "car_reversal": 0.0006136419536987448,
+      "signed_reversal": -0.0006136419536987448
+    },
+    {
+      "ticker": "MIDI",
+      "event_type": "ADD",
+      "effective_date": "2024-11-01",
+      "announcement_date": "2024-10-25",
+      "review_period": "2024-Q4",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-11-01",
+      "t0_exact": true,
+      "alpha": -0.00023451325177718734,
+      "beta": 0.7832100044606665,
+      "est_obs": 230,
+      "car_runup": 0.015498660207150121,
+      "car_reversal": -0.011046982272963468,
+      "signed_reversal": 0.011046982272963468
+    },
+    {
+      "ticker": "SILO",
+      "event_type": "DELETE",
+      "effective_date": "2024-11-01",
+      "announcement_date": "2024-10-25",
+      "review_period": "2024-Q4",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-11-01",
+      "t0_exact": true,
+      "alpha": 0.0018727695797861221,
+      "beta": 0.14972477346404384,
+      "est_obs": 230,
+      "car_runup": 0.034776245470956174,
+      "car_reversal": -0.030144448876067504,
+      "signed_reversal": -0.030144448876067504
+    },
+    {
+      "ticker": "SMDR",
+      "event_type": "ADD",
+      "effective_date": "2024-11-01",
+      "announcement_date": "2024-10-25",
+      "review_period": "2024-Q4",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-11-01",
+      "t0_exact": true,
+      "alpha": -0.000118318034114022,
+      "beta": 1.0679047112504192,
+      "est_obs": 230,
+      "car_runup": 0.0069378665736982755,
+      "car_reversal": -0.07369275717026784,
+      "signed_reversal": 0.07369275717026784
+    },
+    {
+      "ticker": "SMRA",
+      "event_type": "ADD",
+      "effective_date": "2024-11-01",
+      "announcement_date": "2024-10-25",
+      "review_period": "2024-Q4",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-11-01",
+      "t0_exact": true,
+      "alpha": 0.0006123127528985652,
+      "beta": 1.256997453399283,
+      "est_obs": 230,
+      "car_runup": 0.033928787885750156,
+      "car_reversal": 0.003229602373688939,
+      "signed_reversal": -0.003229602373688939
+    },
+    {
+      "ticker": "TBIG",
+      "event_type": "DELETE",
+      "effective_date": "2024-11-01",
+      "announcement_date": "2024-10-25",
+      "review_period": "2024-Q4",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2024-11-01",
+      "t0_exact": true,
+      "alpha": -0.00013012705151082746,
+      "beta": 0.32427226811631155,
+      "est_obs": 230,
+      "car_runup": 0.012677471939158944,
+      "car_reversal": 0.010139185243909731,
+      "signed_reversal": 0.010139185243909731
+    },
+    {
+      "ticker": "ACES",
+      "event_type": "DELETE",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": 0.0006981731299505406,
+      "beta": 0.47492870280803584,
+      "est_obs": 230,
+      "car_runup": -0.0469306245822709,
+      "car_reversal": 0.0365153423205817,
+      "signed_reversal": 0.0365153423205817
+    },
+    {
+      "ticker": "BUKA",
+      "event_type": "DELETE",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "IDX80",
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": -0.0016478669965919682,
+      "beta": 1.0889313684565693,
+      "est_obs": 230,
+      "car_runup": 0.025823946604238784,
+      "car_reversal": 0.17534990628633862,
+      "signed_reversal": 0.17534990628633862
+    },
+    {
+      "ticker": "CTRA",
+      "event_type": "ADD",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": -0.00046128397385827695,
+      "beta": 1.0009810699530295,
+      "est_obs": 230,
+      "car_runup": 0.07041425364509252,
+      "car_reversal": -0.04805391551805527,
+      "signed_reversal": 0.04805391551805527
+    },
+    {
+      "ticker": "EXCL",
+      "event_type": "ADD",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": 0.0006717461378792702,
+      "beta": 0.4842631006034798,
+      "est_obs": 230,
+      "car_runup": 0.016511872497353093,
+      "car_reversal": 0.019130443933743614,
+      "signed_reversal": -0.019130443933743614
+    },
+    {
+      "ticker": "INTP",
+      "event_type": "DELETE",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": -0.0007537055231302389,
+      "beta": 0.4552232265177012,
+      "est_obs": 230,
+      "car_runup": -0.04855725980579612,
+      "car_reversal": -0.028644414755473448,
+      "signed_reversal": -0.028644414755473448
+    },
+    {
+      "ticker": "ISAT",
+      "event_type": "ADD",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": 0.0005015051207985084,
+      "beta": 0.9419489783025872,
+      "est_obs": 230,
+      "car_runup": 0.001547353262926321,
+      "car_reversal": -0.0942174576875124,
+      "signed_reversal": 0.0942174576875124
+    },
+    {
+      "ticker": "JPFA",
+      "event_type": "ADD",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": 0.0026469250623452566,
+      "beta": 0.7214533723818521,
+      "est_obs": 230,
+      "car_runup": 0.06124055227483359,
+      "car_reversal": 0.08099508521271867,
+      "signed_reversal": -0.08099508521271867
+    },
+    {
+      "ticker": "LSIP",
+      "event_type": "ADD",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": 0.0006072005817255683,
+      "beta": 0.9064345705534685,
+      "est_obs": 230,
+      "car_runup": 0.05005303700412656,
+      "car_reversal": -0.030765774195988242,
+      "signed_reversal": 0.030765774195988242
+    },
+    {
+      "ticker": "MAPA",
+      "event_type": "ADD",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": 0.0013128875289973468,
+      "beta": 0.5484880093662586,
+      "est_obs": 230,
+      "car_runup": 0.0350970018584926,
+      "car_reversal": -0.03004686620687061,
+      "signed_reversal": 0.03004686620687061
+    },
+    {
+      "ticker": "MPMX",
+      "event_type": "DELETE",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": -0.0002676602045850557,
+      "beta": 0.4791591603372897,
+      "est_obs": 230,
+      "car_runup": 0.0011909215260896104,
+      "car_reversal": 0.017580914822824444,
+      "signed_reversal": 0.017580914822824444
+    },
+    {
+      "ticker": "MTEL",
+      "event_type": "DELETE",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": 0.0001905634047958832,
+      "beta": 0.3980481483550288,
+      "est_obs": 230,
+      "car_runup": -0.0388796475986269,
+      "car_reversal": 0.013890445099741822,
+      "signed_reversal": 0.013890445099741822
+    },
+    {
+      "ticker": "PGEO",
+      "event_type": "DELETE",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": -0.0008505582764795723,
+      "beta": 0.7248295110442646,
+      "est_obs": 230,
+      "car_runup": -0.11739212560172577,
+      "car_reversal": -0.005079875702869975,
+      "signed_reversal": -0.005079875702869975
+    },
+    {
+      "ticker": "SMDR",
+      "event_type": "DELETE",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": -0.0007934189933026895,
+      "beta": 0.7884997998636115,
+      "est_obs": 230,
+      "car_runup": -0.016941383898571152,
+      "car_reversal": -0.024542194333829027,
+      "signed_reversal": -0.024542194333829027
+    },
+    {
+      "ticker": "SSIA",
+      "event_type": "ADD",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": 0.005054996591640913,
+      "beta": 0.7716970101475115,
+      "est_obs": 230,
+      "car_runup": -0.03474209233357329,
+      "car_reversal": -0.07646281358746676,
+      "signed_reversal": 0.07646281358746676
+    },
+    {
+      "ticker": "TAPG",
+      "event_type": "ADD",
+      "effective_date": "2025-02-03",
+      "announcement_date": "2025-01-23",
+      "review_period": "2025-Q1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-02-03",
+      "t0_exact": true,
+      "alpha": 0.0015073946424578237,
+      "beta": 0.39502100496472264,
+      "est_obs": 230,
+      "car_runup": -0.013639557361539593,
+      "car_reversal": 0.014980848526663194,
+      "signed_reversal": -0.014980848526663194
+    },
+    {
+      "ticker": "ARTO",
+      "event_type": "DELETE",
+      "effective_date": "2025-05-02",
+      "announcement_date": "2025-04-26",
+      "review_period": "2025-Q2",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2025-05-02",
+      "t0_exact": true,
+      "alpha": -0.000934200574736507,
+      "beta": 1.4698130474421018,
+      "est_obs": 230,
+      "car_runup": 0.02669578000904295,
+      "car_reversal": 0.006516324397654294,
+      "signed_reversal": 0.006516324397654294
+    },
+    {
+      "ticker": "BBTN",
+      "event_type": "ADD",
+      "effective_date": "2025-05-02",
+      "announcement_date": "2025-04-26",
+      "review_period": "2025-Q2",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2025-05-02",
+      "t0_exact": true,
+      "alpha": -0.0017725874119036288,
+      "beta": 1.2139745527540993,
+      "est_obs": 230,
+      "car_runup": 0.008644470107451164,
+      "car_reversal": 0.1012987086971034,
+      "signed_reversal": -0.1012987086971034
+    },
+    {
+      "ticker": "BMTR",
+      "event_type": "DELETE",
+      "effective_date": "2025-05-02",
+      "announcement_date": "2025-04-26",
+      "review_period": "2025-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2025-05-02",
+      "t0_exact": true,
+      "alpha": -0.0016017844348198904,
+      "beta": 0.9161908181085449,
+      "est_obs": 230,
+      "car_runup": 0.008731253028074166,
+      "car_reversal": -0.021597534533920215,
+      "signed_reversal": -0.021597534533920215
+    },
+    {
+      "ticker": "BUKA",
+      "event_type": "ADD",
+      "effective_date": "2025-05-02",
+      "announcement_date": "2025-04-26",
+      "review_period": "2025-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2025-05-02",
+      "t0_exact": true,
+      "alpha": 0.0005148708293629969,
+      "beta": 0.9427248771216667,
+      "est_obs": 230,
+      "car_runup": 0.020862598569037234,
+      "car_reversal": -0.018548192423421716,
+      "signed_reversal": 0.018548192423421716
+    },
+    {
+      "ticker": "DSNG",
+      "event_type": "ADD",
+      "effective_date": "2025-05-02",
+      "announcement_date": "2025-04-26",
+      "review_period": "2025-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2025-05-02",
+      "t0_exact": true,
+      "alpha": 0.001290413907941136,
+      "beta": 0.3124087764477327,
+      "est_obs": 230,
+      "car_runup": 0.026250111067482755,
+      "car_reversal": 0.006450611951670806,
+      "signed_reversal": -0.006450611951670806
+    },
+    {
+      "ticker": "MIDI",
+      "event_type": "DELETE",
+      "effective_date": "2025-05-02",
+      "announcement_date": "2025-04-26",
+      "review_period": "2025-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": false,
+      "date_precision": "day",
+      "t0_trading_day": "2025-05-02",
+      "t0_exact": true,
+      "alpha": -0.0008621911317996003,
+      "beta": 0.5406376163189552,
+      "est_obs": 230,
+      "car_runup": 0.1534060459501124,
+      "car_reversal": 0.0481758959465715,
+      "signed_reversal": 0.0481758959465715
+    },
+    {
+      "ticker": "BBTN",
+      "event_type": "DELETE",
+      "effective_date": "2025-08-01",
+      "announcement_date": "2025-07-25",
+      "review_period": "2025-Q3",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-08-01",
+      "t0_exact": true,
+      "alpha": 1.799770007159188e-05,
+      "beta": 1.1951055269052322,
+      "est_obs": 230,
+      "car_runup": -0.0863547312134377,
+      "car_reversal": 0.0010043674402727375,
+      "signed_reversal": 0.0010043674402727375
+    },
+    {
+      "ticker": "ESSA",
+      "event_type": "DELETE",
+      "effective_date": "2025-08-01",
+      "announcement_date": "2025-07-25",
+      "review_period": "2025-Q3",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-08-01",
+      "t0_exact": true,
+      "alpha": -0.0008193648597017813,
+      "beta": 0.7431981997508227,
+      "est_obs": 230,
+      "car_runup": 0.028826516719447526,
+      "car_reversal": -0.05141948418606833,
+      "signed_reversal": -0.05141948418606833
+    },
+    {
+      "ticker": "GGRM",
+      "event_type": "DELETE",
+      "effective_date": "2025-08-01",
+      "announcement_date": "2025-07-25",
+      "review_period": "2025-Q3",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-08-01",
+      "t0_exact": true,
+      "alpha": -0.002388619099626775,
+      "beta": 0.9959904013158429,
+      "est_obs": 230,
+      "car_runup": -0.029552911071487886,
+      "car_reversal": -0.02437028611339869,
+      "signed_reversal": -0.02437028611339869
+    },
+    {
+      "ticker": "GJTL",
+      "event_type": "DELETE",
+      "effective_date": "2025-08-01",
+      "announcement_date": "2025-07-25",
+      "review_period": "2025-Q3",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-08-01",
+      "t0_exact": true,
+      "alpha": 0.0003015127532264725,
+      "beta": 1.258381875315566,
+      "est_obs": 230,
+      "car_runup": -0.08427724160080272,
+      "car_reversal": -0.020188937511605883,
+      "signed_reversal": -0.020188937511605883
+    },
+    {
+      "ticker": "ITMG",
+      "event_type": "ADD",
+      "effective_date": "2025-08-01",
+      "announcement_date": "2025-07-25",
+      "review_period": "2025-Q3",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-08-01",
+      "t0_exact": true,
+      "alpha": -0.0005439253892067663,
+      "beta": 0.5404784982075966,
+      "est_obs": 230,
+      "car_runup": -0.004569318334664471,
+      "car_reversal": 0.021440581178680758,
+      "signed_reversal": -0.021440581178680758
+    },
+    {
+      "ticker": "JPFA",
+      "event_type": "ADD",
+      "effective_date": "2025-08-01",
+      "announcement_date": "2025-07-25",
+      "review_period": "2025-Q3",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-08-01",
+      "t0_exact": true,
+      "alpha": 0.00028204345838446347,
+      "beta": 0.6150698284274242,
+      "est_obs": 230,
+      "car_runup": 0.018566632021704083,
+      "car_reversal": -0.05839470273845194,
+      "signed_reversal": 0.05839470273845194
+    },
+    {
+      "ticker": "MAPI",
+      "event_type": "DELETE",
+      "effective_date": "2025-08-01",
+      "announcement_date": "2025-07-25",
+      "review_period": "2025-Q3",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-08-01",
+      "t0_exact": true,
+      "alpha": -0.0002901375264559847,
+      "beta": 1.0478480592651438,
+      "est_obs": 230,
+      "car_runup": 0.05427503426693568,
+      "car_reversal": -0.0006986243404792092,
+      "signed_reversal": -0.0006986243404792092
+    },
+    {
+      "ticker": "NISP",
+      "event_type": "DELETE",
+      "effective_date": "2025-08-01",
+      "announcement_date": "2025-07-25",
+      "review_period": "2025-Q3",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-08-01",
+      "t0_exact": true,
+      "alpha": 0.00034592385183304967,
+      "beta": 0.4252519795647221,
+      "est_obs": 230,
+      "car_runup": -0.009822238199905325,
+      "car_reversal": 0.002350972270694563,
+      "signed_reversal": 0.002350972270694563
+    },
+    {
+      "ticker": "PTRO",
+      "event_type": "ADD",
+      "effective_date": "2025-08-01",
+      "announcement_date": "2025-07-25",
+      "review_period": "2025-Q3",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-08-01",
+      "t0_exact": true,
+      "alpha": 0.006306176561753393,
+      "beta": 2.043273898059751,
+      "est_obs": 230,
+      "car_runup": 0.01955276853063191,
+      "car_reversal": -0.06351613243615095,
+      "signed_reversal": 0.06351613243615095
+    },
+    {
+      "ticker": "RAJA",
+      "event_type": "ADD",
+      "effective_date": "2025-08-01",
+      "announcement_date": "2025-07-25",
+      "review_period": "2025-Q3",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-08-01",
+      "t0_exact": true,
+      "alpha": 0.004821616058294361,
+      "beta": 1.8109248124316293,
+      "est_obs": 230,
+      "car_runup": 0.1712203562714509,
+      "car_reversal": -0.1042450625758081,
+      "signed_reversal": 0.1042450625758081
+    },
+    {
+      "ticker": "SCMA",
+      "event_type": "ADD",
+      "effective_date": "2025-08-01",
+      "announcement_date": "2025-07-25",
+      "review_period": "2025-Q3",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-08-01",
+      "t0_exact": true,
+      "alpha": 0.0008293172048421888,
+      "beta": 0.8943936485042076,
+      "est_obs": 230,
+      "car_runup": 0.18353257279504595,
+      "car_reversal": 0.10765819554437772,
+      "signed_reversal": -0.10765819554437772
+    },
+    {
+      "ticker": "SIDO",
+      "event_type": "DELETE",
+      "effective_date": "2025-08-01",
+      "announcement_date": "2025-07-25",
+      "review_period": "2025-Q3",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2025-08-01",
+      "t0_exact": true,
+      "alpha": -0.0015958461815107094,
+      "beta": 0.5473908742974222,
+      "est_obs": 230,
+      "car_runup": -0.019765463640744024,
+      "car_reversal": 0.028294774206571893,
+      "signed_reversal": 0.028294774206571893
+    },
+    {
+      "ticker": "AKRA",
+      "event_type": "DELETE",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": -0.00118235711991187,
+      "beta": 0.9959741369875689,
+      "est_obs": 230,
+      "car_runup": 0.0154694839621582,
+      "car_reversal": -0.03949412827408458,
+      "signed_reversal": -0.03949412827408458
+    },
+    {
+      "ticker": "ARTO",
+      "event_type": "DELETE",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": -0.001383174699534818,
+      "beta": 1.659608896133392,
+      "est_obs": 230,
+      "car_runup": 0.0014553963411619748,
+      "car_reversal": -0.019449555222953115,
+      "signed_reversal": -0.019449555222953115
+    },
+    {
+      "ticker": "AUTO",
+      "event_type": "DELETE",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": -0.00014335264278689423,
+      "beta": 0.6228313188868068,
+      "est_obs": 230,
+      "car_runup": 0.05253284131716389,
+      "car_reversal": -0.001892543774101172,
+      "signed_reversal": -0.001892543774101172
+    },
+    {
+      "ticker": "BFIN",
+      "event_type": "DELETE",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": -0.0009611405282460817,
+      "beta": 0.7028058202651178,
+      "est_obs": 230,
+      "car_runup": 0.010506863608400266,
+      "car_reversal": -0.017205900283824297,
+      "signed_reversal": -0.017205900283824297
+    },
+    {
+      "ticker": "BNGA",
+      "event_type": "DELETE",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": -0.0004954947055662633,
+      "beta": 0.6157725471448784,
+      "est_obs": 230,
+      "car_runup": 0.01963789387375176,
+      "car_reversal": -0.014634036774468501,
+      "signed_reversal": -0.014634036774468501
+    },
+    {
+      "ticker": "BRIS",
+      "event_type": "DELETE",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX80",
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": -0.0005898642738248232,
+      "beta": 1.139974113161196,
+      "est_obs": 230,
+      "car_runup": -0.046104204915385937,
+      "car_reversal": -0.0248702831494028,
+      "signed_reversal": -0.0248702831494028
+    },
+    {
+      "ticker": "BUMI",
+      "event_type": "ADD",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX80",
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": 0.0005364265843455188,
+      "beta": 1.4606620513118997,
+      "est_obs": 230,
+      "car_runup": 0.03739802644869436,
+      "car_reversal": 0.040825521168599076,
+      "signed_reversal": -0.040825521168599076
+    },
+    {
+      "ticker": "DSSA",
+      "event_type": "ADD",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX80",
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": 0.004574853739563498,
+      "beta": 0.8630811868960121,
+      "est_obs": 230,
+      "car_runup": -0.04392054658257376,
+      "car_reversal": -0.020719422885726577,
+      "signed_reversal": 0.020719422885726577
+    },
+    {
+      "ticker": "EMTK",
+      "event_type": "ADD",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": 0.005060808477118748,
+      "beta": 1.2084066593114664,
+      "est_obs": 230,
+      "car_runup": 0.07592970129483104,
+      "car_reversal": 0.03535258540301204,
+      "signed_reversal": -0.03535258540301204
+    },
+    {
+      "ticker": "EXCL",
+      "event_type": "DELETE",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": 0.0006983411121263888,
+      "beta": 0.3004283860185075,
+      "est_obs": 230,
+      "car_runup": 0.08631488427511916,
+      "car_reversal": 0.014642662022092488,
+      "signed_reversal": 0.014642662022092488
+    },
+    {
+      "ticker": "HEAL",
+      "event_type": "ADD",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": 0.0006328070553169463,
+      "beta": 0.41471021994377516,
+      "est_obs": 230,
+      "car_runup": -0.007836689963044444,
+      "car_reversal": -0.050168786487352734,
+      "signed_reversal": 0.050168786487352734
+    },
+    {
+      "ticker": "JSMR",
+      "event_type": "DELETE",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": -0.0016268328408548978,
+      "beta": 0.8200974114104828,
+      "est_obs": 230,
+      "car_runup": -0.08185440621128313,
+      "car_reversal": -0.008565700020527789,
+      "signed_reversal": -0.008565700020527789
+    },
+    {
+      "ticker": "KIJA",
+      "event_type": "ADD",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": -6.714717359423657e-06,
+      "beta": 0.5345911265528697,
+      "est_obs": 230,
+      "car_runup": 0.037964134601389386,
+      "car_reversal": -0.017903467766446586,
+      "signed_reversal": 0.017903467766446586
+    },
+    {
+      "ticker": "KPIG",
+      "event_type": "ADD",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": 0.0010705328434661935,
+      "beta": 1.0818908693623293,
+      "est_obs": 230,
+      "car_runup": 0.0013765702066466275,
+      "car_reversal": -0.027179303084576036,
+      "signed_reversal": 0.027179303084576036
+    },
+    {
+      "ticker": "MAPA",
+      "event_type": "DELETE",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": -0.0018000449637670143,
+      "beta": 1.079675608517102,
+      "est_obs": 230,
+      "car_runup": 0.11443924710861021,
+      "car_reversal": 0.040874701073070355,
+      "signed_reversal": 0.040874701073070355
+    },
+    {
+      "ticker": "MNCN",
+      "event_type": "DELETE",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": -0.00026451167757039437,
+      "beta": 0.9809165467832838,
+      "est_obs": 230,
+      "car_runup": 0.0052966005080252315,
+      "car_reversal": -0.019553293134763523,
+      "signed_reversal": -0.019553293134763523
+    },
+    {
+      "ticker": "NCKL",
+      "event_type": "ADD",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": 0.0012032861168976613,
+      "beta": 1.0793170828442786,
+      "est_obs": 230,
+      "car_runup": -0.054613363022796395,
+      "car_reversal": -0.09780865396415939,
+      "signed_reversal": 0.09780865396415939
+    },
+    {
+      "ticker": "PGEO",
+      "event_type": "ADD",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": 0.0010334185218451577,
+      "beta": 0.9661096248650194,
+      "est_obs": 230,
+      "car_runup": -0.011555771117050785,
+      "car_reversal": -0.049230355036173776,
+      "signed_reversal": 0.049230355036173776
+    },
+    {
+      "ticker": "PNBN",
+      "event_type": "ADD",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": -0.001952327158725214,
+      "beta": 1.1012378901984998,
+      "est_obs": 230,
+      "car_runup": 0.02767630161690285,
+      "car_reversal": -0.029618949777699004,
+      "signed_reversal": 0.029618949777699004
+    },
+    {
+      "ticker": "SMRA",
+      "event_type": "DELETE",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": -0.002262339998504442,
+      "beta": 1.1357238628231214,
+      "est_obs": 230,
+      "car_runup": -5.041413572342418e-05,
+      "car_reversal": -0.01963180767630648,
+      "signed_reversal": -0.01963180767630648
+    },
+    {
+      "ticker": "SRTG",
+      "event_type": "DELETE",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": -0.0013860246895352714,
+      "beta": 1.5396338436925117,
+      "est_obs": 230,
+      "car_runup": 0.022061897396761867,
+      "car_reversal": -0.0486182730055485,
+      "signed_reversal": -0.0486182730055485
+    },
+    {
+      "ticker": "TKIM",
+      "event_type": "DELETE",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": -0.00041982566025908083,
+      "beta": 0.9430730517927502,
+      "est_obs": 230,
+      "car_runup": -0.008749747714772603,
+      "car_reversal": -0.02182104771638161,
+      "signed_reversal": -0.02182104771638161
+    },
+    {
+      "ticker": "WIFI",
+      "event_type": "ADD",
+      "effective_date": "2025-11-03",
+      "announcement_date": "2025-10-28",
+      "review_period": "2025-Q4",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "month",
+      "t0_trading_day": "2025-11-03",
+      "t0_exact": true,
+      "alpha": 0.011860167737617142,
+      "beta": 0.9918972664888726,
+      "est_obs": 230,
+      "car_runup": -0.042383622390427825,
+      "car_reversal": 0.04652379981792526,
+      "signed_reversal": -0.04652379981792526
+    },
+    {
+      "ticker": "ACES",
+      "event_type": "DELETE",
+      "effective_date": "2026-02-02",
+      "announcement_date": "2026-01-26",
+      "review_period": "2026-Q1",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-02-02",
+      "t0_exact": true,
+      "alpha": -0.003060281178966313,
+      "beta": 0.9134489239997522,
+      "est_obs": 230,
+      "car_runup": 0.08251123899067914,
+      "car_reversal": 0.02250884703080701,
+      "signed_reversal": 0.02250884703080701
+    },
+    {
+      "ticker": "AVIA",
+      "event_type": "DELETE",
+      "effective_date": "2026-02-02",
+      "announcement_date": "2026-01-26",
+      "review_period": "2026-Q1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-02-02",
+      "t0_exact": true,
+      "alpha": 0.00022982268179006123,
+      "beta": 0.44312426291743134,
+      "est_obs": 230,
+      "car_runup": -0.05541320858954154,
+      "car_reversal": 0.020132040009273544,
+      "signed_reversal": 0.020132040009273544
+    },
+    {
+      "ticker": "BREN",
+      "event_type": "ADD",
+      "effective_date": "2026-02-02",
+      "announcement_date": "2026-01-26",
+      "review_period": "2026-Q1",
+      "indices": [
+        "IDX80",
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-02-02",
+      "t0_exact": true,
+      "alpha": -0.0010340244091418442,
+      "beta": 2.0527371050528527,
+      "est_obs": 230,
+      "car_runup": 0.14758747870277775,
+      "car_reversal": -0.0573081280110254,
+      "signed_reversal": 0.0573081280110254
+    },
+    {
+      "ticker": "BUMI",
+      "event_type": "ADD",
+      "effective_date": "2026-02-02",
+      "announcement_date": "2026-01-26",
+      "review_period": "2026-Q1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-02-02",
+      "t0_exact": true,
+      "alpha": 0.004954665766906653,
+      "beta": 1.3000163904449038,
+      "est_obs": 230,
+      "car_runup": -0.32847704394934985,
+      "car_reversal": 0.0676699122298323,
+      "signed_reversal": -0.0676699122298323
+    },
+    {
+      "ticker": "CUAN",
+      "event_type": "ADD",
+      "effective_date": "2026-02-02",
+      "announcement_date": "2026-01-26",
+      "review_period": "2026-Q1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-02-02",
+      "t0_exact": true,
+      "alpha": 0.0021736977087857233,
+      "beta": 2.345219880413447,
+      "est_obs": 230,
+      "car_runup": 0.17509415614101428,
+      "car_reversal": 0.03334907838703613,
+      "signed_reversal": -0.03334907838703613
+    },
+    {
+      "ticker": "EMTK",
+      "event_type": "ADD",
+      "effective_date": "2026-02-02",
+      "announcement_date": "2026-01-26",
+      "review_period": "2026-Q1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-02-02",
+      "t0_exact": true,
+      "alpha": 0.0032815823648477665,
+      "beta": 1.2287873279128556,
+      "est_obs": 230,
+      "car_runup": -0.06065812992955236,
+      "car_reversal": -0.0005950880484619295,
+      "signed_reversal": 0.0005950880484619295
+    },
+    {
+      "ticker": "HRTA",
+      "event_type": "ADD",
+      "effective_date": "2026-02-02",
+      "announcement_date": "2026-01-26",
+      "review_period": "2026-Q1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-02-02",
+      "t0_exact": true,
+      "alpha": 0.00832974686070947,
+      "beta": 0.6591317783710208,
+      "est_obs": 230,
+      "car_runup": -0.1616149652182274,
+      "car_reversal": 0.1317260649960343,
+      "signed_reversal": -0.1317260649960343
+    },
+    {
+      "ticker": "ITMG",
+      "event_type": "DELETE",
+      "effective_date": "2026-02-02",
+      "announcement_date": "2026-01-26",
+      "review_period": "2026-Q1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-02-02",
+      "t0_exact": true,
+      "alpha": -0.0011920494785246979,
+      "beta": 0.4779313739566659,
+      "est_obs": 230,
+      "car_runup": 0.036881811494300844,
+      "car_reversal": 0.004874324832374167,
+      "signed_reversal": 0.004874324832374167
+    },
+    {
+      "ticker": "LSIP",
+      "event_type": "DELETE",
+      "effective_date": "2026-02-02",
+      "announcement_date": "2026-01-26",
+      "review_period": "2026-Q1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-02-02",
+      "t0_exact": true,
+      "alpha": 0.00030677977556552117,
+      "beta": 0.7585636168813099,
+      "est_obs": 230,
+      "car_runup": 0.037837000891572346,
+      "car_reversal": -0.016510092375279232,
+      "signed_reversal": -0.016510092375279232
+    },
+    {
+      "ticker": "PNBN",
+      "event_type": "DELETE",
+      "effective_date": "2026-02-02",
+      "announcement_date": "2026-01-26",
+      "review_period": "2026-Q1",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-02-02",
+      "t0_exact": true,
+      "alpha": -0.0028755631122511153,
+      "beta": 1.1592765038190151,
+      "est_obs": 230,
+      "car_runup": 0.07722780454938712,
+      "car_reversal": 0.01743665453223154,
+      "signed_reversal": 0.01743665453223154
+    },
+    {
+      "ticker": "SMGR",
+      "event_type": "DELETE",
+      "effective_date": "2026-02-02",
+      "announcement_date": "2026-01-26",
+      "review_period": "2026-Q1",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-02-02",
+      "t0_exact": true,
+      "alpha": -0.0014959019288386974,
+      "beta": 1.3519709312367179,
+      "est_obs": 230,
+      "car_runup": 0.11577994955965112,
+      "car_reversal": -0.015096279080902844,
+      "signed_reversal": -0.015096279080902844
+    },
+    {
+      "ticker": "ADMR",
+      "event_type": "ADD",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": 0.0035337689603759746,
+      "beta": 1.2091088293423673,
+      "est_obs": 230,
+      "car_runup": 0.08201524748260339,
+      "car_reversal": -0.07385619429045709,
+      "signed_reversal": 0.07385619429045709
+    },
+    {
+      "ticker": "BKSL",
+      "event_type": "ADD",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": 0.0020042797498143333,
+      "beta": 1.7525264013359958,
+      "est_obs": 230,
+      "car_runup": 0.0516205433514054,
+      "car_reversal": -0.04662177424128243,
+      "signed_reversal": 0.04662177424128243
+    },
+    {
+      "ticker": "BREN",
+      "event_type": "DELETE",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "IDX80",
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": -0.00011745614105609871,
+      "beta": 1.5458740133685387,
+      "est_obs": 230,
+      "car_runup": 0.022215141126395388,
+      "car_reversal": -0.1674490291694641,
+      "signed_reversal": -0.1674490291694641
+    },
+    {
+      "ticker": "BTPS",
+      "event_type": "DELETE",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": 0.0006320598881093937,
+      "beta": 0.7571447950063614,
+      "est_obs": 230,
+      "car_runup": -0.061595336255083864,
+      "car_reversal": 0.02980237785403578,
+      "signed_reversal": 0.02980237785403578
+    },
+    {
+      "ticker": "CBDK",
+      "event_type": "ADD",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": -0.0011878118626384175,
+      "beta": 1.5341018141373763,
+      "est_obs": 230,
+      "car_runup": 0.06706207867217827,
+      "car_reversal": -0.011476878376420897,
+      "signed_reversal": 0.011476878376420897
+    },
+    {
+      "ticker": "CTRA",
+      "event_type": "DELETE",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": -0.00045626664945965157,
+      "beta": 0.8746390584953792,
+      "est_obs": 230,
+      "car_runup": -0.01800559427682095,
+      "car_reversal": 0.025852294085832797,
+      "signed_reversal": 0.025852294085832797
+    },
+    {
+      "ticker": "CUAN",
+      "event_type": "ADD",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": 0.0027309488531696655,
+      "beta": 2.0369932974894236,
+      "est_obs": 230,
+      "car_runup": -0.08469185120917638,
+      "car_reversal": -0.10039268000403925,
+      "signed_reversal": 0.10039268000403925
+    },
+    {
+      "ticker": "DEWA",
+      "event_type": "ADD",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "IDX80",
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": 0.00662107630116423,
+      "beta": 2.2550568243958473,
+      "est_obs": 230,
+      "car_runup": 0.0468242959736297,
+      "car_reversal": -0.06281312996699209,
+      "signed_reversal": 0.06281312996699209
+    },
+    {
+      "ticker": "DSSA",
+      "event_type": "DELETE",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "IDX80",
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": 0.0018947387175378726,
+      "beta": 1.4276455245965631,
+      "est_obs": 230,
+      "car_runup": -0.3060932328824261,
+      "car_reversal": -0.2686917814337341,
+      "signed_reversal": -0.2686917814337341
+    },
+    {
+      "ticker": "ESSA",
+      "event_type": "ADD",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": 0.0011449114444642883,
+      "beta": 0.8548772597418153,
+      "est_obs": 230,
+      "car_runup": -0.004332885467205673,
+      "car_reversal": -0.07966381799892969,
+      "signed_reversal": 0.07966381799892969
+    },
+    {
+      "ticker": "GGRM",
+      "event_type": "ADD",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": 0.0016142605773744035,
+      "beta": 0.9575709185397583,
+      "est_obs": 230,
+      "car_runup": 0.2018289612997108,
+      "car_reversal": 0.025508293335756098,
+      "signed_reversal": -0.025508293335756098
+    },
+    {
+      "ticker": "HEAL",
+      "event_type": "DELETE",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": 0.000815496041052068,
+      "beta": 0.31570467929637985,
+      "est_obs": 230,
+      "car_runup": -0.05150853247903012,
+      "car_reversal": -0.09842316286997596,
+      "signed_reversal": -0.09842316286997596
+    },
+    {
+      "ticker": "HRTA",
+      "event_type": "ADD",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": 0.007553937220259075,
+      "beta": 0.8252792749285902,
+      "est_obs": 230,
+      "car_runup": -0.08850261174766014,
+      "car_reversal": -0.05498238549994365,
+      "signed_reversal": 0.05498238549994365
+    },
+    {
+      "ticker": "ISAT",
+      "event_type": "DELETE",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "IDX30"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": 0.0015949805412608347,
+      "beta": 1.2229856731674045,
+      "est_obs": 230,
+      "car_runup": 0.12247675506945634,
+      "car_reversal": 0.051336041443089786,
+      "signed_reversal": 0.051336041443089786
+    },
+    {
+      "ticker": "MTEL",
+      "event_type": "DELETE",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": -0.0003471891385921663,
+      "beta": 0.7233856407636493,
+      "est_obs": 230,
+      "car_runup": -0.014930028141770935,
+      "car_reversal": 0.02830486912725587,
+      "signed_reversal": 0.02830486912725587
+    },
+    {
+      "ticker": "NCKL",
+      "event_type": "DELETE",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "IDX80",
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": 0.0023116817269730585,
+      "beta": 1.2192249253466902,
+      "est_obs": 230,
+      "car_runup": -0.02273647292877022,
+      "car_reversal": 0.020581193562359084,
+      "signed_reversal": 0.020581193562359084
+    },
+    {
+      "ticker": "TPIA",
+      "event_type": "ADD",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "IDX80"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": -0.0016389243375474496,
+      "beta": 1.0146782630174362,
+      "est_obs": 230,
+      "car_runup": -0.12181464124864103,
+      "car_reversal": 0.04062197902853015,
+      "signed_reversal": -0.04062197902853015
+    },
+    {
+      "ticker": "WIFI",
+      "event_type": "ADD",
+      "effective_date": "2026-05-04",
+      "announcement_date": "2026-04-24",
+      "review_period": "2026-Q2",
+      "indices": [
+        "LQ45"
+      ],
+      "crosschecked": true,
+      "date_precision": "day",
+      "t0_trading_day": "2026-05-04",
+      "t0_exact": true,
+      "alpha": 0.0011111595389588845,
+      "beta": 1.774211804893701,
+      "est_obs": 230,
+      "car_runup": 0.07410675908624315,
+      "car_reversal": -0.027530573829963968,
+      "signed_reversal": 0.027530573829963968
+    }
+  ],
+  "excluded_events": [
+    {
+      "ticker": "OMED",
+      "effective_date": "2023-08-01",
+      "event_type": "ADD",
+      "reason": "insufficient history for a 230td estimation window ending 20td before announcement (need index >= 1, got -81)"
+    },
+    {
+      "ticker": "MBMA",
+      "effective_date": "2024-02-01",
+      "event_type": "ADD",
+      "reason": "insufficient history for a 230td estimation window ending 20td before announcement (need index >= 1, got -64)"
+    },
+    {
+      "ticker": "PGEO",
+      "effective_date": "2024-02-01",
+      "event_type": "ADD",
+      "reason": "insufficient history for a 230td estimation window ending 20td before announcement (need index >= 1, got -30)"
+    },
+    {
+      "ticker": "PTMP",
+      "effective_date": "2024-02-01",
+      "event_type": "ADD",
+      "reason": "insufficient history for a 230td estimation window ending 20td before announcement (need index >= 1, got -36)"
+    },
+    {
+      "ticker": "SMIL",
+      "effective_date": "2024-02-01",
+      "event_type": "ADD",
+      "reason": "insufficient history for a 230td estimation window ending 20td before announcement (need index >= 1, got -76)"
+    },
+    {
+      "ticker": "TRON",
+      "effective_date": "2024-02-01",
+      "event_type": "ADD",
+      "reason": "insufficient history for a 230td estimation window ending 20td before announcement (need index >= 1, got -38)"
+    },
+    {
+      "ticker": "AMMN",
+      "effective_date": "2024-05-02",
+      "event_type": "ADD",
+      "reason": "insufficient history for a 230td estimation window ending 20td before announcement (need index >= 1, got -59)"
+    },
+    {
+      "ticker": "NCKL",
+      "effective_date": "2024-05-02",
+      "event_type": "ADD",
+      "reason": "insufficient history for a 230td estimation window ending 20td before announcement (need index >= 1, got -9)"
+    },
+    {
+      "ticker": "SMIL",
+      "effective_date": "2024-05-02",
+      "event_type": "DELETE",
+      "reason": "insufficient history for a 230td estimation window ending 20td before announcement (need index >= 1, got -25)"
+    },
+    {
+      "ticker": "AADI",
+      "effective_date": "2025-08-01",
+      "event_type": "ADD",
+      "reason": "insufficient history for a 230td estimation window ending 20td before announcement (need index >= 1, got -106)"
+    },
+    {
+      "ticker": "AADI",
+      "effective_date": "2025-11-03",
+      "event_type": "ADD",
+      "reason": "insufficient history for a 230td estimation window ending 20td before announcement (need index >= 1, got -41)"
+    },
+    {
+      "ticker": "RATU",
+      "effective_date": "2025-11-03",
+      "event_type": "ADD",
+      "reason": "insufficient history for a 230td estimation window ending 20td before announcement (need index >= 1, got -61)"
+    }
+  ]
+}
