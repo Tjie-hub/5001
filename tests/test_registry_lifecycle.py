@@ -93,3 +93,24 @@ def test_startup_summary_reports_debt_and_violations():
     s = startup_summary()
     assert "1 debt" in s          # NR7_BULL
     assert "0 unverified" in s     # no live violations
+
+
+# ── T7 invariant #6: Registry -> Strategy identity -> Production
+# implementation lineage. Every loadable registry entry's strategy_fn must
+# be a real, live-checker-backed production strategy -- the same audit-C-1
+# bug pattern (a name selectable with no checker behind it) one layer up:
+# tests/test_strategy_specs.py::test_regime_map_strategies_are_live_capable
+# already proves this for the regime map; nothing proved it for the Edge
+# Registry itself before this test. ─────────────────────────────────────
+
+def test_every_registry_entry_strategy_fn_has_a_live_production_checker():
+    from engine.strategy_specs import SPECS
+    from engine.strategies import _CHECKER_DISPATCH
+    r = load_registry()
+    for e in r['entries']:
+        name = e['strategy_fn']
+        assert name in SPECS, f"{e['id']}_v{e['version']}: {name!r} not in SPECS"
+        assert SPECS[name].live_checker, \
+            f"{e['id']}_v{e['version']}: {name!r} has no live checker"
+        assert name in _CHECKER_DISPATCH, \
+            f"{e['id']}_v{e['version']}: {name!r} missing from _CHECKER_DISPATCH"

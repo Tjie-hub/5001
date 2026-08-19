@@ -151,13 +151,63 @@ here — code unchanged.
 
 ---
 
-## 5. Remaining T7 scope (not started this session)
+## 5. Invariant #8 (fail-closed runtime) — closed (commit `3af07d3`)
 
-From the 10 T7 invariants: #1-4 substantially addressed by §2-4 above (modulo the two open
-decisions); #5 (exceptions explicit/governed) partially — counter-trend/momentum/premover are now
-each explicitly classified, not silently ungoverned; #6 (edge/evidence/registry/strategy lineage)
-holds for `NR7_BULL`, not yet exercised for any second strategy; #7 (execution-model
-compatibility — bar convention, entry delay, `is_final`, etc. between research backtest and
-production scan), #8 (fail-closed runtime tests at the real execution boundary, not just helper
-functions), #9 (admission auditability), and #10 (capital/promotion semantics vs. governance) are
-not yet investigated.
+`tests/test_t7_fail_closed_admission.py` drives real on-disk registry fixtures through the real
+`load_registry()`/`get_registry()`/`registry_governance()` chain and the real
+`adaptive_strategy_selector()`/`scan_momentum_signals()` gates (not mocking `registry_governance()`
+itself, unlike the pre-existing selector unit tests). Proves all 9 required scenarios — missing
+registry, malformed YAML, invalid evidence, missing evidence, missing receipt, non-admitted
+strategy, SHADOW (even with an otherwise-valid receipt), execution-model/`requires` mismatch,
+unreadable universe artifact — produce no admission and no selection, plus a positive control
+proving APPROVED-with-valid-evidence *is* selected (so the gate isn't just trivially blocking
+everything). Caught and fixed one test-fixture bug in the process (a flat-price synthetic OHLCV
+series detects regime SIDEWAYS, not BEAR, which would have made these proofs vacuous for the
+counter-trend book). No production code changed — all 9 scenarios already held from §2-4; this
+closes the gap between "unit-tested with a mocked admission function" and "proven at the actual
+execution boundary." Scope explicitly excludes the legacy `wf_edge>0` fallback (§4.4), unchanged.
+
+---
+
+## 6. Invariant #6 (edge/evidence/registry/strategy lineage) — closed for `NR7_BULL`
+
+Found one genuine gap while tracing the full chain: nothing tied an Edge Registry entry's
+`strategy_fn` back to a real, live-checker-backed production strategy — the exact audit-C-1 bug
+pattern (a strategy name selectable with no checker behind it), one layer up from where
+`tests/test_strategy_specs.py::test_regime_map_strategies_are_live_capable` already guards it for
+the regime map. Closed with one new regression test,
+`test_every_registry_entry_strategy_fn_has_a_live_production_checker` in
+`tests/test_registry_lifecycle.py`, asserting every entry in `load_registry()['entries']` has a
+`strategy_fn` present in `engine.strategy_specs.SPECS` with `live_checker=True` and present in
+`engine.strategies._CHECKER_DISPATCH`. Passed immediately (no drift exists today) — this is a
+regression guard against future drift, not a fix for a live violation. No production code changed;
+"do not create a duplicate registry" honored — this reuses the existing `SPECS`/`_CHECKER_DISPATCH`
+consistency web `test_strategy_specs.py` already established, just extends its reach to the Edge
+Registry.
+
+**Full lineage trace for `NR7_BULL` (the one live registry entry), file:line evidence:**
+
+| Link | Evidence |
+|---|---|
+| Edge | NR7 (narrow-range-7) breakout pattern, BULL regimes only — `docs/superpowers/results/2026-07-07-nr7-generalization-study.md`, `docs/superpowers/results/2026-07-07-regime-edge-scan.md` |
+| Evidence | `registry/manifests/NR7_BULL_v1.yaml` `evidence_summary` block (oos, pooled_44_ticker, robustness) — legacy pre-R-10 format; separately, `gate_decisions` (in `data/research.db`) has 3 REJECT rows for "NR7 Breakout" (2026-07-12/14), all *postdating* this entry's 2026-07-04 approval, which is exactly why it needs grandfathering (next row) rather than clean evidence |
+| `edge_registry.yaml` | `registry/edge_registry.yaml` — the `NR7_BULL` entry (id/version/status/strategy_fn/regimes/universe_artifact/manifest/requires/changelog) |
+| R-10 receipt | `engine/registry_loader.py:40-47` `_LIFECYCLE_DEBT[("NR7_BULL",1)]` — dated grandfather record (reason, remediation, deadline `2027-01-08`), since the legacy manifest doesn't match `validate_evidence()`'s expected `evidence.gate_decision`/`evidence.forward` shape |
+| Strategy identity | `engine/strategy_specs.py:38` `StrategySpec("NR7 Breakout", "breakout", True)` in `SPECS` |
+| Production implementation | `engine/strategies.py:1286` `'NR7 Breakout': lambda ticker, df: check_nr7_signal(df)` in `_CHECKER_DISPATCH` |
+| Admission | `engine/registry_loader.py::registry_governance()`/`approved_universe()`, reading `get_registry()['entries']` |
+| Signal | `scheduler/scanner.py:1498 adaptive_strategy_selector()` → `scanner.py:1506 check_current_entry_signal(ticker, strategy, df=df)` → `engine/strategy_specs.py::ensure_entry_price()` contract |
+| Execution | `scheduler/scanner.py:1744 open_trade(ticker, float(entry_price), notify=False, ...)` → `paper_trade.py:281 open_trade()` |
+
+---
+
+## 7. Remaining T7 scope (not started this session)
+
+Invariants #1-6 and #8 are addressed by §2-6 above (modulo the two open decisions in §4.3/§4.4).
+#5 (exceptions explicit/governed) is partial — counter-trend/momentum/premover are each now
+explicitly classified, not silently ungoverned. #7 (execution-model compatibility — bar
+convention, entry delay, price, timestamp, scan frequency, partial-bar handling between research
+backtest and production scan), #9 (admission auditability — every production admission
+explainable after the fact: strategy/edge/evidence/registry entry/admission decision/execution
+model/when), and #10 (capital/promotion semantics vs. the authoritative SSOT docs) are in
+progress / not yet investigated.
