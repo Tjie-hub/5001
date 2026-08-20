@@ -19,6 +19,9 @@ POLICY = {
     "/": VIEWER, "/backtest/multi": VIEWER, "/screener": VIEWER,
     "/signal-scanner": VIEWER, "/portfolio": VIEWER, "/dashboard": VIEWER,
     "/sector": VIEWER, "/dive/<ticker>": VIEWER, "/metrics": VIEWER,
+    # --- frontend/ SPA stop-gap serving (ADR-005/U-8 still undecided) ---
+    "/assets/<path:filename>": PUBLIC, "/favicon.svg": PUBLIC,
+    "/<path:path>": VIEWER,
     # --- auth ---
     "/auth/login": PUBLIC, "/auth/logout": PUBLIC, "/auth/whoami": PUBLIC,
     # --- telegram ---
@@ -107,6 +110,7 @@ POLICY = {
     "/api/v1/version": VIEWER, "/api/v1/capabilities": VIEWER,
     "/api/v1/resources": VIEWER,
     "/api/v1/registry/status": VIEWER,
+    "/api/v1/market/summary": VIEWER,
 }
 
 

@@ -205,6 +205,17 @@ _PATHS = {
         "[{id, version, status, strategy_fn, regimes}], skipped_count, "
         "debt_count, violation_count}",
     ),
+    "/api/v1/market/summary": _get(
+        "Executive market summary -- composite risk score/tier plus the "
+        "breadth, IHSG technicals, foreign flow, VPIN and accumulation/"
+        "distribution sensors that feed it (optional ?date=, default "
+        "today) -- same engine.dashboard.get_risk_dashboard() aggregator "
+        "the legacy GET /api/dashboard/risk route already serves",
+        "Standard envelope wrapping {date, risk_score, tier, components, "
+        "ihsg, breadth, foreign_flow, vpin, accdist}; never 404s -- "
+        "insufficient data degrades to a labelled empty sensor summary, "
+        "not an error",
+    ),
 }
 
 

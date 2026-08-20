@@ -31,3 +31,4 @@ from routes.v1 import reports  # noqa: E402,F401 -- registers /reports* on api_v
 from routes.v1 import candidates  # noqa: E402,F401 -- registers /candidates* on api_v1_bp
 from routes.v1 import platform  # noqa: E402,F401 -- registers /version,/capabilities,/resources on api_v1_bp
 from routes.v1 import registry  # noqa: E402,F401 -- registers /registry/status on api_v1_bp
+from routes.v1 import market  # noqa: E402,F401 -- registers /market/summary on api_v1_bp

@@ -15,6 +15,12 @@ status was added after the 2026-08-06 freeze date to back the Decision
 Center Executive Summary (routes/v1/registry.py) -- deliberately extending
 this inventory rather than treating the freeze as closed to new read-only
 endpoints, same pattern as any future v1 addition should follow.
+
+Post-freeze addition (2026-08-20, Production OS Slice 4): /api/v1/market/
+summary was added to back the Market Workspace's Executive Market Summary
+region (routes/v1/market.py), wrapping the pre-existing
+engine.dashboard.get_risk_dashboard() aggregator -- same pattern as the
+registry/status addition above.
 """
 import importlib
 import sqlite3
@@ -62,6 +68,7 @@ API_V1_ENDPOINTS = [
     ("/api/v1/candidates/reversal-watchlist", VIEWER),
     ("/api/v1/candidates/premover-watchlist", VIEWER),
     ("/api/v1/registry/status", VIEWER),
+    ("/api/v1/market/summary", VIEWER),
 ]
 
 # GET-able paths only (excludes dynamic <param> rules, which aren't

@@ -40,7 +40,7 @@ def get_risk_dashboard(db_path: str, date: str) -> dict[str, Any]:
             'death_cross': tech_s.get('death_cross', False),
             'lower_high': tech_s.get('lower_high', False),
             'support_breaks': tech_s.get('support_breaks', []),
-            'ytd_pct': _calc_ytd(conn, date),
+            'ytd_pct': _safe(_calc_ytd, conn, date),
         }
 
         return {

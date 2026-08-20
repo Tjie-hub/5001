@@ -24,6 +24,7 @@ import { getWorkspace, ROUTE_PATHS, type WorkspaceId } from './workspaces'
 import { DecisionPage } from '@domains/decision/decision-page'
 import { SettingsPage } from '@domains/settings/settings-page'
 import { WatchlistPage } from '@domains/watchlist/watchlist-page'
+import { MarketPage } from '@domains/market/market-page'
 
 function WorkspaceRoute({ id }: { id: WorkspaceId }) {
   return <WorkspaceShellPage workspace={getWorkspace(id)} />
@@ -57,9 +58,9 @@ export function AppRoutes() {
 
           {/*
             Decision Center — the first Workstream D workspace built (see
-            domains/decision/decision-page.tsx docstring). Settings and
-            Watchlist are also real (see their own docstrings below); Market,
-            Search, Ticker and Portfolio remain the generic placeholder shell.
+            domains/decision/decision-page.tsx docstring). Settings, Watchlist
+            and Market are also real (see their own docstrings below); Search,
+            Ticker and Portfolio remain the generic placeholder shell.
           */}
           <Route path={ROUTE_PATHS.decision} element={<DecisionPage />} />
           <Route path={ROUTE_PATHS.portfolio} element={<WorkspaceRoute id="portfolio" />} />
@@ -69,7 +70,11 @@ export function AppRoutes() {
             domains/watchlist/watchlist-page.tsx docstring.
           */}
           <Route path={ROUTE_PATHS.watchlist} element={<WatchlistPage />} />
-          <Route path={ROUTE_PATHS.market} element={<WorkspaceRoute id="market" />} />
+          {/*
+            Market — Production OS Slice 4, built directly on the approved
+            ADR-003 architecture. See domains/market/market-page.tsx docstring.
+          */}
+          <Route path={ROUTE_PATHS.market} element={<MarketPage />} />
           <Route path={ROUTE_PATHS.search} element={<WorkspaceRoute id="search" />} />
           {/*
             Settings — ADR-008 (docs/OneDrive_2026-08-07/Frontend arch/
