@@ -111,6 +111,7 @@ POLICY = {
     "/api/v1/resources": VIEWER,
     "/api/v1/registry/status": VIEWER,
     "/api/v1/market/summary": VIEWER,
+    "/api/v1/search/instruments": VIEWER,
 }
 
 

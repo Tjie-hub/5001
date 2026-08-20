@@ -25,6 +25,7 @@ import { DecisionPage } from '@domains/decision/decision-page'
 import { SettingsPage } from '@domains/settings/settings-page'
 import { WatchlistPage } from '@domains/watchlist/watchlist-page'
 import { MarketPage } from '@domains/market/market-page'
+import { SearchPage } from '@domains/search/search-page'
 
 function WorkspaceRoute({ id }: { id: WorkspaceId }) {
   return <WorkspaceShellPage workspace={getWorkspace(id)} />
@@ -58,8 +59,8 @@ export function AppRoutes() {
 
           {/*
             Decision Center — the first Workstream D workspace built (see
-            domains/decision/decision-page.tsx docstring). Settings, Watchlist
-            and Market are also real (see their own docstrings below); Search,
+            domains/decision/decision-page.tsx docstring). Settings, Watchlist,
+            Market and Search are also real (see their own docstrings below);
             Ticker and Portfolio remain the generic placeholder shell.
           */}
           <Route path={ROUTE_PATHS.decision} element={<DecisionPage />} />
@@ -75,7 +76,11 @@ export function AppRoutes() {
             ADR-003 architecture. See domains/market/market-page.tsx docstring.
           */}
           <Route path={ROUTE_PATHS.market} element={<MarketPage />} />
-          <Route path={ROUTE_PATHS.search} element={<WorkspaceRoute id="search" />} />
+          {/*
+            Search — Production OS Slice 5, built directly on the approved
+            ADR-003 architecture. See domains/search/search-page.tsx docstring.
+          */}
+          <Route path={ROUTE_PATHS.search} element={<SearchPage />} />
           {/*
             Settings — ADR-008 (docs/OneDrive_2026-08-07/Frontend arch/
             ADR-008_OPERATIONS_DASHBOARD_SETTINGS_PLACEMENT.md): scheduler/

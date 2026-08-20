@@ -216,6 +216,15 @@ _PATHS = {
         "insufficient data degrades to a labelled empty sensor summary, "
         "not an error",
     ),
+    "/api/v1/search/instruments": _get(
+        "Instrument-code search over idx_tickers (required ?q=, optional "
+        "?limit=, default 20) -- exact match ranked first, then prefix, "
+        "then substring; no company-name search (idx_tickers has no name "
+        "column)",
+        "Standard envelope wrapping {query, results: [{ticker, in_idx30, "
+        "in_lq45, in_idx80}], count}; 400 MISSING_QUERY if ?q= is absent "
+        "or blank; zero matches is a valid 200 empty result, not an error",
+    ),
 }
 
 

@@ -21,6 +21,11 @@ summary was added to back the Market Workspace's Executive Market Summary
 region (routes/v1/market.py), wrapping the pre-existing
 engine.dashboard.get_risk_dashboard() aggregator -- same pattern as the
 registry/status addition above.
+
+Post-freeze addition (2026-08-20, Production OS Slice 5): /api/v1/search/
+instruments was added to back the Search Workspace's instrument search
+(routes/v1/search.py over the new engine.instrument_search module) --
+same post-freeze-extension pattern.
 """
 import importlib
 import sqlite3
@@ -69,6 +74,7 @@ API_V1_ENDPOINTS = [
     ("/api/v1/candidates/premover-watchlist", VIEWER),
     ("/api/v1/registry/status", VIEWER),
     ("/api/v1/market/summary", VIEWER),
+    ("/api/v1/search/instruments", VIEWER),
 ]
 
 # GET-able paths only (excludes dynamic <param> rules, which aren't
