@@ -3,7 +3,20 @@
 One before_request hook enforces security.route_policy for every request.
 Fail-closed: unknown rules require admin; unknown AUTH_MODE == enforce.
 AUTH_MODE=off short-circuits after credential resolution, so behavior is
-byte-identical to the pre-hardening app until the operator opts in.
+byte-identical to the pre-hardening app until the operator opts in --
+EXCEPT for ADMIN-classified routes (see below).
+
+ADMIN-route stop-gap (2026-08-19, incident: an unauthenticated POST to
+/api/agent/config succeeded under AUTH_MODE=off and silently disabled the
+Agent Firm for ~45s -- see Audit/PRODUCTION_ENGINE_BACKLOG.md). ADMIN-required
+routes are now gated unconditionally, independent of AUTH_MODE, using the
+same AUTH_TOKEN_ADMIN credential this module already supported for
+shadow/enforce mode -- there is no new secret mechanism. VIEWER/OPERATOR
+routes are deliberately left on the existing AUTH_MODE-gated path: the
+frontend (frontend/) has no token-attachment mechanism yet (README.md's
+U-4 "no identity layer"), so enforcing those under AUTH_MODE=off would break
+it. This is a proportionate stop-gap, not a resolution of U-4/full RBAC
+activation -- that remains a separate, deliberate decision.
 
 A companion after_request hook writes the audit trail for successful
 state-changing requests on protected routes (hardening Phase 6).
@@ -53,18 +66,22 @@ def init_security(app):
         g.auth_required = required
         if auth.has_access(role, required):
             return None
-        if mode == "off":
+        # ADMIN is gated unconditionally (2026-08-19 stop-gap, see module
+        # docstring) -- everything else keeps the existing AUTH_MODE-gated
+        # behavior untouched.
+        admin_gate = required == auth.ADMIN
+        if mode == "off" and not admin_gate:
             return None
-        # denial path: audit it, block only in enforce
+        # denial path: audit it, block in enforce (or always, for admin_gate)
         from security.audit_trail import record_audit_event
         record_audit_event(
             "auth_failure", actor_role=role, actor_fingerprint=g.auth_fp,
             resource=rule, method=request.method,
-            outcome="blocked" if mode == "enforce" else "shadow_allowed",
+            outcome="blocked" if (mode == "enforce" or admin_gate) else "shadow_allowed",
             ip=request.remote_addr,
             detail=f"required={required}",
         )
-        if mode == "shadow":
+        if mode == "shadow" and not admin_gate:
             log.warning("shadow-auth: %s %s would be denied (role=%s required=%s)",
                         request.method, rule, role, required)
             return None

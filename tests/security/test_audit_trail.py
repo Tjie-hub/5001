@@ -2,7 +2,9 @@
 import importlib
 import sqlite3
 
+from security import auth
 from security.audit_trail import record_audit_event
+from security.middleware import _audit_action
 
 
 def test_record_creates_table_and_row(tmp_path):
@@ -30,6 +32,19 @@ def test_separate_from_provider_events(tmp_path):
     assert "audit_events" in tables and "provider_events" not in tables
 
 
+def test_audit_action_classification():
+    """Unit-level coverage of the three-way _audit_action bucket logic,
+    independent of any specific route's current tier (2026-08-19: several
+    routes -- /api/scheduler/run among them -- moved OPERATOR -> ADMIN after
+    an incident showed they trigger real external side effects; HTTP-level
+    audit-trail coverage below now targets ADMIN, so this keeps the
+    OPERATOR/"operational_action" branch covered directly)."""
+    assert _audit_action("/api/agent/config", auth.ADMIN) == "config_change"
+    assert _audit_action("/api/paper/premover_mode", auth.ADMIN) == "config_change"
+    assert _audit_action("/api/scheduler/run", auth.ADMIN) == "admin_action"
+    assert _audit_action("/api/backtest/scan_all", auth.OPERATOR) == "operational_action"
+
+
 def test_middleware_audits_protected_mutations(tmp_path, monkeypatch):
     db = tmp_path / "t.db"
     conn = sqlite3.connect(str(db))
@@ -39,16 +54,18 @@ def test_middleware_audits_protected_mutations(tmp_path, monkeypatch):
     conn.close()
     monkeypatch.setenv("DB_PATH", str(db))
     monkeypatch.setenv("AUTH_MODE", "enforce")
-    monkeypatch.setenv("AUTH_TOKEN_OPERATOR", "operator-token-0123456789abcdef")
+    # /api/scheduler/run is ADMIN-classified (2026-08-19 incident, see
+    # Audit/PRODUCTION_ENGINE_BACKLOG.md) -- an admin token exercises it now.
+    monkeypatch.setenv("AUTH_TOKEN_ADMIN", "admin-token-0123456789abcdef")
     import app as app_module
     importlib.reload(app_module)
     app_module.app.config["TESTING"] = True
     c = app_module.app.test_client()
     c.post("/api/scheduler/run",
-           headers={"X-API-Key": "operator-token-0123456789abcdef"})
+           headers={"X-API-Key": "admin-token-0123456789abcdef"})
     rows = sqlite3.connect(str(db)).execute(
         "SELECT action, resource FROM audit_events").fetchall()
-    assert ("operational_action", "/api/scheduler/run") in rows
+    assert ("admin_action", "/api/scheduler/run") in rows
 
 
 def test_middleware_audits_auth_failures(tmp_path, monkeypatch):

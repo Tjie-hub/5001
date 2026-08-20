@@ -76,9 +76,13 @@ class TestLegacyMigrationBehavior:
         assert "/api/premover/watchlist" not in POLICY
 
     def test_out_of_scope_write_route_untouched(self):
-        from security.auth import OPERATOR
+        # Untouched by *this* (v1 candidates) migration -- separately moved
+        # OPERATOR -> ADMIN on 2026-08-19 as a security stop-gap (confirmed
+        # external Telegram/Stockbit side effect with no internal caller),
+        # see Audit/PRODUCTION_ENGINE_BACKLOG.md.
+        from security.auth import ADMIN
         from security.route_policy import required_level
-        assert required_level("/api/premover/run", "POST") == OPERATOR
+        assert required_level("/api/premover/run", "POST") == ADMIN
 
     def test_still_consumed_legacy_route_untouched(self, make_client):
         from security.auth import VIEWER

@@ -62,6 +62,12 @@ def test_500_response_has_no_traceback(tmp_path, monkeypatch):
     conn.commit()
     conn.close()
     monkeypatch.setenv("DB_PATH", str(db))
+    # An ad hoc route with no route_policy.py entry fails closed to ADMIN
+    # (2026-08-19 stop-gap: ADMIN is gated unconditionally, even under the
+    # default AUTH_MODE=off) -- set an explicit, test-local admin token so
+    # this test stays hermetic rather than depending on whatever the real
+    # repo .env's AUTH_TOKEN_ADMIN happens to contain.
+    monkeypatch.setenv("AUTH_TOKEN_ADMIN", "boom-test-admin-token")
     import app as app_module
     importlib.reload(app_module)
     app_module.app.config["TESTING"] = False   # exercise the real error handler
@@ -71,7 +77,7 @@ def test_500_response_has_no_traceback(tmp_path, monkeypatch):
         raise RuntimeError("kaboom SECRETVALUE")
 
     c = app_module.app.test_client()
-    r = c.get("/_boom_test")
+    r = c.get("/_boom_test", headers={"Authorization": "Bearer boom-test-admin-token"})
     assert r.status_code == 500
     body = r.get_data(as_text=True)
     assert "Traceback" not in body and "kaboom" not in body

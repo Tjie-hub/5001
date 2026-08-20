@@ -97,12 +97,14 @@ class TestLegacyRoutesUnaffected:
         assert "ok" not in data
 
     def test_legacy_forbidden_shape_unchanged(self, make_client):
+        # /api/scheduler/run is ADMIN-classified (2026-08-19 incident) --
+        # still exercises the same 403 shape, just a different required level.
         c = make_client("enforce")
         resp = c.post("/api/scheduler/run",
                        headers={"Authorization": f"Bearer {VIEW_TOK}"})
         assert resp.status_code == 403
         data = resp.get_json()
-        assert data == {"error": "forbidden", "required": "operator"}
+        assert data == {"error": "forbidden", "required": "admin"}
         assert "ok" not in data
 
     def test_html_route_denial_shape_unchanged(self, make_client):

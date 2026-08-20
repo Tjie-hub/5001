@@ -33,14 +33,16 @@ POLICY = {
     "/api/backtest/walkforward": OPERATOR, "/api/backtest/equity": OPERATOR,
     "/api/backtest/trades/<ticker>/<strategy_name>": VIEWER,
     "/api/signals/today": VIEWER, "/api/signals/scheduled": VIEWER,
-    "/api/signals/custom": OPERATOR,
+    # 2026-08-19: moved to ADMIN -- confirmed external side effect (Telegram
+    # send and/or external API call), see Audit/PRODUCTION_ENGINE_BACKLOG.md.
+    "/api/signals/custom": ADMIN,
     "/api/agent/status": VIEWER, "/api/agent/audit": VIEWER,
     "/api/agent/config": ADMIN,
-    "/api/scheduler/run": OPERATOR,
+    "/api/scheduler/run": ADMIN,   # 2026-08-19: incident route, see backlog
     "/api/paper/config": {"GET": VIEWER, "POST": ADMIN},
-    "/api/paper/open": OPERATOR, "/api/paper/close": OPERATOR,
+    "/api/paper/open": ADMIN, "/api/paper/close": ADMIN,
     "/api/paper/clear_history": ADMIN, "/api/paper/summary": VIEWER,
-    "/api/paper/report-telegram": OPERATOR,
+    "/api/paper/report-telegram": ADMIN,
     "/api/paper/premover_mode": {"GET": VIEWER, "POST": ADMIN},
     "/api/optimizer/run": OPERATOR,
     "/api/optimizer/result/<ticker>/<strategy>": VIEWER,
@@ -48,7 +50,7 @@ POLICY = {
     # --- portfolio ---
     "/api/portfolio/sectors": VIEWER, "/api/portfolio/backtest": OPERATOR,
     # --- screener blueprint (/api/screener prefix) ---
-    "/api/screener/run": OPERATOR, "/api/screener/status": VIEWER,
+    "/api/screener/run": ADMIN, "/api/screener/status": VIEWER,
     "/api/screener/results": VIEWER, "/api/screener/ticks": VIEWER,
     "/api/screener/cumdelta": VIEWER, "/api/screener/vpin": VIEWER,
     "/api/screener/vpin/multi": VIEWER, "/api/screener/vpin/scan": VIEWER,
@@ -56,10 +58,10 @@ POLICY = {
     "/api/screener/columns": VIEWER, "/api/screener/presets": VIEWER,
     "/api/screener/fundamental": VIEWER,
     "/api/screener/stockbit/templates": VIEWER,
-    "/api/screener/stockbit/run": OPERATOR,   # GET, but it launches a scrape run
+    "/api/screener/stockbit/run": ADMIN,   # GET, but it launches a scrape run
     "/api/screener/brpt_filter": VIEWER,
     # --- screener_main blueprint ---
-    "/api/screener/swing_onset": OPERATOR,
+    "/api/screener/swing_onset": ADMIN,
     "/api/sector/rotation": VIEWER, "/api/calendar/status": VIEWER,
     "/api/calendar/events": VIEWER, "/api/fastmover/summary": VIEWER,
     "/api/fastmover/run": OPERATOR,
@@ -67,9 +69,9 @@ POLICY = {
     "/api/strategy/list": VIEWER,
     "/api/strategy/markers/<path:strategy>/<ticker>": VIEWER,
     "/api/ticker/<ticker>/ohlcv": VIEWER,
-    "/api/premover/run": OPERATOR,
+    "/api/premover/run": ADMIN,
     # --- flow / market / dashboard ---
-    "/api/flow/monitor": VIEWER, "/api/flow/check": OPERATOR,
+    "/api/flow/monitor": VIEWER, "/api/flow/check": ADMIN,
     "/api/broker-flow/<ticker>": VIEWER, "/api/broker-flow/dates/<ticker>": VIEWER,
     "/api/market/accdist": VIEWER, "/api/market/vpin": VIEWER,
     "/api/market/technicals": VIEWER, "/api/market/breadth": VIEWER,

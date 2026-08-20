@@ -96,6 +96,11 @@ def test_api_premover_mode_get_and_post(pt_db, monkeypatch):
     """GET returns 'off'; POST sets mode; invalid mode returns 400."""
     import paper_trade as pt
     monkeypatch.setattr(pt, "DB_PATH", pt_db)
+    # POST is ADMIN-classified and gated unconditionally (2026-08-19 stop-gap,
+    # security/middleware.py) -- a test-local token keeps this hermetic
+    # rather than depending on the real repo .env's AUTH_TOKEN_ADMIN.
+    monkeypatch.setenv("AUTH_TOKEN_ADMIN", "premover-test-admin-token")
+    admin_headers = {"Authorization": "Bearer premover-test-admin-token"}
     from app import app
     app.config['TESTING'] = True
     client = app.test_client()
@@ -106,7 +111,8 @@ def test_api_premover_mode_get_and_post(pt_db, monkeypatch):
 
     resp = client.post('/api/paper/premover_mode',
                        json={'mode': 'shadow'},
-                       content_type='application/json')
+                       content_type='application/json',
+                       headers=admin_headers)
     assert resp.status_code == 200
     assert resp.get_json()['mode'] == 'shadow'
 
@@ -115,5 +121,6 @@ def test_api_premover_mode_get_and_post(pt_db, monkeypatch):
 
     resp = client.post('/api/paper/premover_mode',
                        json={'mode': 'unknown'},
-                       content_type='application/json')
+                       content_type='application/json',
+                       headers=admin_headers)
     assert resp.status_code == 400

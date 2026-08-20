@@ -36,6 +36,40 @@ def test_mode_off_everything_open(make_client):
     assert c.get("/dashboard").status_code == 200
 
 
+def test_mode_off_admin_route_still_blocked_unauthenticated(make_client):
+    """2026-08-19 stop-gap: ADMIN routes are gated unconditionally, even
+    under AUTH_MODE=off (the incident: an anonymous POST to /api/agent/config
+    succeeded and silently disabled the Agent Firm)."""
+    c = make_client("off")
+    assert c.post("/api/agent/config", json={"mode": "off"}).status_code == 401
+    assert c.post("/api/paper/clear_history").status_code == 401
+
+
+def test_mode_off_admin_route_works_with_valid_token(make_client):
+    c = make_client("off")
+    r = c.post("/api/agent/config", json={"mode": "shadow"},
+               headers={"Authorization": f"Bearer {ADMIN_TOK}"})
+    assert r.status_code == 200
+
+
+def test_mode_off_admin_route_wrong_role_403(make_client):
+    c = make_client("off")
+    r = c.post("/api/agent/config", json={"mode": "shadow"},
+               headers={"Authorization": f"Bearer {VIEW_TOK}"})
+    assert r.status_code == 403
+
+
+def test_mode_off_non_admin_routes_unaffected(make_client):
+    """The stop-gap must not widen enforcement beyond ADMIN -- VIEWER/OPERATOR
+    stay exactly as permissive as before under AUTH_MODE=off (the frontend has
+    no token-attachment mechanism yet). /api/scheduler/run itself is now
+    ADMIN-classified (2026-08-19 incident) -- /api/backtest/scan_all is a
+    still-OPERATOR route used here instead."""
+    c = make_client("off")
+    assert c.get("/api/signals/today").status_code == 200
+    assert c.post("/api/backtest/scan_all").status_code not in (401, 403)
+
+
 def test_enforce_blocks_anonymous(make_client):
     c = make_client("enforce")
     assert c.get("/api/signals/today").status_code == 401
@@ -71,9 +105,12 @@ def test_query_param_token_accepted(make_client):
 
 
 def test_shadow_never_blocks(make_client):
+    # /api/scheduler/run is ADMIN-classified (2026-08-19 incident) and gated
+    # unconditionally even in shadow -- /api/backtest/scan_all is still a
+    # genuine OPERATOR route, which shadow mode never blocks.
     c = make_client("shadow")
     assert c.get("/api/signals/today").status_code == 200
-    assert c.post("/api/scheduler/run").status_code not in (401, 403)
+    assert c.post("/api/backtest/scan_all").status_code not in (401, 403)
 
 
 def test_login_sets_session(make_client):

@@ -106,6 +106,82 @@ already-frozen API":
 
 ---
 
+## Admin-route auth gate — incident + stop-gap (2026-08-19)
+
+**Incident:** during a live route audit, a manual `curl -X POST /api/agent/config` with an empty
+body was issued as an ad hoc "is this ADMIN route actually protected?" probe. It succeeded
+unauthenticated (`AUTH_MODE=off` in production, as it has been since the security-hardening work —
+see `docs/SECURITY.md`) and, because `routes/backtest.py`'s handler defaults a missing `mode` field
+to `"off"` rather than rejecting the request, silently disabled the Agent Firm for 45s
+(09:22:23–09:23:08 WIB, corrected in-session). Forensics: the window overlapped market hours but no
+scheduled job, signal, decision, or trade fell inside it (`job_execution_log`, `agent_decisions`,
+`scheduled_signals`, `paper_trades`, `ft_shadow_trade`, `ft_shadow_position`, `provider_events` all
+checked directly for the window — zero rows). Root cause of the probe itself: "read-only
+investigation" is a convention this repo has no code-level way to enforce — nothing stops a
+mutating call from being issued mid-audit, by a human or an agent.
+
+**Fix (this session, stop-gap):** `security/middleware.py`'s existing `before_request` RBAC hook
+(already built for `AUTH_MODE=shadow/enforce`, just previously inert because production runs
+`AUTH_MODE=off`) now gates ADMIN-classified routes **unconditionally**, independent of `AUTH_MODE`
+— reusing the same `AUTH_TOKEN_ADMIN` credential mechanism the module already supported, no new
+secret system. `AUTH_TOKEN_ADMIN` is now set in `.env` (mode 600, gitignored, not in this doc).
+VIEWER/OPERATOR routes are deliberately left on the existing `AUTH_MODE`-gated path — the frontend
+(`frontend/`) has no token-attachment mechanism yet (README's U-4 "no identity layer"), so widening
+enforcement to VIEWER under `AUTH_MODE=off` would break it. Verified live: unauthenticated
+`POST /api/agent/config` → 401; with `AUTH_TOKEN_ADMIN` → 200; frontend and scheduler unaffected
+(neither ever called an ADMIN route).
+
+**Follow-up incident (same day, 10:05:57–10:06:21 WIB, after the gate above was already live at
+10:05:34):** a second unread-before-calling verification probe — `curl -X POST /api/scheduler/run`,
+made to check that OPERATOR routes were correctly *unaffected* by the ADMIN-only gate — triggered a
+real, live `daily_signal_scan()` (the same function the real scheduled job runs): a full universe
+scan (~24s, real yfinance calls) and one unscheduled Telegram send ("no signals today", since 0
+signals were found). No paper trades opened (auto-trade only fires on a non-empty signal list), no
+capital impact. This demonstrated live that `/api/scheduler/run` being OPERATOR-classified (open
+under `AUTH_MODE=off`, same as before this session) is itself a real external-side-effect gap, not
+just a hypothetical one.
+
+**Follow-up fix — inventory + expanded gate (2026-08-19, same day):** every POST route (plus the one
+GET route already flagged in this file's own `route_policy.py` comment as launching a scrape) was
+checked for calls to `send_telegram` or an external network fetch (Stockbit/yfinance), and for any
+internal caller (scheduler, cron, frontend) that would break if gated — none were found for any
+candidate. **10 routes moved from OPERATOR to the same unconditional ADMIN gate**, all confirmed to
+send a real Telegram message and/or make a real external API call, all previously reachable
+unauthenticated under `AUTH_MODE=off`:
+
+| Route | Confirmed external effect |
+|---|---|
+| `/api/scheduler/run` | Telegram (unconditional) + yfinance fetch — demonstrated live (above) |
+| `/api/paper/open` | Telegram "Paper Trade OPENED" (`notify=True` default) + opens a real paper trade |
+| `/api/paper/close` | Telegram "Paper Trade Closed" sent directly in the handler |
+| `/api/signals/custom` | Telegram sent directly |
+| `/api/paper/report-telegram` | Explicit Telegram report send |
+| `/api/premover/run` | Real scan wired directly to a Telegram alert callback |
+| `/api/screener/run` | Real background Stockbit scrape across the universe |
+| `/api/screener/stockbit/run` | External Stockbit scrape (`run_screener`) |
+| `/api/screener/swing_onset` | External Stockbit flow-batch fetch |
+| `/api/flow/check` | External Stockbit flow-batch fetch |
+
+Checked and confirmed **clean** (no external call, left as-is): `/api/fastmover/run` (pure local
+pandas/SQLite, verified no network imports), `/api/backtest/{scan_all,quick_scan,precompute,
+multi_quick_scan,roll,multi,walkforward,equity}`, `/api/optimizer/run`, `/api/portfolio/backtest`.
+**Flagged as unverified, not gated:** `/api/chart/tv/sync` — calls into a `urllib.request`-importing
+bridge module; likely a local TradingView desktop bridge rather than a third-party service, but the
+destination wasn't traced (bounded-scope decision, not a determination that it's safe).
+
+**Explicitly not done (separate, deliberate decisions, not resolved by this stop-gap):**
+- Full `AUTH_MODE=shadow`/`enforce` activation (U-4 / real identity+login layer for the frontend).
+- Remaining OPERATOR-classified routes (the "checked and confirmed clean" list above, plus anything
+  not covered by this pass) stay unenforced under `AUTH_MODE=off` — only routes with a *confirmed*
+  external side effect were moved.
+- The `/api/agent/config` handler's own footgun (missing `mode` silently defaults to `"off"` instead
+  of rejecting the request) was not changed — the auth gate now prevents an *unauthenticated* call
+  from reaching it, but an authenticated caller can still hit the same footgun by omission.
+- `/api/chart/tv/sync`'s external-call destination was not traced — revisit if it turns out to reach
+  a genuine third party rather than a local bridge.
+
+---
+
 ## P2 — Maintenance
 
 | # | Item | Source |
