@@ -425,6 +425,140 @@ and concludes verbatim: *"Verdict. No capital. C3 requires E5+X3; the claim has 
 
 **Related:** [[EVIDENCE_MODEL]] §3, §5.1, §8 · [[01_SCIENTIFIC_FOUNDATION]] ADR-L1-007 · `docs/RESEARCH_MASTER_PLAN.md` §5 invariant #10 · `Audit/T7_PRODUCTION_EXECUTION_BOUNDARY_AUDIT.md` §10 · D-022 (custody), D-024 (G-8/G-9 gate scope)
 
+### D-030 · Premover EOD admission model ratified — permanent, Registry-independent channel; stays OFF
+**Status:** ACCEPTED · **Date:** 2026-08-20 · **Type:** Production admission governance · **Approval authority:** Owner
+
+**Component:** `run_premover_eod()` (`scheduler/jobs.py:680`) → `paper_trade.py`'s `get_premover_mode()`/`set_premover_mode()`/`evaluate_premover_trade()` (`auto_trade_from_premover` in `paper_config`) · **Live mode:** `off` (verified against the production DB this session) · **Owner decision:** RATIFY THE EXISTING MECHANISM AS PERMANENT — DO NOT MIGRATE TO THE EDGE REGISTRY
+
+**Decision:** Premover EOD's existing `off`/`shadow`/`enforce` discipline is ratified as its permanent, intended admission model — a channel structurally separate from, and not migrating into, the Edge Registry's `strategy_fn`/`universe_artifact` schema. `auto_trade_from_premover` remains `off` by default (T7 audit §4.3's dormant state is unchanged by this decision). Enabling `shadow` or `enforce` in the future is an ordinary operator action under this already-tested mechanism (`set_premover_mode()`, `POST /api/paper/premover_mode`, admin-RBAC), not an architecture change requiring further governance — the same graduated-rollout shape this repository already uses for `AUTH_MODE`/`EDGE_SCORE_MODE`/`SECTORS_APP_MODE`.
+
+**Reason:** Traced independently this session, not merely re-summarized from the audit. Two findings settle this:
+1. **Original design intent predates the Registry by a month and was never strategy-shaped.** `docs/superpowers/specs/2026-06-05-g6-premover-auto-trade-design.md` (2026-06-05) — the source design for this exact feature — specifies `off`/`shadow`/`enforce` as the complete admission model; it contains no concept of `strategy_fn`, backtest evidence, or `gate_decision` at all, because premover is a live per-ticker pattern scanner (`engine/premover_detector.py::run_scan()`, REVERSAL_BREAKOUT-style setups scored 0-100), not a named, backtested strategy population. The current implementation (`scheduler/jobs.py:680-736`) matches that 2026-06-05 spec line-for-line, including the exact gate order (DD circuit breaker → max positions → duplicate → regime) in `evaluate_premover_trade()` (`paper_trade.py:700-745`).
+2. **The Edge Registry's schema has no natural fit.** `universe_artifact` is a frozen *ticker set* keyed to one `strategy_fn` with a manifest evidence receipt (`registry/SCHEMA.md`-shaped). Premover fires per-ticker on its own live signal, with no fixed universe and no backtest/`gate_decisions` trail to receipt — forcing a placeholder `strategy_fn` into the Registry to satisfy the schema would create an entry with no real evidence behind it, which is exactly the fabricated-evidence failure mode D-029 and the Evidence Model discipline exist to prevent. `open_trade()`'s `strategy=None` handling (`paper_trade.py:296`, resolves to `get_best_strategy_for_ticker()` — a backtest-cache lookup or `"Momentum Following"` default) is a display/attribution label applied *after* premover's own decision, not a Registry-checked admission — this was true before this decision and remains true; nothing about that resolution changes here.
+
+**Consequences:** No code changes. `admission_path`/`registry_hash` (T7 invariant #9, `paper_trade.py`) remain `NULL` for premover-opened trades, as already documented in the audit §9 "Not wired" note — correct, since attributing a Registry admission state to a channel this decision holds outside the Registry would be misleading, not merely incomplete. This closes `Audit/T7_PRODUCTION_EXECUTION_BOUNDARY_AUDIT.md` §4.3 as a permanent architectural position rather than an open owner decision. Live-verified this session: `paper_config.auto_trade_from_premover = 'off'`; the production `paper_trades` table has zero rows (open or closed) — no live or historical exposure through this or any channel today.
+
+**Files changed:** none (documentation only — this entry; a status note in `Audit/T7_PRODUCTION_EXECUTION_BOUNDARY_AUDIT.md` §4.3/§11 pointing here).
+
+**Related:** `docs/superpowers/specs/2026-06-05-g6-premover-auto-trade-design.md` · `Audit/T7_PRODUCTION_EXECUTION_BOUNDARY_AUDIT.md` §4.3, §9, §11 · CLAUDE.md "Research → production contract (Edge Registry)" · D-029 (adjacent T7 admission decision, same audit)
+
+### D-031 · `wf_edge` legacy dual-use channel — owner decision package
+**Status:** ACCEPTED — IMPLEMENTED · **Date:** 2026-08-20 (proposed, revised, ratified, and implemented same day — see "Revision" and "Implementation" below) · **Type:** Production admission governance · **Approval authority:** Owner (ratified — both the scope-(ii) fail-closed fix and scope-(i) Option C terms below are approved as written)
+
+**Component:** `scheduler/scanner.py::_edge_selectable()` (`:654-692`) and its unconstrained sibling `get_ticker_best_strategies()` (`:697-713`, `candidates=None`), reached from `adaptive_strategy_selector()` (`:835-924`, the only trade-path caller) at `:906`.
+
+**Revision (same-day, before ratification):** independently re-traced from source per the owner's explicit instruction not to assume the prior draft was correct. That re-trace found the exposure is **sharper and more specific** than the first draft of this entry stated — see "Sharper finding" below. This revision restructures the entry into three explicit options plus a split recommendation; it does not change Status (still PROPOSED) or touch any code.
+
+**Reachability (re-verified this session, `scheduler/scanner.py`):** `adaptive_strategy_selector()` passes `_edge_selectable()` a constrained candidate list per regime (`:895`), and falls back to the fully unconstrained `get_ticker_best_strategies()` (`:906`) whenever that constrained call yields nothing **and** the current regime has no counter-trend candidate — true for **every BULL regime** (`_COUNTER_TREND_BOOK = {'Crash Recovery', 'Panic Rebound'}` never appears in `_REGIME_STRATEGY_MAP['BULL_MODERATE'|'BULL_STRONG']`). Cross-referenced against the live `disabled_strategies` config (`vwap_reversion,vol_weighted,conservative,momentum,Liquidity Sweep,ORB,Volume Profile POC,Inside Bar Breakout`): for BULL regimes, the *only* non-disabled, non-SHADOW candidate in the constrained path is `Trend Following Breakout` — so the unconstrained fallback triggers routinely, not as a rare edge case, whenever that one strategy has no positive `wf_edge` row for a given ticker.
+
+**Sharper finding (the reason this revision exists):** `_edge_selectable()`'s `candidates is None` branch (the fallback's own path) sets `ungoverned = None` and **skips the `registry_governance()` check loop entirely** — it never calls `registry_governance()` for any strategy name. The function's own code comment three lines above ("SHADOW — excluded outright, never falls back to the ungoverned legacy path") is therefore **only true for the constrained branch**, not for `candidates=None`. Verified live and reproducible today: `NR7 Breakout` — demoted `APPROVED → SHADOW` **yesterday** by D-029 specifically because its evidence failed the Evidence Model's C3 capital bar — has **43 tickers with positive `wf_edge.expectancy_pct` right now** (`KREN 5.77%, PIPA 5.59%, MDRN 5.12%, TIRT 4.85%, DPUM 4.34%, ...`, checked against the live production DB this session). Any of those 43 tickers hitting the BULL-regime fallback condition would re-select `NR7 Breakout` **with no registry check at all**, silently defeating the SHADOW exclusion D-029/D-030 both rely on being absolute. This is not "an ungoverned legacy strategy trading without review" (the original framing) — it is **a strategy the owner explicitly reviewed and excluded, reachable again through a different code path the exclusion was never wired into**. No other call site of this unconstrained path exists outside `adaptive_strategy_selector()` (checked: `migrations/applied/patch_adaptive_strategy.py` is a historical, already-applied one-time migration script, not live code). No existing test covers this scenario — `tests/test_edge_selector.py`'s fixture explicitly monkeypatches `registry_governance` to always return `None` ("isolate it from the real Edge Registry"), and `tests/test_t7_fail_closed_admission.py` explicitly scopes the entire legacy `wf_edge` branch out of its coverage as "a separate, pre-existing, explicitly flagged issue... deliberately untouched."
+
+---
+
+#### Option A — Registry migration
+
+Every strategy currently reachable only via `wf_edge` (`Trend Following Breakout`, plus whichever of `momentum`/`vol_weighted`/`vwap_reversion`/`conservative`/`Liquidity Sweep` are ever re-enabled) would need: a `strategy_fn` identity already present in `engine.strategy_specs.SPECS`/`_CHECKER_DISPATCH` (T7 invariant #6 lineage test) — most already qualify, this part is cheap; a **frozen** `universe_artifact`, which is a real behavior change from today's live, self-updating `wf_edge` query — the universe stops tracking new research runs until re-approved; a manifest with real `gate_decisions`/forward-test evidence meeting the same C3 (E5+X3) bar D-029 just enforced — not yet checked whether any of these strategies have real `gate_decisions` rows at all (T7's audit found **zero** for the three paths it did check: counter-trend book, momentum, premover; unaudited here, but the pattern is not encouraging).
+
+**Grandfathering implications:** `_LIFECYCLE_DEBT` was designed and used exactly once, as an individually-justified, dated exception (CLAUDE.md: "the default action is to shrink it, not add to it"). Migrating 5-8 strategies this way would mean mass-grandfathering, which dilutes the mechanism from "rare, reviewed exception" into a routine onboarding step — a real cost to the discipline D-029 just spent effort restoring.
+
+**Testing requirements:** new lineage/evidence tests per strategy (mirroring `test_registry_lifecycle.py`), plus — regardless of whether Option A is chosen — the fail-closed fix described under "Recommendation" below, since Registry migration alone does not close the SHADOW-bypass (see next paragraph).
+
+**Risk — the critical dependency:** migrating strategies into the Registry does **not**, by itself, stop them from trading through the unconstrained fallback, because that fallback does not consult `registry_governance()` at all. A strategy migrated and placed at SHADOW would be exactly as exposed as `NR7 Breakout` is today. Option A only delivers its intended safety benefit if paired with the fail-closed fix — it cannot substitute for it. Effort: high (weeks-to-months per strategy, forward-test n≥15 per CLAUDE.md's Phase 5 rule); timeline risk of pressure to backfill thin evidence.
+
+#### Option B — Remove legacy `wf_edge` authorization
+
+Given `registry/edge_registry.yaml` has **zero APPROVED entries today**, removing `wf_edge` as an authorization source (disabling both the constrained and unconstrained branches, or just their `wf_edge` query) means `_edge_selectable()`'s `governed` list — currently always empty — is *all* it would ever return. `get_ticker_best_strategies()` would always return `[]`. **Net effect: the main daily scan cycle would stop generating any BUY signal for any strategy, system-wide, immediately** — not a narrow, surgical closure of the SHADOW-bypass, but a full stop of production signal generation as currently configured, since nothing is APPROVED to replace it.
+
+**Rollback:** trivial to revert (a code/config flag), but the operational surprise (zero signals from an otherwise-running scheduler) is real and immediate.
+
+**Behavioral change:** from "scans generate signals for several legacy strategies with positive backtested expectancy, unreviewed by the Registry" to "scans generate no signals at all until at least one strategy clears real Registry admission." Given `paper_trades` is empty today anyway, the practical difference *right now* is small, but this removes whatever passive signal-generation capability currently exists, not just the unsafe sliver of it (the SHADOW-bypass).
+
+**Testing requirements:** `tests/test_edge_selector.py::test_edge_selectable_none_candidates_scans_all` and siblings currently assert the legacy scan-all behavior — would need to be deliberately rewritten to assert exclusion (a visible, intentional test change, not a silent one), plus a regression test proving `adaptive_strategy_selector()` returns only counter-trend-book output (itself currently empty) system-wide.
+
+**Risk:** broad, immediate, system-wide behavior change bundled into what looks like a narrow safety fix — removes real (if unreviewed) signal-generation capability, not just the SHADOW-bypass defect.
+
+#### Option C — Bounded legacy exception
+
+**Scope must split in two, given the sharper finding above — treating both halves identically would be imprecise:**
+- **(i) Constrained per-candidate branch** (`_edge_selectable(conn, ticker, wf_candidates)` for strategies named in `_REGIME_STRATEGY_MAP` with no registry entry, `registry_governance() is None`) — this branch **already** correctly excludes SHADOW strategies via its own registry-check loop. This is the genuine "legacy, unreviewed, but not violating anything already decided" exposure Phase 2C/audit C-6 intended, and is the appropriate subject of a bounded exception.
+- **(ii) Unconstrained fallback** (`candidates=None`) — does **not** belong in a "legacy exception" at all. It isn't a policy question of how much legacy trust to extend; it silently violates a guarantee (D-029/D-030's SHADOW exclusion) the owner already made, one day before this session, for a specific, named reason. This must be closed as a fail-closed correctness fix, not bounded as an exception — see Recommendation.
+
+**For scope (i), if ratified:**
+- **Deadline:** dated, mirroring `_LIFECYCLE_DEBT`'s `NR7_BULL` precedent (owner to set the exact date/trigger — e.g. N months from ratification, or "next real signal from this branch," whichever the owner prefers) by which every strategy still relying on it clears the Gatekeeper into a real Registry entry or moves to `disabled_strategies`.
+- **Monitoring:** `admission_path` (T7 invariant #9) currently records nothing for legacy-branch opens — this exception should require either a `LEGACY_WF_EDGE` value wired into that column, or at minimum a periodic report of what the branch actually selected, so usage is visible rather than invisible.
+- **Allowed/forbidden, by construction not just policy:** allowed only where `registry_governance() is None` (no entry at all); forbidden for any strategy with any registry entry regardless of status — which is exactly what the scope-(ii) fix enforces mechanically rather than by convention.
+- **Owner:** Tjie, matching every other T7/registry decision to date.
+- **Evidence/audit requirements:** none fabricated retroactively (mirrors D-029's own rule) — the exception documents an absence of evidence, it does not manufacture any.
+- **Termination point:** the earlier of the stated deadline, or the first live trade actually opened through this branch for a ticker/strategy pair with zero `gate_decisions` history — either should force re-review, not silent continuation.
+
+---
+
+### Recommendation
+
+**Not a single clean pick among A/B/C — the sharper finding splits this into two decisions of different urgency and kind:**
+
+1. **Close the unconstrained-fallback SHADOW-bypass (scope (ii)) as a fail-closed correctness fix, independent of A/B/C.** This is not "how much legacy trust do we extend" — it is making an already-ratified guarantee (SHADOW is excluded, full stop) actually hold everywhere the code claims it does. The fix is small in shape (the `candidates is None` branch needs the same `registry_governance()` check the constrained branch already has) but **is not implemented here** per your explicit instruction not to modify `_edge_selectable()` this turn — flagged for a dedicated, minimal, test-covered change once you ratify this characterization.
+2. **For the narrower, already-correctly-excluding constrained branch (scope (i)), recommend Option C** — not by default resemblance to `_LIFECYCLE_DEBT`, but because: Registry (Option A) is the intended long-term interface, but its effort (weeks-to-months, mass-grandfathering pressure) is disproportionate to today's actual risk, given `paper_trades` is empty and no live-broker execution exists anywhere in this codebase; full removal (Option B) forces a system-wide stop of all signal generation the owner hasn't asked for, to fix a defect that's actually narrower than that (once (ii) is fixed) than it appears. Option C, correctly scoped to exclude (ii), is the proportionate answer for what remains.
+
+Net: **two ratification decisions, not one** — (a) approve the scope-(ii) fail-closed fix as a follow-up implementation task, and (b) approve Option C's terms (deadline, monitoring, owner) for scope (i). Both await explicit owner sign-off; neither is implemented by this entry.
+
+### Implementation (2026-08-20, same day as ratification)
+
+**Both halves of the Recommendation, as ratified, are implemented:**
+
+1. **Scope (ii) fail-closed fix — done.** `scheduler/scanner.py::_edge_selectable()`'s `candidates is None`
+   branch no longer skips `registry_governance()`. It now queries `wf_edge` unconstrained (as before,
+   the "which strategies" scan is unchanged), then independently checks each found strategy's registry
+   status: included only if `registry_governance()` returns a set containing the ticker (APPROVED);
+   excluded if `'SHADOW'` or `None` (unregistered) — no legacy exception on this path, matching Decision
+   1 exactly. `get_ticker_best_strategies()` and `adaptive_strategy_selector()` needed no changes — both
+   call into the fixed function and inherit the corrected behavior.
+2. **Scope (i) Option C exception — implemented, unchanged in substance, explicit in scope; deadline
+   deliberately left unset.** The explicit-candidates branch's logic is byte-for-byte the same (still:
+   APPROVED → selectable if ticker in universe; SHADOW → excluded; unregistered → legacy `wf_edge`
+   query, this decision's bounded exception). A module-level comment now makes the exception's scope
+   and its D-031 authority explicit in the code rather than only in this document.
+   **Deadline correction (2026-08-20, same day, before commit):** the first implementation pass wrote
+   `D031_WF_EDGE_LEGACY_EXCEPTION_DEADLINE = "2027-01-08"` into `scheduler/scanner.py`, adopted **by
+   analogy** to `engine/registry_loader.py`'s unrelated `_LIFECYCLE_DEBT` (`NR7_BULL`) deadline. On
+   review, this section's own ratified text (below, "Deadline:") explicitly leaves the exact date as
+   **"owner to set the exact date/trigger"** — it was never actually fixed at 2027-01-08 by the owner's
+   ratification of this decision. Treating an inferred-by-analogy date as if it were an approved
+   governance decision would have been exactly the silent-assumption failure mode this corpus's own
+   discipline exists to prevent. **The constant has been removed from code, and no replacement date has
+   been substituted.** The exception remains bounded in scope and mechanics (as ratified) but is not yet
+   bounded in time — that is an explicit open item, not an oversight, pending a separate owner decision
+   on the actual date/trigger. **Observability** is satisfied by pre-existing infrastructure, not new code: every trade this branch's
+   output can lead to already carries `admission_path='UNREGISTERED'` in `paper_trades` (T7 invariant #9),
+   which is how a legacy-exception open is distinguished after the fact — a real, working audit trail,
+   confirmed by reading `scheduler/scanner.py`'s Step 7 auto-open block, which computes `admission_path`
+   unconditionally for every trade it opens regardless of which branch selected the strategy.
+
+**Regression tests added:** `tests/test_t7_wf_edge_fallback_fix.py` (9 tests, real on-disk registry +
+`wf_edge` fixtures, nothing mocked) — covers the full candidates=None / explicit / empty matrix across
+APPROVED/SHADOW/unregistered, a structural reproduction of the real `NR7 Breakout` SHADOW scenario (real
+strategy name, synthetic tickers/data, no production DB touched), and an end-to-end
+`adaptive_strategy_selector()` proof. Two pre-existing tests in `tests/test_edge_selector.py` that
+asserted the old buggy scan-all behavior were corrected (`test_edge_selectable_none_candidates_scans_all`
+→ `test_edge_selectable_none_candidates_is_registry_only`;
+`test_get_ticker_best_strategies_uses_edge` → `test_get_ticker_best_strategies_registry_only_no_admission`),
+plus one new adjacent positive-path test.
+
+**Verification:** focused suite (104 tests across every file touching `_edge_selectable`/
+`get_ticker_best_strategies`/`adaptive_strategy_selector`, plus premover/registry-loader/execution-model
+tests) — all pass. Full repository suite: 2436 passed, 3 failed, all 3 confirmed pre-existing and
+unrelated (`.stignore` contract, `news_filter` request-mocking shape — neither file touched this session).
+Live-verified post-fix: registry unchanged (0 approved, 1 shadow — `NR7_BULL`), `paper_trades` unchanged
+(0 rows), Premover EOD unchanged (`auto_trade_from_premover='off'`, D-030 untouched). No strategy
+promoted; no admission bypass introduced; no live-capital authorization changed.
+
+**Files changed:** `scheduler/scanner.py` (`_edge_selectable()` fix; the exception's deadline is
+explicitly unset in code, see "Deadline correction" above — no constant defines one),
+`tests/test_t7_wf_edge_fallback_fix.py` (new), `tests/test_edge_selector.py` (2 tests corrected, 1 added),
+`Audit/T7_PRODUCTION_EXECUTION_BOUNDARY_AUDIT.md` (implementation/verification note, §11), this entry.
+
+**Related:** `Audit/T7_PRODUCTION_EXECUTION_BOUNDARY_AUDIT.md` §4.4, §11 · `docs/superpowers/plans/2026-07-07-m1-registry-inversion.md` (original M1 design + its now-stale "always passes explicit candidates" assumption, `:523-526`) · `docs/superpowers/plans/2026-07-04-phase2c-edge-selector.md` (Phase 2C / audit C-6 origin) · `engine/registry_loader.py:40-47` (`_LIFECYCLE_DEBT` pattern Option C mirrors for scope (i) only, and whose deadline this decision's exception adopts by analogy) · `tests/test_edge_selector.py`, `tests/test_t7_fail_closed_admission.py` (both explicitly scoped this branch out before this fix) · D-029, D-030 (adjacent T7 admission decisions)
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)

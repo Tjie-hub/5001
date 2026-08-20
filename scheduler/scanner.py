@@ -651,40 +651,97 @@ def daily_signal_scan():
     return signals
 
 
+# D-031 (docs/roadmap/DECISION_LOG.md, ratified 2026-08-20) -- bounded legacy
+# exception, Option C. Applies ONLY to _edge_selectable()'s explicit-
+# candidates branch below (a regime-map strategy with no registry entry at
+# all, checked per-strategy via registry_governance()). It does NOT apply to
+# candidates=None (D-031 Decision 1: that path is Registry-only, no legacy
+# exception -- see the fail-closed fix below, which closed the bug where a
+# SHADOW strategy such as a demoted one could be re-selected through that
+# path without ever being checked).
+#
+# Deadline: NOT YET SET. D-031's ratified text leaves the exact date/trigger
+# for "every strategy still relying on this exception clears the Gatekeeper
+# or moves to disabled_strategies" as an explicit owner decision ("owner to
+# set the exact date/trigger"), not a specific date this fix should invent.
+# An earlier revision of this comment adopted 2027-01-08 (the unrelated
+# engine/registry_loader.py::_LIFECYCLE_DEBT/NR7_BULL deadline) by analogy --
+# that date was never actually ratified for THIS exception and has been
+# removed rather than left standing as an implied decision. Record the real
+# deadline here (and in docs/roadmap/DECISION_LOG.md D-031) once the owner
+# sets one; until then this exception is bounded in scope and mechanics
+# (see above) but not yet bounded in time.
+#
+# Observability: every trade this branch's output leads to already carries
+# admission_path='UNREGISTERED' in paper_trades (T7 invariant #9,
+# engine/registry_loader.py::admission_path() + scheduler/scanner.py Step 7),
+# which is how a legacy-exception open is distinguished after the fact from
+# a Registry-governed one -- no new column or label was needed for this.
+
+
 def _edge_selectable(conn, ticker: str, candidates) -> list:
     """Strategies with a live edge for `ticker`.
 
     Registry-governed strategies (spec §6, M1 inversion): eligibility comes from
     the FROZEN universe artifact in registry/ — production no longer reads
     research's wf_edge for them. Ungoverned strategies keep the legacy live
-    wf_edge query (positive pooled OOS expectancy, Phase 2C / audit C-6).
-    Governed results first, then ungoverned by expectancy DESC.
+    wf_edge query (positive pooled OOS expectancy, Phase 2C / audit C-6) —
+    but that legacy exception applies ONLY when an explicit candidate list is
+    given (D-031 Option C, see the module-level comment above). Governed
+    results first, then ungoverned by expectancy DESC.
+
+    `candidates=None` ("scan every strategy in wf_edge") is Registry-only per
+    D-031 Decision 1: a strategy found this way must independently clear
+    registry_governance() (APPROVED, ticker in its frozen universe) before
+    it is selectable. SHADOW and unregistered strategies are excluded here —
+    this is a fail-closed fix, not a policy choice: the prior behavior let a
+    SHADOW-demoted strategy (e.g. one an owner explicitly reviewed and
+    excluded) be re-selected through this path without ever consulting the
+    Registry, silently defeating the exclusion the explicit-candidates
+    branch below has always enforced correctly.
     """
     if candidates is not None and not candidates:
         return []
     from engine.registry_loader import registry_governance
-    governed, ungoverned = [], []
+
     if candidates is None:
-        ungoverned = None          # legacy: scan every strategy in wf_edge
-    else:
-        for s in candidates:
-            gov = registry_governance(s)
-            if gov is None:
-                ungoverned.append(s)      # no registry entry at all -> legacy path
-            elif gov != 'SHADOW':
-                if ticker in gov:
-                    governed.append(s)
-            # else: SHADOW -- governed but not APPROVED; excluded outright,
-            # never falls back to the ungoverned legacy path (T7.P1.WS4.01)
+        # D-031 Decision 1: no legacy exception on this path -- every
+        # strategy found via wf_edge must independently clear registry
+        # admission (APPROVED, ticker in its frozen universe) before
+        # selection. SHADOW and unregistered are excluded, not grandfathered.
+        try:
+            rows = conn.execute(
+                "SELECT strategy FROM wf_edge "
+                "WHERE ticker = ? AND expectancy_pct > 0 "
+                "ORDER BY expectancy_pct DESC",
+                (ticker,),
+            ).fetchall()
+        except Exception:
+            rows = []
+        result = []
+        for (strategy,) in rows:
+            gov = registry_governance(strategy)
+            if isinstance(gov, set) and ticker in gov and strategy not in result:
+                result.append(strategy)
+        return result
+
+    governed, ungoverned = [], []
+    for s in candidates:
+        gov = registry_governance(s)
+        if gov is None:
+            ungoverned.append(s)      # no registry entry at all -> D-031 Option C exception
+        elif gov != 'SHADOW':
+            if ticker in gov:
+                governed.append(s)
+        # else: SHADOW -- governed but not APPROVED; excluded outright,
+        # never falls back to the ungoverned legacy path (T7.P1.WS4.01)
     result = list(governed)
-    if ungoverned is None or ungoverned:
+    if ungoverned:
         sql = ("SELECT strategy FROM wf_edge "
-               "WHERE ticker = ? AND expectancy_pct > 0")
-        params = [ticker]
-        if ungoverned is not None:
-            sql += " AND strategy IN (%s)" % ",".join("?" * len(ungoverned))
-            params += list(ungoverned)
-        sql += " ORDER BY expectancy_pct DESC"
+               "WHERE ticker = ? AND expectancy_pct > 0 "
+               "AND strategy IN (%s) ORDER BY expectancy_pct DESC"
+               % ",".join("?" * len(ungoverned)))
+        params = [ticker] + list(ungoverned)
         try:
             for r in conn.execute(sql, params).fetchall():
                 if r[0] not in result:

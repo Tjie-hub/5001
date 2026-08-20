@@ -4,6 +4,18 @@
 report (not a governance doc — the two open items in §4 need an explicit owner decision before
 this can be called closed).
 
+**Amended 2026-08-20 (Production OS Slice 3 — T7 Governance Closure):** the two open items below
+are addressed — §4.3 (Premover EOD) by `docs/roadmap/DECISION_LOG.md` **D-030 (ACCEPTED)**: the
+existing `off`/`shadow`/`enforce` mechanism is ratified as Premover's permanent admission model,
+not migrated into the Edge Registry. §4.4 (`wf_edge` dual-use) by **D-031 (PROPOSED, not yet
+ratified)**: a recommendation to bound it as a dated legacy exception, mirroring
+`_LIFECYCLE_DEBT`'s pattern — awaiting owner sign-off on the deadline/migration mechanics before
+any code changes. Neither decision changes Registry state (still 0 APPROVED / 1 SHADOW) or any
+production code. See D-030/D-031 for the full reasoning, including one refinement found while
+re-tracing §4.4 independently: the unconstrained `get_ticker_best_strategies()` fallback
+(`scheduler/scanner.py:906`) is reachable from `adaptive_strategy_selector()` in every BULL regime,
+which the original M1 design doc did not anticipate — see D-031 for detail.
+
 **Mandate:** IDX Master Plan T7 — make the research→production trade-execution boundary real and
 enforceable. Interface of record: `registry/edge_registry.yaml` + `engine/registry_loader.py`
 (single cached reader; degrades to `None`/legacy fallback on failure, never crashes — see
@@ -127,6 +139,9 @@ findings:
 the intended permanent admission model for pattern-scanners of this kind, with the Registry
 reserved for named backtested strategies only? Not resolved here.
 
+**RESOLVED 2026-08-20 — see `docs/roadmap/DECISION_LOG.md` D-030 (ACCEPTED).** Ratified as the
+latter: off/shadow/enforce remains the permanent model, no Registry migration.
+
 ### 4.4 `wf_edge` dual-use — NOT FIXED, flagged as owner decision
 
 `_edge_selectable()`'s legacy branch (`scanner.py:668-679`) runs
@@ -148,6 +163,13 @@ admission channel with its own explicit rules (distinct from "ungoverned" — cu
 beyond the positive-expectancy threshold), or (b) set a migration path/deadline to route every
 currently-legacy strategy through a real Edge Registry entry and retire the fallback. Not resolved
 here — code unchanged.
+
+**PROPOSED 2026-08-20 — see `docs/roadmap/DECISION_LOG.md` D-031 (PROPOSED, awaiting owner
+ratification).** Recommends a hybrid of (a)/(b): a dated, bounded exception mirroring
+`_LIFECYCLE_DEBT`'s pattern rather than permanent silence or unilateral removal. Still not resolved
+— no code changed by the proposal itself. Also identifies that `get_ticker_best_strategies()`'s
+unconstrained fallback (`scanner.py:906`, reached from `adaptive_strategy_selector()` in every BULL
+regime) is a broader exposure than this section's own text describes — see D-031 for the full trace.
 
 ---
 
@@ -411,3 +433,40 @@ authorization channel — documented, deliberately unchanged pending its own gov
 Neither affects any strategy currently reaching live execution: as of D-029, `registry/
 edge_registry.yaml` has **zero APPROVED entries** — no strategy in this system currently holds
 Registry-authorized live-capital status.
+
+**Update 2026-08-20 (Slice 3):** §4.3 is now CLOSED (D-030, ACCEPTED — permanent off/shadow/enforce
+model, no Registry migration). §4.4 has a PROPOSED closure awaiting owner ratification (D-031 —
+dated, bounded legacy exception). No code changed; Registry state unchanged (0 approved, 1 shadow).
+
+**Update 2026-08-20 (Slice 3, continued — D-031 implemented):** independent re-verification of §4.4
+before implementation found the exposure was sharper than this section's original text: the
+`candidates=None` branch of `scheduler/scanner.py::_edge_selectable()` never called
+`registry_governance()` at all, so a SHADOW strategy — including `NR7 Breakout`, demoted by D-029
+the day before this was found — could be re-selected through `get_ticker_best_strategies()` /
+`adaptive_strategy_selector()`'s BULL-regime fallback (`scanner.py:906`) with no registry check.
+Live-verified before the fix: 43 tickers carried positive `wf_edge` expectancy for the by-then-SHADOW
+`NR7 Breakout`. Owner-ratified fix implemented same day: `candidates=None` is now Registry-only (no
+legacy exception on that path); the explicit-candidates branch's bounded legacy exception (§4.4's
+original subject, D-031 Option C) is unchanged. Full terms, options, and the fail-closed fix
+rationale: `docs/roadmap/DECISION_LOG.md` D-031 (now ACCEPTED — IMPLEMENTED). This section's
+original prose above is preserved unedited as the point-in-time record; it no longer describes
+current code, which is why it is superseded here rather than rewritten in place.
+
+**Implementation verification (2026-08-20):** `scheduler/scanner.py::_edge_selectable()` changed —
+see D-031 for the exact diff description. 9 new regression tests
+(`tests/test_t7_wf_edge_fallback_fix.py`) cover the `candidates=None`/explicit-candidates/empty-list
+matrix across APPROVED/SHADOW/unregistered registry states, plus an end-to-end
+`adaptive_strategy_selector()` proof and a structural reproduction of the real `NR7 Breakout`
+SHADOW scenario using real (non-mocked) on-disk registry + `wf_edge` fixtures, no production data
+touched. Two pre-existing tests in `tests/test_edge_selector.py` that asserted the old (buggy)
+scan-all behavior were corrected to assert the new fail-closed behavior, plus one new positive-path
+test added alongside them. Full relevant suite (104 tests across
+`test_adaptive_strategy.py`/`test_edge_selector.py`/`test_nr7_live_pipeline_e2e.py`/
+`test_registry_lifecycle.py`/`test_registry_selector.py`/`test_t7_fail_closed_admission.py`/
+`test_t7_wf_edge_fallback_fix.py`/`test_registry_loader.py`/`test_t7_execution_model_pinning.py`/
+`test_premover_auto_trade.py`/`test_strategy_specs.py`) passes. Full repository suite: 2436 passed,
+3 failed — all 3 pre-existing and unrelated (`.stignore` contract, `news_filter` request-mocking
+shape), confirmed via `git status` to predate this session's changes; not caused by this fix.
+Live-verified post-fix: `registry/edge_registry.yaml` unchanged (0 approved, 1 shadow — `NR7_BULL`),
+`paper_trades` unchanged (0 rows), Premover EOD unchanged (`auto_trade_from_premover='off'`, D-030
+untouched). No strategy promoted; no admission bypass introduced.

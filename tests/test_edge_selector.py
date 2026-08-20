@@ -43,12 +43,21 @@ def test_edge_selectable_returns_only_positive_expectancy(edge_db):
     assert got == ["NR7 Breakout", "Volume Profile POC"]
 
 
-def test_edge_selectable_none_candidates_scans_all(edge_db):
+def test_edge_selectable_none_candidates_is_registry_only(edge_db):
+    """D-031 Decision 1 (docs/roadmap/DECISION_LOG.md, ratified 2026-08-20):
+    candidates=None has no legacy wf_edge exception -- unlike the explicit-
+    candidates branch (test_edge_selectable_returns_only_positive_expectancy
+    above), a strategy with no registry entry is NOT selectable through this
+    path, even with positive wf_edge expectancy. This fixture's
+    registry_governance stub always returns None (see edge_db above), so
+    every wf_edge row here is "unregistered" and none should be selected --
+    this is the exact scan-all/no-registry-check behavior that used to leak
+    through before the fix; it must now return empty."""
     from scheduler.scanner import _edge_selectable
     conn = sqlite3.connect(edge_db)
     got = _edge_selectable(conn, "BBCA", None)
     conn.close()
-    assert got == ["NR7 Breakout", "Volume Profile POC"]
+    assert got == []
 
 
 def test_edge_selectable_unknown_ticker_empty(edge_db):
@@ -58,14 +67,35 @@ def test_edge_selectable_unknown_ticker_empty(edge_db):
     conn.close()
 
 
-def test_get_ticker_best_strategies_uses_edge(edge_db, monkeypatch):
-    """Only positive-expectancy strategies, disabled ones stripped."""
+def test_get_ticker_best_strategies_registry_only_no_admission(edge_db, monkeypatch):
+    """D-031 Decision 1: get_ticker_best_strategies() (the candidates=None
+    caller) is Registry-only -- with this fixture's registry_governance
+    stub always returning None, nothing here has a registry entry, so
+    nothing is selectable regardless of positive wf_edge expectancy or the
+    disabled-strategies filter (which runs after selection and so is now
+    moot -- selection is already empty)."""
     import scheduler.scanner as scanner
     monkeypatch.setattr(scanner, "_get_disabled_strategies",
                         lambda: {"Volume Profile POC"})
     from scheduler.scanner import get_ticker_best_strategies
     got = get_ticker_best_strategies("BBCA")
-    assert got == ["NR7 Breakout"]          # positive edge, not disabled
+    assert got == []
+
+
+def test_get_ticker_best_strategies_selects_approved_strategy(edge_db, monkeypatch):
+    """D-031 Decision 1 positive path: a strategy that IS Registry-APPROVED
+    (ticker in its frozen universe) is still selectable through
+    candidates=None -- the fix is Registry-only, not Registry-blind."""
+    import scheduler.scanner as scanner
+    import engine.registry_loader as rl
+    monkeypatch.setattr(
+        rl, "registry_governance",
+        lambda s: {"BBCA"} if s == "NR7 Breakout" else None,
+    )
+    monkeypatch.setattr(scanner, "_get_disabled_strategies", lambda: set())
+    from scheduler.scanner import get_ticker_best_strategies
+    got = get_ticker_best_strategies("BBCA")
+    assert got == ["NR7 Breakout"]
 
 
 def test_get_ticker_best_strategies_empty_when_no_edge(edge_db):
