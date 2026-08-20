@@ -41,7 +41,7 @@ anything structural.
 | Phase 8 Engineering Plan v1.1         | IMPLEMENTATION READY | Sequence, stage gates                   |
 | Phase 9 Implementation v1.1           | NOT STARTED          | Execution record                        |
 | ADR-001                               | APPROVED             | Framework, state layers, domain diagram |
-| ADR-003                               | PROPOSED             | Server State architecture               |
+| ADR-003                               | APPROVED (2026-08-20) | Server State architecture (TanStack Query) |
 | ADR-005                               | PROPOSED             | Deployment strategy                     |
 | ADR-006                               | PROPOSED             | Legacy Flask UI disposition             |
 
