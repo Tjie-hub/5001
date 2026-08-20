@@ -23,6 +23,7 @@ import { NotFoundPage } from './not-found-page'
 import { getWorkspace, ROUTE_PATHS, type WorkspaceId } from './workspaces'
 import { DecisionPage } from '@domains/decision/decision-page'
 import { SettingsPage } from '@domains/settings/settings-page'
+import { WatchlistPage } from '@domains/watchlist/watchlist-page'
 
 function WorkspaceRoute({ id }: { id: WorkspaceId }) {
   return <WorkspaceShellPage workspace={getWorkspace(id)} />
@@ -56,13 +57,18 @@ export function AppRoutes() {
 
           {/*
             Decision Center — the first Workstream D workspace built (see
-            domains/decision/decision-page.tsx docstring). Every other
-            workspace below except Settings is still the generic placeholder
-            shell; these are the two overrides.
+            domains/decision/decision-page.tsx docstring). Settings and
+            Watchlist are also real (see their own docstrings below); Market,
+            Search, Ticker and Portfolio remain the generic placeholder shell.
           */}
           <Route path={ROUTE_PATHS.decision} element={<DecisionPage />} />
           <Route path={ROUTE_PATHS.portfolio} element={<WorkspaceRoute id="portfolio" />} />
-          <Route path={ROUTE_PATHS.watchlist} element={<WorkspaceRoute id="watchlist" />} />
+          {/*
+            Watchlist — Production OS Slice 2, first workspace built directly
+            on the approved ADR-003 architecture. See
+            domains/watchlist/watchlist-page.tsx docstring.
+          */}
+          <Route path={ROUTE_PATHS.watchlist} element={<WatchlistPage />} />
           <Route path={ROUTE_PATHS.market} element={<WorkspaceRoute id="market" />} />
           <Route path={ROUTE_PATHS.search} element={<WorkspaceRoute id="search" />} />
           {/*
