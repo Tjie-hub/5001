@@ -197,14 +197,16 @@ def main(argv=None) -> int:
 
     budget_s = effective_budget(args.budget_s)
 
-    dates = gap_dates(args.date_from, args.date_to)
-    if args.probe:
-        dates = [dates[0], dates[-1]]
+    raw_dates = gap_dates(args.date_from, args.date_to)
     tickers = _resolve_tickers(args.cat)
 
     frozen_in_window = [d for d in FROZEN_FIXTURE_DATES if args.date_from <= d < args.date_to]
+    # Targeting is decided on the REQUESTED work list, before --probe narrows
+    # it to [first, last] -- otherwise a single-date probe window equal to the
+    # fixture date turns into a 2-element [fixture, fixture] list that this
+    # check would never recognise as "the whole window is the fixture".
     targeted_frozen = [d for d in frozen_in_window
-                       if not args.release_fixture and dates == [d]]
+                       if not args.release_fixture and raw_dates == [d]]
     if targeted_frozen:
         # A run whose ENTIRE work list is the frozen fixture is explicitly
         # targeting it -- refuse loudly unless deliberately released.
@@ -215,6 +217,17 @@ def main(argv=None) -> int:
     if frozen_in_window and not args.release_fixture:
         log(f"NOTE: window includes frozen fixture {frozen_in_window} — this run "
             f"will STOP at the barrier instead of consuming it.")
+
+    dates = raw_dates
+    if args.probe:
+        if not raw_dates:
+            log(f"PROBE: no OHLCV dates in [{args.date_from},{args.date_to}) "
+                f"— nothing to probe, no vendor calls made")
+            return EXIT_OK
+        # Bounded endpoint diagnostic: BBCA only, first+last date. Never the
+        # full --cat universe -- a probe must stay cheap regardless of --cat.
+        dates = [raw_dates[0], raw_dates[-1]]
+        tickers = ["BBCA"] if "BBCA" in tickers else tickers[:1]
 
     log(f"=== Backfill start: {len(dates)} date(s) x {len(tickers)} tickers "
         f"[{args.date_from},{args.date_to}) budget={budget_s}s "

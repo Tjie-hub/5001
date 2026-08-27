@@ -157,3 +157,36 @@ def test_release_fixture_processes_it(sandbox, monkeypatch):
     assert B.main(["--date-from", DATE, "--date-to", "2025-04-15",
                    "--release-fixture"]) == B.EXIT_OK
     assert sandbox["fetch"] == 2  # both tickers fetched on the fixture date
+
+
+# --- --probe is a BOUNDED endpoint diagnostic --------------------------------
+
+
+def test_probe_only_fetches_bbca_not_the_full_universe(sandbox, monkeypatch):
+    """The help text promises 'BBCA on first+last date of range' -- a probe
+    must never cost the full --cat universe."""
+    monkeypatch.setattr(B, "gap_dates", lambda f, t: [OTHER, "2025-01-03"])
+    monkeypatch.setattr(B.sf, "get_tickers", lambda cat: ["BBCA", "ABDA", "TPIA"])
+    assert B.main(["--probe"]) == B.EXIT_OK
+    assert sandbox["fetch"] == 2  # BBCA x 2 dates, never the other tickers
+
+
+def test_probe_with_no_dates_in_range_does_not_crash(sandbox, monkeypatch):
+    """An empty date range must return a documented exit code, not raise."""
+    monkeypatch.setattr(B, "gap_dates", lambda f, t: [])
+    assert B.main(["--probe"]) == B.EXIT_OK
+    assert sandbox["fetch"] == 0
+
+
+def test_probe_targeting_the_frozen_fixture_is_refused(sandbox, monkeypatch):
+    """A single-date probe window equal to the frozen fixture must be refused
+    with EXIT_FROZEN_FIXTURE, exactly like a non-probe run -- not silently
+    accepted as exit 0."""
+    monkeypatch.setattr(B, "gap_dates", lambda f, t: [DATE])
+
+    def no_fetch(*a, **k):
+        raise AssertionError("vendor call on frozen fixture during probe!")
+    monkeypatch.setattr(B.sf, "fetch_flow", no_fetch)
+    assert B.main(["--date-from", DATE, "--date-to", "2025-04-15",
+                   "--probe"]) == B.EXIT_FROZEN_FIXTURE
+    assert sandbox["fetch"] == 0
