@@ -1,0 +1,33 @@
+{
+ "admissibility_module_sha256": "5e58745e6b824a274242ba2282b84bbb857d21953f15058304f288b776d55dc2",
+ "admissible_bar_rows": 20070910,
+ "admissible_sessions": 77,
+ "admissible_ticker_days": 62162,
+ "admissible_tickers": 868,
+ "builder_sha256": "bf541a836e5955c67843c292638ff883624b10aa824566652bb39767a13626c7",
+ "built_utc": "2026-09-14T07:04:35.716192+00:00",
+ "cutoff_wib": "16:15:00",
+ "dataset_version": "I7-admissible-v003",
+ "epit1_excluded_ticker_days_with_bars": 239695,
+ "exclusions_in_window": {
+  "E-PIT-2": 3002,
+  "E-PIT-3": 6629,
+  "E-PIT-4": 11021
+ },
+ "freeze_status": "FROZEN",
+ "outcome_blind": "no close, return, or outcome column is read by the builder",
+ "rules": {
+  "E-PIT-1": "historical/backfilled v002 interval excluded wholesale",
+  "E-PIT-2": "no contemporaneous provenance (write lag outside 0..1 days)",
+  "E-PIT-3": "same-day capture before the 16:15 WIB post-session cutoff",
+  "E-PIT-4": "bars absent, or n_bars != the weekday structural grid"
+ },
+ "session_range": [
+  "2026-04-28",
+  "2026-09-11"
+ ],
+ "source_production_db": "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db",
+ "store_bytes": 913985536,
+ "store_sha256": "a4a9f7f90a8d3610d5f86163528f7f6fbde0994d8bb14651001bc16cd86ba0e0",
+ "v002_last_session": "2026-04-27"
+}
