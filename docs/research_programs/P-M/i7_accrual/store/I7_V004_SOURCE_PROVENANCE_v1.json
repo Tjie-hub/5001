@@ -1,0 +1,48 @@
+{
+ "artifact": "I7_V004_SOURCE_PROVENANCE",
+ "checked_utc": "2026-09-14T12:20:57.350785+00:00",
+ "describes_freeze": {
+  "store": "I7_V004_ADMISSIBLE_v1.sqlite",
+  "store_sha256": "e1375264133b42f417d8e74f48a48646197d15b8961e3bdf431d6eebc8784fba"
+ },
+ "purpose": "records the v004 source-state dependency explicitly (forensic audit reservation R7); NOT a content hash of the source database",
+ "reproducibility_statement": "v004 CANNOT be reproduced byte-for-byte from the recorded inputs: its source is mutable and unhashed, and the builder stamps built_utc. It CAN be re-derived in content for any cell whose source rows are unchanged, which the spot check evidences for the sampled cells. This is a known, declared limitation, not a defect introduced by the v004 correction \u2014 it is inherent to accruing from a live vendor-fed table, and is the gap the prospective capture service closes for future sessions.",
+ "schema_fingerprint": {
+  "evidential_strength": "STRONG for schema, silent on content",
+  "sha256_over_sqlite_master_sql": "cabe892cc70e87ab263f1c9ac939aa7d42eb7d8ee65f82b2a3bc28146d66689c",
+  "tables": [
+   "stockbit_flow",
+   "stockbit_flow_bars"
+  ]
+ },
+ "source_agreement_spot_check": {
+  "cells_agreeing": 200,
+  "cells_disagreeing": 0,
+  "disagreements": [],
+  "evidential_strength": "STRONGEST AVAILABLE \u2014 directly compares frozen content against live source",
+  "method": "deterministic evenly-spaced sample of frozen ADMITTED cells; recompute bar count from production via the primary-key range scan and compare to the frozen ledger",
+  "sample_size": 200
+ },
+ "source_database": {
+  "byte_size": 13722992640,
+  "content_hash": null,
+  "content_hash_note": "deliberately not computed: 13.7 GB, live, and changes daily \u2014 a hash would be stale before it could be used",
+  "evidential_strength": "WEAK \u2014 mutable, live, continuously written by production cron. Size and mtime are NOT content hashes and do not pin state.",
+  "mtime_utc": "2026-09-14T12:00:42.435808+00:00",
+  "path": "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db"
+ },
+ "source_extents_at_check_time": {
+  "evidential_strength": "MODERATE \u2014 pins the observed span, not the values inside it",
+  "stockbit_flow": {
+   "max_trade_date": "2026-09-14",
+   "min_trade_date": "2025-01-02",
+   "rows": 378090
+  },
+  "stockbit_flow_bars": {
+   "max_trade_date": "2026-09-14",
+   "min_trade_date": "2025-01-02",
+   "rows": "not counted \u2014 ~98M rows, no covering index for a windowed count"
+  }
+ },
+ "version": "v1"
+}

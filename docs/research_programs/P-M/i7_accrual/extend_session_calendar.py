@@ -7,15 +7,33 @@ Remediates the X3 defect recorded in
 ("non-admitted sessions per session_calendar") is unevaluable for the 11
 v003-era sessions 2026-08-28..2026-09-11.
 
-This builder applies the BASE CALENDAR'S OWN ADMISSION RULE — verbatim from
-`dataset_b/build_calendar_and_roster.py`: candidate = trading_calendar date;
-excluded if no roster period covers it, if no IHSG bar (unconfirmed IDX
-session), or if PIT-member price coverage (non-null ohlcv close) < 0.95 — to
-the extension window, from source data, read-only.
+CORRECTION — forensic audit reservation R2 (applied post-freeze)
+----------------------------------------------------------------
+An earlier version of this docstring claimed the base rule was applied
+"verbatim ... nothing added". THAT CLAIM WAS FALSE. The base rule in
+`dataset_b/build_calendar_and_roster.py::build_calendar` has FOUR gates; the
+original implementation here had THREE — the `NAMED_EXCLUSIONS` gate was
+omitted.
 
-NO rule is changed and NO threshold is retuned: COVERAGE_THRESHOLD=0.95 and
-the IHSG-confirmation predicate are copied as they stand. The base artifact is
-verified against its recorded sha256 before use and is never modified.
+The omission was immaterial to the frozen artifact: `NAMED_EXCLUSIONS` holds
+exactly one date, 2026-08-25, which lies OUTSIDE this extension window
+(2026-08-28..2026-09-11). That is proven rather than assumed —
+`session_calendar_predicate.verify_extension_artifact()` re-evaluates the
+window under the FULL four-gate rule and reproduces the frozen artifact's
+admitted set (11/11), excluded count (0) and every per-session coverage figure
+exactly. Validation gate 8 runs that proof on demand.
+
+This module now DELEGATES to `session_calendar_predicate.admit()`, which
+IMPORTS `NAMED_EXCLUSIONS` and `COVERAGE_THRESHOLD` from the base builder
+instead of copying them, so the predicate cannot drift from its source. No rule
+is changed and no threshold is retuned. The base artifact is verified against
+its recorded sha256 before use and is never modified.
+
+The frozen artifact `store/I7_SESSION_CALENDAR_EXTENSION_v1.json` was produced
+by the three-gate version and is deliberately NOT rebuilt: it is immutable, and
+its decisions are identical under the corrected predicate. Any future artifact
+built by this module will carry an `excluded[].gate` field the frozen one
+lacks — new versions get new files.
 
 Output: store/I7_SESSION_CALENDAR_EXTENSION_v1.json (+ .sha256), frozen
 read-only. The v004 cohort builder consumes it; the v003 freeze and the
@@ -43,9 +61,10 @@ OUT = os.path.join(HERE, "store", "I7_SESSION_CALENDAR_EXTENSION_v1.json")
 #: readiness review lists as X3-unevaluable (calendar end .. v003 last session).
 EXT_WINDOW = ("2026-08-28", "2026-09-11")
 
-#: Copied verbatim from build_calendar_and_roster.py (declared there as
-#: "0.95 is declared here, not tuned"; measured distribution is bimodal).
-COVERAGE_THRESHOLD = 0.95
+#: IMPORTED, never copied (R2). `session_calendar_predicate` re-exports the
+#: base builder's own constant, so this cannot drift from it.
+import session_calendar_predicate as SCP  # noqa: E402
+from session_calendar_predicate import COVERAGE_THRESHOLD  # noqa: E402
 
 
 def ro(path):
@@ -81,60 +100,15 @@ def verify_base_artifact():
 
 def evaluate_extension(conn):
     """The base calendar's admission rule, applied to the extension window.
-    Copied from build_calendar_and_roster.py::build_calendar; nothing added."""
+
+    R2: this now DELEGATES to `session_calendar_predicate.admit()` — the single
+    shared implementation of the base rule, including the `NAMED_EXCLUSIONS`
+    gate this module originally omitted. Nothing is copied and no threshold is
+    redeclared; the predicate imports both from
+    `dataset_b/build_calendar_and_roster.py`.
+    """
     lo, hi = EXT_WINDOW
-    periods = conn.execute(
-        "SELECT period_label, effective_from, effective_to "
-        "FROM idx80_reconstitution_periods ORDER BY effective_from").fetchall()
-
-    def period_for(d):
-        for lbl, frm, to in periods:
-            if frm <= d and (to is None or d <= to):
-                return lbl
-        return None
-
-    cal = [r[0] for r in conn.execute(
-        "SELECT date FROM trading_calendar "
-        "WHERE date >= ? AND date <= ? ORDER BY date", (lo, hi))]
-    ihsg = {r[0] for r in conn.execute(
-        "SELECT DISTINCT date FROM ohlcv "
-        "WHERE ticker='IHSG' AND date >= ? AND date <= ?", (lo, hi))}
-
-    admitted, excluded, detail = [], [], []
-    for d in cal:
-        lbl = period_for(d)
-        members = [r[0] for r in conn.execute(
-            "SELECT ticker FROM idx80_membership_history "
-            "WHERE period_label=? AND membership_status='MEMBER'", (lbl,))] \
-            if lbl else []
-        if not members:
-            excluded.append({"date": d,
-                             "reason": "no roster period covers this session"})
-            continue
-        if d not in ihsg:
-            excluded.append({"date": d,
-                             "reason": "no IHSG bar (not a confirmed IDX session)"})
-            continue
-        # member price coverage: one parameterized scan of the session's bars,
-        # counted against the member set in Python (no dynamic IN clause)
-        member_set = set(members)
-        have = sum(1 for (tk,) in conn.execute(
-            "SELECT ticker FROM ohlcv WHERE date=? AND close IS NOT NULL",
-            (d,)) if tk in member_set)
-        cov = have / len(members)
-        row = {"date": d, "period": lbl, "members": len(members),
-               "with_price": have, "coverage": round(cov, 4),
-               "ihsg_bar": True}
-        if cov < COVERAGE_THRESHOLD:
-            row["verdict"] = "EXCLUDED"
-            row["reason"] = "member price coverage below threshold"
-            excluded.append({"date": d, "reason": row["reason"],
-                             "coverage": round(cov, 4), "members": len(members)})
-        else:
-            row["verdict"] = "ADMITTED"
-            admitted.append(d)
-        detail.append(row)
-    return admitted, excluded, detail
+    return SCP.admit(conn, lo, hi)
 
 
 def main():
@@ -188,8 +162,17 @@ def main():
                           "sha256": BASE_SHA_RECORDED,
                           "last_session": base_last},
         "admission_rule": {
-            "source": "dataset_b/build_calendar_and_roster.py::build_calendar "
-                      "(applied verbatim; nothing added)",
+            "source": "dataset_b/build_calendar_and_roster.py::build_calendar, "
+                      "applied via the shared predicate "
+                      "i7_accrual/session_calendar_predicate.py::admit, which "
+                      "IMPORTS NAMED_EXCLUSIONS and COVERAGE_THRESHOLD from "
+                      "that module rather than copying them",
+            "gates": list(SCP.GATE_ORDER),
+            "r2_note": "the frozen v1 artifact was produced by an earlier "
+                       "three-gate implementation that omitted NAMED_EXCLUSIONS; "
+                       "immaterial here (its only member, 2026-08-25, is outside "
+                       "this window) and proven identical by "
+                       "session_calendar_predicate.verify_extension_artifact()",
             "coverage_threshold": COVERAGE_THRESHOLD,
             "ihsg_confirmation": True,
             "membership_source": "idx80_membership_history (status='MEMBER') "
