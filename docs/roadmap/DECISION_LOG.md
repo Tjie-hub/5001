@@ -1204,6 +1204,147 @@ methodology files.
 
 ---
 
+## 2j. C7 governance — ratifications, semantic hard gate, EXPERIMENT_LEDGER, and C7 execution authorization, 2026-09-11
+
+**Scope note:** the Owner decisions below were issued via the ZCode execution session (external to this
+repository) and are recorded **on the same basis as D-032/D-033/D-048** — as receipts of Owner directives.
+This section ratifies the forensic reclassifications, adopts the all-broker-net semantic hard gate,
+receipts the Dataset B freeze, ratifies the C7 NF construction, adopts the EXPERIMENT_LEDGER, and
+authorizes `c7_registered=true`. **C7 execution itself was separately authorized by the Owner** and is
+executed under `g1_harness/C7_REGISTRATION_v1_2026-09-11.md` as registered — no methodology change.
+
+### D-049 · Historical reclassifications ratified; all-broker-net semantic hard gate adopted; C7 NF ratified; EXPERIMENT_LEDGER adopted; Dataset B freeze receipted; c7_registered authorized
+**Status:** APPROVED · **Date:** 2026-09-11 · **Type:** Governance ratification + research-gate adoption · **Approval authority:** Owner
+
+**R-1 · Historical reclassifications (owner-ratified; original records preserved):**
+- **HYP-PM-0003 → INVALID — DATA/SEMANTICS.** The registered predictor `SUM(lot)` is the exchange
+  accounting identity (independently measured: identically zero on 68.10% of the 97,762 ticker-days in
+  the Dataset A window; |net|/Σ|lot| p90 = 0.002). The registered F2 remains the historical outcome for
+  the registered artifact predictor; substantively, the M2.1/I7 hypothesis was never tested on a valid
+  directional observable.
+- **BROKER-001 / BFI-001 PRIMARY (BFI_broad = NV/GV) → INVALID — DATA.** Independently measured on the
+  exact Dataset A window: |NV/GV| p50 = 0.0, p90 = 0.00201, p99 = 0.0146, max = 0.0602 (near-degenerate;
+  P(≥0.2) = 0). BFI-001's structure secondaries (CONC t=−2.65 Holm 0.097; BREADTH t=+2.41 Holm 0.164;
+  LOKAL t=+2.43 Holm 0.164) remain **VALID → NOT CONFIRMED** footprints.
+- **G1 C2 → INVALID — SPECIFICATION.** The registered "conduit disagreement" state is algebraically
+  coupled (`for + loc + pem ≡ 0`, integer-exact in 100.00% of 30,877 frozen-store cells) and the
+  execution gate (gross-participation ≥ 15%) inflates incidence 26.6% → 72.5% versus the descriptive
+  net-share form. The C2 G1 number is reportable only as an unconditional thresholded foreign-net
+  direction contrast.
+
+**R-2 · All-broker-net semantic hard gate (ADOPTED as a pre-execution gate; appended to
+DATASET_B_SEMANTIC_REGISTER):** all-broker aggregate net flow constructed from the two sides of the same
+transaction population MUST NOT be treated as a directional predictor; any net/gross quantity must first
+pass the five-part validation (accounting identity, semantic source, aggregation level, truncation
+behavior, PIT availability) recorded in `g1_harness/G1_POSTMORTEM_FAMILY_TRIAGE_2026-09-11.md` Part G and
+enforced for C7 in `run_c7`'s registered outcome check (intensity = gross/ADV20 — a Σ|value|
+construction, not a net).
+
+**R-3 · C7 NF ratified:** `NF = (buy_lot − sell_lot)/(buy_lot + sell_lot)` from production `stockbit_flow`
+(T+1 availability; market-flow-control interpretation only; zero-denominator excluded; window digest
+`60f5f91c…` re-verified pre-run). Note: C7's registered outcome/contrast does not consume NF — the
+ratification removes the ambiguity flag only.
+
+**R-4 · EXPERIMENT_LEDGER adopted:** `docs/research_programs/EXPERIMENT_LEDGER.jsonl` — non-destructive
+unified index over HYPOTHESIS_REGISTRY, research.db (hypotheses/failure_registry/gate_decisions), the
+DECISION_LOG receipts, and the g1_harness registration artifacts. Existing registries remain append-only
+sources of record; the ledger is the derived canonical index and is itself append-only.
+
+**R-5 · Dataset B freeze receipted:** store sha256 `21661f03…`, freeze manifest v1
+(`DATASET_B_FREEZE_MANIFEST_v1.json`, sidecar `95f2c998…`), FINGERPRINT_v2 `1a68ab1c…` — reproduced at
+freeze and re-verified at C7 preflight.
+
+**R-6 · `c7_registered = true` authorized** (C7_REGISTRATION_v1, owner-approved six decisions of
+2026-09-11). Freq remains UNKNOWN/UNUSED on the C7 path (freq-free by construction, poison-tested).
+
+**Not authorized by this entry:** H0–H3/P0 reconstruction (original remains NOT FOUND); D-032 Items C/D
+resolution; any C1a/C1b revival; any methodology/threshold/horizon/inference change.
+
+**Files changed:** this entry · `DATASET_B_SEMANTIC_REGISTER_v1.json` (appended gate entry) ·
+`EXPERIMENT_LEDGER.jsonl` (new) · `FAILURE_REGISTRY.md` (owner-ratification annotation) ·
+`HYPOTHESIS_REGISTRY.md` (HYP-PM-0003 reclassification annotation) · `g1_config.json` (`c7_registered=true`).
+
+**Related:** D-032, D-033, D-048 · `G1_GOVERNANCE_CLOSEOUT_2026-09-11.md` ·
+`OWNER_DECISION_PACKET_FAMILY_ASSIGNMENT_2026-09-11.md` · `C7_REGISTRATION_v1_2026-09-11.md` ·
+`FOUR_TEST_IDENTITY_AND_REGISTRY_AUDIT_2026-09-11.md`.
+
+---
+
+## 2k. I7 registration authorization — D-1 population, D-2 power/MDE ruling, 2026-09-14
+
+### D-050 · I7 (intraday execution timing): v004 PIT population accepted; ex-ante statistical power/MDE requirement closed by Owner ruling at the 0.60% economic floor; registration authorized
+**Status:** APPROVED · **Date:** 2026-09-14 · **Type:** Research-scope owner decision (population + ex-ante criterion + registration authorization) · **Approval authority:** Owner / CRO
+
+**Context.** I7 — *intraday execution timing / adverse-selection sequencing*, mechanism class M2, taxonomy
+entry **I7** — reached G1 with five of six §5.2 intake elements satisfied and two Owner decisions
+outstanding (`I7_OWNER_DECISION_PACKAGE_2026-09-14.md`).
+
+**D-1 · Population substitution — ACCEPTED.** The PIT-valid **v004** cohort is I7's registration
+population, superseding the ~277-session historical window described in the candidate specification §7/§12,
+from which it is **disjoint**. Bound **by fingerprint, not by name** (`RESEARCH_OBJECT_SCHEMA` l.233):
+
+| Field | Value |
+|---|---|
+| Sessions · window | **76** · 2026-04-28 → 2026-09-11 |
+| Admissible ticker-days · tickers · bar rows | **61,335** · **868** · **19,793,865** |
+| Store sha256 | `e1375264133b42f417d8e74f48a48646197d15b8961e3bdf431d6eebc8784fba` |
+
+The historical interval is excluded wholesale under **E-PIT-1**: 99.41% of its cells were written >120 days
+after their session (median lag **364 days**), which `LITERATURE_RESEARCH_STANDARD` bias **B3** classes as
+*"F7 look-ahead in the source itself"*. Acceptance was available as a population declaration rather than a
+preregistration amendment because I7 was in **DRAFT** (HL-2: *"Before it, refine freely"*). §7/§12 are
+superseded **as descriptions**, not as parameters. **Closed.**
+
+**D-2 · Ex-ante MDE / assumed σ / feasibility gate — CLOSED BY OWNER RULING.** The Owner explicitly
+authorizes I7 to proceed **without an ex-ante statistical power/MDE claim beyond the already-authorized
+0.60% economic/friction floor**.
+
+- **Retained:** the **0.60% round-trip friction floor** from the versioned cost authority
+  (`engine/exits/costs.py`), authoritatively supported by the ratified `HYP-PM-0001_POWER` §3–§4
+  methodology (*"the ex-ante MDE must be economic, not statistical"*), by program gate **F4**
+  (`RESEARCH_PROGRAM` §6.1) and by **PR-3** (`EXPERIMENT_STANDARD` §1 Q2). It is already declared in the I7
+  specification §14 (`theta_net = theta_primary − 0.006`).
+- **Accepted as a governance limitation:** the absence of an authoritative, I7-specific **assumed σ** and of
+  an applicable **feasibility gate**. A corpus search (`I7_D2_METHODOLOGY_SEARCH_2026-09-14.md`,
+  `I7_D2_EVIDENCE_RECORD_2026-09-14.md`) found neither.
+- **Explicitly NOT filled** by estimation from the frozen cohort, by analogy to HYP-PM-0001 / HYP-PM-0003 /
+  C7 / HYP-PM-0008, or by newly invented methodology. **No power-derived minimum-N or stopping rule exists
+  for I7**, and none may be introduced post-registration (R15).
+
+**Consequence for interpretation, recorded now:** I7 carries **no power claim**. A non-rejection is
+therefore **not** evidence of absence, and must never be reported as one. This is the same limitation the
+Owner recorded for C7 (D-049 lineage, `C7_REGISTRATION_v1` §3 item 5), reached here on its own evidence
+rather than by analogy.
+
+**Also recorded at registration:** the **R7 provenance limitation** — PIT status rests on
+`stockbit_flow.updated_at`, a same-commit write timestamp; the vendor's original payload is not preserved,
+so the cohort supports *"this system held these values contemporaneously"* but not *"the original vendor
+response is independently re-verifiable"*. A **verification**, not an availability, limitation.
+`point_in_time` is declared **true with this qualification**; `custody_partition` is **in-sample**.
+The **B4 limitation** (Papan Pemantauan Khusus / board membership unidentifiable) is likewise declared.
+
+**Registration authorized** conditional on all other G1 gates passing, which were verified before the
+transition: 27/27 tests, 8/8 executable validation gates, ledger reconciliation exact and MECE, v003
+immutable, cohort unchanged.
+
+**Family effect.** I7 registers as **HYP-PM-0009**, the **third** member of **P-M {I5, I6, I7, I12}**
+(D-028), joining HYP-PM-0001 (FAILED F2) and HYP-PM-0003 (FAILED F2 → INVALID-DATA). The slot is permanent
+(PG-3, OS-10). `HYP-PM-0002` remains DRAFT and consumes no slot; `HYP-PM-0007` remains provisionally
+reserved for the unratified BROKER-001 alias; `HYP-PM-0008` is an unregistered DRAFT (I1 price-limit).
+
+**Not authorized by this entry:** execution of I7; any change to the cohort, exclusions, estimator, primary
+endpoint, threshold, inference, multiplicity or decision rule; any variant or follow-up; any retest of C3 or
+C7; activation of the prospective capture service.
+
+**Files changed:** this entry · `HYPOTHESIS_REGISTRY.md` (HYP-PM-0009 row + family ledger) ·
+`HYP-PM-0009_REGISTERED.md` (new frozen record).
+
+**Related:** D-028 (family declaration) · D-049 (semantic gate; C7 MDE precedent) ·
+`I7_OWNER_DECISION_PACKAGE_2026-09-14.md` · `I7_G1_GAP_CLOSURE_2026-09-14.md` ·
+`I7_D2_EVIDENCE_RECORD_2026-09-14.md` · `I7_ACCRUAL_READINESS_2026-09-14.md`.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

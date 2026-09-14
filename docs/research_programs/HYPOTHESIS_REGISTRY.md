@@ -2,7 +2,7 @@
 
 > The operating index of hypotheses across active programs. A hypothesis is **counted in its program's multiplicity family from G1/REGISTERED and never leaves** (PG-3, OS-10). This registry is append-only in spirit: status advances by adding a superseding record, never by silent edit ([[HYPOTHESIS_LIFECYCLE]] HL-1/HL-2).
 
-**Owner:** Research Director / CRO · **Last updated:** 2026-09-11 · **Governed by:** [[HYPOTHESIS_LIFECYCLE]] · [[RESEARCH_PROGRAM]]
+**Owner:** Research Director / CRO · **Last updated:** 2026-09-14 · **Governed by:** [[HYPOTHESIS_LIFECYCLE]] · [[RESEARCH_PROGRAM]]
 
 ## Registered & in-flight
 
@@ -13,6 +13,7 @@
 | **HYP-PM-0004** | P-M · C-family · **C2** conduit disagreement | foreign/locally-owned brokerage net-flow disagreement → forward-return resolution (unconditional daily contrast form) | **INVALID (governance)** — executed in G1 Run 1 2026-09-11, NOT CONFIRMED (Holm p = 1.0); registered species-mix control unimplementable (freq-dependent) | `docs/research_programs/P-M/g1_harness/G1_REGISTRATION_v1_2026-09-11.md` · `G1_FINAL_EXECUTION_REPORT_2026-09-11.md` · DECISION_LOG D-048 | **C-family consumed** (1st member) |
 | **HYP-PM-0005** | P-M · C-family · **C3** breadth surprise | breadth-surprise state (±0.30 vs trailing median) → forward-return continuation (daily state contrast) | **NOT CONFIRMED (VALID, bounded)** — executed G1 Run 1 2026-09-11, primary k=5 Holm p = 1.0; determinate null, 329 daily observations | same registration · `G1_FINAL_EXECUTION_REPORT_2026-09-11.md` | **C-family consumed** (2nd member) |
 | **HYP-PM-0006** | P-M · C-family · **C7** intensity-state | gross/ADV20 ≥ 2.0 state → registered outcome (directional forward return; high vs non-high daily contrast) | **REGISTERED** 2026-09-11 (`C7_REGISTRATION_v1_2026-09-11.md`) · pending execution (gated) | `C7_REGISTRATION_v1_2026-09-11.md` · `C7_REGISTRATION_READINESS_2026-09-11.md` | **C-family registered** (3rd member — not yet executed) |
+| **HYP-PM-0009** | P-M · {I5,I6,I7,I12} | **I7 intraday execution timing** — informed/size-constrained execution back-loads within the session; conditional on a net-buying day, back-loaded net buying is followed by higher subsequent return than front-loaded net buying of the same sign (M2 · adverse selection) | **REGISTERED** 2026-09-14 · pending execution | [[HYP-PM-0009_REGISTERED]] · sha256 `d19dfd0f…` · DECISION_LOG **D-050** · cohort v004 `e1375264…` | **consumed** (3rd P-M member) |
 | **HYP-PA-0001** | P-A · {I2,I3,I8} | reconstitution closing-auction dislocation (I8→I2) | **FAILED** (F2) 2026-08-19 · was REGISTERED 2026-07-19T00:19:47Z | [[HYP-PA-0001_REGISTERED]] · sha256 `3692e69a…` · [[FAILURE_ENTRY]] · [[EVIDENCE_PACKAGE]] | **consumed** (1st P-A member) |
 
 ## Status legend
@@ -23,7 +24,7 @@
 
 | Program | Family (append-only) | Members registered | Notes |
 |---|---|---|---|
-| **P-M · Microstructure Flow** | {I5, I6, I7, I12} | **2** — HYP-PM-0001, HYP-PM-0003 | family opened at first registration (D-028, PG-3); HYP-PM-0003 registered 2026-09-09 as the 2nd member, counted independently of unregistered HYP-PM-0002 (Option B/OS-10, CRO-adopted) — HYP-PM-0002 remains DRAFT and consumes no slot |
+| **P-M · Microstructure Flow** | {I5, I6, I7, I12} | **3** — HYP-PM-0001, HYP-PM-0003, HYP-PM-0009 | family opened at first registration (D-028, PG-3); HYP-PM-0003 registered 2026-09-09 as the 2nd member, counted independently of unregistered HYP-PM-0002 (Option B/OS-10, CRO-adopted) — HYP-PM-0002 remains DRAFT and consumes no slot |
 | **P-M · C-family** | {C2, C3, C7} | **3** — HYP-PM-0004 (C2, INVALID), HYP-PM-0005 (C3, NOT CONFIRMED), HYP-PM-0006 (C7, pending execution) | family opened per **D-048** (2026-09-11, Owner Option B): separately-denominated from {I5,I6,I7,I12} — no I-taxonomy assignment made or inferred; C1a/C1b WITHDRAWN pre-execution and not counted; C2's INVALID is governance (controls unimplementable), not an empirical refutation; C7 execution gated (`c7_registered=false` + runs/<run_id> provenance wrapper per D-048) |
 | **P-A · Auction Dislocation** | {I2, I3, I8} | **1** — HYP-PA-0001 | family opened at first registration (D-028, PG-3); registered 2026-07-19 on realized WP-D N=210/K=13 window |
 
@@ -63,4 +64,25 @@
   (`HYP-PM-0006`) is REGISTERED and execution-gated. Full receipts: DECISION_LOG **D-048** ·
   `docs/research_programs/P-M/g1_harness/G1_FINAL_EXECUTION_REPORT_2026-09-11.md` ·
   `G1_POSTMORTEM_FAMILY_TRIAGE_2026-09-11.md`.
+- **HYP-PM-0009** — **REGISTERED 2026-09-14** per Owner/CRO ruling [[DECISION_LOG]] **D-050**. Mechanism
+  **M2 / I7 · intraday execution timing**: informed and size-constrained participants back-load execution
+  within the session, so conditional on a net-buying day, back-loaded net buying should be followed by
+  higher subsequent return than front-loaded net buying of the same sign. **H₀ : `theta_primary ≤ 0`**
+  against **H₁ : `theta_primary > 0`** — one-sided; a negative `theta_primary` is a NON-REJECTION, never a
+  reversed finding. Population is the **v004 PIT-valid cohort**, bound by fingerprint
+  `e1375264133b42f417d8e74f48a48646197d15b8961e3bdf431d6eebc8784fba` — 76 sessions (2026-04-28 →
+  2026-09-11), 61,335 admissible ticker-days, 868 tickers, 19,793,865 bar rows — accepted under D-1 and
+  **disjoint** from the ~277-session historical window the candidate specification described, which is
+  excluded wholesale under E-PIT-1 (99.41% of its cells written >120 days after their session, median lag
+  364 days; bias **B3 / F7**). **Ex-ante criterion: the 0.60% round-trip friction floor only.** Per D-050
+  the Owner authorized I7 to proceed **without an ex-ante statistical power/MDE claim**, accepting the
+  absence of an authoritative I7-specific σ and feasibility gate as a **governance limitation** — not
+  filled by estimation, analogy, or invented methodology. **Consequently I7 carries no power claim: a
+  non-rejection is not evidence of absence and must never be reported as one.** Declared limitations: **R7
+  provenance** (PIT rests on a same-commit `updated_at` write timestamp; the vendor's original payload is
+  not preserved — a *verification*, not an availability, limitation; `custody_partition: in-sample`) and
+  **B4** (Papan Pemantauan Khusus / board membership unidentifiable). Pre-registration verification: 27/27
+  tests, 8/8 executable validation gates, ledger exact and MECE. **NOT EXECUTED** — registration stopped
+  before execution per the Owner's instruction. Terminal reachable tier **C2** (EV-9, N=1). See
+  [[HYP-PM-0009_REGISTERED]] (frozen, sha256 `d19dfd0f…`).
 - **HYP-PA-0001** — **EXP-PA-0001 executed 2026-08-19 → FAILED, mode F2 · Prediction failure.** Test 1 (primary, gross, both directions, n=180, G=13): mean signed reversal +0.7261%, SE(CR1) 0.5026%, t=1.445, CI95 [−0.3691%, +1.8212%] — CI includes zero. Test 2 (capturable, DELETE-only, n=98): gross −0.2488% → net of 0.60% friction −0.8488%. Both failed ⇒ refuted per the frozen rule. Exact wild cluster bootstrap (all 2^13 sign vectors) agrees with the asymptotic test on every sample. **Substantive finding: the mechanism is directional, not symmetric** — ADD-side +1.8911% (CI95 [+0.6677%, +3.1144%], WCB p=0.0132, robust to all 13 leave-one-cluster-out refits, positive in 11/13 review dates) versus DELETE-side −0.2488%. Pre-registered gross-only and **not capturable** (shorting-constrained on IDX, C-4); it does not rescue the hypothesis. Realised power was ~4× better than the pre-registered MDE assumed, so the pooled null is informative, not underpowered. Terminal (HL-3); continuation only via T12. Receipts: [[FAILURE_ENTRY]] · [[EVIDENCE_PACKAGE]]. See [[FAILURE_REGISTRY]].
