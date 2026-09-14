@@ -1,0 +1,72 @@
+{
+ "admissibility_module_sha256": "5e58745e6b824a274242ba2282b84bbb857d21953f15058304f288b776d55dc2",
+ "admissible_bar_rows": 19793865,
+ "admissible_sessions": 76,
+ "admissible_ticker_days": 61335,
+ "admissible_tickers": 868,
+ "builder_sha256": "187e71c0224dd1eaa94f8b057f634a4674317fd99a1f764e82bd33f183a7682e",
+ "built_utc": "2026-09-14T10:38:11.447426+00:00",
+ "candidate_cells": 82814,
+ "cutoff_wib": "16:15:00",
+ "dataset_version": "I7-admissible-v004",
+ "epit1_excluded_ticker_days_with_bars": 239695,
+ "exclusions_in_window": {
+  "E-PIT-2": 2044,
+  "E-PIT-3": 1507,
+  "E-PIT-4": 10890,
+  "X3": 7038
+ },
+ "freeze_status": "FROZEN",
+ "outcome_blind": "no close, return, or outcome column is read by the builder; admissible() signature unchanged (session_date, captured_at_wib, n_bars)",
+ "rules": {
+  "E-PIT-1": "historical/backfilled v002 interval excluded wholesale",
+  "E-PIT-2": "no contemporaneous provenance (write lag outside 0..1 days)",
+  "E-PIT-3": "same-day capture before the 16:15 WIB post-session cutoff",
+  "E-PIT-4": "bars absent, or n_bars != the weekday structural grid"
+ },
+ "same_day_pre_cutoff_cells_admitted": 0,
+ "session_calendar": {
+  "base": {
+   "artifact": "DATASET_B_SESSION_CALENDAR_v2.json",
+   "last_session": "2026-08-27",
+   "sessions": 386,
+   "sha256": "5012be2315dc82ccfd65a2b117e1977753f0a7d3214693821b39077cd18043fa"
+  },
+  "extension": {
+   "artifact": "I7_SESSION_CALENDAR_EXTENSION_v1.json",
+   "sessions": 11,
+   "sha256": "a7a4eedf45f3d4b2ced4f9a9f2d90d28e011ef0425b115c127a04fcdda0f189e",
+   "window": [
+    "2026-08-28",
+    "2026-09-11"
+   ]
+  }
+ },
+ "session_range": [
+  "2026-04-28",
+  "2026-09-11"
+ ],
+ "source_production_db": "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db",
+ "spec_exclusions_x1_to_x6": {
+  "X1": "subsumed by E-PIT-1 (2025-04-14 fixture <= 2026-04-27 boundary; asserted by the builder)",
+  "X2": "subsumed by E-PIT-1 (2025-08-04..2025-09-17 zone <= 2026-04-27 boundary; asserted by the builder)",
+  "X3": "ENFORCED at cohort layer: session not admitted by session_calendar (base v2 + extension v1); excluded sessions in window: ['2026-05-01', '2026-05-14', '2026-05-15', '2026-05-28', '2026-06-16', '2026-07-09', '2026-07-24', '2026-09-14']",
+  "X4": "ENFORCED as E-PIT-4 (bars present, n_bars == weekday grid)",
+  "X5": "ESTIMATION-LAYER (ohlcv: corporate action t/t+1/t+2, RAJA, close(t)<100, liquidity floor) \u2014 applied and counted by the estimator; deliberately not applied at accrual",
+  "X6": "ESTIMATION-LAYER (t,t+1,t+2 consecutivity) \u2014 applied and counted by the estimator; deliberately not applied at accrual"
+ },
+ "store_bytes": 901668864,
+ "store_sha256": "e1375264133b42f417d8e74f48a48646197d15b8961e3bdf431d6eebc8784fba",
+ "supersedes": "I7-admissible-v003 (mechanical correction only: X3 enforcement + calendar extension; substantive specification unchanged; v003 left immutable)",
+ "v002_last_session": "2026-04-27",
+ "x3_excluded_sessions_in_window": [
+  "2026-05-01",
+  "2026-05-14",
+  "2026-05-15",
+  "2026-05-28",
+  "2026-06-16",
+  "2026-07-09",
+  "2026-07-24",
+  "2026-09-14"
+ ]
+}

@@ -1,0 +1,140 @@
+{
+ "admission_rule": {
+  "coverage_threshold": 0.95,
+  "ihsg_confirmation": true,
+  "membership_source": "idx80_membership_history (status='MEMBER') via idx80_reconstitution_periods",
+  "source": "dataset_b/build_calendar_and_roster.py::build_calendar (applied verbatim; nothing added)"
+ },
+ "admitted_count": 11,
+ "admitted_sessions": [
+  "2026-08-28",
+  "2026-08-31",
+  "2026-09-01",
+  "2026-09-02",
+  "2026-09-03",
+  "2026-09-04",
+  "2026-09-07",
+  "2026-09-08",
+  "2026-09-09",
+  "2026-09-10",
+  "2026-09-11"
+ ],
+ "artifact": "I7_SESSION_CALENDAR_EXTENSION",
+ "base_calendar": {
+  "artifact": "DATASET_B_SESSION_CALENDAR_v2.json",
+  "last_session": "2026-08-27",
+  "sha256": "5012be2315dc82ccfd65a2b117e1977753f0a7d3214693821b39077cd18043fa"
+ },
+ "built_utc": "2026-09-14T10:15:05.978107+00:00",
+ "evaluation_detail": [
+  {
+   "coverage": 1.0,
+   "date": "2026-08-28",
+   "ihsg_bar": true,
+   "members": 80,
+   "period": "P7",
+   "verdict": "ADMITTED",
+   "with_price": 80
+  },
+  {
+   "coverage": 1.0,
+   "date": "2026-08-31",
+   "ihsg_bar": true,
+   "members": 80,
+   "period": "P7",
+   "verdict": "ADMITTED",
+   "with_price": 80
+  },
+  {
+   "coverage": 1.0,
+   "date": "2026-09-01",
+   "ihsg_bar": true,
+   "members": 80,
+   "period": "P7",
+   "verdict": "ADMITTED",
+   "with_price": 80
+  },
+  {
+   "coverage": 1.0,
+   "date": "2026-09-02",
+   "ihsg_bar": true,
+   "members": 80,
+   "period": "P7",
+   "verdict": "ADMITTED",
+   "with_price": 80
+  },
+  {
+   "coverage": 1.0,
+   "date": "2026-09-03",
+   "ihsg_bar": true,
+   "members": 80,
+   "period": "P7",
+   "verdict": "ADMITTED",
+   "with_price": 80
+  },
+  {
+   "coverage": 1.0,
+   "date": "2026-09-04",
+   "ihsg_bar": true,
+   "members": 80,
+   "period": "P7",
+   "verdict": "ADMITTED",
+   "with_price": 80
+  },
+  {
+   "coverage": 1.0,
+   "date": "2026-09-07",
+   "ihsg_bar": true,
+   "members": 80,
+   "period": "P7",
+   "verdict": "ADMITTED",
+   "with_price": 80
+  },
+  {
+   "coverage": 1.0,
+   "date": "2026-09-08",
+   "ihsg_bar": true,
+   "members": 80,
+   "period": "P7",
+   "verdict": "ADMITTED",
+   "with_price": 80
+  },
+  {
+   "coverage": 1.0,
+   "date": "2026-09-09",
+   "ihsg_bar": true,
+   "members": 80,
+   "period": "P7",
+   "verdict": "ADMITTED",
+   "with_price": 80
+  },
+  {
+   "coverage": 1.0,
+   "date": "2026-09-10",
+   "ihsg_bar": true,
+   "members": 80,
+   "period": "P7",
+   "verdict": "ADMITTED",
+   "with_price": 80
+  },
+  {
+   "coverage": 1.0,
+   "date": "2026-09-11",
+   "ihsg_bar": true,
+   "members": 80,
+   "period": "P7",
+   "verdict": "ADMITTED",
+   "with_price": 80
+  }
+ ],
+ "excluded": [],
+ "extension_window": [
+  "2026-08-28",
+  "2026-09-11"
+ ],
+ "git_commit": "cd40b03e53da6ae45ffde68a66e55172c13ed294",
+ "outcome_blind": "no close/return/outcome column is read for the admission decision (membership price coverage over ohlcv is the base rule's own predicate, unchanged)",
+ "purpose": "extends the X3 session-calendar coverage through 2026-09-11 (readiness review section 2.4 remediation); rule unchanged",
+ "source_db": "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db",
+ "version": "v1"
+}

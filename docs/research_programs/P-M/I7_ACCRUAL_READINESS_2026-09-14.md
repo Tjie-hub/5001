@@ -2,6 +2,71 @@
 
 **Authority:** generated point-in-time record. **Mode:** infrastructure implementation + verification.
 
+> **SUPERSEDED (mechanical correction, later the same day): the v003 freeze is retained immutable as a
+> historical artifact; the live cohort freeze is now V004 — see section 0.** The correction enforces the
+> specification's exclusion X3 and extends the session calendar through 2026-09-11; nothing substantive
+> changed. **I7 remains NOT registered and NOT executed.**
+
+---
+
+## 0. V004 — MECHANICAL CORRECTION (X3 enforcement + session-calendar extension)
+
+Remediates `I7_REGISTRATION_READINESS_REVIEW_2026-09-14.md` §2.4 via its remediation (a): the base
+session calendar (Dataset B SESSION_CALENDAR v2, sha `5012be23…`) ended 2026-08-27, so X3
+("non-admitted sessions per `session_calendar`") was unevaluable for the 11 sessions
+2026-08-28..2026-09-11, and 2026-07-09 (`is_admitted = 0`, *member price coverage below threshold*)
+sat in the v003 cohort against the registered exclusion set.
+
+**What changed — mechanical only:**
+
+| Change | Detail |
+|---|---|
+| Session calendar extended | `store/I7_SESSION_CALENDAR_EXTENSION_v1.json` (sha256 `a7a4eedf45f3d4b2ced4f9a9f2d90d28e011ef0425b115c127a04fcdda0f189e`) — the base calendar's **own** admission rule (roster period → IHSG confirmation → member price coverage ≥ 0.95, copied verbatim from `build_calendar_and_roster.py`, nothing added) applied to 2026-08-28..2026-09-11 from source data: **11/11 sessions admitted** (coverage 1.0000 each), 0 excluded |
+| X3 enforced at cohort layer | `build_v004_freeze.py` excludes every candidate cell whose session is not calendar-admitted (precedence: X3 session-level first, then E-PIT cell rules; E-PIT-1 still bounds the candidate set) |
+
+**What did NOT change:** the I7 hypothesis, estimator, state definition, threshold, inference, decision
+rule — all untouched. **No minimum-cell/session rule was added** (2026-09-08 keeps its single admissible
+cell and is handled at estimation time, exactly as in v003). X1/X2 are subsumed by E-PIT-1 (asserted:
+both regions end before the 2026-04-28 boundary). X4 is the same predicate as E-PIT-4. X5/X6 remain
+**estimation-time** filters over ohlcv (review §2.5) and are deliberately not applied at accrual —
+applying them here would require reading prices/outcomes.
+
+**V004 freeze:**
+
+| Field | Value |
+|---|---|
+| Store | `i7_accrual/store/I7_V004_ADMISSIBLE_v1.sqlite` |
+| **sha256** | **`e1375264133b42f417d8e74f48a48646197d15b8961e3bdf431d6eebc8784fba`** |
+| Bytes | 901,668,864 (read-only, `r--r--r--`) |
+| Manifest | `I7_V004_MANIFEST.json` (+ `.sha256`), overwrite-protected builder |
+| Admissible | **61,335 ticker-days · 76 sessions (2026-04-28 → 2026-09-11) · 868 tickers · 19,793,865 bar rows** |
+| Exclusions | X3 **7,038** (8 sessions) · E-PIT-2 2,044 · E-PIT-3 1,507 · E-PIT-4 10,890 |
+| Reconciliation | 61,335 + 21,479 = **82,814** candidate cells — exact |
+
+**X3 sessions (8) — broader than the review's three, and correctly so.** The review scanned v003's
+*admitted* sessions and saw only `2026-07-09`. X3-as-specified also removes cells in sessions the
+calendar never admitted: the three calendar-excluded dates (`2026-07-09`, `2026-07-24`, `2026-08-25`)
+plus five sessions absent from the calendar entirely (`2026-05-01`, `05-14`, `05-15`, `05-28`, `06-16` —
+vendor wrote rows on non-calendar dates) and the incomplete live session `2026-09-14`. All were already
+non-admissible in v003; v004 re-labels them under the governing rule. **The admitted cohort changes by
+exactly one session: 2026-07-09 (827 cells) — v003 62,162 − 827 = 61,335.**
+
+**Verification (all performed on the frozen artifacts):**
+
+| Required check | Result |
+|---|---|
+| 2026-07-09 handled per X3 | **958 cells, 100% X3, 0 admitted, 0 bars in `flow_bars_v004`** |
+| Every session 2026-08-28→09-11 has an evaluable X3 status | **YES** — all 11 admitted by the extension (827–832 admissible cells each; 2026-09-02: 74; 2026-09-08: 1) |
+| X1–X6 mechanically enforced | X1/X2 subsumed (asserted) · X3 gate in builder · X4 ≡ E-PIT-4 · X5/X6 estimation-layer, recorded in the manifest |
+| Ledger reconciles | 61,335 + 7,038 + 2,044 + 1,507 + 10,890 = 82,814 ✓ |
+| No pre-cutoff cells admitted | **0** (same-day writes before 16:15 WIB among admitted: 0) |
+| Outcome blindness intact | `admissible()` signature unchanged and test-asserted (18/18 pass); builder reads only bar fields, `updated_at`, calendar membership; no close/return/outcome column |
+| v003 immutable | store sha256 recomputed post-build: `a4a9f7f9…` byte-identical |
+
+---
+
+# HISTORICAL RECORD — V003 FREEZE (superseded by section 0; retained immutable)
+
 > **I7 is NOT registered and NOT executed.** No return, IC, p-value, power, or profitability quantity was
 > computed. No outcome column was read by any artifact built here. The I7 candidate specification
 > (`BRANCH_A_NEW_MECHANISM_AUDIT_2026-09-14.md`) is **unchanged**. No hypothesis or family was created.
