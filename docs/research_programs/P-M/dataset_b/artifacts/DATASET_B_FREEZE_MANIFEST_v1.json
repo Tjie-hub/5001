@@ -1,0 +1,64 @@
+{
+ "artifact": "DATASET_B_FREEZE_MANIFEST",
+ "version": "v1",
+ "frozen_at_utc": "2026-09-11T06:30:00Z",
+ "authorized_by": "Owner directive (ZCode task 'FINALIZE DATASET B AND RUN G1', step 1: DATASET B FREEZE); candidate verified READY FOR FREEZE per G1_OWNER_DECISION_PACKET_2026-09-11.md §5 and DATASET_B_FINAL_RECONCILIATION_2026-09-11.md (13/13 PASS)",
+ "store": {
+  "path": "docs/research_programs/P-M/dataset_b/store/DATASET_B_BROKER_FLOW_STORE_v1.sqlite",
+  "sha256": "21661f033145ef90657f8d133ced62a3cd4ba85cdaa7ece2a4b19f4940b755a8",
+  "bytes": 276115456,
+  "integrity_check": "ok",
+  "wal_state_at_freeze": "checkpointed/TRUNCATE — log empty before and after checkpoint"
+ },
+ "fingerprints": {
+  "dataset_fingerprint_v2": {
+   "value": "1a68ab1c6c33409f16fe1c4dd40895c9f5a1b743693d05621e7338086cb8c5d9",
+   "artifact": "DATASET_B_FINGERPRINT_v2.json",
+   "reproduced_at_freeze": true,
+   "cells_in_scope": 30626,
+   "tickers_in_scope": 100,
+   "note": "RAJA quarantined (corporate-action adjustment-basis); 254/30,880 cells out of scope"
+  },
+  "supplementary_store_fold": {
+   "value": "1303378683819f17afa41001dd64574708127a6494ecdd135df23c6b6a2088dd",
+   "artifact": "g1_harness/G1_FREEZE_CANDIDATE_STORE_MANIFEST_2026-09-11.json",
+   "reproduced_at_freeze": true
+  },
+  "production_fingerprint_v1": {
+   "value": "b0ad62826671e7da8236c3265304feaf890d20fab44104c3190dac591806f51b",
+   "reproduced_at_freeze": true,
+   "note": "production tables over the same window unchanged since artifact build (isolation evidence)"
+  }
+ },
+ "capture": {
+  "cells_intended": 30880,
+  "cells_captured": 30880,
+  "success": 30877,
+  "empty": 3,
+  "empty_classification": "TICKER_LEVEL_ZERO_VOLUME_SESSION",
+  "empty_cells": [["PTRO", "2025-10-06"], ["RAJA", "2025-10-13"], ["RATU", "2025-11-28"]],
+  "failed": 0,
+  "truncated": 0,
+  "date_echo_mismatches": 0,
+  "broker_flow_b_rows": 1518727,
+  "capture_version": "v1",
+  "vendor_limit": 150,
+  "cadence_s": 1.5,
+  "window": ["2025-01-02", "2026-08-27"],
+  "sessions": 386,
+  "universe_tickers": 101,
+  "roster_artifact_sha256": "f7e2fec030116a906471d27ee1e3a148aac459f125208d7d6e8e6c6fd3d8c57a",
+  "calendar_artifact_sha256": "5012be2315dc82ccfd65a2b117e1977753f0a7d3214693821b39077cd18043fa"
+ },
+ "validation_receipts": {
+  "validation_report": "artifacts/VALIDATION_REPORT_v1.json — 35/35 PASS",
+  "final_reconciliation": "DATASET_B_FINAL_RECONCILIATION_2026-09-11.md — 13/13 PASS",
+  "freeze_readiness": "g1_harness/G1_FREEZE_READINESS_2026-09-11.md — all checks PASS"
+ },
+ "standing_exceptions": [
+  "broker_flow.freq semantics UNKNOWN — FORBIDDEN as ticket denominator (SEMANTIC_REGISTER_v1); vendor probe or owner withdrawal decision outstanding",
+  "broker_flow.lot/side carry a known ~0.1-0.2% vendor-rounding defect (VERIFIED WITH DEFECT) — use sign(value), not side",
+  "RAJA quarantined pending corporate-action adjustment-basis decision"
+ ],
+ "immutability": "Append-only: this manifest is never edited; any change to the store's logical content invalidates dataset_fingerprint_v2 and the supplementary fold, which must both reproduce before any G1 run. Superseding versions get new filenames."
+}

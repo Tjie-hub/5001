@@ -561,6 +561,649 @@ explicitly unset in code, see "Deadline correction" above — no constant define
 
 ---
 
+## 2e. Broker-Flow-v002 Phase 1 preparation — Owner-directed decisions, 2026-09-08
+
+**Scope note, read before either entry below:** `broker-flow-v002` and its Phase 1 hypotheses (H0-H3)
+are **not yet a registered research object in this repository** — no entry exists for them in
+`docs/research_programs/HYPOTHESIS_REGISTRY.md`, and the authoritative preregistration corpus
+(`BROKER_FLOW_PREREGISTRATION.md` and siblings) is understood to live on a separate machine
+(Windows/ZCode, `C:\Users\tjies\ZCodeProject\`) not reachable from the session that recorded D-032.
+That session verified this repository contains no file, prior commit, or prior DECISION_LOG entry
+matching `broker-flow-v002` under any name. D-032 is therefore a **Dell-side record of owner
+instructions issued directly in that session**, not a verified cross-check against the actual
+preregistration text, and not itself an amendment to that document. Whoever holds the authoritative
+corpus must independently ensure D-032 and the real preregistration stay consistent; this entry
+cannot do that reconciliation from here.
+
+### D-032 · Broker-Flow-v002 Phase 1 — analytical window and freeze-strategy decisions recorded; §4/§5 and turnover left explicitly open
+**Status:** ACCEPTED (Decisions A, B) / OPEN — UNRESOLVED (Items C, D) · **Date:** 2026-09-08 · **Type:** Research-scope owner decision (data preparation, pre-registration) · **Approval authority:** Owner
+
+**Decision A — Analytical coverage (ACCEPTED).** Quoted as issued: *"Retain the original broker-flow
+analytical window beginning 2025-01-02 through the v002 freeze date. Do not redefine the analytical
+window merely to accommodate current data coverage. Historical coverage gaps must be repaired where
+technically/vendor-supported before freeze. The current tiered coverage must be explicitly audited
+after repair."*
+
+**Decision B — Freeze strategy (ACCEPTED).** Quoted as issued: *"Choose complete-backfill-before-freeze.
+Do NOT freeze broker-flow-v002 with the currently known structural coverage gap merely to make Phase 1
+executable. If vendor/data limitations make complete coverage impossible, STOP and escalate rather than
+silently changing the specification."*
+
+**Consequence of A+B, traced against this session's own read-only findings:** `broker_flow` in
+`data/walkforward.db` has two coverage tiers over `[2025-01-02, 2026-09-04)` — 291 dates at ~96-108
+tickers/day, 102 dates at up to ~829 tickers/day. Against the full active universe (958 tickers), the
+completion predicate (`broker_flow` row OR confirmed-empty `bandar_detector` marker — reused from
+`tools/broker_flow_idx80_gap.py`, not reinvented) shows **0 of 393 dates fully complete** and
+**~275,253 missing ticker-day cells** as of this entry (re-measured live, see "Read-only validation"
+below). Per Decision B, none of this may be frozen as-is. Per Decision A, this gap must be closed by
+backfill (mechanically prepared, not yet authorized or run — see
+`tools/agent_backfill_broker_flow_full_universe.py`), and the resulting coverage must be **re-audited**,
+not assumed, before any freeze. No code change follows from this entry; the backfill driver referenced
+here was built and dry-run validated in the immediately preceding session, independent of this decision
+record.
+
+**Item C — §4/§5 H1 contradiction (OPEN — NOT RESOLVED).** Recorded verbatim, not resolved: *"The
+locked preregistration contains a contradiction between: §4: no train/test split for H0/H1
+specification tests; §5: H0/H1 language containing OOS/fold criteria. This requires a dated explicit
+preregistration decision before H1 results can be interpreted. No H1 fold criterion is to be silently
+added or removed."* This item **blocks interpretation of any H1 result** until resolved by whoever
+holds and amends the authoritative preregistration. Nothing in this repository resolves it, and no
+attempt was made to.
+
+**Item D — H1 turnover definition (OPEN — NOT RESOLVED).** Recorded verbatim, not resolved: *"The §5
+≤200% monthly turnover criterion remains unresolved until an explicit mathematical operational
+definition is recorded. Do not invent a turnover formula. H1 cannot receive a definitive verdict based
+on that criterion until it is formally defined."* No formula was invented or implied anywhere in this
+session or this entry.
+
+**Read-only validation performed before recording this entry** (all against live `data/walkforward.db`,
+read-only connections only — nothing written):
+- Analytical window per Decision A: `[2025-01-02, 2026-09-04)` (2026-09-04 taken from the previously
+  stated target artifact name `walkforward_v002_20260904.db`, not itself a new scope decision).
+- Coverage: 393 IHSG-confirmed trading dates in window; 0 fully complete; ~275,253 missing ticker-day
+  cells against the 958-ticker active universe.
+- Driver: `tools/agent_backfill_broker_flow_full_universe.py` present, `--dry-run` re-run this session,
+  `vendor_calls_made: false`, exit code 1 (PARTIAL — work pending, nothing executed).
+- No `broker-flow-v002` or `walkforward_v002*` artifact exists anywhere on this machine
+  (`data/frozen/` contains only the unrelated, untouched `stockbit-flow-bars-v002`).
+
+**Files changed:** none besides this entry. No preregistration document was created, edited, or
+touched — none is reachable from this session (see scope note above). No code was changed. No dataset
+was created, frozen, or transferred. No H0/H1/H2/H3 test was run.
+
+**Related:** the immediately preceding sessions' preflight/decision-pack/orchestrator-build exchanges
+(not separately filed as repository documents — this DECISION_LOG entry is the first persisted record
+of them) · `tools/agent_backfill_broker_flow_full_universe.py`, `tests/test_agent_backfill_broker_flow_full_universe.py`
+(driver + tests, built and dry-run validated prior to this entry, unmodified by it) ·
+`data/frozen/stockbit-flow-bars-v002/MANIFEST.json` (the adjacent, confirmed-wrong-dataset artifact
+this decision does not touch).
+
+---
+
+## 2f. Broker-Flow IDX80 Dataset admission — Owner approval of the decision surface, 2026-09-09
+
+**Scope note, read before the entry below:** the decision surface consists of the admission package
+`docs/research_programs/P-M/BROKER_FLOW_DATASET_ADMISSION_DRAFT_2026-09-09.md` (Rev 2 — §G checklist, §H
+decision block, §J receipt gates, §K discrepancies) and the Owner decision memo derived from it. The Owner
+approved the decision surface by a single approval issued directly in the drafting session (external to this
+repository — recorded here on the same basis as D-032's scope note). That approval selected **H-1 only**;
+it did not specify options among H-2…H-6. Per the package's own rule against silently choosing unresolved
+sub-options, H-2…H-6 are recorded here as **still open**, not inferred. Nothing in this entry declares,
+fingerprints, or freezes a Dataset Object, registers a hypothesis, runs any empirical or back-and-forward
+test, modifies `data/walkforward.db`, performs a vendor call, or repairs 2026-08-25.
+
+### D-033 · Broker-Flow IDX80 Dataset Object — Owner approves the IDX80-scoped admission path (H-1); H-2…H-6 and capability_class remain explicitly open
+**Status:** APPROVED (H-1 only) / OPEN — UNRESOLVED (H-2, H-3, H-4, H-5, H-6) · **Date:** 2026-09-09 · **Type:** Research-scope owner decision (dataset governance — admission path) · **Approval authority:** Owner
+
+**H-1 — APPROVED.** The Owner approved proceeding with the proposed **IDX80-scoped Dataset Object
+admission path** as drafted in the Rev 2 admission package. Recorded explicitly against D-032 Decision B:
+this approval **is** the explicit specification decision for an IDX80-scoped path — it is **not** an implicit
+workaround for Decision B, and it does **not** amend, supersede, or satisfy Decision B's full-active-universe
+freeze basis for `broker-flow-v002`, which remains of record unchanged. Per the Owner's approval terms:
+this is **not** automatic fingerprinting or freezing; no empirical/back-and-forward tests are authorized;
+no hypothesis registration is authorized; 2026-08-25 must **not** be repaired unless separately authorized;
+**all evidence/receipt gates are preserved**. **No lifecycle transition occurred by this entry** — the
+Dataset Object is **not DECLARED**; DECLARED remains gated on the §J.1 receipts (R-1…R-10) and on the
+resolutions of H-2…H-6 below.
+
+**H-2 — OPEN (analytical window end).** 2026-08-27 (proposed/authorized backfill scope) vs the
+v002-freeze-date boundary of D-032 Decision A — not specified by the approval; requires explicit resolution
+before the boundary can be finalized.
+
+**H-3 — OPEN (2026-08-25).** Ratify proposed exclusion vs direct cause-investigation/repair-first vs
+deferral — not specified; no repair is authorized by this entry.
+
+**H-4 — OPEN (DECLARED authority).** Authority for the DECLARED transition (governance gap; package §K.7) —
+not specified.
+
+**H-5 — OPEN (dataset ID / registry).** Interim non-canonical identifier vs registry machinery — not
+specified; `dataset_id` remains UNASSIGNED and the proposed string remains NON-CANONICAL / PENDING REGISTRY
+DECISION.
+
+**H-6 — OPEN (P1/P2 provenance boundary).** Resolution mechanism for the P1/P2 overlap — not specified;
+remains an admission blocker per package §B/§F.6 (R-6).
+
+**CRO — `capability_class` remains a CRO decision** (package §J R-7); not addressed by this approval.
+
+**Effect and gates.** The admission path is approved subject to the package's §J.1 receipts (R-1…R-10) and
+the resolutions of H-2…H-6. FINGERPRINTED and FROZEN remain unreachable (§J.2 F-1…F-5 preserved). The
+approval itself was issued external to this repository; the corresponding canonical authorization receipt
+(R-1) remains outstanding and is a separate artifact from this entry.
+
+**Files changed:** this entry · `docs/research_programs/P-M/BROKER_FLOW_DATASET_ADMISSION_DRAFT_2026-09-09.md`
+(status annotations only: header note, §G DECLARED row, §H H-1 row and recorded-outcome line, §J R-10 status
+cell — no field values fabricated, H-2…H-6 left open). No code was changed. No dataset was created, declared,
+fingerprinted, or frozen. No DB, vendor, backfill, or repair operation was performed.
+
+**Related:** D-032 (Broker-Flow-v002 Phase 1 — Decisions A, B; Items C and D still OPEN) ·
+`docs/research_programs/P-M/BROKER_FLOW_DATASET_ADMISSION_DRAFT_2026-09-09.md` (Rev 2, §G/§H/§J/§K) ·
+`docs/governance/DATA_FEASIBILITY_STUDY.md` §4–§5 (binding capability constraint; §K.6 inventory
+discrepancy reconciliation outstanding) · `tools/broker_flow_idx80_gap.py` (canonical coverage predicate,
+D-032-provenance; §J.2 F-2)
+
+---
+
+## 2g. Broker-Flow IDX80 Dataset population candidates — H-7C/H-8A persistence, 2026-09-09
+
+**Scope note, read before the entries below:** H-7C and H-8A were approved by the Owner in-session
+(external to this repository, on the same basis as D-032's and D-033's scope notes) as follow-on
+decisions against the still-open items recorded in D-033. Neither entry below authorizes DECLARED,
+FINGERPRINTED, or FROZEN for either candidate Dataset Object, registers a hypothesis, runs any
+empirical or forward test, modifies `data/walkforward.db` or any application/schema code, performs a
+vendor call, or repairs `2026-08-25`. D-033's H-2 (analytical window end), H-3 (2026-08-25 treatment),
+H-4 (DECLARED authority), and H-5 (dataset ID / registry) are **not** addressed by either entry and
+remain OPEN exactly as recorded in D-033, now understood to apply independently to each of the two
+candidates named below.
+
+### D-034 · Broker-Flow IDX80 Dataset population split ratified — H-7C approved (Dataset A / Dataset B recorded as separate O4 candidates, not collapsed)
+**Status:** APPROVED · **Date:** 2026-09-09 · **Type:** Research-scope owner decision (dataset population definition) · **Approval authority:** Owner
+
+**H-7C — APPROVED.** Quoted as issued: *"Treat the August non-PIT IDX80 backfill population and the
+PIT-aware population as separate Dataset candidates. Do not collapse them."* This is recorded as the
+Owner's resolution of D-033's **H-6** item ("P1/P2 provenance boundary — resolution mechanism... not
+specified") — resolved **by splitting, not merging** the two populations into independent candidates,
+rather than by adopting a single unified Dataset Object. This entry does not amend, supersede, or
+re-open D-032 or D-033's other items; it resolves H-6 only.
+
+**Evidentiary basis (distinct from the decision itself).** This session's read-only H-6 provenance
+investigation (recorded as this entry's supporting evidence, not as a separate Owner decision) found
+`broker_flow`'s composite primary key `(ticker, trade_date, broker_code, side)` structurally
+prevents duplicate/overlapping rows, and that the ordinary-live write path (`stockbit_fetcher.py`) and
+the IDX80 backfill write path (`tools/backfill_broker_flow_idx80.py`) are independently gap-gated
+against each other, making P1/P2 co-writes to the same cell structurally impossible
+[DB-VERIFIED / CANONICAL — see the population specification artifact §0 and Dataset A/B sections
+below for the full evidentiary record]. The Owner's H-7C decision was made against this evidence but
+is recorded here as an act of Owner authority, not as a conclusion this session reached on its own.
+
+**Candidates named by this decision:**
+- **Dataset A** — `DS-broker_flow-idx80-nonpit-2025_2026v1` (interim/non-canonical, H-5 open):
+  analytical window `2025-01-02` → `2026-08-27` inclusive, excluding `2026-08-25`; current-at-backfill
+  `idx_tickers.in_idx80=1` roster (79 tickers) applied uniformly across the window; **NON-PIT** by
+  construction.
+- **Dataset B** — `DS-broker_flow-idx80-pit-2025_2026-04v1` (interim/non-canonical, H-5 open): named
+  for its reliably-evidenced continuous PIT-aware window only; per-date roster drawn from
+  `idx80_reconstitution_periods` / `idx80_membership_history`.
+
+Full identity, inclusion/exclusion predicates, provenance status, coverage, universe integrity, known
+gaps, O4 field mapping, capability/fidelity, and freeze-prerequisite detail for both candidates are
+specified in the referenced population specification artifact, not restated here.
+
+**Files changed:** none besides this entry. The referenced population specification artifact
+(`docs/research_programs/P-M/BROKER_FLOW_DATASET_POPULATION_SPECIFICATION_H7C_2026-09-09.md`) already
+exists, created earlier in the same session as a read-only governance/specification artifact; it is
+untouched by this entry. No code was changed. No dataset was created, declared, fingerprinted, or
+frozen. No DB, vendor, backfill, or repair operation was performed.
+
+**Related:** D-033 (H-1 APPROVED; H-2…H-6 OPEN — this entry resolves H-6 only, H-2…H-5 remain OPEN
+and now apply independently to Dataset A and Dataset B) ·
+`docs/research_programs/P-M/BROKER_FLOW_DATASET_POPULATION_SPECIFICATION_H7C_2026-09-09.md` (full
+Dataset A / Dataset B specification, §0 evidence-integrity finding, §5 comparison table, §6
+governance recommendation) ·
+`docs/research_programs/P-M/BROKER_FLOW_DATASET_ADMISSION_DRAFT_2026-09-09.md` (origin of the H-2…H-6
+open-item numbering this entry references).
+
+---
+
+### D-035 · Broker-Flow IDX80 admission scope extended to both H-7C candidates — H-8A approved; Dataset A coverage-reconciliation evidence recorded
+**Status:** APPROVED (H-8A) · evidence section below is a record, not a decision · **Date:** 2026-09-09
+· **Type:** Research-scope owner decision (admission-path scope extension) + read-only evidence
+record · **Approval authority:** Owner (H-8A) / session read-only investigation (evidence section)
+
+**H-8A — APPROVED.** Quoted as issued: *"H-1's IDX80-scoped admission approval applies separately to
+both H-7C candidates: Dataset A: `DS-broker_flow-idx80-nonpit-2025_2026v1`; Dataset B: PIT-aware
+candidate."* This extends D-033's **H-1** approval (previously stated against a single undifferentiated
+IDX80-scoped admission path) to cover Dataset A and Dataset B **independently**, following D-034's
+split. It does **not** merge the two candidates, does **not** grant either candidate any lifecycle
+status beyond what D-033 already grants under H-1, and does **not** resolve D-033's H-2, H-3, H-4, or
+H-5 — those remain OPEN and, per this entry, apply separately to Dataset A and Dataset B rather than to
+a single undifferentiated candidate.
+
+**Evidence record (Dataset A only — not an Owner decision, recorded for traceability).** In a
+follow-on read-only reconciliation of the ~904-row aggregate discrepancy reported in the H-7C
+population specification (Dataset A section), this session traced the figure to two accounting causes
+— test-suite log contamination and a DONE-line undercount from two interrupted-but-completed log
+blocks — yielding an exact match between the properly-scoped DB write count (24,109 cells) and the
+log's per-date first-seen-missing sum (24,109). A subsequently-surfaced 144-cell residual
+(30,652 expected − 24,109 backfill-touched − 6,399 ordinary-live-covered = 144) was independently
+traced to exactly two dates (`2026-04-17`, `2026-04-20`) × 72 identical tickers written by a pre-campaign
+catch-up pass on `2026-04-20T17:00`, with the remaining 7 tickers per date genuinely covered by the
+2026-08-27–29 backfill campaign. This closes the full identity **30,652 = 24,109 + 144 + 6,399** with
+zero genuinely missing cells, classified **FULLY RECONCILED** against the completeness predicate in
+`tools/broker_flow_idx80_gap.py::broker_cell_complete()`.
+
+This evidence record does **not** authorize DECLARED, FINGERPRINTED, or FROZEN for Dataset A; does
+**not** resolve D-033's H-2/H-3/H-4/H-5; and does **not** resolve the open ambiguity between the
+DECLARED→FINGERPRINTED→FROZEN lifecycle in [[RESEARCH_OBJECT_SCHEMA]] §3.4 and the
+CREATED→REGISTERED→...→ARCHIVED lifecycle in [[CUSTODY_MODEL]] §4.1–4.2 — that ambiguity remains
+unresolved and is not silently resolved by this entry. No dedicated repository artifact currently
+holds this reconciliation independent of this entry; that is noted as a governance gap, not closed
+here.
+
+**Files changed:** none besides this entry. No code was changed. No dataset was created, declared,
+fingerprinted, or frozen. No DB, vendor, backfill, or repair operation was performed.
+
+**Related:** D-033 (H-1 APPROVED single-candidate form) · D-034 (H-7C split; introduces Dataset A /
+Dataset B as the two candidates this entry extends H-1 to) ·
+`docs/research_programs/P-M/BROKER_FLOW_DATASET_POPULATION_SPECIFICATION_H7C_2026-09-09.md` (Dataset A
+§A.6, reporting the original ~904-row discrepancy this entry's evidence section reconciles) ·
+`tools/broker_flow_idx80_gap.py::broker_cell_complete()` (canonical completeness predicate used to
+classify the reconciliation as FULLY RECONCILED).
+
+---
+
+## 2h. Broker-Flow IDX80 Dataset A — DECLARED-gate decision surface ruled, 2026-09-09
+
+**Scope note, read before the entries below:** D-036, D-037, D-038 rule on the three items identified as
+DECLARED-blocking in `docs/research_programs/P-M/BROKER_FLOW_DATASET_A_DECLARED_READINESS_2026-09-09.md` §5
+(D-1, D-2, D-3 of that document — not to be confused with this log's own D-numbering). Approved by the Owner
+in-session (external to this repository, on the same basis as prior scope notes in this section). **None of
+these three entries transitions Dataset A, or any other Dataset Object, to DECLARED, FINGERPRINTED, or
+FROZEN** — they rule on prerequisites and interpretation only. No hypothesis is registered and no empirical
+test is authorized by any of the three.
+
+### D-036 · O4 Dataset lifecycle vs CUSTODY_MODEL asset-state — Option B ratified (orthogonal axes, not synonyms)
+**Status:** APPROVED · **Date:** 2026-09-09 · **Type:** Research-scope owner decision (lifecycle interpretation) · **Approval authority:** Owner
+
+**Decision — APPROVED (Option B).** Quoted as issued: *"DECLARED and REGISTERED are treated as orthogonal
+lifecycle concepts rather than synonyms. Preserve DECLARED as the Research Object admission/lifecycle state and
+REGISTERED as the custody identity/registration state, unless a higher-precedence governance rule requires
+otherwise."*
+
+This resolves, for O4 Dataset objects generally (not only Dataset A), the ambiguity recorded in
+`BROKER_FLOW_DATASET_A_DECLARED_READINESS_2026-09-09.md` §1 between [[RESEARCH_OBJECT_SCHEMA]] §3.4's
+`DECLARED → FINGERPRINTED → FROZEN` lifecycle facet and [[CUSTODY_MODEL]] §4.1's `CREATED → REGISTERED → ... →
+ARCHIVED` asset-state machine. By the terms of this decision, §3.4's Lifecycle facet is treated as its own
+claim-readiness axis — analogous to [[CUSTODY_AMENDMENT]] §3 row 9's explicit *"orthogonal, no collision"*
+ruling for Hypothesis's 12-state lifecycle against the same 8-state custody axis — rather than as a synonym
+replaced by CUSTODY_MODEL's REGISTERED state (row 6's weaker *"resolves to"* wording is not read as
+replacement).
+
+**Consequence.** DECLARED does **not** require a computed `broker_flow` fingerprint as a precondition;
+fingerprinting remains gated at the `FINGERPRINTED` step, per §3.4's original, literal text. A Dataset's
+separate CUSTODY_MODEL asset-state (CREATED/REGISTERED/etc.) tracks underneath DECLARED without collision,
+exactly as ruled for Hypothesis.
+
+**Scope and limits.** This decision rules on the *interpretation* of two existing canonical documents; it does
+**not** amend either document's text (amendment remains Research Architect authority per each document's own
+header), and it does **not** itself transition Dataset A or any other Dataset Object to DECLARED, FINGERPRINTED,
+or FROZEN. The qualifier *"unless a higher-precedence governance rule requires otherwise"* is preserved
+verbatim — this ruling stands unless and until a document ranked higher in the Decision-Making Hierarchy
+(`.claude/rules/research-governance.md`) is shown to require a different reading.
+
+**Files changed:** none besides this entry. No dataset was created, declared, fingerprinted, or frozen. No DB,
+vendor, backfill, or repair operation was performed.
+
+**Related:** [[RESEARCH_OBJECT_SCHEMA]] §3.4 · [[CUSTODY_MODEL]] §4.1, §4.6, CU-1 · [[CUSTODY_AMENDMENT]] §3 rows
+6 and 9 · `docs/research_programs/P-M/BROKER_FLOW_DATASET_A_DECLARED_READINESS_2026-09-09.md` §1 (D-1 origin),
+§5 (decision surface).
+
+---
+
+### D-037 · Dataset A `capability_class` approved (Option A) — Available Today, informed-flow/adverse-selection proxy
+**Status:** APPROVED · **Date:** 2026-09-09 · **Type:** CRO capability-class approval (O4 Dataset field) · **Approval authority:** CRO (issued via Owner decision, this session)
+
+**Decision — APPROVED (Option A).** Quoted as issued: *"Approve the proposed CRO capability_class as: Available
+Today, informed-flow/adverse-selection proxy, per DATA_FEASIBILITY_STUDY §4.1."*
+
+`capability_class` for `DS-broker_flow-idx80-nonpit-2025_2026v1` (Dataset A) is set to **Available Today**,
+category **informed-flow / adverse-selection proxy** (not true OFI — proxy tier), exactly as
+[[DATA_FEASIBILITY_STUDY]] §4.1 already states following its 2026-09-09 correction (this session; `broker_flow`
+inventory span corrected from ~3.5 mo to ~20 mo [DB-VERIFIED]).
+
+**Scope and limits.** This approval does **not** clear the [[DATA_FEASIBILITY_STUDY]] §5.3 history-maturity gate
+for `broker_flow` — that determination was explicitly left open by the 2026-09-09 correction and remains a
+separate, unresolved item for any future hypothesis binding this dataset, not a DECLARED-blocking condition per
+se. This approval is scoped to Dataset A's `capability_class` field only; it does not extend to Dataset B or to
+`broker_flow` generally beyond what [[DATA_FEASIBILITY_STUDY]] §4.1 already states.
+
+**Files changed:** none besides this entry. No dataset was created, declared, fingerprinted, or frozen. No DB,
+vendor, backfill, or repair operation was performed.
+
+**Related:** [[RESEARCH_OBJECT_SCHEMA]] §3.4 (`capability_class` field, CRO approval ownership) ·
+[[DATA_FEASIBILITY_STUDY]] §4.1, §5.3 (corrected 2026-09-09) ·
+`docs/research_programs/P-M/BROKER_FLOW_DATASET_A_DECLARED_READINESS_2026-09-09.md` §3 (R-7), §4, §5 (D-2
+origin).
+
+---
+
+### D-038 · R-1 authorization-receipt sufficiency ruled (Option A) — D-032 + D-033 sufficient, no separate artifact required
+**Status:** APPROVED · **Date:** 2026-09-09 · **Type:** Research-scope owner decision (receipt-sufficiency ruling) · **Approval authority:** Owner
+
+**Decision — APPROVED (Option A).** Quoted as issued: *"D-032 + D-033, as persisted in DECISION_LOG.md, are
+sufficient to satisfy R-1. No separate authorization-receipt artifact is required."*
+
+R-1 (`docs/research_programs/P-M/BROKER_FLOW_DATASET_ADMISSION_DRAFT_2026-09-09.md` §J.1: "Persisted Owner
+authorization receipt for the data-layer backfill") is satisfied by D-032 (analytical-window and freeze-strategy
+decisions) and D-033 (Owner approves the IDX80-scoped admission path, H-1), as persisted in this document. No
+separate authorization-receipt artifact will be produced.
+
+**Scope and limits.** This ruling is specific to R-1's textual requirement; it does not rule on R-10's separate
+branch-commit question (D-032 through D-038 remain working-tree-only as of this entry), and does not itself
+grant DECLARED status.
+
+**Files changed:** none besides this entry. No dataset was created, declared, fingerprinted, or frozen. No DB,
+vendor, backfill, or repair operation was performed.
+
+**Related:** D-032, D-033 · `docs/research_programs/P-M/BROKER_FLOW_DATASET_ADMISSION_DRAFT_2026-09-09.md` §J.1
+R-1 · `docs/research_programs/P-M/BROKER_FLOW_DATASET_A_DECLARED_READINESS_2026-09-09.md` §3 (R-1), §5 (D-3
+origin).
+
+---
+
+### D-039 · Dataset A `asset_class` sufficient for DECLARED at PROPOSED tier — no separate ratification required
+**Status:** APPROVED · **Date:** 2026-09-09 · **Type:** Research-scope owner decision (O4 field-gating micro-decision) · **Approval authority:** Owner
+
+**Decision — APPROVED.** Quoted as issued: *"The existing PROPOSED `asset_class` value in the Dataset A
+admission draft — 'IDX equities, IDX80 universe (fixed backfill-time roster — not PIT membership)' — is
+sufficient for the DECLARED gate without separate Owner ratification. No separate `asset_class` ratification is
+required at DECLARED. Its status remains PROPOSED/declared metadata as applicable under the governing schema,
+with any later ratification or refinement handled at the appropriate subsequent lifecycle gate if required."*
+
+This closes the one residual item identified when the DECLARED gate was re-run following D-036/D-037/D-038: `asset_class`
+(one of ROM's five cited O4 mandatory fields) carried only a PROPOSED value from
+`BROKER_FLOW_DATASET_ADMISSION_DRAFT_2026-09-09.md` §A.2, never explicitly Owner-ratified the way `dataset_id`
+was via H-5, and — unlike `regime_classification` (F-5) and `provenance_hash` (F-1) — had no existing F-item
+deferring it to `FROZEN`. This entry establishes, for Dataset A specifically, that `asset_class` did not need
+that ratification to clear DECLARED; its PROPOSED status stands as sufficient, with ratification or refinement
+available (not required) at a later gate.
+
+**Scope and limits.** This decision does **not** alter Dataset A's substantive scope (universe, window,
+exclusion, NON-PIT status) — the quoted `asset_class` string is adopted verbatim from the admission draft,
+unmodified. It does not itself transition Dataset A to DECLARED, FINGERPRINTED, or FROZEN, and does not
+generalize to any other O4 field or any other Dataset Object without a separate ruling.
+
+**Files changed:** none besides this entry. No dataset was created, declared, fingerprinted, or frozen. No DB,
+vendor, backfill, or repair operation was performed.
+
+**Related:** D-036, D-037, D-038 (the three prior rulings this completes) ·
+`docs/research_programs/P-M/BROKER_FLOW_DATASET_ADMISSION_DRAFT_2026-09-09.md` §A.2 (`asset_class` PROPOSED
+value, origin) · `docs/research_programs/P-M/BROKER_FLOW_DATASET_A_DECLARED_READINESS_2026-09-09.md` §4 (O4
+field closure).
+
+---
+
+### D-040 · Dataset A `DS-broker_flow-idx80-nonpit-2025_2026v1` transitioned to DECLARED
+**Status:** APPROVED · **Date:** 2026-09-09 · **Type:** O4 Dataset lifecycle transition · **Approval authority:** Owner
+
+**Decision.** Dataset A enters `DECLARED` ([[RESEARCH_OBJECT_SCHEMA]] §3.4), all ten §J.1 receipts (R-1…R-10,
+[[DECISION_LOG]] D-032…D-039) and the four lifecycle/field micro-decisions (D-036…D-039) having closed with no
+remaining blocker, per `BROKER_FLOW_DATASET_A_DECLARED_TRANSITION_REQUEST_2026-09-09.md`.
+
+**Not authorized by this transition:** FINGERPRINTED, FROZEN, hypothesis registration, or empirical testing —
+each remains gated on its own separate prerequisites (F-1…F-5, [[HYPOTHESIS_LIFECYCLE]] G1) and requires its
+own future decision.
+
+**Files changed:** this entry · `BROKER_FLOW_DATASET_ADMISSION_DRAFT_2026-09-09.md` §G (DECLARED row updated
+from "NOT ACTIONED" to "DECLARED, 2026-09-09") · `BROKER_FLOW_DATASET_A_DECLARED_TRANSITION_REQUEST_2026-09-09.md`
+(status annotation only). No code, DB, schema, fingerprint, or freeze operation performed.
+
+**Related:** D-032…D-039 · `BROKER_FLOW_DATASET_A_DECLARED_READINESS_2026-09-09.md`.
+
+---
+
+### D-041 · Dataset A `DS-broker_flow-idx80-nonpit-2025_2026v1` transitioned to FINGERPRINTED
+**Status:** APPROVED · **Date:** 2026-09-09 · **Type:** O4 Dataset lifecycle transition · **Approval authority:** Owner
+
+**Decision.** Dataset A enters `FINGERPRINTED` ([[RESEARCH_OBJECT_SCHEMA]] §3.4), with `provenance_hash =
+329b22e49f0ef882b6da031f437e9d87084d2863837ebf8c830de362b7942558` (scope declared per
+`BROKER_FLOW_DATASET_A_FINGERPRINTED_GATE_2026-09-09.md` §2) and the formal coverage-audit receipt (§3 of the
+same document) both on record.
+
+**Not authorized by this transition:** FROZEN, hypothesis registration, or empirical testing — each remains
+gated on F-3/F-4/F-5 and [[HYPOTHESIS_LIFECYCLE]] G1 respectively.
+
+**Files changed:** this entry · `BROKER_FLOW_DATASET_ADMISSION_DRAFT_2026-09-09.md` §G (FINGERPRINTED row) ·
+`BROKER_FLOW_DATASET_A_FINGERPRINTED_GATE_2026-09-09.md` (status annotation only).
+
+**Related:** D-040 · `BROKER_FLOW_DATASET_A_FINGERPRINTED_GATE_2026-09-09.md`.
+
+---
+
+### D-042 · Dataset A `regime_classification` — Option B ratified for F-5 (lightweight characterization, not O15)
+**Status:** APPROVED · **Date:** 2026-09-09 · **Type:** O4 Dataset field-gating decision (FROZEN prerequisite) · **Approval authority:** Owner
+
+**Decision — APPROVED (Option B).** Quoted as issued: *"Authorize a narrow, lightweight, evidence-derived
+`regime_classification` characterization for the sample window, following the worked-example style rather than
+creating a full O15 Regime object."* Scope as issued: characterize 2025-01-02 → 2026-08-27 using only existing
+canonical market evidence; do not alter Dataset A; do not create a formal O15 Regime object; do not invent or
+infer unsupported classifications; document methodology, evidence, and limitations; keep the result descriptive
+rather than trade-conditioned. **This authorization is scoped only to satisfying F-5 for Dataset A's FROZEN
+gate.**
+
+**Result.** `regime_classification` populated:
+> *"mixed — SIDEWAYS 61.6% / BEAR 26.5% / BULL 11.9% of trading days (rule-based, ADX(14)>25 & MA-slope(20,5)
+> thresholds, reusing `engine/regime_filter.py::detect_regime()`'s existing definition, applied daily to IHSG);
+> includes a documented ~41.5% peak-to-trough IHSG drawdown (2026-01-20 peak 9,134.70 → 2026-06-08 trough
+> 5,342.14), followed by partial recovery. Overall window return −10.32%. Descriptive characterization only —
+> not an O15 Regime object; not trade-conditioned; not applied to any strategy."*
+
+Full methodology, evidence, and limitations: `BROKER_FLOW_DATASET_A_REGIME_CHARACTERIZATION_2026-09-09.md`. No
+new threshold or classification rule was invented — the exact, already-canonical `detect_regime()` rule was
+applied day-by-day across the window rather than only its usual single-latest-bar use. `regime_profiles` was
+not written to and does not exist as a table in this database; no O15 Regime object lifecycle was entered.
+
+**Scope and limits.** This decision and its result do not alter Dataset A's population, universe, window, or
+exclusion; do not register a hypothesis; do not run an empirical test; and do not themselves transition Dataset
+A to FROZEN.
+
+**Files changed:** this entry · `BROKER_FLOW_DATASET_A_REGIME_CHARACTERIZATION_2026-09-09.md` (new).
+
+**Related:** `BROKER_FLOW_DATASET_A_FROZEN_GATE_2026-09-09.md` §C (F-5 origin) · `WORKED_EXAMPLE_END_TO_END.md`
+§S4 (style precedent) · `engine/regime_filter.py::detect_regime()` (reused methodology).
+
+---
+
+### D-043 · Dataset A `DS-broker_flow-idx80-nonpit-2025_2026v1` transitioned to FROZEN
+**Status:** APPROVED · **Date:** 2026-09-09 · **Type:** O4 Dataset lifecycle transition · **Approval authority:** Owner
+
+**Decision.** Dataset A enters `FROZEN` ([[RESEARCH_OBJECT_SCHEMA]] §3.4). F-1…F-5 ([[DECISION_LOG]] D-040,
+D-041, and this session's F-3/F-4 closure + D-042's F-5 closure) are all satisfied. The CUSTODY asset-state's
+frozen condition was already triggered at FINGERPRINTED (D-041, per ROM v2.0 §3.2 "Frozen on fingerprint") and
+requires no separate action here. `provenance_hash` remains
+`329b22e49f0ef882b6da031f437e9d87084d2863837ebf8c830de362b7942558`, unchanged.
+
+**Not authorized by this transition:** hypothesis registration or empirical testing — each remains gated on
+[[HYPOTHESIS_LIFECYCLE]] G1 and requires its own future decision. Amendment after FROZEN is prohibited per
+[[RESEARCH_OBJECT_SCHEMA]] §3.4 Ownership ("Amend after freeze: prohibited"); any future correction is a new
+Dataset version, per Versioning ("Immutable on fingerprint. A revised dataset is a new Dataset").
+
+**Files changed:** this entry · `BROKER_FLOW_DATASET_ADMISSION_DRAFT_2026-09-09.md` §G (FROZEN row) ·
+`BROKER_FLOW_DATASET_A_FROZEN_TRANSITION_REQUEST_2026-09-09.md` (status annotation only).
+
+**Related:** D-040, D-041, D-042 · `BROKER_FLOW_DATASET_A_FROZEN_GATE_2026-09-09.md` ·
+`BROKER_FLOW_DATASET_A_REGIME_CHARACTERIZATION_2026-09-09.md`.
+
+---
+
+### D-046 · History-maturity gate — backfilled-history counting rule, Option C (QUALIFIED COUNT) ratified
+**Status:** APPROVED · **Date:** 2026-09-09 · **Type:** Research-governance interpretive decision · **Approval authority:** Owner/CRO
+
+**Decision — APPROVED (Option C — QUALIFIED COUNT).** For [[DATA_FEASIBILITY_STUDY]] §5.3 / LIM4's
+history-maturity gate: **genuine vendor-backfilled historical data counts toward span-based maturity for
+regime-stratified validation and walk-forward validation.** It does **not**, by itself, advance maturity for
+**forward-observation phenomena — including decay estimation** (LIM7: *"decay is detectable only in
+arrears"*) — which require genuinely elapsed future observation that backfill cannot supply by its nature.
+
+**This is a qualified counting rule, not a blanket maturity clearance.** It resolves *whether backfilled span
+is eligible to count at all* (Q1) — it does not resolve, and does not attempt to resolve, *how much span is
+required* (`N`, still unassigned anywhere in the corpus) or *how a Dataset Object's specific population is
+checked against that requirement* (previously explored as Q3 and resolved separately, see below). Both
+remain open.
+
+**Consequence for Dataset A.** `DS-broker_flow-idx80-nonpit-2025_2026v1`'s genuine historical span
+(`2025-01-02 → 2026-08-27`, ~20 months, confirmed non-synthetic vendor-backfilled data — this session's F-3
+finding) is **eligible to be considered** for regime-stratified / walk-forward maturity. **Dataset A is NOT
+thereby declared mature or cleared for validation.** No numeric or qualitative sufficiency bar is applied or
+satisfied by this entry. For decay-estimation purposes specifically, Dataset A's maturity clock is unaffected
+by this ruling and would run only from genuinely elapsed future observation, if and when that becomes relevant
+to a specific hypothesis.
+
+**Preserved, unchanged by this entry:**
+- **F-5 (`regime_classification`) remains CLOSED** (D-042).
+- **Dataset A remains FROZEN** (D-043) — this entry performs no lifecycle transition and does not touch
+  Dataset A's population, universe, window, or exclusion.
+- **Q3 remains resolved as previously recorded:** `regime_config.yaml::cell.min_n=100` is a trade-level,
+  per-hypothesis/G1 statistical floor (gatekeeper `min_n_cell`, NR7 `t3_min_n`) — it is **not** a Dataset-level
+  maturity threshold and plays no role in this ruling.
+- **`N` is explicitly NOT assigned a value by this entry.** No numeric or qualitative sufficiency standard is
+  invented here; that remains a separate, still-open determination.
+
+**Not authorized by this entry:** hypothesis registration, empirical validation, walk-forward or
+regime-stratified testing, or any modification to Dataset A.
+
+**Files changed:** this entry only. `DATA_FEASIBILITY_STUDY.md` was **not** modified — no existing governance
+mechanic requires an interpretive ruling of this kind to be written back into the study itself; §5.3's text
+already states the requirement in a form this ruling merely interprets, without contradicting or overriding it.
+
+**Related:** LIM4, LIM7 · [[DATA_FEASIBILITY_STUDY]] §5.3 · `HYP-PM-0001_DRAFT.md` §5, `HYP-PM-0001_POWER.md`
+§3–§4 (precedent, silent on this exact question) · this session's F-3 finding (backfilled-data genuineness) ·
+D-042 (Dataset A regime characterization) · D-043 (FROZEN, unaffected).
+
+---
+
+### D-047 · History-maturity gate — `N` threshold deferred to per-Program PG-A initiation (Option 3)
+**Status:** APPROVED · **Date:** 2026-09-09 · **Type:** Research-governance interpretive decision · **Approval authority:** Owner/CRO
+
+**Decision — APPROVED (Option 3 — DEFER ENTIRELY TO PER-PROGRAM INITIATION).** The remaining `≥N months`
+question under [[DATA_FEASIBILITY_STUDY]] §5.3 / LIM4 is resolved as follows:
+
+- **The canonical corpus does not define a numeric `N`.** Exhaustive search (`≥N months`, `N months`,
+  `multi-year`, `12/18/24/36 months`) found no numeric candidate anywhere in `docs/` or `research/`.
+- **"Multi-year" is not operationally quantified** anywhere LIM4 or §5.3 use the term.
+- **`min_n=100` is not applicable as a Dataset-level maturity threshold** — confirmed (Q3): it is a trade-level,
+  per-hypothesis/G1 statistical floor (`regime_config.yaml::cell.min_n`, gatekeeper `min_n_cell`, NR7
+  `t3_min_n`), unrelated to raw dataset span or regime-day counts.
+- **The prior one-regime precedent (`HYP-PM-0001_POWER.md`, `EXP-PM-0001/FAILURE_ENTRY.md`) establishes
+  insufficiency, not sufficiency,** of multi-regime presence — observing only one regime is disqualifying;
+  observing more than one is not thereby stated anywhere to be sufficient.
+- **No new Dataset-level observation threshold is invented by this entry.**
+- **History maturity remains a prerequisite to be assessed at Program initiation (PG-A)**, per
+  `RESEARCH_PROGRAM_STANDARD.md` §PG-A/PG-14 and `OBJECTIVES_2026H2.md` O5's existing directive — *"monitor
+  history depth; when LIM4 clears, run the PG-A initiation packet"* — using the evidence available at that
+  time, not a threshold fixed now.
+- **The PG-A initiation packet for Program P4 (Informed-Flow) must make the LIM4 maturity determination
+  explicit** before any validation/generalization scope is authorized under that Program.
+- **PG-14's Program timebox is a separate mechanism** (the forward-evidence timebox, fixed ex ante at PG-A,
+  never extended to rescue a claim) and is unaffected by this entry.
+- **Dataset A's D-046-eligible span (`2025-01-02 → 2026-08-27`) and D-042's three-regime characterization may
+  be considered as evidence at the future PG-A assessment, but neither constitutes pre-clearance** of the gate
+  — this entry does not rule Dataset A, or any dataset, mature.
+- **Decay estimation remains subject to D-046's genuinely-elapsed-future requirement**, unaffected by this
+  entry — backfilled span does not advance decay maturity under any option considered.
+
+**Preserved, unchanged by this entry:**
+- **Dataset A remains FROZEN** (D-043) — no lifecycle transition performed; Dataset A's population, universe,
+  window, and exclusion are untouched.
+- **F-5 (`regime_classification`) remains CLOSED** (D-042).
+- **Q1 remains resolved as Option C (QUALIFIED COUNT)** (D-046).
+- **Q3 remains resolved:** `min_n=100` is trade-level/per-hypothesis/G1, not a Dataset-level maturity threshold.
+
+**Not authorized by this entry:** hypothesis registration or empirical validation — neither is performed or
+enabled by this ruling. No Program P4 PG-A packet is initiated by this entry; it only states what that future
+packet must do.
+
+**Files changed:** this entry only. `DATA_FEASIBILITY_STUDY.md` was **not** modified — this ruling interprets
+and defers application of §5.3's existing text; it does not amend it. Dataset A was not modified.
+
+**Related:** LIM4, LIM7 · [[DATA_FEASIBILITY_STUDY]] §5.3 · `RESEARCH_PROGRAM_STANDARD.md` §PG-A, PG-13, PG-14 ·
+`OBJECTIVES_2026H2.md` O5 · `RESEARCH_PROGRAM.md` (P4 row, "Not initiated — timebox watch only") ·
+`HYP-PM-0001_POWER.md`, `EXP-PM-0001/FAILURE_ENTRY.md` (one-regime insufficiency precedent) · D-042, D-043,
+D-046.
+
+---
+
+## 2i. G1/C-family governance — family determination (Option B), governance receipts, and G1 Run 1 classification, 2026-09-11
+
+**Scope note, read before the entries below:** the Owner decisions receipted here were issued via the ZCode
+execution session (external to this repository) and are recorded **on the same basis as D-032's and D-033's
+scope notes** — as receipts of Owner directives, not as independently verified cross-checks. The empirical
+artifacts they receipt (frozen store, run output, manifests) are hash-pinned in
+`docs/research_programs/P-M/dataset_b/artifacts/DATASET_B_FREEZE_MANIFEST_v1.json` and
+`docs/research_programs/P-M/g1_harness/G1_RUN_MANIFEST_RUN1_2026-09-11.json`. Nothing in this section
+executes any empirical test, modifies any dataset, or amends any methodology.
+
+### D-048 · C-family determination — {C2, C3, C7} formalized as a separately-denominated family (Option B); no I-taxonomy assignment made
+**Status:** APPROVED (Option B) · **Date:** 2026-09-11 · **Type:** Research-scope owner decision (multiplicity/family determination) · **Approval authority:** Owner
+
+**Decision.** Per the Owner's approval of Option B from
+`docs/research_programs/P-M/g1_harness/OWNER_DECISION_PACKET_FAMILY_ASSIGNMENT_2026-09-11.md`: the
+already-registered arms **{C2, C3, C7}** are formalized as a **separately-denominated hypothesis family**
+("P-M · C-family"), opened per the registry's own "family opened at first registration" precedent (D-028,
+PG-3), with the G1 replacement registration (`g1_harness/G1_REGISTRATION_v1_2026-09-11.md`) as its first
+registration act and `C7_REGISTRATION_v1_2026-09-11.md` as the C7 member registration.
+
+**Explicitly NOT decided / NOT done by this entry:**
+- **No I-taxonomy assignment.** C2, C3, and C7 are **not** classified as I5, I6, I7, or I12. The taxonomy
+  assignment question was ruled UNRESOLVED in `g1_harness/G1_GOVERNANCE_CLOSEOUT_2026-09-11.md` (no
+  authoritative document assigns any C-number to an I-entry) and remains an Owner prerogative for the future.
+- **No pooling.** The C-family is not pooled with, and does not modify, the P-M {I5, I6, I7, I12} family.
+- **No empirical execution authorized** by this entry (C7 has not run; C2/C3 were executed under the prior
+  owner-authorized G1 registration and are receipted below).
+
+**Multiplicity consequences.** P-M {I5, I6, I7, I12} denominator: **unchanged** (2 consumed members;
+HYP-PM-0001, HYP-PM-0003). C-family denominator: **3 registered arms** — C2 (executed, governance-invalidated),
+C3 (executed, valid bounded null), C7 (registered, pending execution). C1a/C1b are WITHDRAWN pre-execution and
+**do not count** (same no-slot treatment as pre-registration drafts, per the registry's DRAFT precedent).
+
+**Governance receipts (entered by this entry; hashes pinned in the cited manifests):**
+
+| # | Receipt | Identity |
+|---|---|---|
+| 1 | **Dataset B freeze** | store sha256 `21661f033145ef90…`; freeze manifest v1 `dataset_b/artifacts/DATASET_B_FREEZE_MANIFEST_v1.json` (sidecar `95f2c998…`); FINGERPRINT_v2 `1a68ab1c…`; 30,880 cells (30,877 SUCCESS + 3 EMPTY), 0 failed/truncated |
+| 2 | **BFI-002 replacement registration** | `g1_harness/G1_REGISTRATION_v1_2026-09-11.md` — dated NEW registration; original `BROKER_FLOW_PREREGISTRATION.md` NOT FOUND (retrieval report 2026-09-11); not a reconstruction |
+| 3 | **C1a/C1b withdrawal** | freq UNKNOWN/FORBIDDEN (SEMANTIC_REGISTER_v1); arms `WITHDRAWN_FREQ_DEPENDENT`, unconditional, never executed |
+| 4 | **NF ratification** | `NF = (buy_lot − sell_lot)/(buy_lot + sell_lot)` from production `stockbit_flow`; T+1; market-flow-control only; window digest `60f5f91c…` (record `g1_harness/G1_GOVERNANCE_UNBLOCK_RECORD_2026-09-11.md` §3) |
+| 5 | **Six C7 owner decisions** | outcome/contrast/horizons/multiplicity/MDE/persistence — incorporated verbatim in `C7_REGISTRATION_v1_2026-09-11.md` §3 |
+| 6 | **G1 Run 1 + classification** | executed 2026-09-11, exit 0; classification ledger in the entry below |
+| 7 | **C-family decision** | this entry (D-048, Option B) |
+
+**G1 Run 1 classification ledger (preserved exactly):**
+- **C1a = INVALID / non-reportable** (WITHDRAWN before execution; freq UNKNOWN; no numbers produced).
+- **C1b = WITHDRAWN / never implemented** (no C1b cell existed in the harness).
+- **C2 = INVALID** (governance-invalidated: registered species-mix control unimplementable — freq-dependent; executed unconditional contrast does not test the designed conditional estimand).
+- **C3 = VALID → NOT CONFIRMED, bounded** (executed exactly as registered; determinate null: primary k=5 θ = +5.8 bp, NW t = +0.323, Holm p = 1.0; robust to family recomposition).
+- **G1 overall = SPLIT / governance-invalidated** (one valid bounded null + one governance-invalidated arm + two withdrawn arms; not a clean test of the original three-arm design).
+
+**Not authorized by this entry:** C7 execution (the `c7_registered` gate remains FALSE); any empirical run;
+any methodology, threshold, k-set, cost, exclusion, or inference change; any I-taxonomy assignment; any
+alteration of the G1 result or artifacts.
+
+**Provenance condition on future execution:** `docs/research_programs/P-M/g1_harness/` and
+`docs/research_programs/P-M/dataset_b/` are currently **untracked** in git. Before any future empirical
+execution, the authoritative harness/governance files (list in
+`g1_harness/G1_GOVERNANCE_CLOSEOUT_2026-09-11.md` §E2) must be committed, ZCode recorded as sole owner of
+`g1_harness/`, and the immutable `runs/<run_id>/` provenance wrapper **implemented or the execution
+explicitly gated on it** (closeout §E3). Execution from an uncommitted/ambiguous source state is prohibited.
+
+**Files changed:** this entry · `HYPOTHESIS_REGISTRY.md` (C-family rows) · no code, no datasets, no
+methodology files.
+
+**Related:** D-032 (window/freeze decisions; Items C, D OPEN) · D-033 (admission path) ·
+`G1_OWNER_DECISION_PACKET_FAMILY_ASSIGNMENT_2026-09-11.md` · `G1_GOVERNANCE_CLOSEOUT_2026-09-11.md` ·
+`G1_REGISTRATION_v1_2026-09-11.md` · `C7_REGISTRATION_v1_2026-09-11.md`.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

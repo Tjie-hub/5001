@@ -1,0 +1,1449 @@
+{
+ "counts": {
+  "MARKET_GAP": 160
+ },
+ "events": [
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "AADI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "ACES",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "ADMR",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "ADRO",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "AKRA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "AMMN",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "AMRT",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "ANTM",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "ARTO",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "ASII",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "BBCA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "BBNI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "BBRI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "BBTN",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "BKSL",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "BMRI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "BRMS",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "BRPT",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "BSDE",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "BUKA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "BUMI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "CBDK",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "CMRY",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "CPIN",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "CTRA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "CUAN",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "DEWA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "DSNG",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "ELSA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "EMTK",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "ENRG",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "ERAA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "ESSA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "EXCL",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "GGRM",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "GOTO",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "HEAL",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "HRTA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "HRUM",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "ICBP",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "INCO",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "INDF",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "INDY",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "INKP",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "INTP",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "ISAT",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "ITMG",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "JPFA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "JSMR",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "KIJA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "KLBF",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "KPIG",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "MAPA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "MAPI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "MBMA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "MDKA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "MEDC",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "MIKA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "MYOR",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "PANI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "PGAS",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "PGEO",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "PNLF",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "PTBA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "PTRO",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "PWON",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "RAJA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "RATU",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "SCMA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "SIDO",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "SMGR",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "SMRA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "SSIA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "TAPG",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "TLKM",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "TOWR",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "TPIA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "UNTR",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "UNVR",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-09",
+   "ticker": "WIFI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "AADI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "ACES",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "ADMR",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "ADRO",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "AKRA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "AMMN",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "AMRT",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "ANTM",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "ARTO",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "ASII",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "BBCA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "BBNI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "BBRI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "BBTN",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "BKSL",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "BMRI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "BRMS",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "BRPT",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "BSDE",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "BUKA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "BUMI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "CBDK",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "CMRY",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "CPIN",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "CTRA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "CUAN",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "DEWA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "DSNG",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "ELSA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "EMTK",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "ENRG",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "ERAA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "ESSA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "EXCL",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "GGRM",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "GOTO",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "HEAL",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "HRTA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "HRUM",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "ICBP",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "INCO",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "INDF",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "INDY",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "INKP",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "INTP",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "ISAT",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "ITMG",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "JPFA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "JSMR",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "KIJA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "KLBF",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "KPIG",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "MAPA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "MAPI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "MBMA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "MDKA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "MEDC",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "MIKA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "MYOR",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "PANI",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "PGAS",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "PGEO",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "PNLF",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "PTBA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "PTRO",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "PWON",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "RAJA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "RATU",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "SCMA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "SIDO",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "SMGR",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "SMRA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "SSIA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "TAPG",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "TLKM",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "TOWR",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "TPIA",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "UNTR",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "UNVR",
+   "verdict": "MARKET_GAP"
+  },
+  {
+   "peer_absent_ratio": 1.0,
+   "peers_absent": 80,
+   "peers_total": 80,
+   "reason": "80/80 PIT peers also absent (100%) \u2014 infrastructure, not a per-name event",
+   "session": "2026-07-24",
+   "ticker": "WIFI",
+   "verdict": "MARKET_GAP"
+  }
+ ],
+ "policy": "Dataset B declares NO suspension-based exclusion. Sessions are excluded by the market-wide completeness predicate only. Ticker-specific absences are recorded as UNVERIFIED and drop out naturally because a forward return requires both endpoint bars.",
+ "threshold": 0.5
+}

@@ -1,0 +1,74 @@
+{
+ "IDX auto-rejection bands": {
+  "evidence": "LC-PM-0009: R3 symmetric to 2025-04-07, R4 ARB -15% from 2025-04-08 (SK Kep-00003/BEI/04-2025). Dataset B: 58 R3 sessions, 328 R4 sessions.",
+  "meaning": "regime-dependent daily price limits; the Dataset B window STRADDLES a boundary",
+  "research_use": "each session carries a band_regime label. LC-PM-0009 states pooling across regimes without conditioning is void under B8.",
+  "status": "VERIFIED"
+ },
+ "bandar_detector.total_buyer / total_seller": {
+  "evidence": "disclosed_rows == min(total, 25) in 30,626/30,626 ticker-days on both sides, zero mismatches; parsed from the same API response as broker_flow yet reaching 79 where broker rows cap at 25; live probe at full limit returned exactly total_buyer / total_seller rows",
+  "meaning": "UNCENSORED count of brokers net-buying / net-selling that ticker-session",
+  "research_use": "the only uncensored participation measure available",
+  "status": "VERIFIED"
+ },
+ "bandar_detector.value / volume": {
+  "evidence": "value = volume*100*avg_price with standard deviation 0.0000 across 30,468 rows; live probe: bandar.volume equals the sum of positive net lots at ratio 1.0000",
+  "meaning": "NET CROSSED volume and its rupiah value \u2014 NOT market traded totals",
+  "research_use": "NEVER a denominator for concentration or market volume. Use ohlcv.volume for traded volume.",
+  "status": "VERIFIED"
+ },
+ "broker_flow.freq": {
+  "evidence": "the fetcher maps ONE vendor field onto both buy and sell rows (stockbit_fetcher.py:719,731). Tested against the independent stockbit_flow daily summary over 34,017 ticker-days: SUM(freq) / (flow.buy_freq+flow.sell_freq) has median 0.0080, and no variant reaches 2% agreement on any day. A ~100x shortfall is far beyond what top-25 truncation can explain (the top 25 carry ~75% of value).",
+  "meaning": "UNKNOWN",
+  "research_use": "FORBIDDEN as a transaction count or ticket-size denominator until a vendor probe establishes its unit.",
+  "status": "UNKNOWN"
+ },
+ "broker_flow.investor_type": {
+  "evidence": "95 broker codes, exactly one investor_type each, invariant across 3,026,786 rows, 397 sessions, both sides, both calendar years. The third class has exactly four constant members (CC, NI, OD, DX). IDX investor reporting has two classes, not three.",
+  "meaning": "Ownership category of the BROKERAGE HOUSE: foreign-owned / local / government-state-owned brokerage",
+  "research_use": "say 'foreign-owned brokerage flow'. NEVER 'foreign investor flow', 'retail investor flow' or 'institutional investor flow'.",
+  "status": "VERIFIED"
+ },
+ "broker_flow.lot": {
+  "evidence": "a broker appears exactly once per ticker-session (3,026,786/3,026,786 rows have a single side); vendor request carries transaction_type=TRANSACTION_TYPE_NET; live probe at full limit nets to exactly 0",
+  "meaning": "NET lots for that broker on that ticker-session (buy minus sell), SIGNED",
+  "research_use": "SUM(lot) for a net. NEVER BUY_lot - SELL_lot (double-applies the sign).",
+  "status": "VERIFIED"
+ },
+ "broker_flow.lot_value": {
+  "evidence": "lot_value >= |lot|*100 in 3,026,786/3,026,786 rows; avg_price = value_total/lot_value in 3,015,371/3,026,786; the identity buy_gross + sell_gross - ohlcv_volume = bandar.volume*100 closes exactly on 74.8% of complete-disclosure days and within 1% on 87.0%",
+  "meaning": "GROSS shares transacted on the broker's dominant side; non-negative",
+  "research_use": "usable as gross-on-dominant-side. blotv/slotv field-level semantics are NOT independently confirmed against vendor documentation.",
+  "status": "PARTIALLY VERIFIED"
+ },
+ "broker_flow.side": {
+  "evidence": "757 BUY rows carry lot<0 and 1,822 SELL rows carry lot>0 in the Dataset A window \u2014 vendor rounding where net lots and net value disagree in sign",
+  "meaning": "the sign of the broker's net, not a raw buy/sell split",
+  "research_use": "derive direction from sign(value), never from the side column",
+  "status": "VERIFIED WITH DEFECT"
+ },
+ "broker_flow.value": {
+  "evidence": "SUM(value) = 0 on 70,424/70,424 complete-disclosure ticker-days; = 0 exactly on all three full-limit probe responses",
+  "meaning": "NET rupiah value for that broker on that ticker-session, SIGNED",
+  "research_use": "the accounting identity makes aggregate net UNINFORMATIVE. Do not resurrect aggregate net-flow as a directional variable.",
+  "status": "VERIFIED"
+ },
+ "broker_flow.value_total": {
+  "evidence": "as lot_value; avg_price reconciles",
+  "meaning": "GROSS rupiah on the broker's dominant side; non-negative",
+  "research_use": "gross exposure only",
+  "status": "PARTIALLY VERIFIED"
+ },
+ "idx_tickers.in_idx80": {
+  "evidence": "matches no reconstitution period (best 64/80 at P2, 57/80 at P7); contains the 692nd most liquid stock on the exchange; no writer exists in the codebase, only readers",
+  "meaning": "a stale single snapshot written 2026-04-27; NOT historical membership",
+  "research_use": "FORBIDDEN. Use the frozen PIT roster artifact.",
+  "status": "REJECTED FOR RESEARCH USE"
+ },
+ "ohlcv.close / volume": {
+  "evidence": "already split-adjusted for PTRO, CUAN and DSSA; NOT adjusted for RAJA (close/broker-VWAP 4.946 before the ex-date, 0.993 after)",
+  "meaning": "traded price and volume, regular board; adjustment basis MIXED",
+  "research_use": "run the residual detector at build time; quarantine basis mismatches rather than applying a blanket adjustment (which would double-adjust the three already-correct tickers)",
+  "status": "VERIFIED WITH DEFECT"
+ }
+}

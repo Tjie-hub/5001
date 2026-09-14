@@ -1,0 +1,687 @@
+{
+ "breached_naive_model": 15,
+ "findings": [
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R3",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 0,
+   "broker_shares_that_session": 0,
+   "corporate_action": null,
+   "date": "2025-03-12",
+   "evidence": "session 2025-03-12 precedes 2025-04-08; regime R3 floor -35%; move -17.24% is inside it",
+   "likely_cause": "legal R3 down-move: -17.24% against a symmetric -35% floor. The naive model assumed the R4 asymmetric ARB of -15%, which did not take effect until 2025-04-08 (SK Kep-00003/BEI/04-2025, LC-PM-0009).",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.172414,
+   "prev_close": 87.0,
+   "prev_raw_ohlcv": {
+    "close": 87.0,
+    "date": "2025-03-11",
+    "high": 91.0,
+    "low": 85.0,
+    "open": 85.0,
+    "volume": 182117100.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 72.0,
+    "high": 89.0,
+    "low": 62.0,
+    "open": 87.0,
+    "volume": 1085275200.0
+   },
+   "regime_aware_band": [
+    0.35,
+    -0.35
+   ],
+   "resolution": "RETAIN \u2014 naive model was wrong, not the data",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "BKSL"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R3",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 31,
+   "broker_shares_that_session": 18421100,
+   "corporate_action": null,
+   "date": "2025-02-07",
+   "evidence": "session 2025-02-07 precedes 2025-04-08; regime R3 floor -20%; move -19.94% is inside it",
+   "likely_cause": "legal R3 down-move: -19.94% against a symmetric -20% floor. The naive model assumed the R4 asymmetric ARB of -15%, which did not take effect until 2025-04-08 (SK Kep-00003/BEI/04-2025, LC-PM-0009).",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.19943,
+   "prev_close": 8775.0,
+   "prev_raw_ohlcv": {
+    "close": 8775.0,
+    "date": "2025-02-06",
+    "high": 8925.0,
+    "low": 8600.0,
+    "open": 8900.0,
+    "volume": 8514600.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 7025.0,
+    "high": 7025.0,
+    "low": 7025.0,
+    "open": 7025.0,
+    "volume": 9594200.0
+   },
+   "regime_aware_band": [
+    0.2,
+    -0.2
+   ],
+   "resolution": "RETAIN \u2014 naive model was wrong, not the data",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "BREN"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R4",
+   "breached_naive_model": false,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 41,
+   "broker_shares_that_session": 31176555100,
+   "corporate_action": null,
+   "date": "2025-11-11",
+   "evidence": "high/ceiling = 0.9975; a data artifact would not land on the regulatory limit. volume 28,600,582,500",
+   "likely_cause": "genuine limit-up: session high 202 against an ARA ceiling of 202.50 (35% of ref 150)",
+   "naive_arb_threshold": -0.15,
+   "observed_move": 0.32,
+   "prev_close": 150.0,
+   "prev_raw_ohlcv": {
+    "close": 150.0,
+    "date": "2025-11-10",
+    "high": 150.0,
+    "low": 141.0,
+    "open": 142.0,
+    "volume": 3425993000.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 198.0,
+    "high": 202.0,
+    "low": 150.0,
+    "open": 151.0,
+    "volume": 28600582500.0
+   },
+   "regime_aware_band": [
+    0.35,
+    -0.15
+   ],
+   "resolution": "RETAIN \u2014 legal move, inside the regime band",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "BUMI"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R3",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 0,
+   "broker_shares_that_session": 0,
+   "corporate_action": null,
+   "date": "2025-01-23",
+   "evidence": "session 2025-01-23 precedes 2025-04-08; regime R3 floor -20%; move -19.89% is inside it",
+   "likely_cause": "legal R3 down-move: -19.89% against a symmetric -20% floor. The naive model assumed the R4 asymmetric ARB of -15%, which did not take effect until 2025-04-08 (SK Kep-00003/BEI/04-2025, LC-PM-0009).",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.198939,
+   "prev_close": 9425.0,
+   "prev_raw_ohlcv": {
+    "close": 9425.0,
+    "date": "2025-01-22",
+    "high": 9925.0,
+    "low": 9125.0,
+    "open": 9800.0,
+    "volume": 39033500.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 7550.0,
+    "high": 9350.0,
+    "low": 7550.0,
+    "open": 9225.0,
+    "volume": 93551000.0
+   },
+   "regime_aware_band": [
+    0.2,
+    -0.2
+   ],
+   "resolution": "RETAIN \u2014 naive model was wrong, not the data",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "CBDK"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R3",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 0,
+   "broker_shares_that_session": 0,
+   "corporate_action": null,
+   "date": "2025-02-07",
+   "evidence": "session 2025-02-07 precedes 2025-04-08; regime R3 floor -25%; move -19.96% is inside it",
+   "likely_cause": "legal R3 down-move: -19.96% against a symmetric -25% floor. The naive model assumed the R4 asymmetric ARB of -15%, which did not take effect until 2025-04-08 (SK Kep-00003/BEI/04-2025, LC-PM-0009).",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.199647,
+   "prev_close": 1415.0,
+   "prev_raw_ohlcv": {
+    "close": 1415.0,
+    "date": "2025-02-06",
+    "high": 1427.5,
+    "low": 1395.0,
+    "open": 1422.5,
+    "volume": 56050000.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 1132.5,
+    "high": 1132.5,
+    "low": 1132.5,
+    "open": 1132.5,
+    "volume": 17147000.0
+   },
+   "regime_aware_band": [
+    0.25,
+    -0.25
+   ],
+   "resolution": "RETAIN \u2014 naive model was wrong, not the data",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "CUAN"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R3",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 0,
+   "broker_shares_that_session": 0,
+   "corporate_action": null,
+   "date": "2025-02-10",
+   "evidence": "session 2025-02-10 precedes 2025-04-08; regime R3 floor -25%; move -19.87% is inside it",
+   "likely_cause": "legal R3 down-move: -19.87% against a symmetric -25% floor. The naive model assumed the R4 asymmetric ARB of -15%, which did not take effect until 2025-04-08 (SK Kep-00003/BEI/04-2025, LC-PM-0009).",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.198675,
+   "prev_close": 1132.5,
+   "prev_raw_ohlcv": {
+    "close": 1132.5,
+    "date": "2025-02-07",
+    "high": 1132.5,
+    "low": 1132.5,
+    "open": 1132.5,
+    "volume": 17147000.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 907.5,
+    "high": 1000.0,
+    "low": 907.5,
+    "open": 907.5,
+    "volume": 391873000.0
+   },
+   "regime_aware_band": [
+    0.25,
+    -0.25
+   ],
+   "resolution": "RETAIN \u2014 naive model was wrong, not the data",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "CUAN"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R3",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 0,
+   "broker_shares_that_session": 0,
+   "corporate_action": null,
+   "date": "2025-02-11",
+   "evidence": "session 2025-02-11 precedes 2025-04-08; regime R3 floor -25%; move -19.01% is inside it",
+   "likely_cause": "legal R3 down-move: -19.01% against a symmetric -25% floor. The naive model assumed the R4 asymmetric ARB of -15%, which did not take effect until 2025-04-08 (SK Kep-00003/BEI/04-2025, LC-PM-0009).",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.190083,
+   "prev_close": 907.5,
+   "prev_raw_ohlcv": {
+    "close": 907.5,
+    "date": "2025-02-10",
+    "high": 1000.0,
+    "low": 907.5,
+    "open": 907.5,
+    "volume": 391873000.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 735.0,
+    "high": 920.0,
+    "low": 732.5,
+    "open": 880.0,
+    "volume": 1063169000.0
+   },
+   "regime_aware_band": [
+    0.25,
+    -0.25
+   ],
+   "resolution": "RETAIN \u2014 naive model was wrong, not the data",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "CUAN"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R3",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 0,
+   "broker_shares_that_session": 0,
+   "corporate_action": null,
+   "date": "2025-02-07",
+   "evidence": "session 2025-02-07 precedes 2025-04-08; regime R3 floor -25%; move -17.86% is inside it",
+   "likely_cause": "legal R3 down-move: -17.86% against a symmetric -25% floor. The naive model assumed the R4 asymmetric ARB of -15%, which did not take effect until 2025-04-08 (SK Kep-00003/BEI/04-2025, LC-PM-0009).",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.178553,
+   "prev_close": 1921.0,
+   "prev_raw_ohlcv": {
+    "close": 1921.0,
+    "date": "2025-02-06",
+    "high": 1952.0,
+    "low": 1852.0,
+    "open": 1924.0,
+    "volume": 103030000.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 1578.0,
+    "high": 1919.0,
+    "low": 1578.0,
+    "open": 1919.0,
+    "volume": 45282500.0
+   },
+   "regime_aware_band": [
+    0.25,
+    -0.25
+   ],
+   "resolution": "RETAIN \u2014 naive model was wrong, not the data",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "DSSA"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R4",
+   "breached_naive_model": false,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 49,
+   "broker_shares_that_session": 1339574877,
+   "corporate_action": null,
+   "date": "2026-08-18",
+   "evidence": "high/ceiling = 0.9997; a data artifact would not land on the regulatory limit. volume 1,517,937,167",
+   "likely_cause": "genuine limit-up: session high 166 against an ARA ceiling of 166.05 (35% of ref 123)",
+   "naive_arb_threshold": -0.15,
+   "observed_move": 0.349593,
+   "prev_close": 123.0,
+   "prev_raw_ohlcv": {
+    "close": 123.0,
+    "date": "2026-08-14",
+    "high": 123.0,
+    "low": 119.0,
+    "open": 123.0,
+    "volume": 156871626.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 166.0,
+    "high": 166.0,
+    "low": 123.0,
+    "open": 123.0,
+    "volume": 1517937167.0
+   },
+   "regime_aware_band": [
+    0.35,
+    -0.15
+   ],
+   "resolution": "RETAIN \u2014 legal move, inside the regime band",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "KIJA"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R3",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 47,
+   "broker_shares_that_session": 75482100,
+   "corporate_action": null,
+   "date": "2025-01-23",
+   "evidence": "session 2025-01-23 precedes 2025-04-08; regime R3 floor -20%; move -19.89% is inside it",
+   "likely_cause": "legal R3 down-move: -19.89% against a symmetric -20% floor. The naive model assumed the R4 asymmetric ARB of -15%, which did not take effect until 2025-04-08 (SK Kep-00003/BEI/04-2025, LC-PM-0009).",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.198915,
+   "prev_close": 13825.0,
+   "prev_raw_ohlcv": {
+    "close": 13825.0,
+    "date": "2025-01-22",
+    "high": 14575.0,
+    "low": 12500.0,
+    "open": 14100.0,
+    "volume": 37017900.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 11075.0,
+    "high": 14075.0,
+    "low": 11075.0,
+    "open": 13700.0,
+    "volume": 62526900.0
+   },
+   "regime_aware_band": [
+    0.2,
+    -0.2
+   ],
+   "resolution": "RETAIN \u2014 naive model was wrong, not the data",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "PANI"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R3",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 0,
+   "broker_shares_that_session": 0,
+   "corporate_action": null,
+   "date": "2025-02-07",
+   "evidence": "session 2025-02-07 precedes 2025-04-08; regime R3 floor -25%; move -24.61% is inside it",
+   "likely_cause": "legal R3 down-move: -24.61% against a symmetric -25% floor. The naive model assumed the R4 asymmetric ARB of -15%, which did not take effect until 2025-04-08 (SK Kep-00003/BEI/04-2025, LC-PM-0009).",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.246073,
+   "prev_close": 3820.0,
+   "prev_raw_ohlcv": {
+    "close": 3820.0,
+    "date": "2025-02-06",
+    "high": 3940.0,
+    "low": 3800.0,
+    "open": 3880.0,
+    "volume": 32796800.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 2880.0,
+    "high": 3390.0,
+    "low": 2870.0,
+    "open": 2870.0,
+    "volume": 390669300.0
+   },
+   "regime_aware_band": [
+    0.25,
+    -0.25
+   ],
+   "resolution": "RETAIN \u2014 naive model was wrong, not the data",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "PTRO"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R3",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 50,
+   "broker_shares_that_session": 792257000,
+   "corporate_action": null,
+   "date": "2025-03-04",
+   "evidence": "session 2025-03-04 precedes 2025-04-08; regime R3 floor -25%; move -19.87% is inside it",
+   "likely_cause": "legal R3 down-move: -19.87% against a symmetric -25% floor. The naive model assumed the R4 asymmetric ARB of -15%, which did not take effect until 2025-04-08 (SK Kep-00003/BEI/04-2025, LC-PM-0009).",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.198718,
+   "prev_close": 3120.0,
+   "prev_raw_ohlcv": {
+    "close": 3120.0,
+    "date": "2025-03-03",
+    "high": 3240.0,
+    "low": 3010.0,
+    "open": 3010.0,
+    "volume": 44650100.0
+   },
+   "quarantined": true,
+   "raw_ohlcv": {
+    "close": 2500.0,
+    "high": 3100.0,
+    "low": 2350.0,
+    "open": 3100.0,
+    "volume": 134953000.0
+   },
+   "regime_aware_band": [
+    0.25,
+    -0.25
+   ],
+   "resolution": "RETAIN \u2014 naive model was wrong, not the data",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "RAJA"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R4",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": true,
+   "broker_rows_that_session": 48,
+   "broker_shares_that_session": 268098400,
+   "corporate_action": {
+    "applied_in_ohlcv": false,
+    "event_id": "6092",
+    "ex_date": "2026-07-16",
+    "factor": 5.0,
+    "observed_return": -0.809783,
+    "return_if_unadjusted": -0.8,
+    "secondary_factor": null,
+    "source": "corporate_action_events",
+    "ticker": "RAJA",
+    "type": "stocksplit"
+   },
+   "date": "2026-07-16",
+   "evidence": "close/broker-VWAP median 4.946 pre-ex vs 0.993 post-ex; corporate_action_events stocksplit_new/old = 5/1",
+   "likely_cause": "unapplied stocksplit 5:1 on this ex-date; ohlcv not adjusted (applied_in_ohlcv=False)",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.809783,
+   "prev_close": 4600.0,
+   "prev_raw_ohlcv": {
+    "close": 4600.0,
+    "date": "2026-07-15",
+    "high": 4740.0,
+    "low": 4550.0,
+    "open": 4630.0,
+    "volume": 82619862.0
+   },
+   "quarantined": true,
+   "raw_ohlcv": {
+    "close": 875.0,
+    "high": 930.0,
+    "low": 870.0,
+    "open": 895.0,
+    "volume": 531757417.0
+   },
+   "regime_aware_band": [
+    0.25,
+    -0.15
+   ],
+   "resolution": "QUARANTINE ticker (basis mismatch, see residual detector)",
+   "retained": false,
+   "session_in_calendar": true,
+   "ticker": "RAJA"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R3",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 0,
+   "broker_shares_that_session": 0,
+   "corporate_action": null,
+   "date": "2025-03-04",
+   "evidence": "session 2025-03-04 precedes 2025-04-08; regime R3 floor -20%; move -18.75% is inside it",
+   "likely_cause": "legal R3 down-move: -18.75% against a symmetric -20% floor. The naive model assumed the R4 asymmetric ARB of -15%, which did not take effect until 2025-04-08 (SK Kep-00003/BEI/04-2025, LC-PM-0009).",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.1875,
+   "prev_close": 7200.0,
+   "prev_raw_ohlcv": {
+    "close": 7200.0,
+    "date": "2025-03-03",
+    "high": 7475.0,
+    "low": 6800.0,
+    "open": 6950.0,
+    "volume": 7851000.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 5850.0,
+    "high": 7200.0,
+    "low": 5775.0,
+    "open": 7200.0,
+    "volume": 34799400.0
+   },
+   "regime_aware_band": [
+    0.2,
+    -0.2
+   ],
+   "resolution": "RETAIN \u2014 naive model was wrong, not the data",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "RATU"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R3",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 48,
+   "broker_shares_that_session": 83348400,
+   "corporate_action": null,
+   "date": "2025-02-07",
+   "evidence": "session 2025-02-07 precedes 2025-04-08; regime R3 floor -20%; move -19.44% is inside it",
+   "likely_cause": "legal R3 down-move: -19.44% against a symmetric -20% floor. The naive model assumed the R4 asymmetric ARB of -15%, which did not take effect until 2025-04-08 (SK Kep-00003/BEI/04-2025, LC-PM-0009).",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.194444,
+   "prev_close": 8100.0,
+   "prev_raw_ohlcv": {
+    "close": 8100.0,
+    "date": "2025-02-06",
+    "high": 8675.0,
+    "low": 8100.0,
+    "open": 8675.0,
+    "volume": 31484400.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 6525.0,
+    "high": 7650.0,
+    "low": 6500.0,
+    "open": 7650.0,
+    "volume": 63322200.0
+   },
+   "regime_aware_band": [
+    0.2,
+    -0.2
+   ],
+   "resolution": "RETAIN \u2014 naive model was wrong, not the data",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "TPIA"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R3",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 43,
+   "broker_shares_that_session": 73343500,
+   "corporate_action": null,
+   "date": "2025-03-18",
+   "evidence": "session 2025-03-18 precedes 2025-04-08; regime R3 floor -20%; move -18.42% is inside it",
+   "likely_cause": "legal R3 down-move: -18.42% against a symmetric -20% floor. The naive model assumed the R4 asymmetric ARB of -15%, which did not take effect until 2025-04-08 (SK Kep-00003/BEI/04-2025, LC-PM-0009).",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.184211,
+   "prev_close": 6650.0,
+   "prev_raw_ohlcv": {
+    "close": 6650.0,
+    "date": "2025-03-17",
+    "high": 6900.0,
+    "low": 6600.0,
+    "open": 6825.0,
+    "volume": 5110800.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 5425.0,
+    "high": 6700.0,
+    "low": 5325.0,
+    "open": 6650.0,
+    "volume": 58255100.0
+   },
+   "regime_aware_band": [
+    0.2,
+    -0.2
+   ],
+   "resolution": "RETAIN \u2014 naive model was wrong, not the data",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "TPIA"
+  },
+  {
+   "adjusted_ohlcv": "none applied \u2014 see adjustment policy",
+   "band_regime": "R3",
+   "breached_naive_model": true,
+   "breaches_regime_aware_model": false,
+   "broker_rows_that_session": 0,
+   "broker_shares_that_session": 0,
+   "corporate_action": null,
+   "date": "2025-03-04",
+   "evidence": "session 2025-03-04 precedes 2025-04-08; regime R3 floor -25%; move -17.53% is inside it",
+   "likely_cause": "legal R3 down-move: -17.53% against a symmetric -25% floor. The naive model assumed the R4 asymmetric ARB of -15%, which did not take effect until 2025-04-08 (SK Kep-00003/BEI/04-2025, LC-PM-0009).",
+   "naive_arb_threshold": -0.15,
+   "observed_move": -0.175299,
+   "prev_close": 2510.0,
+   "prev_raw_ohlcv": {
+    "close": 2510.0,
+    "date": "2025-03-03",
+    "high": 2530.0,
+    "low": 2360.0,
+    "open": 2500.0,
+    "volume": 78494100.0
+   },
+   "quarantined": false,
+   "raw_ohlcv": {
+    "close": 2070.0,
+    "high": 2480.0,
+    "low": 1945.0,
+    "open": 2410.0,
+    "volume": 194400700.0
+   },
+   "regime_aware_band": [
+    0.25,
+    -0.25
+   ],
+   "resolution": "RETAIN \u2014 naive model was wrong, not the data",
+   "retained": true,
+   "session_in_calendar": true,
+   "ticker": "WIFI"
+  }
+ ],
+ "naive_model": {
+  "arb": -0.15,
+  "note": "flat ARB applied to the whole window"
+ },
+ "regime_source": "LC-PM-0009 \u00b7 IDX auto-rejection regime timeline",
+ "resolved": 15,
+ "total_examined": 17,
+ "unresolved": 0
+}

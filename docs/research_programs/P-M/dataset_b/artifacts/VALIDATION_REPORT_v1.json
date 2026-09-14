@@ -1,0 +1,322 @@
+{
+ "calendar_sha256": "5012be2315dc82ccfd65a2b117e1977753f0a7d3214693821b39077cd18043fa",
+ "checks": [
+  {
+   "check": "calendar artifact hash verifies",
+   "detail": "5012be2315dc82cc\u2026",
+   "pass": true
+  },
+  {
+   "check": "roster artifact hash verifies",
+   "detail": "f7e2fec030116a90\u2026",
+   "pass": true
+  },
+  {
+   "check": "no idx_tickers read in foundation module CODE (docstrings excluded)",
+   "detail": "verification reads the frozen artifact only",
+   "pass": true
+  },
+  {
+   "check": "2026-07-09 excluded",
+   "detail": "member price coverage below threshold",
+   "pass": true
+  },
+  {
+   "check": "2026-07-24 excluded",
+   "detail": "member price coverage below threshold",
+   "pass": true
+  },
+  {
+   "check": "2026-08-25 excluded",
+   "detail": "no IHSG bar; trading_calendar source is 'scr",
+   "pass": true
+  },
+  {
+   "check": "excluded sessions recorded with reasons",
+   "detail": "3 recorded",
+   "pass": true
+  },
+  {
+   "check": "no excluded session appears in the session list",
+   "detail": "",
+   "pass": true
+  },
+  {
+   "check": "every admitted session has full member price coverage",
+   "detail": "min coverage 1.0",
+   "pass": true
+  },
+  {
+   "check": "membership resolved per session",
+   "detail": "",
+   "pass": true
+  },
+  {
+   "check": "every session carries a full 80-member index",
+   "detail": "member counts [80]",
+   "pass": true
+  },
+  {
+   "check": "declared == observed constituent count in all periods",
+   "detail": "8 periods",
+   "pass": true
+  },
+  {
+   "check": "the ten never-members are absent from the universe",
+   "detail": "",
+   "pass": true
+  },
+  {
+   "check": "named custody artifact PIT_ROSTER_v1 is membership-identical to v2",
+   "detail": "v2 differs only in the calendar hash it references",
+   "pass": true
+  },
+  {
+   "check": "every session carries an IDX band-regime label",
+   "detail": "{'R3': 58, 'R4': 328}",
+   "pass": true
+  },
+  {
+   "check": "all in-window splits recovered with a ratio",
+   "detail": "4 events",
+   "pass": true
+  },
+  {
+   "check": "RAJA 2026-07-16 5:1 present from corporate_action_events",
+   "detail": "",
+   "pass": true
+  },
+  {
+   "check": "RAJA detected as NOT already adjusted in ohlcv",
+   "detail": "",
+   "pass": true
+  },
+  {
+   "check": "PTRO/CUAN/DSSA detected as ALREADY adjusted (no double-adjustment)",
+   "detail": "",
+   "pass": true
+  },
+  {
+   "check": "RAJA is detected",
+   "detail": "known positive",
+   "pass": true
+  },
+  {
+   "check": "no clean ticker falsely flagged",
+   "detail": "clean median range 0.9928-1.0037",
+   "pass": true
+  },
+  {
+   "check": "k=3: every observation is exactly 3 sessions",
+   "detail": "0 violations",
+   "pass": true
+  },
+  {
+   "check": "k=3: zero substituted landing sessions",
+   "detail": "0 violations",
+   "pass": true
+  },
+  {
+   "check": "k=3: zero windows crossing an excluded session",
+   "detail": "0 violations",
+   "pass": true
+  },
+  {
+   "check": "k=3: every observation is a PIT member at formation",
+   "detail": "0 violations",
+   "pass": true
+  },
+  {
+   "check": "k=7: every observation is exactly 7 sessions",
+   "detail": "0 violations",
+   "pass": true
+  },
+  {
+   "check": "k=7: zero substituted landing sessions",
+   "detail": "0 violations",
+   "pass": true
+  },
+  {
+   "check": "k=7: zero windows crossing an excluded session",
+   "detail": "0 violations",
+   "pass": true
+  },
+  {
+   "check": "k=7: every observation is a PIT member at formation",
+   "detail": "0 violations",
+   "pass": true
+  },
+  {
+   "check": "k=15: every observation is exactly 15 sessions",
+   "detail": "0 violations",
+   "pass": true
+  },
+  {
+   "check": "k=15: zero substituted landing sessions",
+   "detail": "0 violations",
+   "pass": true
+  },
+  {
+   "check": "k=15: zero windows crossing an excluded session",
+   "detail": "0 violations",
+   "pass": true
+  },
+  {
+   "check": "k=15: every observation is a PIT member at formation",
+   "detail": "0 violations",
+   "pass": true
+  },
+  {
+   "check": "no move outside the IDX auto-rejection bands is unexplained",
+   "detail": "0 unexplained; 3 inside-band or explained or quarantined",
+   "pass": true
+  },
+  {
+   "check": "large-but-legal moves are retained, not scrubbed",
+   "detail": "2 moves >30% retained as genuine limit-ups",
+   "pass": true
+  }
+ ],
+ "corporate_actions": [
+  {
+   "applied_in_ohlcv": true,
+   "event_id": "6083",
+   "ex_date": "2025-07-15",
+   "factor": 10.0,
+   "observed_return": -0.037037,
+   "return_if_unadjusted": -0.9,
+   "secondary_factor": 10.0,
+   "source": "corporate_action_events",
+   "ticker": "CUAN",
+   "type": "stocksplit"
+  },
+  {
+   "applied_in_ohlcv": true,
+   "event_id": "6089",
+   "ex_date": "2026-04-09",
+   "factor": 25.0,
+   "observed_return": 0.164179,
+   "return_if_unadjusted": -0.96,
+   "secondary_factor": 25.0,
+   "source": "corporate_action_events",
+   "ticker": "DSSA",
+   "type": "stocksplit"
+  },
+  {
+   "applied_in_ohlcv": true,
+   "event_id": "6076",
+   "ex_date": "2025-01-03",
+   "factor": 10.0,
+   "observed_return": 0.04918,
+   "return_if_unadjusted": -0.9,
+   "secondary_factor": 10.0,
+   "source": "corporate_action_events",
+   "ticker": "PTRO",
+   "type": "stocksplit"
+  },
+  {
+   "applied_in_ohlcv": false,
+   "event_id": "6092",
+   "ex_date": "2026-07-16",
+   "factor": 5.0,
+   "observed_return": -0.809783,
+   "return_if_unadjusted": -0.8,
+   "secondary_factor": null,
+   "source": "corporate_action_events",
+   "ticker": "RAJA",
+   "type": "stocksplit"
+  }
+ ],
+ "forward": {
+  "k15": {
+   "candidates": 30880,
+   "dropped_crosses_excluded": 2133,
+   "dropped_no_formation_price": 0,
+   "dropped_no_outcome_price": 0,
+   "dropped_off_calendar": 1185,
+   "dropped_quarantine": 254,
+   "k": 15,
+   "kept": 27308,
+   "strict_contiguity": true
+  },
+  "k3": {
+   "candidates": 30880,
+   "dropped_crosses_excluded": 632,
+   "dropped_no_formation_price": 0,
+   "dropped_no_outcome_price": 0,
+   "dropped_off_calendar": 237,
+   "dropped_quarantine": 254,
+   "k": 3,
+   "kept": 29757,
+   "strict_contiguity": true
+  },
+  "k7": {
+   "candidates": 30880,
+   "dropped_crosses_excluded": 1264,
+   "dropped_no_formation_price": 0,
+   "dropped_no_outcome_price": 0,
+   "dropped_off_calendar": 553,
+   "dropped_quarantine": 254,
+   "k": 7,
+   "kept": 28809,
+   "strict_contiguity": true
+  }
+ },
+ "large_moves": [
+  {
+   "ara": 0.35,
+   "arb": -0.15,
+   "band_regime": "R4",
+   "close": 198.0,
+   "date": "2025-11-11",
+   "explained_by_ca": false,
+   "outside_idx_band": false,
+   "prev_close": 150.0,
+   "quarantined": false,
+   "ret": 0.32,
+   "ticker": "BUMI"
+  },
+  {
+   "ara": 0.35,
+   "arb": -0.15,
+   "band_regime": "R4",
+   "close": 166.0,
+   "date": "2026-08-18",
+   "explained_by_ca": false,
+   "outside_idx_band": false,
+   "prev_close": 123.0,
+   "quarantined": false,
+   "ret": 0.3496,
+   "ticker": "KIJA"
+  },
+  {
+   "ara": 0.25,
+   "arb": -0.15,
+   "band_regime": "R4",
+   "close": 875.0,
+   "date": "2026-07-16",
+   "explained_by_ca": true,
+   "outside_idx_band": true,
+   "prev_close": 4600.0,
+   "quarantined": true,
+   "ret": -0.8098,
+   "ticker": "RAJA"
+  }
+ ],
+ "passed": 35,
+ "quarantine": [
+  "RAJA"
+ ],
+ "roster_sha256": "f7e2fec030116a906471d27ee1e3a148aac459f125208d7d6e8e6c6fd3d8c57a",
+ "sessions": 386,
+ "total": 35,
+ "universe": 101,
+ "vwap_ratio": {
+  "flagged": [
+   "RAJA"
+  ],
+  "instability": 0.5,
+  "insufficient": [],
+  "tolerance": 0.05
+ }
+}

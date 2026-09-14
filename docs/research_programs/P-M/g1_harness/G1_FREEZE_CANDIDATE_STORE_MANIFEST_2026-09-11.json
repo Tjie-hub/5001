@@ -1,0 +1,1432 @@
+{
+ "manifest": {
+  "artifact": "G1_FREEZE_CANDIDATE_STORE_MANIFEST",
+  "capture_grid": {
+   "calendar_artifact_sha256": "5012be2315dc82ccfd65a2b117e1977753f0a7d3214693821b39077cd18043fa",
+   "calendar_artifact_version": "v2",
+   "cells_in_scope": 30626,
+   "quarantined": [
+    "RAJA"
+   ],
+   "roster_artifact_sha256": "f7e2fec030116a906471d27ee1e3a148aac459f125208d7d6e8e6c6fd3d8c57a",
+   "roster_artifact_version": "v1",
+   "sessions": 386
+  },
+  "method": "per-ticker commutative SHA-256 fold; order-independent, value-sensitive (identical to dataset_b/fingerprint.py)",
+  "per_ticker": {
+   "AADI": {
+    "bandar_detector_b": {
+     "fold": "7f27e03f23bf3fa8a12123e019205f5af41b8e30ca0ff13fba49dd070fd90d7b",
+     "rows": 254
+    },
+    "broker_flow_b": {
+     "fold": "1bc3eb8f9b71d1648f5b66d12d25a9c3d1d25a5be6c7f9523c85772ee7dd5b50",
+     "rows": 12915
+    },
+    "ohlcv": {
+     "fold": "51d0300f98ec7459446c78a212cd3571f7ba927bda1c606b9a6b69c0cb7310f7",
+     "rows": 254
+    }
+   },
+   "ACES": {
+    "bandar_detector_b": {
+     "fold": "2e649ccf146be40236ef5ea493aa89b362d59182c5e150d474106c9a341fc231",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "237dacbfe5c0710e5544a2fd39928183eb7d6070bc6d167125754c95a95da929",
+     "rows": 17502
+    },
+    "ohlcv": {
+     "fold": "92c2a1d45e0beb1cfdfa0d5d7da522c1789d74e2c8cb2fb91375b51d9f7f2be3",
+     "rows": 386
+    }
+   },
+   "ADMR": {
+    "bandar_detector_b": {
+     "fold": "d44ff1951a46b915d7b183402740b3fe6f7541c38f948403f415d3af87843941",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "3309aed963825711c0048ea9a5891e9964b161e3596134cfbc2325a1ed1400db",
+     "rows": 19938
+    },
+    "ohlcv": {
+     "fold": "b00d2a5f98711e7d0415470b65d96c47857f9e05a3773851340c41e682a09ec5",
+     "rows": 386
+    }
+   },
+   "ADRO": {
+    "bandar_detector_b": {
+     "fold": "beb43bb45ad12999e2c9053d0c28963deb81c14ef97fe7898a29ed4b50fe2e7e",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "b539f0e8090d67ec365cb5ca526193caefd3259cfe3f1ea6e2c1e433bbfcf874",
+     "rows": 22586
+    },
+    "ohlcv": {
+     "fold": "38bd29c51f7c4fe8cb6b0f9fe78bdf450c88f4a90ed7456fa6cae69bd3d91293",
+     "rows": 386
+    }
+   },
+   "AKRA": {
+    "bandar_detector_b": {
+     "fold": "a5f28ab83aa4787225c8a8ecb508e32c72df28c5c215345f7bd4764f74950b29",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "e981663d4114d978219a2d9429b741ffb51cc65113912bebd9a6a6bbc6517185",
+     "rows": 17664
+    },
+    "ohlcv": {
+     "fold": "06b87390477fb8337df23c321615f8486e2f8168856d9ac0f3d4b662f8188f19",
+     "rows": 386
+    }
+   },
+   "AMMN": {
+    "bandar_detector_b": {
+     "fold": "5084a769714fcc952feb1f41ed2043f0642e8f4cb0b1b4b6dae1426d681b9812",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "9ad9bd1e09c22912fa9d1b3aecb2e128be1779eda291b9f08fda74b45dfe26c9",
+     "rows": 23445
+    },
+    "ohlcv": {
+     "fold": "26c04dbb03a63987186969940053dfdb47b0d866673fd9f67398296b5fd1ad55",
+     "rows": 386
+    }
+   },
+   "AMRT": {
+    "bandar_detector_b": {
+     "fold": "d96357ee59c2390510b2cfceeef74705335b15de587ce5ac559cdcd2a0047417",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "4f48d1da1349a5ab48dc0ffb7e83cc5ad1b0cd164ea9f9aec740ef017ef59908",
+     "rows": 17703
+    },
+    "ohlcv": {
+     "fold": "5e56753ac9f1aa6045e916882a867d3bdb421a3476a611bdfbe8007b9c653971",
+     "rows": 386
+    }
+   },
+   "ANTM": {
+    "bandar_detector_b": {
+     "fold": "5f43aacf7cab35ee69c0b15512b791f520e6d956aa08a067b88a4815ba360dae",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "9ebf74a2e387f7d696a4a03f42fce370f1f9e050daafe5718f528c01ff2fa9bb",
+     "rows": 25618
+    },
+    "ohlcv": {
+     "fold": "aa06086d0cdc3c07ee1d637bb3e1a06a374e3f5aba02172f39a1edfe415f8c4b",
+     "rows": 386
+    }
+   },
+   "ARTO": {
+    "bandar_detector_b": {
+     "fold": "9b5a289cb397176d843dc4a09b89401ca28efbaa8123658e7b75ed56dae33dd9",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "6d99829c1f3e91258e37ca15281443780265188ab2be38b48d4a40928d08509c",
+     "rows": 16664
+    },
+    "ohlcv": {
+     "fold": "ddb77503de4efee06afcb5821c381dd95d4199175b8d207962797cb98d80de86",
+     "rows": 386
+    }
+   },
+   "ASII": {
+    "bandar_detector_b": {
+     "fold": "0267ee0d8473f1303d79ee7f8fa8bdcedafff5ab6ac195431d6f893e489cf00d",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "135928dc97a677a08e851289c5dd62b6f7452bc34581cc9b0c72ce5a67e29bb7",
+     "rows": 21336
+    },
+    "ohlcv": {
+     "fold": "388cab38f965af58683e344c815503e5f600c0ad2d9d2bbb3217072789e396c6",
+     "rows": 386
+    }
+   },
+   "AUTO": {
+    "bandar_detector_b": {
+     "fold": "edb343a8bbe5e05cb15cb6967c3ef923585b142c17afe42141bace4508790881",
+     "rows": 196
+    },
+    "broker_flow_b": {
+     "fold": "8a1327bc95bfae9b72eb1fa09b2fdee0a1143d37fd6830372a8ef75df9804378",
+     "rows": 6918
+    },
+    "ohlcv": {
+     "fold": "e1375b95afd0144fbfa7e302cc71a31b5ac504e1f6182cb3ae3d43f1de0288d1",
+     "rows": 196
+    }
+   },
+   "AVIA": {
+    "bandar_detector_b": {
+     "fold": "2694b2d32f43b659ad6c734f85e38cf2669414c67d95735722c1c106b8c311c8",
+     "rows": 256
+    },
+    "broker_flow_b": {
+     "fold": "ce187e2e80d41d775126f4ac570bf4a130f1c1b6f43497f0c62823097c1121eb",
+     "rows": 9786
+    },
+    "ohlcv": {
+     "fold": "17619ec6a90268eb39fd4061888492bde89e6af40bf1c7ebf10563c166a7d23a",
+     "rows": 256
+    }
+   },
+   "BBCA": {
+    "bandar_detector_b": {
+     "fold": "5b00e16b3b3870e97b1cb99dd5ac114962d3a8cac183fd6e1bcb1ce5f15a8a0d",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "415be702eb81a5400dd55c8cec1438597c95231e47e5c2a8ac7cd4de51130bdd",
+     "rows": 27606
+    },
+    "ohlcv": {
+     "fold": "827ce3d90c8a7b3dd12ec2c919c91447a371c542d979349814efc1694a7d27e9",
+     "rows": 386
+    }
+   },
+   "BBNI": {
+    "bandar_detector_b": {
+     "fold": "1c05ba301671281b619fc0ed1fa1f85fb1b1220bf560a4c668056141f1a27016",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "7e4e3407517d036ad465f782c7c0ae2fcbfdfa6a2fc67e9435165e9fb6c8e16e",
+     "rows": 22900
+    },
+    "ohlcv": {
+     "fold": "83c0101eef3fb4f1374d8441f0c48915fcba8e85297554cd7a7dc04dc4a8447c",
+     "rows": 386
+    }
+   },
+   "BBRI": {
+    "bandar_detector_b": {
+     "fold": "04d24db0febad1545ff05644f7cc97abc014e3c835d8c208e7be86bab41762ba",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "9b7fcb5f97237cbc9e4790bccc31102fe1a6f6a9979e90614a7fa3630ecbb049",
+     "rows": 28018
+    },
+    "ohlcv": {
+     "fold": "fbf44cbe4ace6a9a0ddcd5130d9ae77c896ce0f46466917bff53e0cdffe92f8a",
+     "rows": 386
+    }
+   },
+   "BBTN": {
+    "bandar_detector_b": {
+     "fold": "8aa929b936d01e8c59823be66e6daf31097c67b908c1e34ef071d1705caa7e26",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "332b752ddec8f34877e3df273456de4583290a7641f147d9a160382dd02385dc",
+     "rows": 18937
+    },
+    "ohlcv": {
+     "fold": "c4b28d93ad3f495037c834fc32bb3818d7e8befff4b1465dae7f77d7988e005a",
+     "rows": 386
+    }
+   },
+   "BFIN": {
+    "bandar_detector_b": {
+     "fold": "19e50d3db0945e18354fa1a4a24973eaf3d2e4ab90c92e3554aab29e3e80e543",
+     "rows": 213
+    },
+    "broker_flow_b": {
+     "fold": "0f8212fceb80c1fd336685d1e2e93a9de58ac2bb55d2410f8876515080e3b72d",
+     "rows": 7541
+    },
+    "ohlcv": {
+     "fold": "d3ba6792735a9fa42701b690068b45d69ac4571084cc31c25d682308eaaf57b5",
+     "rows": 213
+    }
+   },
+   "BKSL": {
+    "bandar_detector_b": {
+     "fold": "e859772a45e06d97f206d99b7a13ecd229215d7b116f3cb052967dba54156ca2",
+     "rows": 74
+    },
+    "broker_flow_b": {
+     "fold": "d609da10587600c55fc911c45e0e2b351a6c9a88434d8db3e354d448303c7379",
+     "rows": 3699
+    },
+    "ohlcv": {
+     "fold": "7393842941b191f33b246b45b682dad6c530ae38b5253723207ac142ff664de2",
+     "rows": 74
+    }
+   },
+   "BMRI": {
+    "bandar_detector_b": {
+     "fold": "f047d6d62d53de2aaec85f3bea1159df57867e8e9d1a88c9ed2b8371c499c9e4",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "f2dd7409565fd3cd0d5883b49eb2bac88289c425e3a82ce86bf8f14933197054",
+     "rows": 25966
+    },
+    "ohlcv": {
+     "fold": "90ee574744a64d1b6285b80989e9de0e93572021a0ab2da539ccb3a2434f1a28",
+     "rows": 386
+    }
+   },
+   "BMTR": {
+    "bandar_detector_b": {
+     "fold": "423c317fa88bfba7d00ac5efa05b0d9bd9725e2aab0f6ecda4bbcf94bd0039c3",
+     "rows": 74
+    },
+    "broker_flow_b": {
+     "fold": "26faea9af29160808d564d48fd0981fd2b84e5cb1a1e3daf1a3c334c208d7d89",
+     "rows": 2814
+    },
+    "ohlcv": {
+     "fold": "9cdccfb2ae410380a7fa46ecd6b65a9b0e943bd698833d1043602fbbd6307448",
+     "rows": 74
+    }
+   },
+   "BNGA": {
+    "bandar_detector_b": {
+     "fold": "3b4b67534b0a4727e6092b651e8fbdab73708ac56b590b4ee2504e3a7f74fd94",
+     "rows": 196
+    },
+    "broker_flow_b": {
+     "fold": "c6a3df3e7ac77d365f9480da78e411f12c6c778ef614baab27b33c50b997f795",
+     "rows": 7757
+    },
+    "ohlcv": {
+     "fold": "d6d348fe24549e468716b320e4cee50203f5b8563a6a96d2904a132475bf68b2",
+     "rows": 196
+    }
+   },
+   "BREN": {
+    "bandar_detector_b": {
+     "fold": "651476091cd15dbae39d885b6b42100b202f18f88d2cbb1df359d93067085e37",
+     "rows": 56
+    },
+    "broker_flow_b": {
+     "fold": "d5740c01bed3a6720a8653e390d3f7061e022c2d553d8e189b682253c20ef4cc",
+     "rows": 2830
+    },
+    "ohlcv": {
+     "fold": "4fb9b022ce8ba33e9f080a3bd99c71ba37ba60055881672982f10ab4e2050b62",
+     "rows": 56
+    }
+   },
+   "BRIS": {
+    "bandar_detector_b": {
+     "fold": "a15cf71566742c59171d56780606efd384ba353ab4d5152bcf89f8207fb921f3",
+     "rows": 196
+    },
+    "broker_flow_b": {
+     "fold": "34e2193b223609cd0395879009cd7af7f6a43d0b58bc430ebaa83d24bf29f3f5",
+     "rows": 10236
+    },
+    "ohlcv": {
+     "fold": "e449e3f7c810f96f24576b81c9908fee38c64d8ddab25e21e7c97b611e86a57c",
+     "rows": 196
+    }
+   },
+   "BRMS": {
+    "bandar_detector_b": {
+     "fold": "1ab3d0376ac81097a5632a4d7b7dcea45551f2bfe98bd704bb4c49ecf50ca409",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "2593003deb73c1c3f8ae632adea6b987bfbb6da6158e0677def1f1425f1e458c",
+     "rows": 26107
+    },
+    "ohlcv": {
+     "fold": "17d24063cb173ad673add998ea1027f8fd9726ff199492196969b0096bd10134",
+     "rows": 386
+    }
+   },
+   "BRPT": {
+    "bandar_detector_b": {
+     "fold": "2c39ef863671ed83569cf246cdd40b60c77326e65d78f3a7f150916fcf5264ec",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "0e42cd7ba0773e63ce06a2ec1e2d9d3e6e61b539e3b3aa4b74a9364c6c71451b",
+     "rows": 25180
+    },
+    "ohlcv": {
+     "fold": "204797acbfb5e2790f00002dcf656be3ba663fd1a7b4683aa26f87ea2846df95",
+     "rows": 386
+    }
+   },
+   "BSDE": {
+    "bandar_detector_b": {
+     "fold": "cd57124cb6cb04d23e105f36bbf1460af774ce7f33e79267c4e0af43d9b843c3",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "eefeeea347b81b9e8aa3db7fcd223ecd86e50e4cb58001f5a0b945c5042f89f3",
+     "rows": 16532
+    },
+    "ohlcv": {
+     "fold": "4238b803d9947b6f082828be5a3078969d6c6560a2c1481c2047610ac0b628ee",
+     "rows": 386
+    }
+   },
+   "BTPS": {
+    "bandar_detector_b": {
+     "fold": "847bfaebb8e286cb6375da13028d42f11ca690fe3f530f39eb3389a178695848",
+     "rows": 312
+    },
+    "broker_flow_b": {
+     "fold": "8084ed6d187cbf526f2040f9559567199f1b7302a242c40a0db94e82ce2f1013",
+     "rows": 11860
+    },
+    "ohlcv": {
+     "fold": "46b7bab2676f216aa80c0b1c4f3c7058263e4af631893fdb73034924e0952649",
+     "rows": 312
+    }
+   },
+   "BUKA": {
+    "bandar_detector_b": {
+     "fold": "5ccbff439e1aca2647cd31f6bc571c2daca9f116a6bcaaa7f77c73afcbd79c77",
+     "rows": 331
+    },
+    "broker_flow_b": {
+     "fold": "c200317502a86815ce3d8694941b3952d87e83573055bb070b693ad622192ee5",
+     "rows": 15408
+    },
+    "ohlcv": {
+     "fold": "e8481d8cbd6fe8e725584b199924e9cab85fc62de2c06804691b794bee37fa8b",
+     "rows": 331
+    }
+   },
+   "BUMI": {
+    "bandar_detector_b": {
+     "fold": "55849471a56bc0904044cceb28add3ce4668e9305fc9c8a6b363e0b1a76da4f8",
+     "rows": 190
+    },
+    "broker_flow_b": {
+     "fold": "123af704d5228dacaf9e95141d64ef0b73a61223007ec4649f1792217736dfed",
+     "rows": 14539
+    },
+    "ohlcv": {
+     "fold": "6250957224206de4c512ed41247daf3dd9e04720714ebb427fdae7aa9ac2b41b",
+     "rows": 190
+    }
+   },
+   "CBDK": {
+    "bandar_detector_b": {
+     "fold": "b7b36ccff9477cd4f6cc9bd889bea7526bc47d3e6e9a2174eb879edc5c051380",
+     "rows": 74
+    },
+    "broker_flow_b": {
+     "fold": "cb94fe2d54dc1d28a372a8bcf480144ef8ef6d5d74a322aa6cb5ae5d9663793d",
+     "rows": 2732
+    },
+    "ohlcv": {
+     "fold": "aa7d61cffb062729d645d73eefcb68c44a1896d54ba93ab3d5bdcd160161fc76",
+     "rows": 74
+    }
+   },
+   "CMRY": {
+    "bandar_detector_b": {
+     "fold": "c6c25446f2894eaa4a016f2acad516f86199c3e00d18fb07816e028053aaddab",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "f11bde96fdb16a53da01a6461db58a748ceafc91769ce11d9b5823d2e2f07b70",
+     "rows": 11836
+    },
+    "ohlcv": {
+     "fold": "1dc0ad7bf253a0ed6c00cfe3c87c15e7f3a568331daab6bb152381edb7cc31ec",
+     "rows": 386
+    }
+   },
+   "CPIN": {
+    "bandar_detector_b": {
+     "fold": "3f4cdc0b54d1f105a8480da7bdc2c88a6e12462d97f85b81df8e7553af7c99dd",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "9228732e0567d1a7e880aff2481025f6f42b3dcb768d37831f384f98d5524cbb",
+     "rows": 17340
+    },
+    "ohlcv": {
+     "fold": "712e4f6b180f1c8aa26bf20686648dde35c834cda09f1f78e017e5dc49b185f6",
+     "rows": 386
+    }
+   },
+   "CTRA": {
+    "bandar_detector_b": {
+     "fold": "35384a9207bb8494a2f750213822348f675c8d8f48877a850e32cd3b046ed70b",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "84f808bda23d5147d38a570dfc2e1c9be1bca026baa1d08d26583b77cd9828e1",
+     "rows": 17012
+    },
+    "ohlcv": {
+     "fold": "f19eb6e850846409984400e63eb48fa83e8ed7d2312bac729973be9c8598219e",
+     "rows": 386
+    }
+   },
+   "CUAN": {
+    "bandar_detector_b": {
+     "fold": "87728737e796a4ef2b18cca23bfdd33080396c0eb4f7c99c877d35c3def837f2",
+     "rows": 130
+    },
+    "broker_flow_b": {
+     "fold": "8181a041814b570a4918cbe413a559f18850be7ad5df716e8ce847b5902f19a2",
+     "rows": 8224
+    },
+    "ohlcv": {
+     "fold": "05ec4bd274373606445c2eba2486f1754541385c6e3a5ee606282d6f1a9046f1",
+     "rows": 130
+    }
+   },
+   "DEWA": {
+    "bandar_detector_b": {
+     "fold": "be59dcba76268d0466a08ce11957fc759818a50acb0b23c4a59bf327de15b942",
+     "rows": 74
+    },
+    "broker_flow_b": {
+     "fold": "d45a2f19dd23e48678af76ca87153e37c06723dfafaa87ebeffece8ebeb2fd46",
+     "rows": 4828
+    },
+    "ohlcv": {
+     "fold": "672cf2599ffa42294d92a525ddbb3b360b92064172a9be4b992a53049959ab78",
+     "rows": 74
+    }
+   },
+   "DSNG": {
+    "bandar_detector_b": {
+     "fold": "d236af616076ec40669ee99d0d00b50285450f9893302c096ef2ebe3aae40832",
+     "rows": 312
+    },
+    "broker_flow_b": {
+     "fold": "ff47a6202b317d05b2a1fff8958ad0e5387682056d0282ff995b60ef7c590547",
+     "rows": 14946
+    },
+    "ohlcv": {
+     "fold": "b2c4def7b34d0cd07a4f7f3bf0ff6f141e2f258269070be29bae13f4b398af4a",
+     "rows": 312
+    }
+   },
+   "DSSA": {
+    "bandar_detector_b": {
+     "fold": "b9e0639774043b3c767be315c34715761bb373c3c26681619e1ce551a866f68c",
+     "rows": 116
+    },
+    "broker_flow_b": {
+     "fold": "924cd2fbf1519e3a497bbe3e99ad9d013f9cc0d8b32a78f17035aaeb90f90cf8",
+     "rows": 5403
+    },
+    "ohlcv": {
+     "fold": "e8a4604fc62fee9fb076b9c788aa1653b967ac3beeb8cb3d5221a1e3821ab7ee",
+     "rows": 116
+    }
+   },
+   "ELSA": {
+    "bandar_detector_b": {
+     "fold": "41e1930f42a1bd6b223c1908d516ef0ffd1443a7ee329fdc83128299485527b3",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "817f44a32808f2517810e7b798ffe5293c779e7ced79003b80aaf4565b4d228e",
+     "rows": 17726
+    },
+    "ohlcv": {
+     "fold": "e2af8aff480812f758764cec5837bab7237274d7db9098a9511595ba1883f129",
+     "rows": 386
+    }
+   },
+   "EMTK": {
+    "bandar_detector_b": {
+     "fold": "3470bb630ed121644093aa7d4b62e038336e7c0c1b0c9887b7baa413ae340dd2",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "ae8902c7c62108cd9a23dccc35759b9d4d863760bdc1d024033753884a5c7244",
+     "rows": 19938
+    },
+    "ohlcv": {
+     "fold": "6ea08ce54a4bf5cb2c828787c01995728256c36176b209580d5d9fb99aee589a",
+     "rows": 386
+    }
+   },
+   "ENRG": {
+    "bandar_detector_b": {
+     "fold": "8b39b67fc9b7cfad8da943c124498bcbef8934f1c1ac547b47450d5e42f84f04",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "de6cf6acec389a49bf34ee70b805101b280fa1984dfbf7572baf0432a894686b",
+     "rows": 21226
+    },
+    "ohlcv": {
+     "fold": "4657e210eb0778011b7f300e405d61643313a36604c17cb0007fa39314dac932",
+     "rows": 386
+    }
+   },
+   "ERAA": {
+    "bandar_detector_b": {
+     "fold": "a344d1627c3f964bf6775979dc1d849c9b8a02508cabd4f2af41e1bd81ec225d",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "e98e72f7d320701347ca75f28671c599aa18cdb6ac67e9d070214b8e588df49d",
+     "rows": 17943
+    },
+    "ohlcv": {
+     "fold": "d8656addf1ea16ccacf578452ecaea598bacfef11d17f61c17d85a3c8d152155",
+     "rows": 386
+    }
+   },
+   "ESSA": {
+    "bandar_detector_b": {
+     "fold": "849e9f5de613ede4b3a65346e5ea8d446b459e2bbb15e1d5b9fda608feef7e8d",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "8f13ff47172ef8018a4bafb9dd955646a00e6fbfc48099858cacdcdfaaa22984",
+     "rows": 18980
+    },
+    "ohlcv": {
+     "fold": "8df1c5990fa602307d8b38fffb4bab1b58695dd651444feb8b1c7b8006e75421",
+     "rows": 386
+    }
+   },
+   "EXCL": {
+    "bandar_detector_b": {
+     "fold": "7217909423cfb386723fbea94fd55f0d5386b84e8c0048181313db4f8301eeb5",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "2a9abff5e64534643a89b4612f1da26dc429907f6261306ab09323b5ff119a05",
+     "rows": 17657
+    },
+    "ohlcv": {
+     "fold": "e535176d0c0b77664d6dfbff33b6e4f23a75a815002c55956f74d5e8caaae58a",
+     "rows": 386
+    }
+   },
+   "GGRM": {
+    "bandar_detector_b": {
+     "fold": "50f16bf08bbbb050cd2f2ad1bbd430dd9b3cc4d12f8ce18a3d6584862f7b691a",
+     "rows": 206
+    },
+    "broker_flow_b": {
+     "fold": "03c16cb2b4ad68cf411985cf3c59a57031f20b27790150f03e31de5e9bab1410",
+     "rows": 7822
+    },
+    "ohlcv": {
+     "fold": "d6ab62762833518ae45731d8ead2a7def51313affcc81cc1927aa45b835c622e",
+     "rows": 206
+    }
+   },
+   "GJTL": {
+    "bandar_detector_b": {
+     "fold": "0cd87ed3bbce622bd5e85800bc8eaec5194733eed04d0dcc027955fb0fdf8de8",
+     "rows": 132
+    },
+    "broker_flow_b": {
+     "fold": "77263e7d1a04b630e152369e3a1780d11d4b8564330f5cde69ec75fd6e620692",
+     "rows": 5143
+    },
+    "ohlcv": {
+     "fold": "4f3fa529fa903d20d9d5cea740fd83cdd1950ce4b1eae7e11ac52ecac64e1cc9",
+     "rows": 132
+    }
+   },
+   "GOTO": {
+    "bandar_detector_b": {
+     "fold": "6c5dcef376b913537b9d5cd7be08b3bf6240300eb083b4f10f3e7c29bdbdd70b",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "4c3fa1f79a274851b069837e19642395a76ceabf8a193a614bda49df9e965e32",
+     "rows": 23806
+    },
+    "ohlcv": {
+     "fold": "2b4a821b5bf8f33fa4ca49f9fe3860b7af093f6b55b2225a4d99007ac8094d10",
+     "rows": 386
+    }
+   },
+   "HEAL": {
+    "bandar_detector_b": {
+     "fold": "cb473ff8f95261bb9bc7e479ce45809c5a5d0427ccad5a1e58dc78fa3c4c0942",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "5ffa4c4ba556969cf6c3bc5da355428176dfb06e8ad281d898220601a2cb9323",
+     "rows": 13767
+    },
+    "ohlcv": {
+     "fold": "177ac3844b12a455c3710ac189ee83bb179f0398f08d1b67bf8ef33520996f05",
+     "rows": 386
+    }
+   },
+   "HRTA": {
+    "bandar_detector_b": {
+     "fold": "df52d594699493c3e31977b8d34ddaf23599ea86732ba582bbfe97cad3d75bd1",
+     "rows": 130
+    },
+    "broker_flow_b": {
+     "fold": "4dc0559fd251249d09dc308390740129d6fab7c622bc6e32cce2510ef3ee4c30",
+     "rows": 5901
+    },
+    "ohlcv": {
+     "fold": "dcf455cc2cabf5c08b41be166cdd99bde9c62686fa1ba77c668b4a0c1c188b69",
+     "rows": 130
+    }
+   },
+   "HRUM": {
+    "bandar_detector_b": {
+     "fold": "9a57efc57704c87a04323721605c585c14e56b054b04abb9b87785fbff21908a",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "5154d85b0390d1dce2c79d559a56e62b48cf5fe7bc1d4ee8ee7bf7009dd8cea6",
+     "rows": 18198
+    },
+    "ohlcv": {
+     "fold": "4ff579892f361881d2208c05e420bf9938db43b31fa668a0f4c0680f2bd608b2",
+     "rows": 386
+    }
+   },
+   "ICBP": {
+    "bandar_detector_b": {
+     "fold": "354eda70ec4f4de3eaae54349ec23a83844e8ef698a1d7a44b800228cfc334bf",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "56c3c14807785b47140f836c868cb669f4380511b32ad07f2288e2aba7a5c9b6",
+     "rows": 17075
+    },
+    "ohlcv": {
+     "fold": "b3006d268b2af34d4e8ff7c4fa66c5f77eb39a6c6747bff54129d5a2feb9ef4e",
+     "rows": 386
+    }
+   },
+   "INCO": {
+    "bandar_detector_b": {
+     "fold": "dd3be4805831520e33382ef0ba56937f5efdcbf85e333f728e589f828cbbe10a",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "b0ead22055d45ec3554398f4373a4411bb8407fe920ee747d566415cb35a147f",
+     "rows": 20562
+    },
+    "ohlcv": {
+     "fold": "097d6476b3d9cc1db86094d0ef10611ade5e03706856dd10014fb0af59a4d902",
+     "rows": 386
+    }
+   },
+   "INDF": {
+    "bandar_detector_b": {
+     "fold": "eb591f6f7dcd6135e879c2ff6a5560af6c804e24b94335d59936b50fd9e3e019",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "f9f563bf3acdac92c85dd973b29859ff591951d74fe7730b16cfc435791c47b4",
+     "rows": 18089
+    },
+    "ohlcv": {
+     "fold": "d458ac915125488a05c445b667a442196ef0b401eee9cbedb73841342637a3c3",
+     "rows": 386
+    }
+   },
+   "INDY": {
+    "bandar_detector_b": {
+     "fold": "c7e206f2fe3ed4f8ce67a7ec32a6d0d32225337d413f761f2f1c27d61202505c",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "175fbbbb7794753fd4ac0f05aa3e6d6d095ea38dc52e74c65e10708e18886384",
+     "rows": 19313
+    },
+    "ohlcv": {
+     "fold": "7cc69d610c6772577c3e468a1e3a2d4ac3e1256cba15fc65b49fc0097b38174e",
+     "rows": 386
+    }
+   },
+   "INKP": {
+    "bandar_detector_b": {
+     "fold": "00951d133fdb985be47a687da0f20958648a0fdb294866333f0de8a1bcf2c182",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "cf97ff16f01b5e71e87070a2a041dc41c8202830bcd3424599372cb03ed8c104",
+     "rows": 18476
+    },
+    "ohlcv": {
+     "fold": "61aad68815af93bcedb6ae1a85eca8ade0caed2e75efd892ffa057b4649cbfe9",
+     "rows": 386
+    }
+   },
+   "INTP": {
+    "bandar_detector_b": {
+     "fold": "6b931c55bf5bee150168da18266f99f162e5eca6895180a0149e0b22e1be7d59",
+     "rows": 369
+    },
+    "broker_flow_b": {
+     "fold": "914aa0d140a3b80d835fee2dba8f3d6c1797867b99f976a50895f899552f4c5b",
+     "rows": 13879
+    },
+    "ohlcv": {
+     "fold": "1d8670f93f1f1c99f2f1e63abc0b285c8fc0472253d0e610bd440e979c692a32",
+     "rows": 369
+    }
+   },
+   "ISAT": {
+    "bandar_detector_b": {
+     "fold": "8e32ca031fa4348142d11c4ca2e203903b89d1aac27fbbb27ff334a40fbd5efe",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "88fc989ca7629bac7030dda36d85e60fd20dda4c8390f4f67b0d16f2d7b3a24d",
+     "rows": 17708
+    },
+    "ohlcv": {
+     "fold": "0e348708678670c62ee8c19fde816201bb10ff0830f2bda31983c1e4ace2a4f6",
+     "rows": 386
+    }
+   },
+   "ITMG": {
+    "bandar_detector_b": {
+     "fold": "ef28bcd2f7d6adb10e767de4abf22815db4dd8ce49deaffbac3d656853f7431a",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "eb457a3b664e46d4269a75c187e8ec10721754d864fceaf1b0ae071c8f79f4ad",
+     "rows": 16397
+    },
+    "ohlcv": {
+     "fold": "b36791cb0c857741503ef34894fcfdb2ab84a32b85ac691a7e517256607f89db",
+     "rows": 386
+    }
+   },
+   "JPFA": {
+    "bandar_detector_b": {
+     "fold": "6be2884142927db34d48e52380aa0b27f97b4511e284bea5cbb0168641d40ff8",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "89f4e71345202469cf7246b40b5311907b8d59d59916430284a271f991af07a0",
+     "rows": 18492
+    },
+    "ohlcv": {
+     "fold": "0e1ee5e1c916c597fa2eee5d98f619ff8c46bcb846606d26bad417b6671cd258",
+     "rows": 386
+    }
+   },
+   "JSMR": {
+    "bandar_detector_b": {
+     "fold": "3ff218dfec45acde3e48c3d0961d2fc5ab8b94a524b7c8705efe5b94c3aa970a",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "218c79c44c84c5914dc5332a072cd2171cb0643dbaf33758a883e0ec80680a95",
+     "rows": 16241
+    },
+    "ohlcv": {
+     "fold": "51e97a205504a2ce280d24400242425620764340be14c867e26eeb538021ed05",
+     "rows": 386
+    }
+   },
+   "KIJA": {
+    "bandar_detector_b": {
+     "fold": "fad044129e974a1d6a5b0136c320495687bd56de7e142b453590c77f3962463a",
+     "rows": 190
+    },
+    "broker_flow_b": {
+     "fold": "302293bc3ec3267e0805c9c8e244c5192425a3bfa99e7a32cc51334d91d6fe21",
+     "rows": 8739
+    },
+    "ohlcv": {
+     "fold": "2990ab86df55ba0f8af3cffce4abca54e2e8320291b7c676c5f7db760d26bc24",
+     "rows": 190
+    }
+   },
+   "KLBF": {
+    "bandar_detector_b": {
+     "fold": "0959faf99cabd8de5c6779359101e574d3ce3e0c8a1264e02c1f12ff36b1079c",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "ff47af01aaf8609dfc0b941061f5151e930ae0eda26c57a9ce9ede700d187e2d",
+     "rows": 18923
+    },
+    "ohlcv": {
+     "fold": "e20f824409a38f0fd9fdc038db404a73a90bf0f9b181265f82f54261000000b0",
+     "rows": 386
+    }
+   },
+   "KPIG": {
+    "bandar_detector_b": {
+     "fold": "efdb807419604b637b6031ea8b4b651f9d8ccc89d1f0711550567ea860695c3e",
+     "rows": 190
+    },
+    "broker_flow_b": {
+     "fold": "b007a08075b7d5cf4461e1bfe8fb9306c7c613d23ad1e6407c2017458b13da56",
+     "rows": 8170
+    },
+    "ohlcv": {
+     "fold": "8db199cd3e762522638dea2821917b75b785c5dab28a1548c58629035ceb1970",
+     "rows": 190
+    }
+   },
+   "LSIP": {
+    "bandar_detector_b": {
+     "fold": "58e11df2f6511b8274d4a245600912d5518d83d86e8b240096b91a2f3d7fee4e",
+     "rows": 254
+    },
+    "broker_flow_b": {
+     "fold": "b20506d2107b77e0e1ca492d4c5837580116967149ca7fc0ef24976c2ba1cfa9",
+     "rows": 10518
+    },
+    "ohlcv": {
+     "fold": "4b2c98c3f19e48ee87accdb44a52b081b0ab254828fda69c74bf1c93cbae8de8",
+     "rows": 254
+    }
+   },
+   "MAPA": {
+    "bandar_detector_b": {
+     "fold": "0939d24370596856f00398024c75119657a120becf2591b235dac625f5c1fa28",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "fa7e2fad72ab2467d3fec8e6b934d4c1111c45f07f3019f344cad2ec1c415e48",
+     "rows": 14976
+    },
+    "ohlcv": {
+     "fold": "a9228072aeeb5845e4f90b75d5a996a3258040989223da236fd2eeb719970dc5",
+     "rows": 386
+    }
+   },
+   "MAPI": {
+    "bandar_detector_b": {
+     "fold": "7e2cf5b4e0096c06b1e53dadbfcdb518e7787281572fa48532a9f7630e11b166",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "6b0f58b59d5414d6c9b0ccdac8ff38e96f4f0a8192f7df26072db36057b116ca",
+     "rows": 16057
+    },
+    "ohlcv": {
+     "fold": "1f2f945a07bb66c62228922d5f236c7028fbe411ec0ad48d674d5baaf59c5442",
+     "rows": 386
+    }
+   },
+   "MBMA": {
+    "bandar_detector_b": {
+     "fold": "26e2aecf398b70a7e2e8b2187ab7a603189b65d2496525dc8c64feeb3e4fdcad",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "cbe3c5850586f5aa4ca731eb25e94760a23cf7e7abb9b55c5cd59a18780151f4",
+     "rows": 22155
+    },
+    "ohlcv": {
+     "fold": "02358df61b4a2ef55fa6171fb6c98e1e01ed8738039ef26b52d0edcc491a89b6",
+     "rows": 386
+    }
+   },
+   "MDKA": {
+    "bandar_detector_b": {
+     "fold": "1ca593eb9977c6d1ec58b25c164b6fccf0a1909cd71faff1de03e1272667468b",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "401cf37052a9ee2d273fbefe2af29f1f814e88faaf375b762d656be5380141eb",
+     "rows": 22806
+    },
+    "ohlcv": {
+     "fold": "d1aa0891a338f399a4606c1cb10d8a06d83765075f1c417407c730e57595ae49",
+     "rows": 386
+    }
+   },
+   "MEDC": {
+    "bandar_detector_b": {
+     "fold": "63f7dac796fb83a79fb4c7e2d42f075deb1df0cc96ba36b207984474dfe8b8d8",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "cfeabbbceae9a5e66e214cb961c29e250f5578208f01a64030bba594ebeb2035",
+     "rows": 20739
+    },
+    "ohlcv": {
+     "fold": "6cd0257690150303c8043827b861ffe42b7c700f0c6f763326cc8810e020393b",
+     "rows": 386
+    }
+   },
+   "MIDI": {
+    "bandar_detector_b": {
+     "fold": "dbe1b5a68b627021fc05fb47f08d967b1dafde2cf3b0613a5df5f6e4cb4cb71b",
+     "rows": 74
+    },
+    "broker_flow_b": {
+     "fold": "26ab68d80f064c3c42f53d93826376cf3c318c291afc43295fcc77ffa545661d",
+     "rows": 2175
+    },
+    "ohlcv": {
+     "fold": "c4d1c7979d0db5b8b67bc96c97fd9fdb64b563479b1b28a326a755f2a795be82",
+     "rows": 74
+    }
+   },
+   "MIKA": {
+    "bandar_detector_b": {
+     "fold": "47e10d6d23d3da72ab2d8d0e2b791e155176b814992501b238800b9da8311d22",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "5af1a08fa77d6ec5d87abab46c0c3b021e65cd494d5b4bd1936e41c605babdd4",
+     "rows": 15509
+    },
+    "ohlcv": {
+     "fold": "f515be82eb4f568d8d41c398d080c717a991f4c06254fc236652628937258227",
+     "rows": 386
+    }
+   },
+   "MNCN": {
+    "bandar_detector_b": {
+     "fold": "ddd74a1b16726c44e2b6dd3e31b38cbfe5f1bbcb02bcab40a113d70e9523f655",
+     "rows": 196
+    },
+    "broker_flow_b": {
+     "fold": "e4392da5c1d9aacb1b8cc20005936e273c6efafcbfd63b8211bf43c96be6435c",
+     "rows": 7331
+    },
+    "ohlcv": {
+     "fold": "9f82d78f239adbef694476a2d5b5183deba616dc6cbcd50fdf5599a68b5beb85",
+     "rows": 196
+    }
+   },
+   "MPMX": {
+    "bandar_detector_b": {
+     "fold": "e048803384fa82bc6e61d0870b8ad211866572d77324098c15008f3071151589",
+     "rows": 19
+    },
+    "broker_flow_b": {
+     "fold": "f382d2906d39f3f96fddcad6a64d6acfbe681b8af9f97d7c8fd2c9b408b554bd",
+     "rows": 608
+    },
+    "ohlcv": {
+     "fold": "9d702ab87ac03c01950cee9b59f0831d6cf838c6a98e135153913d7c0bc80de3",
+     "rows": 19
+    }
+   },
+   "MTEL": {
+    "bandar_detector_b": {
+     "fold": "c1d65c3856f9212f9a3f145904d358a210813758744d0692ef5e4c684c56c540",
+     "rows": 312
+    },
+    "broker_flow_b": {
+     "fold": "0ec1941115a4289a829b3e01dc29078bfd90514e7acaa0d5cf504bca28948b4f",
+     "rows": 11510
+    },
+    "ohlcv": {
+     "fold": "460aca7444b30445919014c6cdd9541cdde7e2ba71fb7110beb0155379603810",
+     "rows": 312
+    }
+   },
+   "MYOR": {
+    "bandar_detector_b": {
+     "fold": "f5ac9f2e45c6c607e8570bb2cf356c18d1c2af190c1b4df5df591fce889e6abd",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "cbdc737c7c07b5ec68c61cb66984fc7a9d3e95e261c52fa2f0e82d2ceb79b53b",
+     "rows": 15709
+    },
+    "ohlcv": {
+     "fold": "5d461b878f4c180131be1d2cd8983621f2371ee87011ae0b160cf767d0f2d4d0",
+     "rows": 386
+    }
+   },
+   "NCKL": {
+    "bandar_detector_b": {
+     "fold": "241c612dc8657bffc61729d5ad15fd9fc4c680752aad7d8b0aa2f80323a78666",
+     "rows": 329
+    },
+    "broker_flow_b": {
+     "fold": "b0ab955409d8ca871be109848a2a604b50afe02b1e50e8ad6bbf93bfa9c79c2a",
+     "rows": 16190
+    },
+    "ohlcv": {
+     "fold": "210cd7464c38bb315bd982949b8a4115588492331f6550778a0abf54a1ce7d86",
+     "rows": 329
+    }
+   },
+   "NISP": {
+    "bandar_detector_b": {
+     "fold": "da7a7d6c937b463ccc68dc2ee47d09de5ab418ae47773ac4e6b1c341fc7e710b",
+     "rows": 132
+    },
+    "broker_flow_b": {
+     "fold": "f7144fc550e959898da761c0ce4bc108ebfb96621fbd30d468fa12dbc5b2ec13",
+     "rows": 4730
+    },
+    "ohlcv": {
+     "fold": "7cd1ada6c6c26ed3dc06c11c473f72138eb259d37c0ace9090653867b67201db",
+     "rows": 132
+    }
+   },
+   "PANI": {
+    "bandar_detector_b": {
+     "fold": "a0fcde59ba83d6059ae6162880f78907fe2b10b9f797296715c43122ef84a194",
+     "rows": 369
+    },
+    "broker_flow_b": {
+     "fold": "423409c0a9565f4085c996f66b52976e8de45a84c558c194e452ac411c9cc7d8",
+     "rows": 20366
+    },
+    "ohlcv": {
+     "fold": "ccd978b18f0c73481bc70f8888ec03ae567f87965a4e1eac3eb6d64063bc0b74",
+     "rows": 369
+    }
+   },
+   "PGAS": {
+    "bandar_detector_b": {
+     "fold": "99ddc59b221903014e956896cf4d57e9c2843ee2a73f4dcf13046635efe3fdbd",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "e284461524449526869db2bb281c625cd91005776171a9ecfe15c2db5f02b9d4",
+     "rows": 20710
+    },
+    "ohlcv": {
+     "fold": "39877ca424d06f9c1993d59ca1ef298a46d9afdad5ec4a06d4d663b2b9b6b544",
+     "rows": 386
+    }
+   },
+   "PGEO": {
+    "bandar_detector_b": {
+     "fold": "1b13ee211709a1b02b6c39e1f6673025f48cfce8a12d1eea2f203ee581ff9074",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "59561f43451843870ad180142871eed26b9e958fafe2613879b31e0b39c21463",
+     "rows": 19645
+    },
+    "ohlcv": {
+     "fold": "65d2b52ccdfc3aef35aebd06ee29350ff92287a03f918cdfc3ac2bc19da88966",
+     "rows": 386
+    }
+   },
+   "PNBN": {
+    "bandar_detector_b": {
+     "fold": "7543f6528080515821fbe664683e3ced0f3c7cbf3c372a60dd330a29184c3f0a",
+     "rows": 60
+    },
+    "broker_flow_b": {
+     "fold": "8156cfdbe7a09a3ed5f3a353bfef149632d3aaa23cd03f4b6ed3ef267d5b48e9",
+     "rows": 2588
+    },
+    "ohlcv": {
+     "fold": "331c9d204a74fbffd2f6a3872d838eba820e7f434add4620490ac58edaccbcc2",
+     "rows": 60
+    }
+   },
+   "PNLF": {
+    "bandar_detector_b": {
+     "fold": "3271cde7a4180e55f35a00bdb762eab71980f8489bd815afdf9812cb6ace7b98",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "0535bbd91980761597d44df84c32094fc84cfb81cf5679e646ed1ee690d96ae5",
+     "rows": 18096
+    },
+    "ohlcv": {
+     "fold": "8b74105ef06be696371f1cd8d33c659b29f720c53f3c29152c6c1a8234e1f460",
+     "rows": 386
+    }
+   },
+   "PTBA": {
+    "bandar_detector_b": {
+     "fold": "6eb06435df9441fc71a1567e6b131d2122589f9ec5a9314307e9960a6e143ad5",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "2ef70ee02d644ec0ea5c6036fc8364d739d223c962bb89ee65618f94e59ee2e6",
+     "rows": 19031
+    },
+    "ohlcv": {
+     "fold": "9b5c7a08fa03f738c79cac98a4b84d7955651fda058ad9e62c620b69ec8ec215",
+     "rows": 386
+    }
+   },
+   "PTRO": {
+    "bandar_detector_b": {
+     "fold": "dc5321b5c0c7e2c9b10278088d74f6fbaa39bcc6c3bc8386f546aab82f2c0527",
+     "rows": 253
+    },
+    "broker_flow_b": {
+     "fold": "f7abcef508f5736c69138f7cffbe3e763f7ad06523f6d05dfe55e0891c3ae6af",
+     "rows": 16037
+    },
+    "ohlcv": {
+     "fold": "c3e76dcd2b5e1fdd3581e4bdfd3fe81c864cb6d44aaa7f4b41fd28a46f542a52",
+     "rows": 254
+    }
+   },
+   "PWON": {
+    "bandar_detector_b": {
+     "fold": "7d871b7c49d77fb18deb2ccacbd3efe39a848dbc89b5fc65b13fb715410cab6e",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "aa20acb1fc8a905af98c022012fbda2721a2b8d915ff006e2f7758b34297fee4",
+     "rows": 17493
+    },
+    "ohlcv": {
+     "fold": "7f92e297cbbbdcf90a342127fce12b6f4239c4d1f13e0f0ad3588b45fcdf4ead",
+     "rows": 386
+    }
+   },
+   "RATU": {
+    "bandar_detector_b": {
+     "fold": "5e38776f08bee7169b21f28fe5dcc7cc58ee51d714345a633509dc23df3e77f0",
+     "rows": 189
+    },
+    "broker_flow_b": {
+     "fold": "44dc3ae60d6403aedf1c63e502828636d5837b2a9567c25d177aa88a4edf99bb",
+     "rows": 9813
+    },
+    "ohlcv": {
+     "fold": "a5aaf8cb19c8b5def604823bd1ea8758cd75f699edca70a85ded74c3f64e4303",
+     "rows": 190
+    }
+   },
+   "SCMA": {
+    "bandar_detector_b": {
+     "fold": "492f8d4f441f93c9a0fb767547b7d751284ca6edaa9b5137462ebaaefca34914",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "754e4d51ada708603a0dacf935ef9f78b5e95da12dfb5d98f83aae1fa30d2b10",
+     "rows": 18589
+    },
+    "ohlcv": {
+     "fold": "8e335380697ccfe3a0098edb6645e92f90770fcd64574f1392d234153f8a911c",
+     "rows": 386
+    }
+   },
+   "SIDO": {
+    "bandar_detector_b": {
+     "fold": "06a3569780a23f957182ea585affbb36d24a9bda1348f8ebb187f9433d0d164e",
+     "rows": 369
+    },
+    "broker_flow_b": {
+     "fold": "7605b7f513c57fac0c1597f456c854501daeb44c18307fe5af4714d9fe005fc2",
+     "rows": 16655
+    },
+    "ohlcv": {
+     "fold": "3e42081cdb8f439858dda0ae97cf7a2229466201775284c565ac489a3a21f5c0",
+     "rows": 369
+    }
+   },
+   "SMDR": {
+    "bandar_detector_b": {
+     "fold": "7ff858306c48b79a8d4a07aa8ac8519fdf91375b0fc9ba2e2515e1ee1bd8ef8d",
+     "rows": 19
+    },
+    "broker_flow_b": {
+     "fold": "6530ea636400770c9d74302add229fbe7c4b909213c55f69a633fb7834766aa5",
+     "rows": 636
+    },
+    "ohlcv": {
+     "fold": "4c3840c9139183dcae0ba85163b6230db91434ac92709e71270a903559bae3d4",
+     "rows": 19
+    }
+   },
+   "SMGR": {
+    "bandar_detector_b": {
+     "fold": "2454743fa76f30a4cef9d7741eec20514151313509b1518e8a674e2201104bd8",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "9d314ffdfae19724522ccbe26c4d01f1bae809b5cf70ef03ce9f86ed9318f2c0",
+     "rows": 18731
+    },
+    "ohlcv": {
+     "fold": "cd06f038aa55b9cd4fa883c6befcde546224a99e5aa06de9e5ad89482e772d07",
+     "rows": 386
+    }
+   },
+   "SMRA": {
+    "bandar_detector_b": {
+     "fold": "e50088b24cf628d5cb5060cbe4bd1b6c8313c8826547d13910b59c17966b1c3e",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "fc280a703cd59e97ec7335a0ff17e7b82b8aaf1890136bafc15895ccb6e12a0c",
+     "rows": 17383
+    },
+    "ohlcv": {
+     "fold": "ed1e08bd56b203c3ed07aa89d268787a63c4355a767c7925000c10f7e8c3640c",
+     "rows": 386
+    }
+   },
+   "SRTG": {
+    "bandar_detector_b": {
+     "fold": "082051d2b64cfdbf8868d568aa7a9e43fb68d8c81440edadfd74571573fcf298",
+     "rows": 196
+    },
+    "broker_flow_b": {
+     "fold": "a9c8aab9c4b01f32445833d070c4d42a222683a6d5d51ae6ea6c23bb77959471",
+     "rows": 8256
+    },
+    "ohlcv": {
+     "fold": "e5b130072fda82d643b6d8b4aab67ebf590901d80474dc281836ceaf3852b854",
+     "rows": 196
+    }
+   },
+   "SSIA": {
+    "bandar_detector_b": {
+     "fold": "5b3b89752ca9bca19dfe8df464ba48674a15c43c50621f25fd084b9a550c99b1",
+     "rows": 367
+    },
+    "broker_flow_b": {
+     "fold": "32b9fc929853c05c2091a32f4d78b287e0b5a569312fad8b78e4726a9799b226",
+     "rows": 17404
+    },
+    "ohlcv": {
+     "fold": "d0a7e8b06aba290007f4483b1c229549ce3476edabf5c7a180a7716504e22b80",
+     "rows": 367
+    }
+   },
+   "TAPG": {
+    "bandar_detector_b": {
+     "fold": "8e04d522754901ef20f9336680f9a0cd43aa0488aa3faa3edbf36154cd8dff48",
+     "rows": 367
+    },
+    "broker_flow_b": {
+     "fold": "6120645d992ae49117e509f1f0b15c018859ae5b0e73c0796c65b9ce11c7365f",
+     "rows": 15953
+    },
+    "ohlcv": {
+     "fold": "bba5dd2394a7a3296607ddaf4ed11ed6c89fec221a9618b59da9ce82e652be9f",
+     "rows": 367
+    }
+   },
+   "TKIM": {
+    "bandar_detector_b": {
+     "fold": "c53c03ad89cafa5dbdcd31ed0b22862236cb23bfd65084af99513019fe6feaf6",
+     "rows": 196
+    },
+    "broker_flow_b": {
+     "fold": "aa5e0c64f66ade705209c4a35d58fc310746fb33b6c1f3c86fc45f0c684c723c",
+     "rows": 7433
+    },
+    "ohlcv": {
+     "fold": "54cf25cebcac9f5ba1e537195d5b81b347cb02643058968348886622d7c46dc7",
+     "rows": 196
+    }
+   },
+   "TLKM": {
+    "bandar_detector_b": {
+     "fold": "0ece8b6d7f22f3cdf3287a266a7d68d48500a3e0d137218deadc03cb5f35ff6d",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "96640b37a46614bbe1504ab72035f19686caa0f6ef9d3c1365ab6d52cd18fff1",
+     "rows": 23274
+    },
+    "ohlcv": {
+     "fold": "9325a5cbf925852e2db03ae7d1a1f56144858d688e074e8a2fce13e3d8bf4a6c",
+     "rows": 386
+    }
+   },
+   "TOWR": {
+    "bandar_detector_b": {
+     "fold": "1ac767d4b64bc47575ccb0e5722dc84a9870e80533e0e01550cf6cdf4850cbd2",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "5dc49ed584b3fb481b39bef41b067efa055ebad230c62679fa7ddd393b0dc194",
+     "rows": 17147
+    },
+    "ohlcv": {
+     "fold": "a0798e0ebedfd36ca9d14f6205f2027cb79c4dbc5e09f3c1a82299c8540da75c",
+     "rows": 386
+    }
+   },
+   "TPIA": {
+    "bandar_detector_b": {
+     "fold": "c037bbfff26723e72aa01ffbca46422377bc5eddaf0b001c986011ca6dcdaaaa",
+     "rows": 74
+    },
+    "broker_flow_b": {
+     "fold": "ec26e14cc69cb25a9fe04b1bfc2af960d1193301cc3d5c18b393b7fae89cf17e",
+     "rows": 5229
+    },
+    "ohlcv": {
+     "fold": "59f6658ff4066dcb80268b56c24ccfa963bf4c8343eb9d08637a745b84a72fed",
+     "rows": 74
+    }
+   },
+   "UNTR": {
+    "bandar_detector_b": {
+     "fold": "7f9c49159455cdf3e3cdb62703345c33d5f802727366b49ad148e44d09622312",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "e139607f32128ccf1ce703dcc5c296973f7d761a98fd1de199180bcfcd285c65",
+     "rows": 18568
+    },
+    "ohlcv": {
+     "fold": "b02fc24ed7d15b5fd398394538209f79aa1d10e86a786b752c122e2fc782b513",
+     "rows": 386
+    }
+   },
+   "UNVR": {
+    "bandar_detector_b": {
+     "fold": "edf08de44723f0b476c41468e2c9b1a32a08afc93a58644c5f5481b21ada5ecd",
+     "rows": 386
+    },
+    "broker_flow_b": {
+     "fold": "2bf2da1abe1f397f25aedeeea75e8b3b0870398a5c625d0cc1822baa5fc47014",
+     "rows": 20279
+    },
+    "ohlcv": {
+     "fold": "232b58c9028704b134d253f5f2473db46c0e199481cb57890480f3c36b923c84",
+     "rows": 386
+    }
+   },
+   "WIFI": {
+    "bandar_detector_b": {
+     "fold": "bca43c6b4348c88d55b9a93bab7cf9401fa767720c63d739fba6da62d97ec415",
+     "rows": 190
+    },
+    "broker_flow_b": {
+     "fold": "31ac21928adb3e411e9dc85731101990dfbb5c6dae76e5460f4072e6d37d8262",
+     "rows": 10461
+    },
+    "ohlcv": {
+     "fold": "09401b17049471967cd3293998e14c622de9d98a35ea765a37fd9a7f2b98f927",
+     "rows": 190
+    }
+   }
+  },
+  "store": "/home/tjiesar/10 Projects/idx-walkforward-5001/docs/research_programs/P-M/dataset_b/store/DATASET_B_BROKER_FLOW_STORE_v1.sqlite",
+  "store_fingerprint": "1303378683819f17afa41001dd64574708127a6494ecdd135df23c6b6a2088dd",
+  "version": "draft-v1-NOT-FROZEN"
+ },
+ "summary": {
+  "note_isolation": "dataset_a_expected_rows removed: 1,222,713 is the IDX80-roster-scoped frozen slice, not the raw table count; the full-universe production table legitimately holds more rows. Isolation evidence = DATASET_B_FINGERPRINT_v1 reproduction (exact) over the same window, plus the 2026-09-10 Dataset A custody reproduction (verdict A).",
+  "production_fingerprint_v1_recomputed": "b0ad62826671e7da8236c3265304feaf890d20fab44104c3190dac591806f51b",
+  "production_fingerprint_v1_recorded": "b0ad62826671e7da8236c3265304feaf890d20fab44104c3190dac591806f51b",
+  "production_fingerprint_v1_reproduced": true,
+  "production_fulluniverse_window_broker_flow_rows": 2871143,
+  "store_bandar_b_rows_in_scope": 30624,
+  "store_broker_flow_b_rows_in_scope": 1503287,
+  "store_fingerprint": "1303378683819f17afa41001dd64574708127a6494ecdd135df23c6b6a2088dd"
+ }
+}

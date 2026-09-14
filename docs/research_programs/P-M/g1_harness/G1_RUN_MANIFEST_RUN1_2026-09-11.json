@@ -1,0 +1,27 @@
+{
+ "artifact": "G1_RUN_MANIFEST",
+ "code_sha256": {
+  "foundation.py": "e427cc482fa1e00cfda830eb5a6d84eda3cc583dde0a81fc7c1d90c47b7eab29",
+  "g1_harness.py": "9471c740175b313582bf01b8dd86b6394985bd767f12f614b03d8b788df103f4"
+ },
+ "command": "G1_CONFIG=./g1_config.json python3 g1_harness.py",
+ "config_sha256": "7211ad94c44614f27906a71329f688304f0d09565e167653468523da00c285dd",
+ "cwd": "/home/tjiesar/10 Projects/idx-walkforward-5001/docs/research_programs/P-M/g1_harness",
+ "errors": [],
+ "executed_at_utc": "2026-09-11T02:31:18Z",
+ "exit_code": 0,
+ "freeze": {
+  "dataset_fingerprint_v2": "1a68ab1c6c33409f16fe1c4dd40895c9f5a1b743693d05621e7338086cb8c5d9",
+  "manifest_sha256": "95f2c998760ba6f2e687b091950315ce45370854226f419ef768f2b4bcc17af5",
+  "store_sha256": "21661f033145ef90657f8d133ced62a3cd4ba85cdaa7ece2a4b19f4940b755a8"
+ },
+ "known_label_caveat": "output provenance field net_flow_source carries the stale string 'PROVISIONAL, unratified' (written pre-ratification); the executed construction IS the ratified stockbit_flow share-ratio NF \u2014 label left unmodified to preserve the executed-code hash",
+ "nf_digest": "60f5f91c33b929cd9ff0403ec49ce3dd07545062a0560da359d61846638f98cf",
+ "raw_output": {
+  "path": "G1_REAL_OUTPUT_RUN1_2026-09-11.json",
+  "sha256": "74883c04cf80a867fa8b9eb8fd2772d5ca6237eb5528b48d7063703c52bd9607"
+ },
+ "registration": "G1_REGISTRATION_v1_2026-09-11.md",
+ "run_id": "G1-RUN1",
+ "warnings": []
+}

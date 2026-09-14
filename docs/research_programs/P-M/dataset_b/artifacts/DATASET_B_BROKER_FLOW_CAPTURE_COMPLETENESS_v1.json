@@ -1,0 +1,114 @@
+{
+ "accounting_identity_max_abs_residual": 0,
+ "artifact": "DATASET_B_BROKER_FLOW_CAPTURE_COMPLETENESS",
+ "bandar_detector_b_rows": 30877,
+ "broker_flow_b_rows": 1518727,
+ "capture_run_log": [
+  {
+   "cadence_s": 1.5,
+   "cells_attempted": 8,
+   "cells_empty": 0,
+   "cells_failed": 0,
+   "cells_intended": 30880,
+   "cells_success": 8,
+   "code_sha256": "5a0af8fff9ac34ef7471f4d261725c5790dd4a2767fd1ccabb375a1956628f68",
+   "finished_at_utc": "2026-09-10T06:31:12.439213+00:00",
+   "host": "tjiesar-XPS-13-9343",
+   "limit_param": 150,
+   "note": "Stage-6 Dataset B broker-flow limit=150 historical backfill",
+   "roster_artifact_sha256": "f7e2fec030116a906471d27ee1e3a148aac459f125208d7d6e8e6c6fd3d8c57a",
+   "run_id": "fad1dff9-3830-4622-b913-75e8007d0f9d",
+   "started_at_utc": "2026-09-10T06:30:58.254379+00:00"
+  },
+  {
+   "cadence_s": 1.5,
+   "cells_attempted": 8,
+   "cells_empty": 0,
+   "cells_failed": 0,
+   "cells_intended": 30880,
+   "cells_success": 8,
+   "code_sha256": "5a0af8fff9ac34ef7471f4d261725c5790dd4a2767fd1ccabb375a1956628f68",
+   "finished_at_utc": "2026-09-10T06:31:33.069945+00:00",
+   "host": "tjiesar-XPS-13-9343",
+   "limit_param": 150,
+   "note": "Stage-6 Dataset B broker-flow limit=150 historical backfill",
+   "roster_artifact_sha256": "f7e2fec030116a906471d27ee1e3a148aac459f125208d7d6e8e6c6fd3d8c57a",
+   "run_id": "610548cb-79d7-4d33-b27a-117326055670",
+   "started_at_utc": "2026-09-10T06:31:18.980785+00:00"
+  },
+  {
+   "cadence_s": 1.5,
+   "cells_attempted": 17395,
+   "cells_empty": 3,
+   "cells_failed": 0,
+   "cells_intended": 30880,
+   "cells_success": 17392,
+   "code_sha256": "5a0af8fff9ac34ef7471f4d261725c5790dd4a2767fd1ccabb375a1956628f68",
+   "finished_at_utc": "2026-09-10T21:24:22.813392+00:00",
+   "host": "tjiesar-XPS-13-9343",
+   "limit_param": 150,
+   "note": "Stage-6 Dataset B broker-flow limit=150 historical backfill",
+   "roster_artifact_sha256": "f7e2fec030116a906471d27ee1e3a148aac459f125208d7d6e8e6c6fd3d8c57a",
+   "run_id": "c5934125-1282-4cf9-adfd-7aedfbda06b4",
+   "started_at_utc": "2026-09-10T13:05:34.172715+00:00"
+  }
+ ],
+ "cells_attempted": 30880,
+ "cells_extra_count": 0,
+ "cells_extra_not_in_roster": [],
+ "cells_intended": 30880,
+ "cells_missing_count": 0,
+ "cells_missing_vs_intended": [],
+ "date_echo_mismatches": 0,
+ "duplicate_cells": 0,
+ "empty_cells_detail": [
+  {
+   "classification": "TICKER_LEVEL_ZERO_VOLUME_SESSION",
+   "evidence": "ohlcv bar exists O=H=L=C flat, volume=0.0; not in legacy suspension_events (known-incomplete table); not market-wide (single ticker, single date); not a scraper/data gap \u2014 vendor correctly returned zero brokers because zero trades occurred. NOT vendor-confirmed as an official suspension notice (repository holds no such registry).",
+   "http_status": 200,
+   "session_date": "2025-10-06",
+   "ticker": "PTRO"
+  },
+  {
+   "classification": "TICKER_LEVEL_ZERO_VOLUME_SESSION",
+   "evidence": "ohlcv bar exists O=H=L=C flat, volume=0.0; not in legacy suspension_events (known-incomplete table); not market-wide (single ticker, single date); not a scraper/data gap \u2014 vendor correctly returned zero brokers because zero trades occurred. NOT vendor-confirmed as an official suspension notice (repository holds no such registry).",
+   "http_status": 200,
+   "session_date": "2025-10-13",
+   "ticker": "RAJA"
+  },
+  {
+   "classification": "TICKER_LEVEL_ZERO_VOLUME_SESSION",
+   "evidence": "ohlcv bar exists O=H=L=C flat, volume=0.0; not in legacy suspension_events (known-incomplete table); not market-wide (single ticker, single date); not a scraper/data gap \u2014 vendor correctly returned zero brokers because zero trades occurred. NOT vendor-confirmed as an official suspension notice (repository holds no such registry).",
+   "http_status": 200,
+   "session_date": "2025-11-28",
+   "ticker": "RATU"
+  }
+ ],
+ "excluded_date_propagation": {
+  "2026-08-25": 0
+ },
+ "generated_at_utc": "2026-09-10T22:17:37.427176+00:00",
+ "known_partial_dates_not_in_admitted_calendar": {
+  "2026-07-09": 0,
+  "2026-07-24": 0,
+  "2026-09-02": 0,
+  "2026-09-08": 0
+ },
+ "max_n_buy": 79,
+ "max_n_sell": 72,
+ "max_total_population": 88,
+ "retry_log": {
+  "final_failed_count": 0,
+  "resolved_on_resume": true,
+  "transient_503_during_first_run": 3
+ },
+ "roster_artifact_sha256": "f7e2fec030116a906471d27ee1e3a148aac459f125208d7d6e8e6c6fd3d8c57a",
+ "status_breakdown": {
+  "EMPTY": 3,
+  "SUCCESS": 30877
+ },
+ "trial_baseline_max_side": 64,
+ "trial_baseline_max_total": 77,
+ "truncated_at_limit150": 0,
+ "version": "v1"
+}

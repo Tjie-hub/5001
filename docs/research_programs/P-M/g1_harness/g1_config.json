@@ -1,0 +1,21 @@
+{
+ "synthetic": false,
+ "enforce_freq_gate": true,
+ "st_tercile_cuts": [
+  -0.3333333333333333,
+  0.3333333333333333
+ ],
+ "gates": {
+  "dataset_b_frozen": true,
+  "prereg_confirmed": true,
+  "freq_semantics_ratified": true,
+  "net_flow_source_ratified": true
+ },
+ "_notes": {
+  "st_tercile_cuts": "Ex-ante cuts +/-1/3 of the declared ST range [mem: measured p10/p50/p90 = -0.50/0.00/+0.50 and prevalence desk-led 37.0% / crowd-led 35.8% / mixed 27.1%]. Frozen from the descriptive distribution in the BFI-002 design memo \u00a73, NOT from returns. Must be ratified verbatim in the authoritative preregistration before any real run.",
+  "gates": "ALL GATES TRUE per owner-authorized G1_REGISTRATION_v1_2026-09-11. dataset_b_frozen: freeze manifest artifacts/DATASET_B_FREEZE_MANIFEST_v1.json (2026-09-11). prereg_confirmed: TRUE via DATED REPLACEMENT REGISTRATION G1_REGISTRATION_v1_2026-09-11 (original BROKER_FLOW_PREREGISTRATION.md NOT FOUND/NOT recovered; this is a NEW registration, not a reconstruction). freq_semantics_ratified: TRUE **only in the withdrawal sense** \u2014 freq semantics remain UNKNOWN and UNUSED; C1a/C1b are REGISTERED AS WITHDRAWN (freq_resolution='withdrawn') and never execute; this is NOT a claim that freq semantics are known. net_flow_source_ratified: TRUE per G1_GOVERNANCE_UNBLOCK_RECORD_2026-09-11 \u00a73 (stockbit_flow share-ratio NF; digest 60f5f91c\u2026 must be re-verified at run time).",
+  "inference": "Daily spread series + Newey-West(k) t (BFI-001 inherited convention = date clustering). If the authoritative preregistration specifies a different (or additional) inference, THAT config replaces this file's defaults; this harness does not substitute methods on its own."
+ },
+ "freq_resolution": "withdrawn",
+ "c7_registered": false
+}
