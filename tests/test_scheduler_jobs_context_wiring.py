@@ -19,6 +19,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import engine.agent_firm.firm  # noqa: F401 - ensure the submodule attribute exists
 import engine.agent_firm_context as afc
 import scheduler.jobs as jobs_mod
 
@@ -63,6 +64,22 @@ def _seeded_db(tmp_path, ticker="BBRI"):
     return str(db)
 
 
+def _seed_eod_base_plan(db, ticker="BBRI", base_date="2026-08-31"):
+    """Premarket consumes the frozen EOD plan (audit 2026-09-02 rebuild); it no
+    longer builds an independent universe, so a base plan must exist."""
+    from engine import watchlist_ledger as wl
+    conn = sqlite3.connect(db)
+    try:
+        wl.ensure_tables(conn)
+        wl.append_snapshot(conn, base_date, wl.STRATEGY_EOD, [{
+            "ticker": ticker, "confidence": 0.7, "conviction": 70.0,
+            "confluence": 1, "sources": ["R"], "decision_price": 1000.0,
+        }])
+    finally:
+        conn.close()
+    return base_date
+
+
 def _mock_firm_and_config(capture, is_active=True):
     mock_firm = MagicMock()
     mock_firm.evaluate_staged = MagicMock(side_effect=lambda c, **k: capture.append(c) or [])
@@ -75,17 +92,12 @@ def _mock_firm_and_config(capture, is_active=True):
 class TestPremarketFirmScanContextWiring:
     def test_candidates_arrive_with_populated_tier1_context(self, tmp_path, monkeypatch):
         db = _seeded_db(tmp_path, "BBRI")
+        _seed_eod_base_plan(db, "BBRI")
         capture = []
         mock_firm, mock_cfg = _mock_firm_and_config(capture)
 
         monkeypatch.setattr(jobs_mod, "_holiday_skip", lambda name: False)
         monkeypatch.setattr(jobs_mod, "DB_PATH", db)
-        monkeypatch.setattr(
-            "engine.unified_watchlist.build_unified_watchlist",
-            lambda db_path: [{"ticker": "BBRI", "direction": "long", "strength": 70.0,
-                              "sources": ["REVERSAL"], "confluence": False, "close": 1000,
-                              "detail": {}}],
-        )
         monkeypatch.setattr(
             "engine.liquidity.select_top_liquid_longs",
             lambda rows, conn, date_str, top_n=3: rows,
@@ -122,14 +134,9 @@ class TestPremarketFirmScanContextWiring:
         # watchlist/liquidity mocks below never touch it, only the context builder does,
         # and it must fail soft rather than raise.
         empty_db = str(tmp_path / "empty.db")
+        _seed_eod_base_plan(empty_db, "BBRI")   # ledger only; no context tables
         monkeypatch.setattr(jobs_mod, "_holiday_skip", lambda name: False)
         monkeypatch.setattr(jobs_mod, "DB_PATH", empty_db)
-        monkeypatch.setattr(
-            "engine.unified_watchlist.build_unified_watchlist",
-            lambda db_path: [{"ticker": "BBRI", "direction": "long", "strength": 70.0,
-                              "sources": ["REVERSAL"], "confluence": False, "close": 1000,
-                              "detail": {}}],
-        )
         monkeypatch.setattr(
             "engine.liquidity.select_top_liquid_longs",
             lambda rows, conn, date_str, top_n=3: rows,

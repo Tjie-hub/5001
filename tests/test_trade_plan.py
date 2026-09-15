@@ -98,9 +98,14 @@ def test_gather_excludes_bearish_volume_dump(conn):
 
 
 def test_confluence_counts_distinct_sources(conn):
+    # A-2 (audit 2026-09-02): the "P" (premarket-approval) source tag was
+    # removed -- it fed that same morning's premarket approval into the
+    # evening EOD ranking, running the intended EOD->premarket flow backwards.
+    # AKRA's fixture still carries a premarket approval row, but it is no
+    # longer read here, so confluence drops from R+S+P to R+S.
     cands = {c["ticker"]: c for c in gather_long_candidates(conn, DATE)}
-    assert cands["AKRA"]["confluence"] == 3          # R + S + P
-    assert set(cands["AKRA"]["sources"]) == {"R", "S", "P"}
+    assert cands["AKRA"]["confluence"] == 2          # R + S
+    assert set(cands["AKRA"]["sources"]) == {"R", "S"}
     assert cands["CPIN"]["confluence"] == 1
     assert cands["SURE"]["sources"] == ["S", "V"]    # bullish + volume mover
 
@@ -158,10 +163,12 @@ def test_build_message_empty_is_graceful(conn):
 
 
 def test_fallback_rank_synthesizes_confidence_from_score(conn):
+    # A-2 (audit 2026-09-02): "P" source removed, see test_confluence_counts_
+    # distinct_sources -- AKRA's score (and derived confidence) is now R+S only.
     cands = gather_long_candidates(conn, DATE)
     ranked = fallback_rank(cands)
-    assert ranked[0]["ticker"] == "AKRA"                  # R+S+P → highest score
-    assert ranked[0]["confidence"] == pytest.approx(0.85)  # 0.5 + 0.05*score, capped
+    assert ranked[0]["ticker"] == "AKRA"                  # R+S → still highest score
+    assert ranked[0]["confidence"] == pytest.approx(0.69)  # 0.5 + 0.05*score
     assert all("confidence" in c for c in ranked)
 
 

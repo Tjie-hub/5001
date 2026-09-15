@@ -50,6 +50,7 @@ def gather_long_candidates(conn: sqlite3.Connection, date_str: str) -> list[dict
             "ticker": ticker, "close": None, "sources": [],
             "conviction": 0.0, "smart_money": None, "net_value": 0.0,
             "vol_ratio": 0.0, "premkt_conf": None, "reason": "",
+            "strategy_fn": None, "wf_flow_score": None,
         })
 
     # ── Reversal watchlist (longs) ──────────────────────────────────────────
@@ -82,16 +83,46 @@ def gather_long_candidates(conn: sqlite3.Connection, date_str: str) -> list[dict
         if float(r[2] or 0) >= VOLUME_MOVER_RATIO and "V" not in c["sources"]:
             c["sources"].append("V")
 
-    # ── Premarket agent approvals (already firm-vetted today) ───────────────
-    for r in conn.execute(
-        "SELECT ticker, confidence FROM agent_decisions "
-        "WHERE substr(created_at,1,10)=? AND strategy='premarket' AND decision='approve'",
-        (date_str,)
-    ).fetchall():
-        c = _slot(r[0])
-        if "P" not in c["sources"]:
-            c["sources"].append("P")
-        c["premkt_conf"] = float(r[1]) if r[1] is not None else None
+    # ── Validated walk-forward signals (tag W) ──────────────────────────────
+    # THE point of the 2026-09-02 rebuild: the EOD plan is the place where a
+    # walk-forward-validated signal becomes tomorrow's base plan. These rows are
+    # the ONLY ones in this pool with out-of-sample evidence behind them --
+    # scheduler/scanner.py wrote them only after the strategy cleared
+    # engine.admission (registry + rule parity + positive pooled OOS expectancy
+    # + evidence freshness). Every other source here is a heuristic screen.
+    #
+    # When the admission chain admits nothing, this query returns nothing, and
+    # the EOD plan is honestly all-heuristic. That is the current state and it is
+    # visible in the source tags rather than hidden.
+    try:
+        for r in conn.execute(
+            "SELECT ticker, strategies, flow_score FROM scheduled_signals "
+            "WHERE substr(scan_time,1,10)=? AND signal_direction='BUY'",
+            (date_str,)
+        ).fetchall():
+            c = _slot(r[0])
+            if "W" not in c["sources"]:
+                c["sources"].append("W")
+            first = (r[1] or "").split(",")[0].strip()
+            if first:
+                c["strategy_fn"] = first
+            if r[2] is not None:
+                c["wf_flow_score"] = r[2]
+    except sqlite3.Error:
+        pass    # table absent in a lean fixture -> no W candidates, not an error
+
+    # ── Source tag "P" REMOVED 2026-09-02 (audit finding A-2) ───────────────
+    # This block read `agent_decisions WHERE strategy='premarket' AND
+    # decision='approve'` for the SAME date and gave it the joint-highest weight
+    # in candidate_score (2.0 + 2*confidence). That made the live data flow
+    # premarket(D) -> EOD(D): the LLM's morning confidence re-entered the evening
+    # ranking as if it were an independent source, and it inverted the intended
+    # architecture, in which EOD is the base plan and premarket is the overnight
+    # revision of it (see engine/premarket_revision.py).
+    #
+    # `premkt_conf` stays on the candidate dict (defaulted None by _slot) so
+    # candidate_score, rank_approved and every existing reader keep working
+    # unchanged; it is simply never populated from the same session any more.
 
     for c in cand.values():
         c["confluence"] = len(c["sources"])
@@ -124,8 +155,13 @@ def edge_prescreen(conn: sqlite3.Connection, candidates: list[dict[str, Any]],
         ).fetchall()
         closes = [r[0] for r in rows][::-1]
         mr_sources = ["REVERSAL"] if "R" in (c.get("sources") or []) else []
+        # strategy=None is correct and deliberate (audit L-3): an EOD screen /
+        # volume / reversal candidate is not attributed to any walk-forward
+        # strategy, so it has no OOS statistics to be judged on. Only Tier A
+        # (directional) vetoes are read below, which need none.
         enr = enrich_candidate(conn, c["ticker"], scan_date,
-                               closes=closes, regime=None, sources=mr_sources)
+                               closes=closes, regime=None, sources=mr_sources,
+                               strategy=None)
         reason = diagnose(enr, market_regime)[1]
         if reason and reason.startswith("d"):     # Tier A directional veto only
             vetoed.append((c["ticker"], reason))
@@ -141,14 +177,20 @@ def candidate_score(c: dict[str, Any]) -> float:
     independent confirmation and must not out-rank an institutional reversal)."""
     s = c.get("sources", [])
     score = 0.0
+    if "W" in s:                       # validated walk-forward signal
+        # The only source in this pool backed by out-of-sample evidence and a
+        # receipt-bound admission decision. It outranks every heuristic screen by
+        # construction (audit 2026-09-02): a name that cleared admission is not
+        # comparable to a name that merely appeared on a volume screen.
+        score += 5.0
     if "R" in s:                       # reversal watchlist (broker-flow confirmed)
-        score += 2.0 + c["conviction"] / 50.0
-    if "P" in s:                       # premarket agent approval
+        score += 2.0 + (c.get("conviction") or 0.0) / 50.0
+    if "P" in s:                       # premarket agent approval (no longer emitted)
         score += 2.0 + (c.get("premkt_conf") or 0.0) * 2.0
     if "S" in s:                       # technical bullish screen
         score += 1.0
     if "V" in s:                       # volume mover (capped, diminishing)
-        score += min(c["vol_ratio"] / 50.0, 1.0)
+        score += min((c.get("vol_ratio") or 0.0) / 50.0, 1.0)
     return score
 
 
@@ -198,6 +240,84 @@ def fallback_rank(cands: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+def attach_provenance(conn: sqlite3.Connection, ranked: list[dict[str, Any]],
+                      date_str: str, *, plan: str) -> list[dict[str, Any]]:
+    """Stamp each published row with everything needed to answer, later:
+
+        why was this ticker here, which validated strategy produced it, what OOS
+        evidence backed it, what price and rule were available at decision time?
+
+    Without this the snapshot was a bare (date, ticker, rank) triple and outcomes
+    had to be reconstructed from a separate price table after the fact — the gap
+    that made "EOD prediction quality" uncomputable (audit 2026-09-02, F-1).
+
+    Decision price is the last settled close for `date_str`: it is what the
+    engine could actually see at 16:40. The entry rule is the validated
+    next-session-open convention (engine/entry_convention.py), the same one every
+    walk-forward strategy fills on — so an outcome is reproducible without any
+    retrospective price selection.
+    """
+    from engine import entry_convention as ec
+    from engine.edge_enrich import wf_edge_for
+    from engine import rule_identity
+
+    out = []
+    for c in ranked:
+        c = dict(c)
+        ticker = c["ticker"]
+        strategy_fn = c.get("strategy_fn")
+        c["strategy_fn"] = strategy_fn      # always present on a published row
+
+        close = c.get("close")
+        if close is None:
+            row = conn.execute(
+                "SELECT close, date FROM ohlcv WHERE ticker=? AND date<=? "
+                "ORDER BY date DESC LIMIT 1", (ticker, date_str)).fetchone()
+            if row:
+                close, c["decision_bar_date"] = row[0], row[1]
+        c["decision_price"] = float(close) if close is not None else None
+        c["decision_price_basis"] = ec.BASIS_LAST_CLOSE
+        c["entry_rule"] = ec.ENTRY_RULE_NEXT_OPEN
+
+        if strategy_fn:
+            c["rule_id"] = rule_identity.live_rule_id(strategy_fn)
+            try:
+                from engine.registry_loader import admission_path
+                c["admission_path"] = admission_path(strategy_fn)
+            except Exception:
+                c["admission_path"] = None
+            wf = wf_edge_for(conn, ticker, strategy_fn)
+            c["wf_expectancy_pct"] = wf.get("expectancy_pct")
+            c["wf_n_trades"] = wf.get("n_trades")
+            c["wf_last_computed"] = wf.get("last_computed")
+        else:
+            # Honest null: a heuristic screen hit is attributed to no validated
+            # strategy and therefore carries no OOS evidence. Never borrow
+            # another strategy's numbers to fill this in (audit L-3).
+            c["rule_id"] = None
+            c["admission_path"] = None
+            c["wf_expectancy_pct"] = None
+            c["wf_n_trades"] = None
+            c["wf_last_computed"] = None
+
+        prov = dict(c.get("provenance") or {})
+        prov.update({
+            "plan": plan,
+            "sources": c.get("sources") or [],
+            "confluence": c.get("confluence"),
+            "candidate_score": round(candidate_score(c), 4)
+            if plan == "eod" else None,
+            "conviction": c.get("conviction"),
+            "vol_ratio": c.get("vol_ratio"),
+            "agent_confidence": c.get("confidence"),
+            "agent_rationale": (c.get("rationale") or "")[:400] or None,
+            "evidence_backed": bool(strategy_fn),
+        })
+        c["provenance"] = prov
+        out.append(c)
+    return out
+
+
 WATCHLIST_SNAPSHOT_DDL = """
 CREATE TABLE IF NOT EXISTS watchlist_snapshot (
     date TEXT NOT NULL,
@@ -221,11 +341,24 @@ def ensure_watchlist_snapshot_table(conn: sqlite3.Connection) -> None:
 
 
 def record_snapshot(conn: sqlite3.Connection, date_str: str, strategy: str,
-                    ranked: list[dict[str, Any]]) -> None:
-    """Persist today's ranked watchlist so a future day's report can diff against
-    it. One row per ticker, keyed by (date, strategy, ticker); INSERT OR REPLACE
-    so a same-day re-run never duplicates rows. Reporting-only — writes rank/
-    confidence/conviction as already decided elsewhere, never recomputes them."""
+                    ranked: list[dict[str, Any]]) -> int:
+    """Publish a watchlist: append it to the immutable ledger, then refresh the
+    current-state projection.
+
+    `watchlist_snapshot` stays INSERT OR REPLACE — it is the "what is current"
+    view the Telegram diff and the dashboards read, and rewriting it on a
+    same-day re-run is correct for that role. What was WRONG (audit 2026-09-02)
+    is that it was the ONLY record, so a re-run silently erased what had actually
+    been published, and it carried no price, no strategy attribution and no
+    evidence.
+
+    engine.watchlist_ledger.append_snapshot() now writes an append-only,
+    revision-numbered row first — protected by BEFORE UPDATE/DELETE triggers —
+    carrying the decision price, the entry rule, the attributing walk-forward
+    strategy and its OOS evidence as of this moment. Returns the revision number.
+    """
+    from engine import watchlist_ledger as _wl
+    revision = _wl.append_snapshot(conn, date_str, strategy, ranked)
     ensure_watchlist_snapshot_table(conn)
     for i, c in enumerate(ranked, 1):
         conn.execute(
@@ -237,6 +370,7 @@ def record_snapshot(conn: sqlite3.Connection, date_str: str, strategy: str,
              json.dumps(c.get("sources") or [])),
         )
     conn.commit()
+    return revision
 
 
 def get_snapshot(conn: sqlite3.Connection, date_str: str, strategy: str) -> list[dict[str, Any]]:

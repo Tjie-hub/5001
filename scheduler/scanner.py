@@ -1030,10 +1030,14 @@ def run_edge_veto_stage(intersection_results, flow_confirmed, ohlcv_map,
                 except Exception:
                     votes = None
                 strats = r.get('strategies', [])
+                # L-3: OOS stats must belong to the strategy that would actually
+                # be traded -- strategies[0] is what open_trade records as the
+                # attributing strategy, so it is the one the gates must judge.
                 enriched.append(enrich_candidate(
                     conn, r['ticker'], date_str, closes=closes,
                     regime=r.get('adaptive_regime'),
-                    sources=(), strategies=strats, technical_votes=votes))
+                    sources=(), strategies=strats, technical_votes=votes,
+                    strategy=(strats[0] if strats else None)))
             survivors = apply_vetoes(enriched, mreg, open_n)
         finally:
             conn.close()

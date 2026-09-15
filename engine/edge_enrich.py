@@ -1,10 +1,27 @@
 """
 engine/edge_enrich.py — Build veto-ready candidate dicts from the DB.
 
-Joins, per ticker: best wf_edge row (validated OOS stats), latest stockbit_flow
-(composite_score + verdict), per-ticker regime (caller-supplied or detected),
-technical direction (MA stack), mean-reversion thesis (from source/strategy),
-and catalyst flag. The result is the dict shape engine/veto.apply_vetoes expects.
+Joins, per ticker: the wf_edge row FOR THE NAMED STRATEGY (validated OOS stats),
+latest stockbit_flow (composite_score + verdict), per-ticker regime
+(caller-supplied or detected), technical direction (MA stack), mean-reversion
+thesis (from source/strategy), and catalyst flag. The result is the dict shape
+engine/veto.apply_vetoes expects.
+
+STRATEGY-SPECIFIC BY CONSTRUCTION (audit 2026-09-02, finding L-3)
+-----------------------------------------------------------------
+This module used to call `_best_wf_edge(conn, ticker)`, which selected
+`ORDER BY expectancy_pct DESC LIMIT 1` — the ticker's *best* strategy, whatever
+it was. A reversal-watchlist candidate was then judged against, say, a Liquidity
+Sweep row's n_trades / win_rate / expectancy_pct, and those are exactly the
+fields Tier B of engine/veto.py (s1-s4) gates on. One strategy's OOS evidence
+was silently laundered into another strategy's admission decision.
+
+The lookup is now keyed on (ticker, strategy) and there is no "best" fallback.
+A candidate with no named strategy — an EOD screen hit, a premover, a bear-dip —
+has NO OOS statistics, and that is the truthful answer: it carries None for
+every stat, so Tier B's s1 drops it. Fail-closed is deliberate. Borrowing an
+unrelated strategy's numbers to clear a statistical gate is the defect, not the
+absence of numbers.
 """
 import logging
 from datetime import date
@@ -44,17 +61,25 @@ def _latest_flow(conn, ticker):
     return (row[0], row[1]) if row else (None, None)
 
 
-def _best_wf_edge(conn, ticker) -> dict:
-    """Best (highest expectancy) validated strategy for the ticker, if any.
-    Self-heals when wf_edge hasn't been built yet → returns {} (s1 drops it).
-    Warns (but does not drop) when the stats are stale — refresh_wf_scores()
-    may not have run since a fresh deploy / DB restore."""
+def wf_edge_for(conn, ticker, strategy) -> dict:
+    """Validated OOS stats for exactly (ticker, strategy). {} when absent.
+
+    Self-heals when wf_edge hasn't been built yet -> returns {} (Tier B s1 drops
+    the candidate). Warns (but does not drop) when the stats are stale --
+    refresh_wf_scores() may not have run since a fresh deploy / DB restore.
+
+    There is deliberately NO cross-strategy fallback: see the module docstring
+    (audit finding L-3). `strategy=None` returns {} rather than the ticker's best
+    row -- an unattributed candidate genuinely has no OOS evidence.
+    """
     ensure_wf_edge_table(conn)
+    if not strategy:
+        return {}
     row = conn.execute(
         "SELECT expectancy_pct, win_rate, consistency_pct, sharpe, n_trades, "
         "last_computed "
-        "FROM wf_edge WHERE ticker=? ORDER BY expectancy_pct DESC LIMIT 1",
-        (ticker,),
+        "FROM wf_edge WHERE ticker=? AND strategy=? LIMIT 1",
+        (ticker, strategy),
     ).fetchone()
     if not row:
         return {}
@@ -65,22 +90,34 @@ def _best_wf_edge(conn, ticker) -> dict:
             age_days = (date.today() - computed_date).days
             if age_days > _WF_STALE_DAYS:
                 logger.warning(
-                    "wf_edge for %s is stale (last_computed=%s, %d days old) — "
-                    "run refresh_wf_scores()", ticker, last_computed, age_days)
+                    "wf_edge for %s/%s is stale (last_computed=%s, %d days old) - "
+                    "run refresh_wf_scores()", ticker, strategy, last_computed,
+                    age_days)
         except (ValueError, TypeError):
-            logger.warning("wf_edge for %s has unparseable last_computed=%r",
-                           ticker, last_computed)
+            logger.warning("wf_edge for %s/%s has unparseable last_computed=%r",
+                           ticker, strategy, last_computed)
     return {'expectancy_pct': row[0], 'win_rate': row[1],
-            'consistency_pct': row[2], 'sharpe': row[3], 'n_trades': row[4]}
+            'consistency_pct': row[2], 'sharpe': row[3], 'n_trades': row[4],
+            'last_computed': last_computed, 'strategy': strategy}
 
 
 def enrich_candidate(conn, ticker, scan_date, *, closes=None, regime=None,
-                     sources=(), strategies=(), technical_votes=None) -> dict:
-    """Assemble one veto-ready candidate dict. Missing wf_edge → stats stay
-    None (Tier B s1 will drop it). Missing flow → None (treated as no signal)."""
+                     sources=(), strategies=(), technical_votes=None,
+                     strategy=None) -> dict:
+    """Assemble one veto-ready candidate dict.
+
+    `strategy` names the strategy whose OOS evidence applies. It may also be
+    inferred from a single-element `strategies` tuple. When neither is given the
+    candidate carries no OOS stats and Tier B's s1 will drop it -- see the
+    module docstring (finding L-3). Missing flow -> None (treated as no signal).
+    """
     cs, verdict = _latest_flow(conn, ticker)
-    wf = _best_wf_edge(conn, ticker)
+    if strategy is None and strategies and len(tuple(strategies)) == 1:
+        strategy = tuple(strategies)[0]
+    wf = wf_edge_for(conn, ticker, strategy)
     return {
+        'strategy':          strategy,
+        'wf_last_computed':  wf.get('last_computed'),
         'ticker':            ticker,
         'flow_score':        cs,
         'flow_verdict':      verdict,

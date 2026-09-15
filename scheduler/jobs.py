@@ -1000,31 +1000,76 @@ def _build_premarket_firm_message(decisions: list, rows: list, header: str,
     return msg
 
 
-def run_premarket_firm_scan():
-    """08:35 WIB — premarket agent-firm vetting of last night's unified watchlist.
+def _premarket_revision_section(decisions: list) -> list[str]:
+    """Telegram block naming every change made to the frozen EOD base plan and
+    the new information that justified it. Reporting only."""
+    from engine.watchlist_ledger import (
+        ACTION_ADD, ACTION_DOWNGRADE, ACTION_REMOVE, ACTION_RETAIN, ACTION_UPGRADE)
+    if not decisions:
+        return []
+    emoji = {ACTION_RETAIN: "\u2705", ACTION_REMOVE: "\u274c",
+             ACTION_ADD: "\U0001f195", ACTION_UPGRADE: "\u2b06",
+             ACTION_DOWNGRADE: "\u2b07"}
+    changed = [d for d in decisions if d.action != ACTION_RETAIN]
+    retained = [d for d in decisions if d.action == ACTION_RETAIN]
+    lines = ["", "<b>\U0001f504 REVISION OF THE EOD BASE PLAN</b>"]
+    if not changed:
+        lines.append(f"  No overnight information changed the plan "
+                     f"({len(retained)} retained).")
+        return lines
+    for d in changed[:10]:
+        lines.append(f"  {emoji.get(d.action, '')} <b>{html.escape(d.ticker)}</b> "
+                     f"{d.action} — {html.escape(d.reason[:130])}")
+    if len(changed) > 10:
+        lines.append(f"  … +{len(changed) - 10} more")
+    if retained:
+        lines.append(f"  \u2705 Retained unchanged: "
+                     + ", ".join(html.escape(d.ticker) for d in retained[:12]))
+    return lines
 
-    Picks the top-15 long-direction setups from build_unified_watchlist (reversal +
-    premover + bear-dip, all settled overnight), runs them through the 2-stage agent
-    firm, and sends a premarket shortlist heads-up. Informational only — auto-entry
-    stays owned by the 16:30 premover EOD path.
+
+def run_premarket_firm_scan():
+    """08:35 WIB — REVISE the frozen EOD base plan using overnight information.
+
+    REBUILT 2026-09-02 (audit findings A-1 / A-2). This job used to call
+    build_unified_watchlist() and construct an entirely separate candidate
+    universe from REVERSAL / PREMOVER / BEAR_DIP, while the EOD plan merged
+    R / S / V / P. The two vocabularies are disjoint; across 17 consecutive
+    EOD -> premarket transitions only four tickers ever carried over. Two
+    independent samples cannot answer "did the premarket revision improve the
+    EOD plan?" -- the question was unanswerable by construction.
+
+    The job is now a revision operator:
+
+        frozen EOD plan (previous session)
+          + information that did not exist at 16:40  (news, settled broker flow,
+            corporate actions, VPIN, reconciled prices, market risk tier)
+          -> RETAIN / REMOVE / UPGRADE / DOWNGRADE / ADD, each with a recorded
+             reason and its evidence
+          -> Agent Firm vetting of the survivors
+          -> frozen premarket plan
+
+    The Agent Firm vets; it never promotes. LLM approval is not evidence of
+    alpha and does not change a candidate's strategy attribution or its OOS
+    record.
     """
     if _holiday_skip("run_premarket_firm_scan"):
         handle = current_job()
         if handle:
             handle.mark_skipped("holiday")
         return
-    from engine.unified_watchlist import build_unified_watchlist
     from engine.liquidity import select_top_liquid_longs
     from engine.agent_firm import firm as _firm
     from engine.agent_firm.schemas import SignalCandidate as _SC
+    from engine import premarket_revision as _rev
+    from engine import trade_plan as tp
+    from engine import watchlist_ledger as _wl
 
     now = datetime.now(WIB)
     now_str = now.strftime('%H:%M')
     date_str = now.strftime('%Y-%m-%d')
 
-    # Dedup guard — prevents duplicate sends when two instances briefly overlap
-    # (systemd Restart=always can start a new process before the old one fully exits).
-    # First instance to INSERT wins; second gets IntegrityError and skips silently.
+    # Dedup guard — first INSERT wins; a systemd restart race never double-sends.
     with db_connect(DB_PATH, timeout=5) as _g:
         _g.execute(
             "CREATE TABLE IF NOT EXISTS _job_sentinel "
@@ -1045,116 +1090,56 @@ def run_premarket_firm_scan():
                 handle.mark_skipped(f"dedup_guard_error: {e}")
             return
 
-    logger.info(f"[{now_str}] Premarket agent-firm scan dimulai...")
+    logger.info(f"[{now_str}] Premarket revision of the EOD base plan starting...")
 
+    # Long-lived process: drop admission's rule-study cache so evidence written
+    # since the last cycle is visible (see scheduler/scanner.py for the rationale).
     try:
-        rows = build_unified_watchlist(DB_PATH)
-    except Exception as e:
-        logging.error(f"[premarket_firm] watchlist build error: {e}")
-        logger.warning(f"[{now_str}] Premarket firm: watchlist build error: {e}")
-        return
+        from engine.admission import reset_evidence_cache as _reset_adm_cache
+        _reset_adm_cache()
+    except Exception:
+        pass
 
-    # Value-base liquidity: keep the 3 best long-only setups whose 30d avg daily
-    # traded value (close*volume, Rp) clears the turnover floor — drops thin names
-    # that a volume/lot count would let through at low price levels.
+    # ── 1. Load the frozen EOD base plan ─────────────────────────────────────
     conn = db_connect(DB_PATH)
     try:
-        longs = select_top_liquid_longs(rows, conn, date_str, top_n=3)
+        base = _wl.base_plan(conn, date_str, _wl.STRATEGY_EOD)
     finally:
         conn.close()
-    if not longs:
-        logger.info(f"[{now_str}] Premarket firm: no liquid long setups from unified watchlist — skipped")
+    base_status, base_date, base_rows = base["status"], base["date"], base["rows"]
+
+    # P-2: EMPTY_PLAN and NO_EOD_SNAPSHOT are different facts and must not be
+    # collapsed. EMPTY_PLAN is a real prediction the engine made -- it ran and
+    # deliberately approved nobody -- and revising it correctly yields an empty
+    # premarket plan. NO_EOD_SNAPSHOT is an operational fault (job never ran, DB
+    # restored, first day) and is reported as one.
+    if base_status == _wl.BASE_MISSING:
+        logger.warning(f"[{now_str}] Premarket: NO_EOD_SNAPSHOT — no EOD publication "
+                       f"exists at all. This is an operational fault, not an empty "
+                       f"plan; premarket is a revision of EOD by design.")
+        send_telegram(
+            f"\u26a0\ufe0f <b>PREMARKET — {now.strftime('%d/%m %H:%M')}</b>\n\n"
+            f"<b>NO_EOD_SNAPSHOT</b> — no EOD publication found in "
+            f"<code>watchlist_publication</code>, so there is nothing to revise.\n\n"
+            f"This is not the same as an empty plan: the EOD job appears not to "
+            f"have published at all. Check the 16:40 job."
+        )
         return
 
-    # ── Pre-LLM edge veto (Phase 3, gated by EDGE_SCORE_MODE) ─────────────────
-    from config import edge_mode
-    if edge_mode() != 'off':
-        try:
-            from engine.edge_enrich import enrich_candidate, market_regime
-            from engine.veto import apply_vetoes
-            _c = db_connect(DB_PATH)
-            try:
-                _mreg = market_regime(_c)
-                _open = _c.execute(
-                    "SELECT COUNT(*) FROM paper_trades WHERE status='OPEN'"
-                ).fetchone()[0]
-                _enr = []
-                for r in longs:
-                    _rows = _c.execute(
-                        "SELECT close FROM ohlcv WHERE ticker=? ORDER BY date DESC LIMIT 60",
-                        (r["ticker"],)).fetchall()
-                    _closes = [x[0] for x in _rows][::-1]
-                    _enr.append(enrich_candidate(
-                        _c, r["ticker"], date_str, closes=_closes,
-                        regime=None, sources=r.get("sources", [])))
-                _surv = apply_vetoes(_enr, _mreg, _open)
-            finally:
-                _c.close()
-            _keep = {s["ticker"] for s in _surv}
-            logging.info(f"[{now_str}] Premarket edge veto ({edge_mode()}, market={_mreg}): "
-                         f"{len(_surv)}/{len(longs)} survive")
-            if edge_mode() == 'enforce':
-                longs = [r for r in longs if r["ticker"] in _keep]
-                if not longs:
-                    logging.info(f"[{now_str}] Premarket: all candidates failed edge/veto — skipped")
-                    return
-        except Exception as _ev:
-            logging.warning(f"[{now_str}] Premarket edge veto error (fail-open): {_ev}")
+    if base_status == _wl.BASE_EMPTY:
+        logger.info(f"[{now_str}] Premarket: EMPTY_PLAN — EOD {base_date} "
+                    f"(revision {base['revision']}) published zero approved "
+                    f"candidates. Revising an empty plan yields an empty plan.")
+    else:
+        logger.info(f"[{now_str}] Base plan {base_date}: {len(base_rows)} candidate(s)")
 
-    # AF-2 WP4: this job's own run is its "scan cycle" for Tier 1 context purposes —
-    # it does not run inside scheduled_multi_strategy_scan(), so it must flush both
-    # caches itself (mirrors that function's reset_market_ctx()/reset_batch_context()
-    # pair) before building context, or market/portfolio/risk_limits/execution would
-    # be silently reused from whatever the process last computed, hours stale.
+    # ── 2. Market context that is itself new information ─────────────────────
     _risk = None
     try:
         _risk = get_market_risk_for_circuit_breaker()
     except Exception as e:
         logging.warning(f"[premarket_firm] risk lookup error (fail-soft): {e}")
 
-    from engine.agent_firm_context import build_candidate_context, reset_batch_context
-    _firm.reset_market_ctx()
-    reset_batch_context()
-    _ctx_by_ticker = {}
-    try:
-        _ctx_conn = db_connect(DB_PATH)
-        try:
-            for r in longs:
-                _ctx_by_ticker[r["ticker"]] = build_candidate_context(
-                    _ctx_conn, r["ticker"], date_str,
-                    market_risk_score=(_risk or {}).get("score"),
-                )
-        finally:
-            _ctx_conn.close()
-    except Exception as _ctx_err:
-        logging.warning(f"[premarket_firm] context build error (fail-open, "
-                        f"candidates proceed without Tier 1 context): {_ctx_err}")
-
-    candidates = [
-        _SC(
-            ticker=r["ticker"],
-            strategy="premarket",
-            score=float(r.get("strength") or 0.0),
-            scan_time=f"{date_str} {now_str}",
-            flow_verdict=(r.get("detail", {}).get("reversal") or {}).get("verdict"),
-            foreign_score=None,
-            indicators={"sources": r.get("sources", []),
-                        "confluence": r.get("confluence", False)},
-            **_ctx_by_ticker.get(r["ticker"], {}),
-        )
-        for r in longs
-    ]
-
-    try:
-        decisions = _firm.evaluate_staged(candidates)
-    except Exception as e:
-        logging.error(f"[premarket_firm] firm eval error: {e}")
-        logger.warning(f"[{now_str}] Premarket firm eval error: {e}")
-        return
-
-    # Daily-Summary context — same functions the 16:30/16:40 jobs already use,
-    # reused (not reimplemented) here. Fail-soft: a lookup error must not block
-    # the shortlist send, it just omits that summary line.
     regime = None
     try:
         from engine.edge_enrich import market_regime as _market_regime
@@ -1166,20 +1151,122 @@ def run_premarket_firm_scan():
     except Exception as e:
         logging.warning(f"[premarket_firm] regime lookup error (fail-soft): {e}")
 
-    # Reuses _risk computed above (context-population step) — not a second
-    # compute_market_risk_score() call; same value, same fail-soft None on error.
-    risk = _risk
+    # ── 3. Revise ────────────────────────────────────────────────────────────
+    # Discovery-sourced ADDs are OFF by default: REVERSAL / PREMOVER / BEAR_DIP
+    # are all written at 16:15-16:30, BEFORE the EOD job ran, so a name found
+    # there is not new information -- it is the same evening's data re-read.
+    _allow_adds = os.getenv("PREMARKET_ALLOW_DISCOVERY_ADDS", "false").strip().lower() in ("1", "true", "yes")
+    discoveries = []
+    if _allow_adds:
+        try:
+            from engine.unified_watchlist import build_unified_watchlist
+            discoveries = [r for r in build_unified_watchlist(DB_PATH)
+                           if (r.get("direction") or "long").lower() == "long"]
+        except Exception as e:
+            logging.warning(f"[premarket_firm] discovery source error (fail-soft): {e}")
 
-    # Persist today's ranked shortlist + diff against the prior snapshot so the
-    # report can show new/removed/upgraded/downgraded tickers. Reuses the exact
-    # engine.trade_plan snapshot/diff infra built for the EOD plan (strategy=
-    # 'premarket' keeps the two histories independent) — reporting only, never
-    # feeds back into ranking/decisions.
-    from engine import trade_plan as tp
-    approved, by_ticker = _premarket_approved_and_lookup(decisions, longs)
+    conn = db_connect(DB_PATH)
+    try:
+        decisions_rev = _rev.revise(
+            conn, base_rows, base_date=base_date, plan_date=date_str,
+            market_risk=_risk, market_regime=regime,
+            discoveries=discoveries, allow_discovery_adds=_allow_adds)
+        survivors = _rev.apply(decisions_rev)
+
+        # ── 4. Liquidity is an execution constraint, and a RECORDED one ──────
+        # It used to silently discard everything outside the top 3, which made
+        # the surviving cohort conditioned on an unobservable filter (audit,
+        # question 10). Every drop is now a REMOVE decision with a reason.
+        if survivors:
+            liquid = select_top_liquid_longs(survivors, conn, date_str,
+                                             top_n=max(3, len(survivors)))
+            keep = {r["ticker"] for r in liquid}
+            for r in survivors:
+                if r["ticker"] not in keep:
+                    decisions_rev.append(_rev.RevisionDecision(
+                        r["ticker"], _wl.ACTION_REMOVE, "illiquid",
+                        "below the 30d average-daily-traded-value floor at "
+                        "premarket", {"filter": "select_top_liquid_longs"}, r))
+            survivors = [r for r in survivors if r["ticker"] in keep]
+
+        _wl.record_revisions(conn, date_str, base_date, [d.as_dict() for d in decisions_rev])
+    finally:
+        conn.close()
+
+    n_removed = sum(1 for d in decisions_rev if d.action == _wl.ACTION_REMOVE)
+    logger.info(f"[{now_str}] Revision: {len(survivors)} survive of {len(base_rows)} "
+                f"base candidates ({n_removed} removed)")
+
+    # ── 5. Agent Firm vetting of the survivors (vetting, never promotion) ────
+    from engine.agent_firm_context import build_candidate_context, reset_batch_context
+    _firm.reset_market_ctx()
+    reset_batch_context()
+    _ctx_by_ticker = {}
+    if survivors:
+        try:
+            _ctx_conn = db_connect(DB_PATH)
+            try:
+                for r in survivors:
+                    _ctx_by_ticker[r["ticker"]] = build_candidate_context(
+                        _ctx_conn, r["ticker"], date_str,
+                        market_risk_score=(_risk or {}).get("score"),
+                    )
+            finally:
+                _ctx_conn.close()
+        except Exception as _ctx_err:
+            logging.warning(f"[premarket_firm] context build error (fail-open, "
+                            f"candidates proceed without Tier 1 context): {_ctx_err}")
+
+    candidates = [
+        _SC(
+            ticker=r["ticker"],
+            strategy="premarket",
+            score=float(r.get("conviction") or r.get("confidence") or 0.0),
+            scan_time=f"{date_str} {now_str}",
+            flow_verdict=None,
+            foreign_score=None,
+            indicators={"sources": r.get("sources", []),
+                        "confluence": r.get("confluence", False),
+                        "revision_action": r.get("revision_action"),
+                        "revision_reason": r.get("revision_reason"),
+                        "base_strategy": r.get("strategy_fn")},
+            **_ctx_by_ticker.get(r["ticker"], {}),
+        )
+        for r in survivors
+    ]
+
+    decisions = []
+    if candidates:
+        try:
+            decisions = _firm.evaluate_staged(candidates)
+        except Exception as e:
+            logging.error(f"[premarket_firm] firm eval error: {e}")
+            logger.warning(f"[{now_str}] Premarket firm eval error: {e}")
+            return
+
+    # ── 6. Publish the revised, frozen premarket plan ────────────────────────
+    approved, by_ticker = _premarket_approved_and_lookup(decisions, survivors)
     ranked = _premarket_ranked_for_snapshot(approved, by_ticker)
+    # carry the base plan's attribution and evidence forward onto the published
+    # rows so the premarket record is traceable to the EOD row it revised
+    _base_by_ticker = {r["ticker"]: r for r in survivors}
+    for row in ranked:
+        src = _base_by_ticker.get(row["ticker"], {})
+        for k in ("strategy_fn", "provenance", "revision_action",
+                  "revision_reason_code", "revision_reason"):
+            if src.get(k) is not None:
+                row[k] = src[k]
+        prov = dict(row.get("provenance") or {})
+        prov["base_plan_date"] = base_date
+        row["provenance"] = prov
+
     diff = None
     with db_connect(DB_PATH) as _snap_conn:
+        try:
+            ranked = tp.attach_provenance(_snap_conn, ranked, date_str,
+                                          plan="premarket")
+        except Exception as e:
+            logging.warning(f"[premarket_firm] provenance stamp failed (fail-soft): {e}")
         try:
             diff = tp.diff_watchlist(_snap_conn, date_str, "premarket", ranked)
             tp.record_snapshot(_snap_conn, date_str, "premarket", ranked)
@@ -1187,16 +1274,23 @@ def run_premarket_firm_scan():
             logging.warning(f"[premarket_firm] watchlist snapshot/diff error (fail-soft): {e}")
 
     try:
-        send_telegram(_build_premarket_firm_message(
-            decisions, longs, now.strftime('%d/%m %H:%M'),
-            regime=regime, risk=risk, watchlist_total=len(rows), diff=diff))
+        msg = _build_premarket_firm_message(
+            decisions, survivors, now.strftime('%d/%m %H:%M'),
+            regime=regime, risk=_risk, watchlist_total=len(base_rows), diff=diff)
+        msg += "\n".join(_premarket_revision_section(decisions_rev)) + "\n"
+        msg += (f"\n<i>Base plan: EOD {base_date} [{base_status}] "
+                f"({len(base_rows)} candidates) \u2192 {len(survivors)} after "
+                f"revision. Discovery adds: "
+                f"{'on' if _allow_adds else 'off'}.</i>")
+        send_telegram(msg)
     except Exception as e:
         logger.warning(f"[premarket firm] Telegram error: {e}")
 
     n_app = sum(1 for d in decisions if d.decision == "approve")
     n_veto = sum(1 for d in decisions if d.decision == "veto")
-    logger.info(f"[{now_str}] Premarket firm: {len(decisions)} evaluated "
-          f"({n_app} approve, {n_veto} veto)")
+    logger.info(f"[{now_str}] Premarket revision: base={len(base_rows)} "
+                f"survivors={len(survivors)} evaluated={len(decisions)} "
+                f"({n_app} approve, {n_veto} veto)")
 
 
 def run_eod_trade_plan():
@@ -1304,6 +1398,8 @@ def run_eod_trade_plan():
         with db_connect(DB_PATH) as _snap_conn:
             try:
                 diff = tp.diff_watchlist(_snap_conn, date_str, "eod", [])
+                # An empty plan is still a published prediction and must be
+                # recorded as a revision in the append-only ledger (audit F-1).
                 tp.record_snapshot(_snap_conn, date_str, "eod", [])
             except Exception as e:
                 logging.warning(f"[eod_trade_plan] watchlist snapshot/diff error (fail-soft): {e}")
@@ -1387,6 +1483,16 @@ def run_eod_trade_plan():
     diff = None
     with db_connect(DB_PATH) as _snap_conn:
         try:
+            # Stamp strategy attribution, OOS evidence, decision price and
+            # entry rule before publishing, so the frozen base plan can be
+            # forward-tested and explained without retrospective price lookup
+            # (audit F-1). Fail-soft: provenance must never block the report.
+            try:
+                ranked = tp.attach_provenance(_snap_conn, ranked, date_str,
+                                              plan="eod")
+            except Exception as _pe:
+                logging.warning(f"[eod_trade_plan] provenance stamp failed "
+                                f"(fail-soft): {_pe}")
             diff = tp.diff_watchlist(_snap_conn, date_str, "eod", ranked)
             tp.record_snapshot(_snap_conn, date_str, "eod", ranked)
         except Exception as e:
@@ -1560,6 +1666,7 @@ def run_forward_test_cycle(db_path=None, run_date=None):
     from forward_testing.storage.db import init_ft_tables
     from forward_testing.storage.repo import FTRepo
     from forward_testing.adapters.signal_adapter import SignalAdapter
+    from forward_testing.adapters.watchlist_adapter import WatchlistAdapter
     from forward_testing.positions.market_data import MarketDataResolver
     from forward_testing.positions.exit_policy import ExitPolicyRegistry
     from forward_testing.positions.shadow_manager import ShadowPositionManager
@@ -1589,6 +1696,28 @@ def run_forward_test_cycle(db_path=None, run_date=None):
         init_ft_tables(db)
         repo = FTRepo(db)
 
+        # Pre-registered forward-test windows (audit blocker #5). Verifies the
+        # frozen configuration each cohort is being measured under still holds;
+        # a change closes the window as CONTAMINATED and opens a successor, so
+        # results either side are never pooled. Fail-soft: window bookkeeping
+        # must never take down the cycle.
+        try:
+            from engine import forward_window as _fw
+            with db_connect(db) as _wc:
+                _win = _fw.check_all(_wc, event_date=rd)
+            for _c, _r in _win.items():
+                if _r["action"] == "rolled":
+                    logger.warning(
+                        f"[forward_test] {_c}: configuration changed mid-window — "
+                        f"cohort closed as CONTAMINATED, successor opened. "
+                        f"Changes: {_r['changes'][:5]}")
+                elif _r["action"] == "opened":
+                    logger.info(f"[forward_test] {_c}: forward-test window opened "
+                                f"{_r['window']['window_id'][:8]} "
+                                f"@{_r['window']['config_hash']}")
+        except Exception as _fw_err:
+            logger.warning(f"[forward_test] window check error (fail-soft): {_fw_err}")
+
         def _trade_count():
             with db_connect(db) as c:
                 return c.execute("SELECT COUNT(*) FROM ft_shadow_trade").fetchone()[0]
@@ -1597,6 +1726,14 @@ def run_forward_test_cycle(db_path=None, run_date=None):
         trades_before = _trade_count()
 
         n_ingested = SignalAdapter(repo, db).ingest(rd)
+        # AUDIT F-1: the EOD and Premarket plans are what the operator actually
+        # acts on, and until 2026-09-02 neither was forward-tested at all. They
+        # ingest as their own cohorts ('eod', 'premarket') and are never pooled
+        # with the scanner's — the whole point is to compare them.
+        try:
+            n_ingested += WatchlistAdapter(repo, db).ingest(rd)
+        except Exception as _wa_err:
+            logger.warning(f"[forward_test] watchlist ingest error (fail-soft): {_wa_err}")
         mgr = ShadowPositionManager(
             repo, MarketDataResolver(db), ExitPolicyRegistry(),
             LifecycleManager(repo), db, costs=Costs(),

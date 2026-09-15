@@ -46,6 +46,8 @@ class TestEnrichCandidate:
         return conn
 
     def test_joins_flow_and_wf_edge(self):
+        # L-3 (audit 2026-09-02): wf_edge lookup is keyed on (ticker, strategy),
+        # no cross-strategy "best" fallback — strategy must be named explicitly.
         conn = self._db()
         conn.execute("INSERT INTO stockbit_flow VALUES ('INCO','2026-06-22',-5,'DISTRIBUTING')")
         save_wf_edge(conn, 'INCO', [{
@@ -55,7 +57,8 @@ class TestEnrichCandidate:
         }], 'now')
         c = enrich_candidate(conn, 'INCO', '2026-06-22',
                              closes=[200 - i for i in range(60)],  # downtrend
-                             regime='SIDEWAYS', sources=['BEAR_DIP'])
+                             regime='SIDEWAYS', sources=['BEAR_DIP'],
+                             strategy='conservative')
         assert c['flow_score'] == -5
         assert c['flow_direction'] == 'BEARISH'
         assert c['tech_direction'] == 'BEARISH'
@@ -93,7 +96,8 @@ class TestWfEdgeStaleness:
         old = (date.today() - timedelta(days=30)).isoformat()
         self._save(conn, 'INCO', old)
         with caplog.at_level(logging.WARNING, logger='engine.edge_enrich'):
-            c = enrich_candidate(conn, 'INCO', '2026-06-22', closes=[], regime='BULL')
+            c = enrich_candidate(conn, 'INCO', '2026-06-22', closes=[], regime='BULL',
+                                 strategy='conservative')
         assert c['expectancy_pct'] == 2.5            # stats still returned (not dropped)
         assert any('stale' in r.message for r in caplog.records)
 
