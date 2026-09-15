@@ -1345,6 +1345,67 @@ C7; activation of the prospective capture service.
 
 ---
 
+### D-051 · HYP-PM-0009 (I7) executed once → FAILED (F2 · prediction failure); terminal; closeout recorded
+**Status:** RECORDED · **Date:** 2026-09-15 · **Type:** Post-execution governance record (registration D-050 lineage) · **Approval authority:** Owner instruction (governance closeout, 2026-09-15)
+
+**Execution.** The single registered execution of HYP-PM-0009 was performed **once** as `EXP-PM-0009/R2`
+(`run_utc` 2026-09-15T01:41:30Z, in-sample, repository at registration commit `e0e3f91`) after an
+in-script pre-execution integrity gate passed **19/19** (preregistration sha `d19dfd0f…` recomputed over
+the frozen block; cohort store `e1375264…fba`; candidate spec `76a96545…`; calendars `5012be23…` /
+`a7a4eedf…`; accrual ledger 82,814 candidates exact and MECE). No substantive registered field —
+hypothesis, H0/H1, primary endpoint, cohort, exclusions, estimator, thresholds, timing windows,
+inference, multiplicity, decision rule — was changed at any point.
+
+**Implementation-defect disclosure (implementation correction only).** A first invocation the same day
+(`EXP-PM-0009/R1`, 01:39:02Z) was **INVALID — implementation defect, estimand not evaluated**: an
+exit-leg index error made `fwd_return = close(t+1)/close(t+1) − 1 ≡ 0` (θ exactly 0, NW_t = NaN). The
+registered outcome formula (`close(t+2)/close(t+1) − 1`) was never computed. The correction changed only
+the index arithmetic so the code computes the already-frozen formula. R1's artifacts are preserved
+verbatim; R2's k=1 arm reproduces R1's accidentally-shifted arm exactly (deterministic cross-check). The
+frozen block hash `d19dfd0f…` verifies unchanged before, during, and after execution and closeout.
+
+**Essential result (primary k=1; entry close(t+1), outcome close(t+2)/close(t+1) − 1).**
+
+| Quantity | Value |
+|---|---|
+| θ_primary | **+0.0337%** per formation-day (+0.000337) |
+| Newey-West HAC t (lag 5) | **0.1102** |
+| Two-sided p (Holm = identity, single cell) | **0.912223** |
+| Daily observations m(d) | **64** (6 dates skipped and counted; 2026-09-08's single cell disposed by step_1) |
+| θ_net sensitivity = θ_primary − 0.006 | **−0.5663%** (sensitivity ONLY, never a verdict) |
+| Estimation-layer accounting | population 24,187 net-buying cells → X6 475, X5 17,684, surviving 6,028 (MECE) |
+| Robustness (non-confirmatory) | k=2: θ −0.0362%, p 0.928 · k=3: θ +0.2138%, p 0.615 |
+
+**Classification (made exactly once): FAIL — F2 · prediction failure.** The registered kill rule
+("θ_primary not positive with two-sided p < 0.05 ⇒ REFUTED, terminates FAILED, mode F2") is met: θ is
+nominally positive but p = 0.9122. H0 (θ ≤ 0) is not rejected at the registered one-sided decision
+(two-sided statistic, nominal one-sided size 0.025).
+
+**Interpretation constraint, carried verbatim into every record:** I7 carries **NO power claim** (D-050).
+**"Non-rejection is not evidence of absence"** — this result must never be reported or used as evidence
+of absence. The **R7 PIT provenance limitation** is retained in the result (same-commit `updated_at`
+custody timestamps; original vendor payload not independently re-verifiable — a verification, not an
+availability, limitation; 200/200 source spot-check matches).
+
+**Terminality.** FAILED is terminal (HL-3). Per the registered `no_rescue` rule and the closeout STOP
+condition: no rerun, no alternative timing windows, no subgroup analysis, no explanation-seeking analysis,
+no post-hoc power, no new threshold, no cohort modification, no rescue hypothesis, no further P-M
+execution. HYP-PM-0009 remains **counted permanently** in P-M {I5, I6, I7, I12} (X8, PG-3, OS-10) — the
+family's third member, all three now FAILED F2. Continuation only via **T12 supersession**: a new
+hypothesis, new G1, its own slot. The next decision is **Owner-level** selection of the next
+already-authorized research candidate, if one exists.
+
+**Closeout records (append-only):** `HYPOTHESIS_REGISTRY.md` (row → FAILED, notes, family ledger) ·
+`FAILURE_REGISTRY.md` (row **FAIL-PM-0009**; F2 count 3→4; N=5→6) · `EXPERIMENT_LEDGER.jsonl`
+(hypothesis record appended) · `experiments/EXP-PM-0009/{FAILURE_ENTRY,CLOSE_OUT_REPORT}.md` (new) ·
+R1/R2 execution artifacts preserved unchanged.
+
+**Related:** D-050 (registration; D-1/D-2 rulings) · D-028 (family) · D-049 (semantic gate — compliant
+here trivially: no all-broker net constructed; `identity_affected: false`) ·
+`experiments/EXP-PM-0009/MANIFEST.md`.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

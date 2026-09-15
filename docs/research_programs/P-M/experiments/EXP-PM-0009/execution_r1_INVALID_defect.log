@@ -1,0 +1,46 @@
+EXP-PM-0009 confirmatory run @ 2026-09-15T01:39:02Z
+
+=== EXP-PM-0009 pre-execution integrity gate (no outcome statistic computed) ===
+  [PASS] preregistration sha256 over FROZEN block (d19dfd0f6b059a4b…)
+  [PASS] candidate spec sha256 (76a96545…) (76a965459425e7c1…)
+  [PASS] cohort store sha256 (e1375264…fba) (e1375264133b42f4…)
+  [PASS] extension calendar sha256 (a7a4eedf…) (a7a4eedf45f3d4b2…)
+  [PASS] base calendar embedded sha256 (5012be23…) (5012be2315dc82cc…)
+  [PASS] effective calendar = base 386 ∪ ext 11 = 397 (386+11->397)
+  [PASS] ledger admitted == 61335 (61335)
+  [PASS] ledger X3 == 7038 (7038)
+  [PASS] ledger E-PIT-2 == 2044 (2044)
+  [PASS] ledger E-PIT-3 == 1507 (1507)
+  [PASS] ledger E-PIT-4 == 10890 (10890)
+  [PASS] ledger total == 82814 (exact, MECE) (82814)
+  [PASS] 76 admitted sessions in 2026-04-28..2026-09-11 (76 2026-04-28..2026-09-11)
+  [PASS] 868 admitted tickers (868)
+  [PASS] 19,793,865 bar rows (19793865)
+  [PASS] every admitted session in effective calendar ()
+  [PASS] the 8 X3-excluded sessions absent from effective calendar ([])
+  [PASS] admitted cells unique per (ticker, session) (61335/61335)
+  [PASS] store freeze_status == FROZEN ("FROZEN")
+Result: 19/19 PASS
+
+aggregating segment nets from flow_bars_v004 (admitted cells only)...
+admitted cells: 61,335; population (daily_net > 0): 24,187
+ohlcv rows read (2025-09-01..2026-09-30, is_final, close>0, volume>0): 206,994
+corporate_actions rows in window: 289
+
+[k=1 PRIMARY] dates m(d)=68 skipped=4 surviving cells=6,503
+  accounting: X6=213 X5=17,471 (ca=173 raja=20 missing_close=1,944 price_floor=4,760 liquidity_floor=10,574)
+  theta_primary = 0.000000  (0.0000%)  NW_t(lag5) = nan  two-sided p = nan
+  theta_net sensitivity = -0.6000%
+
+[k=2 robustness] dates m(d)=64 skipped=6 surviving cells=6,028
+  accounting: X6=475 X5=17,684 (ca=256 raja=19 missing_close=3,036 price_floor=4,528 liquidity_floor=9,845)
+  theta_primary = 0.000337  (0.0337%)  NW_t(lag5) = 0.1102  two-sided p = 0.912223
+  theta_net sensitivity = -0.5663%
+
+[k=3 robustness] dates m(d)=65 skipped=4 surviving cells=6,013
+  accounting: X6=765 X5=17,409 (ca=323 raja=19 missing_close=2,791 price_floor=4,494 liquidity_floor=9,782)
+  theta_primary = -0.000362  (-0.0362%)  NW_t(lag5) = -0.0905  two-sided p = 0.927881
+  theta_net sensitivity = -0.6362%
+
+results.json + execution.log written to /home/tjiesar/10 Projects/idx-walkforward-5001/docs/research_programs/P-M/experiments/EXP-PM-0009
+CLASSIFICATION: FAIL (F2 · prediction failure)

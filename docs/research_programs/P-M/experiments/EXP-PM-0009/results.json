@@ -1,0 +1,138 @@
+{
+  "experiment_id": "EXP-PM-0009",
+  "hypothesis_id": "HYP-PM-0009",
+  "run_id": "EXP-PM-0009/R2",
+  "run_utc": "2026-09-15T01:41:30Z",
+  "registered_specification": {
+    "record": "docs/research_programs/P-M/HYP-PM-0009_REGISTERED.md",
+    "preregistration_sha256": "d19dfd0f6b059a4b4c564361087bf9aa59e327c8105c5229e166afa64f76b75a",
+    "candidate_spec_sha256": "76a965459425e7c1006569d05d8e43fe2e877164e605d0e2d9a9caeb92bba03f",
+    "cohort_store_sha256": "e1375264133b42f417d8e74f48a48646197d15b8961e3bdf431d6eebc8784fba"
+  },
+  "provenance": {
+    "git_commit_at_registration": "e0e3f915cbcd80c06caa87f00cf2f7611d82f6e9",
+    "script_sha256": "d2e7a9a21f7939a73e2ecf36c3e667bb29b5d69d716faeff1f5346abd5905e3e",
+    "python": "3.12.3",
+    "cohort_store": "I7_V004_ADMISSIBLE_v1.sqlite",
+    "outcome_source": "data/walkforward.db ohlcv / corporate_actions (read-only)"
+  },
+  "cohort": {
+    "sessions": 76,
+    "window": [
+      "2026-04-28",
+      "2026-09-11"
+    ],
+    "admitted_ticker_days": 61335,
+    "tickers": 868,
+    "bar_rows": 19793865,
+    "candidate_cells": 82814,
+    "ledger": {
+      "admitted": 61335,
+      "X3": 7038,
+      "E-PIT-2": 2044,
+      "E-PIT-3": 1507,
+      "E-PIT-4": 10890
+    }
+  },
+  "estimator": "daily-series-first (BFI-001 \u00a7G/\u00a7I); Newey-West HAC lag 5; two-sided p (erfc)",
+  "cost_convention": "theta_net = theta_primary - 0.006 (sensitivity only)",
+  "primary": {
+    "k": 1,
+    "accounting": {
+      "population": 24187,
+      "x6_consecutivity": 475,
+      "x5_total": 17684,
+      "x5_ca": 256,
+      "x5_raja": 19,
+      "x5_missing_close": 3036,
+      "x5_price_floor": 4528,
+      "x5_liquidity_floor": 9845,
+      "surviving_cells": 6028
+    },
+    "n_dates_m": 64,
+    "n_dates_skipped": 6,
+    "skipped_dates": [
+      "2026-06-04",
+      "2026-08-18",
+      "2026-08-19",
+      "2026-09-02",
+      "2026-09-03",
+      "2026-09-07"
+    ],
+    "n_dates_below_min10_for_nw": null,
+    "theta_primary": 0.00033707452122781214,
+    "nw_t": 0.11023536795968707,
+    "nw_n": 64,
+    "two_sided_p": 0.9122227136109339,
+    "holm_p": 0.9122227136109339,
+    "theta_net_sensitivity": -0.005662925478772188
+  },
+  "robustness_k2": {
+    "k": 2,
+    "accounting": {
+      "population": 24187,
+      "x6_consecutivity": 765,
+      "x5_total": 17409,
+      "x5_ca": 323,
+      "x5_raja": 19,
+      "x5_missing_close": 2791,
+      "x5_price_floor": 4494,
+      "x5_liquidity_floor": 9782,
+      "surviving_cells": 6013
+    },
+    "n_dates_m": 65,
+    "n_dates_skipped": 4,
+    "skipped_dates": [
+      "2026-06-04",
+      "2026-08-19",
+      "2026-09-02",
+      "2026-09-07"
+    ],
+    "n_dates_below_min10_for_nw": null,
+    "theta_primary": -0.0003623727747875099,
+    "nw_t": -0.0905114397875798,
+    "nw_n": 65,
+    "two_sided_p": 0.9278808036315904,
+    "holm_p": 0.9278808036315904,
+    "theta_net_sensitivity": -0.00636237277478751
+  },
+  "robustness_k3": {
+    "k": 3,
+    "accounting": {
+      "population": 24187,
+      "x6_consecutivity": 765,
+      "x5_total": 17499,
+      "x5_ca": 401,
+      "x5_raja": 19,
+      "x5_missing_close": 2979,
+      "x5_price_floor": 4440,
+      "x5_liquidity_floor": 9660,
+      "surviving_cells": 5923
+    },
+    "n_dates_m": 63,
+    "n_dates_skipped": 6,
+    "skipped_dates": [
+      "2026-06-04",
+      "2026-08-13",
+      "2026-08-19",
+      "2026-09-01",
+      "2026-09-02",
+      "2026-09-07"
+    ],
+    "n_dates_below_min10_for_nw": null,
+    "theta_primary": 0.002137991485506411,
+    "nw_t": 0.5032658355398856,
+    "nw_n": 63,
+    "two_sided_p": 0.614777383108551,
+    "holm_p": 0.614777383108551,
+    "theta_net_sensitivity": -0.0038620085144935893
+  },
+  "decision": {
+    "rule": "PASS iff theta_primary > 0 AND two-sided p < 0.05 (registered kill rule)",
+    "theta_primary_positive": true,
+    "two_sided_p_below_0.05": false,
+    "classification": "FAIL (F2 \u00b7 prediction failure)",
+    "interpretation_limit": "I7 carries NO power claim (D-050). If not rejected, this is NOT evidence of absence and must not be reported as one. A negative theta falls inside H0 as a non-rejection, never a reversed finding.",
+    "r7_provenance_limitation": "PIT provenance is TRUE WITH QUALIFICATION (R7): rests on stockbit_flow.updated_at written by this system's own writer in the same commit; supports contemporaneous custody, NOT independent re-verification of the original vendor response. Verification limitation, not availability. 200/200 source spot-check matches (I7_V004_SOURCE_PROVENANCE_v1.json)."
+  }
+}
