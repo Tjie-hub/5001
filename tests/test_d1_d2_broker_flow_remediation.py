@@ -71,13 +71,23 @@ def test_no_buy_minus_sell_lot_value_anti_pattern_in_production():
     )
 
 
-# test_agent_firm_flow_prompt_does_not_claim_institutional_or_foreign_investor()
-# DEFERRED 2026-09-15 (Commit 3): the audit's B.1 finding (engine/agent_firm/prompts/flow_v1.md
-# still instructs the LLM to reason about "institutional"/"foreign investor" money from
-# investor_type='Asing' data) is real and highest-severity, but per this commit's explicit
-# scope decision the live LLM prompt is intentionally NOT touched here -- it is a separate,
-# owner-reviewed decision from the production-code/query fixes in this commit. Re-add this
-# test alongside that prompt change when it is separately authorized.
+def test_agent_firm_flow_prompt_does_not_claim_institutional_or_foreign_investor():
+    """D1 guard: the live LLM prompt must not instruct the model to reason about
+    'institutional' or 'foreign investor' money from investor_type='Asing' data -- the
+    audit's B.1 finding, and the highest-severity site (it gates live paper-trade signals).
+    The prompt is allowed to name those terms only to explicitly forbid them."""
+    prompt = (ROOT / "engine/agent_firm/prompts/flow_v1.md").read_text()
+    lowered = prompt.lower()
+    # The original defect: instructing the LLM to treat the data AS institutional/foreign
+    # investor money. Must be gone.
+    assert "institutional and/or foreign money is genuinely" not in lowered
+    assert "decide whether institutional" not in lowered
+    # The prompt must instead explicitly forbid that framing.
+    assert "not characterize this as" in lowered or "not " in lowered and "institutional" in lowered
+    assert "foreign-owned brokerage" in lowered or "foreign-owned brokerages" in lowered
+    # The field name must be present and self-describing -- not the old ambiguous name.
+    assert "net_foreign_owned_brokerage_lots_14d" in prompt
+    assert "net_foreign_14d" not in prompt
 
 
 class TestPremarketRevisionForeignNet:
