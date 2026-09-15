@@ -1061,112 +1061,15 @@ def run_edge_veto_stage(intersection_results, flow_confirmed, ohlcv_map,
 
 def run_agent_firm_gate(intersection_results, flow_confirmed, date_str, time_str,
                         market_risk_score=None):
-    """Evaluate intersection_results through the agent firm gate.
-
-    Candidates are taken from intersection_results (all strategy signals), not
-    flow_confirmed. This lets the agent run in bear markets where the flow gate
-    produces zero confirmed tickers.
-
-    Returns updated flow_confirmed:
-    - firm disabled → flow_confirmed unchanged
-    - active + no signals → idle-log, flow_confirmed unchanged
-    - shadow mode → flow_confirmed unchanged (agent evaluates, doesn't filter)
-    - enforce mode → flow_confirmed minus vetoes, plus explicitly-approved
-      promotions; degraded/bypassed fall back to the flow gate (+ alarm).
-
-    Each candidate's Tier 1 context objects (technical/flow/regime_context/news/market/
-    portfolio/risk_limits/execution) are populated via engine.agent_firm_context's
-    canonical producers before evaluate_staged() runs (AF-2 WP2, ADR-AF-002). Every
-    specialist (technical/flow/regime/news/risk) reads its own field directly off the
-    candidate (AF-2 WP3) — this population step is load-bearing for decision output, not
-    inert producer wiring (see Audit/AF2_WP3_IMPLEMENTATION_REPORT.md).
+    """REMOVED 2026-09-15 — universe-wide per-scan-cycle LLM gating (up to 20
+    candidates, up to 5x/day) is retired in favor of the strict 2-invocations-
+    per-trading-day contract (engine.agent_firm_daily, wired into
+    scheduler.jobs.run_eod_trade_plan / run_premarket_firm_scan). This function
+    is kept only so scheduled_multi_strategy_scan()'s call site needs no
+    change; it is now always a pass-through and never imports or calls the
+    firm, so it costs nothing and cannot make an LLM call.
     """
-    try:
-        from engine.agent_firm import config as _firm_cfg
-        from engine.agent_firm import firm as _firm
-        from engine.agent_firm.schemas import SignalCandidate as _SC
-        from engine.agent_firm_context import build_candidate_context
-
-        if not _firm_cfg.is_active():
-            return flow_confirmed
-
-        if not intersection_results:
-            logger.info(f"[{time_str}] Agent firm: idle (no strategy signals generated)")
-            return flow_confirmed
-
-        _cand_rows = intersection_results[:20]
-        _ctx_by_ticker = {}
-        try:
-            _ctx_conn = db_connect(DB_PATH)
-            try:
-                for r in _cand_rows:
-                    _ctx_by_ticker[r["ticker"]] = build_candidate_context(
-                        _ctx_conn, r["ticker"], date_str, market_risk_score=market_risk_score,
-                    )
-            finally:
-                _ctx_conn.close()
-        except Exception as _ctx_err:
-            logger.warning(f"[{time_str}] Agent firm context build error (fail-open, "
-                          f"candidates proceed without Tier 1 context): {_ctx_err}")
-
-        _candidates = [
-            _SC(
-                ticker=r["ticker"],
-                strategy=(r["strategies"][0] if r.get("strategies") else "multi"),
-                score=float((r.get("flow") or {}).get("score") or 0),
-                scan_time=f"{date_str} {time_str}",
-                flow_verdict=(r.get("flow") or {}).get("verdict"),
-                foreign_score=None,
-                indicators={},
-                **_ctx_by_ticker.get(r["ticker"], {}),
-            )
-            for r in _cand_rows
-        ]
-        _decisions = _firm.evaluate_staged(_candidates)
-        logger.info(f"[{time_str}] Agent firm: {len(_decisions)} evaluated"
-              f" ({sum(1 for d in _decisions if d.decision == 'approve')} approved"
-              f", {sum(1 for d in _decisions if d.decision == 'veto')} vetoed)")
-
-        # AF-2 ADR-AF-003: this gate no longer writes agent_size_hint itself — it only
-        # contributes the Agent Firm's qualitative size_tier recommendation as an input.
-        # engine.position_sizing.resolve_size_hint() is the sole writer of agent_size_hint,
-        # called once per candidate after this gate returns (scheduled_multi_strategy_scan()).
-        _tier_map = {d.ticker: d.size_tier
-                     for d in _decisions if d.decision == "approve" and d.size_tier}
-        for r in intersection_results:
-            tier = _tier_map.get(r["ticker"])
-            if tier is not None:
-                r["agent_size_tier"] = tier
-
-        if _firm_cfg.get_enforce():
-            # C-9 fix (Phase 3B): the firm is a filter ON TOP OF the flow gate.
-            #   approve  → kept (may promote a non-flow-confirmed candidate)
-            #   veto     → dropped (wins even over a flow-confirmed signal)
-            #   degraded / bypassed → NO real evaluation → fall back to the flow
-            #     gate's verdict (kept iff already flow-confirmed) + alarm, so an
-            #     LLM outage can no longer silently promote every signal.
-            _approved = {d.ticker for d in _decisions if d.decision == "approve"}
-            _vetoed = {d.ticker for d in _decisions if d.decision == "veto"}
-            _outage = [d.ticker for d in _decisions
-                       if d.decision in ("degraded", "bypassed")]
-            if _outage:
-                from engine.fail_open_alarm import fail_open_alarm
-                fail_open_alarm(
-                    "agent_firm_enforce",
-                    f"{len(_outage)} degraded/bypassed → flow-gate fallback",
-                    count=len(_outage),
-                )
-            _flow_tickers = {r["ticker"] for r in flow_confirmed}
-            _kept_fc = [r for r in flow_confirmed if r["ticker"] not in _vetoed]
-            _promoted = [r for r in intersection_results
-                         if r["ticker"] in _approved
-                         and r["ticker"] not in _flow_tickers]
-            return _kept_fc + _promoted
-
-        return flow_confirmed
-    except Exception as _err:
-        logger.warning(f"[{time_str}] Agent firm error (fail-open): {_err}")
-        return flow_confirmed
+    return flow_confirmed
 
 
 def resolve_agent_size_hints(rows: list) -> None:
@@ -1192,87 +1095,13 @@ def rank_bear_watchlist_and_notify(watchlist_tickers, date_str, time_str,
 
     Called after the bear watchlist scout so the agent can surface which
     oversold bear names have the strongest bull case when regime flips.
-    Log-only by design (no Telegram) since the 2026-06-16 lean-notification
-    audit (commit 89baa33) — this ranking is reference signal, not an alert.
-    Fail-silent: any error is logged and swallowed.
-
-    Tier 1 context is populated per candidate the same way run_agent_firm_gate() does
-    (AF-2 WP2, ADR-AF-002) — every specialist reads it directly (AF-2 WP3), so this
-    context materially informs the ranking, not just inert producer wiring.
+    REMOVED 2026-09-15 — this ranking called the firm on up to 20 tickers per
+    scan cycle, outside the strict 2-invocations-per-trading-day contract
+    (engine.agent_firm_daily). Now a pure no-op: never imports or calls the
+    firm, so it costs nothing and cannot make an LLM call. Kept only so the
+    scheduled_multi_strategy_scan() call site needs no change.
     """
-    if not watchlist_tickers:
-        return
-    try:
-        from engine.agent_firm import config as _firm_cfg
-        from engine.agent_firm import firm as _firm
-        from engine.agent_firm.schemas import SignalCandidate as _SC
-        from engine.agent_firm_context import build_candidate_context
-
-        if not _firm_cfg.is_active():
-            return
-
-        # Skip tickers already approved today — avoids redundant LLM calls
-        _conn = db_connect(DB_PATH)
-        try:
-            _already = {
-                row[0] for row in _conn.execute(
-                    "SELECT ticker FROM agent_decisions "
-                    "WHERE strategy='watchlist' AND decision='approve' "
-                    "AND date(scan_time)=?",
-                    (date_str,),
-                )
-            }
-        finally:
-            _conn.close()
-
-        _fresh = [t for t in list(watchlist_tickers)[:20] if t not in _already]
-        if not _fresh:
-            logger.info(f"[{time_str}] Bear watchlist ranking: all tickers already approved today, skipping")
-            return
-
-        _ctx_by_ticker = {}
-        try:
-            _ctx_conn = db_connect(DB_PATH)
-            try:
-                for t in _fresh:
-                    _ctx_by_ticker[t] = build_candidate_context(
-                        _ctx_conn, t, date_str, market_risk_score=market_risk_score,
-                    )
-            finally:
-                _ctx_conn.close()
-        except Exception as _ctx_err:
-            logger.warning(f"[{time_str}] Bear watchlist context build error (fail-open, "
-                          f"candidates proceed without Tier 1 context): {_ctx_err}")
-
-        _candidates = [
-            _SC(
-                ticker=t,
-                strategy="watchlist",
-                score=0.0,
-                scan_time=f"{date_str} {time_str}",
-                flow_verdict=None,
-                foreign_score=None,
-                indicators={},
-                **_ctx_by_ticker.get(t, {}),
-            )
-            for t in _fresh
-        ]
-        _decisions = _firm.evaluate_staged(_candidates)
-        _approved = [d for d in _decisions if d.decision == "approve"]
-        if not _approved:
-            return
-
-        _approved.sort(key=lambda d: d.confidence or 0.0, reverse=True)
-
-        msg = "🐻 <b>Bear Watchlist — Agent Ranking</b>\n\n"
-        for i, d in enumerate(_approved, 1):
-            conf_str = f"{d.confidence:.2f}" if d.confidence is not None else "N/A"
-            rationale = d.rationale or "N/A"
-            msg += f"{i}. {d.ticker} (conviction {conf_str}): {rationale}\n"
-
-        logging.info(f"[{time_str}] Bear watchlist ranking (no alert): {[d.ticker for d in _approved]}")
-    except Exception as _err:
-        logger.warning(f"[{time_str}] Bear watchlist ranking error (fail-silent): {_err}")
+    return
 
 
 def _ensure_scheduled_signals_table(conn):

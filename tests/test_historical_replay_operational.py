@@ -147,20 +147,14 @@ def _run_one_cycle(pt, ticker, date_str, time_str, edge_score, size_tier, monkey
             intersection_results, flow_confirmed, {}, date_str, time_str,
         )
 
-    decision = MagicMock(ticker=ticker, decision="approve", size_tier=size_tier)
-    mock_firm = MagicMock()
-    mock_firm.evaluate_staged = MagicMock(side_effect=lambda c, **k: [decision])
-    mock_cfg = MagicMock(is_active=MagicMock(return_value=True),
-                          get_enforce=MagicMock(return_value=False))
-
-    import engine.agent_firm as _pkg
-    with patch.object(_pkg, "firm", mock_firm), \
-         patch.object(_pkg, "config", mock_cfg), \
-         patch.dict(sys.modules, {"engine.agent_firm.firm": mock_firm,
-                                   "engine.agent_firm.config": mock_cfg}):
-        flow_confirmed = scanner_mod.run_agent_firm_gate(
-            intersection_results, flow_confirmed, date_str, time_str,
-        )
+    # 2026-09-15: run_agent_firm_gate() no longer calls the firm at all (universe-
+    # wide per-scan-cycle LLM gating was retired — see
+    # tests/test_scheduler_firm_hook.py), so the tier attachment it used to do
+    # from an "approved" decision is reproduced directly here — this test's
+    # actual subject is the rest of the chain (sizing -> open_trade -> next-day
+    # state), not how a tier gets onto the row.
+    if size_tier:
+        flow_confirmed[0]["agent_size_tier"] = size_tier
 
     scanner_mod.resolve_agent_size_hints(flow_confirmed)
     row = flow_confirmed[0]

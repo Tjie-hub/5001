@@ -11,7 +11,6 @@ This test proves that no longer happens: the final `agent_size_hint` is a functi
 `engine.position_sizing.resolve_size_hint()` (via `resolve_agent_size_hints()`), never a second
 write clobbering a first.
 """
-import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -39,8 +38,16 @@ def _make_signal(ticker):
 
 def _run_full_pipeline(ticker, edge_score, agent_decision):
     """Mirrors scheduled_multi_strategy_scan()'s real call order: edge-veto stage ->
-    agent-firm gate -> resolve_agent_size_hints() — the exact sequence the ADR's evidence
-    table names as the collision site."""
+    agent-firm tier attachment -> resolve_agent_size_hints() — the exact sequence the
+    ADR's evidence table names as the collision site.
+
+    2026-09-15: run_agent_firm_gate() no longer calls the firm at all (universe-wide
+    per-scan-cycle LLM gating was retired — see tests/test_scheduler_firm_hook.py), so
+    the tier attachment it used to do is reproduced directly here from
+    `agent_decision`, exactly mirroring the gate's old attach-only-on-approve logic —
+    this test's actual subject is resolve_agent_size_hints()'s combination behavior,
+    not how a tier gets onto the row.
+    """
     sig = _make_signal(ticker)
     intersection_results = [sig]
     flow_confirmed = [sig]
@@ -63,28 +70,11 @@ def _run_full_pipeline(ticker, edge_score, agent_decision):
         "run_edge_veto_stage() must not write agent_size_hint itself (ADR-AF-003)"
     )
 
-    mock_firm = MagicMock()
-    mock_firm.evaluate_staged = MagicMock(side_effect=lambda c, **k: [agent_decision])
-    mock_cfg = MagicMock()
-    mock_cfg.is_active = MagicMock(return_value=True)
-    mock_cfg.get_enforce = MagicMock(return_value=False)  # shadow: doesn't filter
-
-    import engine.agent_firm as _pkg
-    import paper_trade as _pt
-    with patch.object(_pkg, "firm", mock_firm), \
-         patch.object(_pkg, "config", mock_cfg), \
-         patch.object(scanner_mod, "DB_PATH", ":memory:"), \
-         patch.object(_pt, "DB_PATH", ":memory:"), \
-         patch.dict(sys.modules, {
-             "engine.agent_firm.firm": mock_firm,
-             "engine.agent_firm.config": mock_cfg,
-         }):
-        flow_confirmed = scanner_mod.run_agent_firm_gate(
-            intersection_results, flow_confirmed, "2026-07-29", "10:00",
-        )
+    if agent_decision.decision == "approve" and agent_decision.size_tier:
+        flow_confirmed[0]["agent_size_tier"] = agent_decision.size_tier
 
     assert "agent_size_hint" not in flow_confirmed[0], (
-        "run_agent_firm_gate() must not write agent_size_hint itself (ADR-AF-003)"
+        "tier attachment must not write agent_size_hint itself (ADR-AF-003)"
     )
 
     scanner_mod.resolve_agent_size_hints(flow_confirmed)

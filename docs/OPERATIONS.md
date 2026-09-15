@@ -153,10 +153,14 @@ DB writes) — see the incident report's addendum for the evidence trail.
 
 ## Provider failover (agent firm)
 
-`.env`: `AGENT_FIRM_PROVIDER=auto`, `AGENT_FIRM_PROVIDER_ORDER=zai,claude`
-— ZAI primary (unchanged behavior), Claude CLI fallback. Per-provider
-circuit breaker (3 failures → 30 s cooldown → half-open trial); Claude has
-a daily call cap (`AGENT_FIRM_CLAUDE_MAX_CALLS_PER_DAY`).
+`.env`: `AGENT_FIRM_PROVIDER=auto`, `AGENT_FIRM_PROVIDER_ORDER=claude,zai`
+— Claude Sonnet primary (flipped 2026-09-15; was ZAI-primary before), GLM-5.3
+Flash (`zai`) fallback. Per-provider circuit breaker (3 failures → 30 s
+cooldown → half-open trial); Claude has a daily call cap
+(`AGENT_FIRM_CLAUDE_MAX_CALLS_PER_DAY`) — now more load-bearing than before
+since Claude is tried on every invocation, not just as a fallback. Claude's
+usage also shares the same subscription 5-hour window as interactive Claude
+Code use on this account (see "Provider failover" in CLAUDE.md).
 
 Every router decision is persisted to the `provider_events` table (as of
 2026-07-10 — it was write-less before) AND logged as JSON. Check health:

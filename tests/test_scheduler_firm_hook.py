@@ -1,15 +1,16 @@
 """Tests for run_agent_firm_gate() in scheduler/scanner.py.
 
-Phase 1 behavior: agent evaluates intersection_results (all strategy signals),
-not flow_confirmed (the flow-gated subset). This unblocks the agent in bear
-markets where flow_confirmed is always empty.
+REMOVED 2026-09-15: universe-wide per-scan-cycle LLM gating (up to 20
+candidates, up to 5x/day) was retired in favor of the strict 2-invocations-
+per-trading-day contract (engine.agent_firm_daily; see
+tests/test_agent_firm_daily.py and tests/test_eod_trade_plan_job.py /
+tests/test_premarket_firm_scan.py for its coverage). run_agent_firm_gate()
+is now a pure pass-through kept only so scheduled_multi_strategy_scan()'s
+call site needs no change — these tests prove exactly that, and that it
+never imports or calls the firm (so it can never make a billable LLM call).
 """
 import sys
-from unittest.mock import MagicMock
 
-import paper_trade
-import scheduler.scanner as scanner_mod
-from engine.agent_firm.schemas import SignalCandidate
 from scheduler.scanner import run_agent_firm_gate
 
 
@@ -24,211 +25,35 @@ def _make_result(ticker, flow_score, confirmed=False):
     }
 
 
-def _mock_firm_module(evaluate_fn):
-    m = MagicMock()
-    m.evaluate_staged = MagicMock(side_effect=evaluate_fn)
-    return m
-
-
-def _mock_config_module(is_active=True, get_enforce=False):
-    m = MagicMock()
-    m.is_active = MagicMock(return_value=is_active)
-    m.get_enforce = MagicMock(return_value=get_enforce)
-    return m
-
-
-def _call_gate(intersection_results, flow_confirmed, mock_firm, mock_cfg,
-               date_str="2026-06-05", time_str="08:00"):
-    """Call run_agent_firm_gate() with mocked engine.agent_firm dependencies.
-
-    The gate does ``from engine.agent_firm import firm`` / ``import config`` lazily,
-    which resolves to attributes on the already-imported package. Patch both the
-    package attributes and sys.modules so mocking is robust regardless of whether
-    the real submodules were imported by an earlier test in the same session.
-    """
-    # AF-2 WP2: run_agent_firm_gate() now opens a DB connection (via scanner.DB_PATH) to
-    # populate Tier 1 context per candidate. Pin both scanner.DB_PATH and paper_trade.DB_PATH
-    # (build_risk_context/build_execution_context import paper_trade directly, with its own
-    # module-level DB_PATH) to an isolated in-memory DB so this test suite stays hermetic —
-    # per CLAUDE.md, tests must never touch the gitignored data/walkforward.db. A ":memory:"
-    # connection has no tables, so context population fails soft to empty defaults, which is
-    # exactly what these tests need (they assert filtering/logging, not context content).
-    import engine.agent_firm as _pkg
-    from unittest.mock import patch
-    with patch.object(_pkg, "firm", mock_firm), \
-         patch.object(_pkg, "config", mock_cfg), \
-         patch.object(scanner_mod, "DB_PATH", ":memory:"), \
-         patch.object(paper_trade, "DB_PATH", ":memory:"), \
-         patch.dict(sys.modules, {
-             "engine.agent_firm.firm": mock_firm,
-             "engine.agent_firm.config": mock_cfg,
-         }):
-        return run_agent_firm_gate(
-            intersection_results, flow_confirmed, date_str, time_str
-        )
-
-
-# ── Tests ─────────────────────────────────────────────────────────────────────
-
-def test_gate_skipped_when_firm_disabled():
-    """Agent gate is a no-op when firm is disabled — flow_confirmed passes through unchanged."""
+def test_gate_always_passes_flow_confirmed_through_unchanged():
     flow_confirmed = [_make_result("BBRI", flow_score=3, confirmed=True)]
-    intersection_results = list(flow_confirmed)
+    intersection_results = [_make_result("BBCA", flow_score=-2, confirmed=False)] + flow_confirmed
 
-    result = _call_gate(intersection_results, flow_confirmed,
-                        _mock_firm_module(lambda c: []),
-                        _mock_config_module(is_active=False))
+    result = run_agent_firm_gate(intersection_results, flow_confirmed,
+                                 "2026-06-05", "08:00")
 
     assert result == flow_confirmed
 
 
-def test_gate_evaluates_from_intersection_when_flow_confirmed_empty():
-    """Bear market: flow_confirmed is empty but agent still evaluates intersection_results."""
-    evaluate_calls = []
-    intersection_results = [_make_result("BBCA", flow_score=-2, confirmed=False)]
-    flow_confirmed = []
-
-    _call_gate(intersection_results, flow_confirmed,
-               _mock_firm_module(lambda c: evaluate_calls.append(c) or []),
-               _mock_config_module(is_active=True))
-
-    assert len(evaluate_calls) == 1, "agent should run even when flow_confirmed is empty"
-    assert evaluate_calls[0][0].ticker == "BBCA"
-    assert evaluate_calls[0][0].score == -2.0  # flow score as evidence, not a gate
-
-
-def test_gate_candidates_capped_at_20():
-    """Cost guard: agent evaluates at most 20 tickers regardless of intersection_results size."""
-    evaluate_calls = []
+def test_gate_passes_through_even_with_many_candidates():
+    """No universe-wide scanning remains — a large intersection_results must not
+    change the pass-through behavior (there is no cap to hit, because there is
+    no evaluation at all anymore)."""
     intersection_results = [_make_result(f"TK{i:02d}", 1) for i in range(30)]
+    flow_confirmed = intersection_results[:2]
 
-    _call_gate(intersection_results, [],
-               _mock_firm_module(lambda c: evaluate_calls.append(c) or []),
-               _mock_config_module(is_active=True))
+    result = run_agent_firm_gate(intersection_results, flow_confirmed,
+                                 "2026-06-05", "08:00")
 
-    assert len(evaluate_calls) == 1
-    assert len(evaluate_calls[0]) == 20, "must cap at 20 candidates for cost control"
-
-
-def test_gate_idle_log_when_intersection_empty(caplog):
-    """When intersection_results is empty, agent logs idle instead of silently skipping."""
-    import logging
-    caplog.set_level(logging.INFO)
-    _call_gate([], [],
-               _mock_firm_module(lambda c: []),
-               _mock_config_module(is_active=True))
-
-    assert "Agent firm: idle" in caplog.text
+    assert result == flow_confirmed
 
 
-def test_gate_shadow_mode_does_not_filter_flow_confirmed():
-    """Shadow mode: agent evaluates but flow_confirmed for paper trades is unchanged."""
-    approved = MagicMock(ticker="AMMN", decision="approve")
-    vetoed = MagicMock(ticker="MDKA", decision="veto")
-
-    flow_confirmed = [
-        _make_result("AMMN", flow_score=1, confirmed=True),
-        _make_result("MDKA", flow_score=2, confirmed=True),
-    ]
-
-    result = _call_gate(flow_confirmed, flow_confirmed,
-                        _mock_firm_module(lambda c: [approved, vetoed]),
-                        _mock_config_module(is_active=True, get_enforce=False))
-
-    assert len(result) == 2  # shadow mode: both pass through
-
-
-def test_gate_enforce_mode_filters_from_intersection_results():
-    """Enforce mode: approved set comes from intersection_results, not flow_confirmed."""
-    approved = MagicMock(ticker="AMMN", decision="approve")
-    vetoed = MagicMock(ticker="MDKA", decision="veto")
-
-    intersection_results = [
-        _make_result("AMMN", flow_score=1, confirmed=False),
-        _make_result("MDKA", flow_score=-1, confirmed=False),
-    ]
-
-    result = _call_gate(intersection_results, [],
-                        _mock_firm_module(lambda c: [approved, vetoed]),
-                        _mock_config_module(is_active=True, get_enforce=True))
-
-    assert len(result) == 1
-    assert result[0]["ticker"] == "AMMN"
-
-
-def test_enforce_degraded_non_flow_confirmed_is_dropped(monkeypatch):
-    """C-9 fix: degraded (LLM failed) on a NON-flow-confirmed ticker falls back
-    to the flow gate → dropped. Explicit approve still promotes."""
-    import engine.fail_open_alarm as fa
-    monkeypatch.setattr(fa, "fail_open_alarm", lambda *a, **k: "")
-    approved = MagicMock(ticker="AMMN", decision="approve")
-    degraded = MagicMock(ticker="MDKA", decision="degraded")
-
-    intersection_results = [
-        _make_result("AMMN", flow_score=1, confirmed=False),
-        _make_result("MDKA", flow_score=1, confirmed=False),
-    ]
-
-    result = _call_gate(intersection_results, [],
-                        _mock_firm_module(lambda c: [approved, degraded]),
-                        _mock_config_module(is_active=True, get_enforce=True))
-
-    assert {r["ticker"] for r in result} == {"AMMN"}, \
-        "approve promotes; degraded non-flow-confirmed is dropped"
-
-
-def test_enforce_degraded_flow_confirmed_is_kept(monkeypatch):
-    """degraded on a flow-confirmed ticker falls back to flow → kept."""
-    import engine.fail_open_alarm as fa
-    monkeypatch.setattr(fa, "fail_open_alarm", lambda *a, **k: "")
-    degraded = MagicMock(ticker="BBRI", decision="degraded")
-
-    flow_confirmed = [_make_result("BBRI", flow_score=3, confirmed=True)]
-    intersection_results = list(flow_confirmed)
-
-    result = _call_gate(intersection_results, flow_confirmed,
-                        _mock_firm_module(lambda c: [degraded]),
-                        _mock_config_module(is_active=True, get_enforce=True))
-
-    assert {r["ticker"] for r in result} == {"BBRI"}
-
-
-def test_enforce_veto_drops_flow_confirmed(monkeypatch):
-    """Explicit veto wins over the flow gate — a flow-confirmed veto is dropped."""
-    import engine.fail_open_alarm as fa
-    monkeypatch.setattr(fa, "fail_open_alarm", lambda *a, **k: "")
-    vetoed = MagicMock(ticker="MDKA", decision="veto")
-    approved = MagicMock(ticker="BBRI", decision="approve")
-
-    flow_confirmed = [
-        _make_result("MDKA", flow_score=3, confirmed=True),
-        _make_result("BBRI", flow_score=3, confirmed=True),
-    ]
-    intersection_results = list(flow_confirmed)
-
-    result = _call_gate(intersection_results, flow_confirmed,
-                        _mock_firm_module(lambda c: [vetoed, approved]),
-                        _mock_config_module(is_active=True, get_enforce=True))
-
-    assert {r["ticker"] for r in result} == {"BBRI"}
-
-
-def test_enforce_outage_fires_fail_open_alarm(monkeypatch):
-    """Any degraded/bypassed present → a single visible fail-open alarm fires."""
-    import engine.fail_open_alarm as fa
-    calls = []
-    monkeypatch.setattr(fa, "fail_open_alarm",
-                        lambda *a, **k: calls.append((a, k)) or "")
-    degraded = MagicMock(ticker="MDKA", decision="degraded")
-    bypassed = MagicMock(ticker="ANTM", decision="bypassed")
-
-    intersection_results = [
-        _make_result("MDKA", flow_score=1, confirmed=False),
-        _make_result("ANTM", flow_score=1, confirmed=False),
-    ]
-
-    _call_gate(intersection_results, [],
-               _mock_firm_module(lambda c: [degraded, bypassed]),
-               _mock_config_module(is_active=True, get_enforce=True))
-
-    assert len(calls) == 1, "outage must alarm exactly once per gate call"
+def test_gate_never_imports_or_touches_the_firm_module(monkeypatch):
+    """Regression guard: the gate must not be able to make an LLM call, even by
+    accident. A None entry in sys.modules makes any `from engine.agent_firm
+    import firm` raise ImportError — the old body's try/except would have
+    swallowed that as fail-open, but the new body never enters the import at
+    all, so this must simply succeed and return flow_confirmed unchanged."""
+    monkeypatch.setitem(sys.modules, "engine.agent_firm.firm", None)
+    result = run_agent_firm_gate([_make_result("BBCA", 1)], [], "2026-06-05", "08:00")
+    assert result == []

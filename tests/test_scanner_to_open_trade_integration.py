@@ -12,7 +12,6 @@ Agent Firm integration validation.
 """
 import json
 import sqlite3
-import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -125,22 +124,13 @@ def _run_full_chain(tmp_path, ticker, edge_score, agent_decision, monkeypatch):
             intersection_results, flow_confirmed, {}, "2026-07-29", "10:00",
         )
 
-    mock_firm = MagicMock()
-    mock_firm.evaluate_staged = MagicMock(side_effect=lambda c, **k: [agent_decision])
-    mock_cfg = MagicMock()
-    mock_cfg.is_active = MagicMock(return_value=True)
-    mock_cfg.get_enforce = MagicMock(return_value=False)
-
-    import engine.agent_firm as _pkg
-    with patch.object(_pkg, "firm", mock_firm), \
-         patch.object(_pkg, "config", mock_cfg), \
-         patch.dict(sys.modules, {
-             "engine.agent_firm.firm": mock_firm,
-             "engine.agent_firm.config": mock_cfg,
-         }):
-        flow_confirmed = scanner_mod.run_agent_firm_gate(
-            intersection_results, flow_confirmed, "2026-07-29", "10:00",
-        )
+    # 2026-09-15: run_agent_firm_gate() no longer calls the firm at all (universe-wide
+    # per-scan-cycle LLM gating was retired — see tests/test_scheduler_firm_hook.py), so
+    # the tier attachment it used to do from an "approved" decision is reproduced
+    # directly here — this test's actual subject is the rest of the chain (sizing ->
+    # open_trade -> persistence), not how a tier gets onto the row.
+    if agent_decision.decision == "approve" and agent_decision.size_tier:
+        flow_confirmed[0]["agent_size_tier"] = agent_decision.size_tier
 
     scanner_mod.resolve_agent_size_hints(flow_confirmed)
 
@@ -262,7 +252,12 @@ async def test_disabled_agent_firm_leaves_edge_score_as_sole_driver(tmp_path, mo
     """ADR-AF-003's 'only edge_score present (Agent Firm inactive...)' branch, exercised
     through the real run_agent_firm_gate() early-return path (not just resolve_size_hint()
     called directly, per tests/test_position_sizing.py) — proving the fail-soft contract holds
-    at the actual integration boundary, not only at the unit level."""
+    at the actual integration boundary, not only at the unit level.
+
+    2026-09-15: run_agent_firm_gate() is now unconditionally this pass-through (universe-
+    wide per-scan-cycle LLM gating was retired — see tests/test_scheduler_firm_hook.py), so
+    there is no "disabled" config to mock anymore — this is simply the gate's only behavior.
+    """
     db_path = str(tmp_path / "shared.db")
     _seed_full_db(db_path, "BBCA")
     import paper_trade as pt
@@ -283,14 +278,9 @@ async def test_disabled_agent_firm_leaves_edge_score_as_sole_driver(tmp_path, mo
             [sig], [sig], {}, "2026-07-29", "10:00",
         )
 
-    mock_cfg = MagicMock()
-    mock_cfg.is_active = MagicMock(return_value=False)  # Agent Firm disabled entirely
-    import engine.agent_firm as _pkg
-    with patch.object(_pkg, "config", mock_cfg), \
-         patch.dict(sys.modules, {"engine.agent_firm.config": mock_cfg}):
-        flow_confirmed = scanner_mod.run_agent_firm_gate(
-            intersection_results, flow_confirmed, "2026-07-29", "10:00",
-        )
+    flow_confirmed = scanner_mod.run_agent_firm_gate(
+        intersection_results, flow_confirmed, "2026-07-29", "10:00",
+    )
 
     assert "agent_size_tier" not in flow_confirmed[0]
     scanner_mod.resolve_agent_size_hints(flow_confirmed)

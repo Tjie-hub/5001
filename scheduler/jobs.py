@@ -1052,6 +1052,18 @@ def run_premarket_firm_scan():
     The Agent Firm vets; it never promotes. LLM approval is not evidence of
     alpha and does not change a candidate's strategy attribution or its OOS
     record.
+
+    This is Run 2 of the strict 2-invocations-per-trading-day Agent Firm
+    contract (engine.agent_firm_daily, 2026-09-15): before vetting, survivors
+    are intersected with the EXACT ticker set run_eod_trade_plan() selected
+    and persisted the previous evening (engine.agent_firm_daily.load_plan()) —
+    this job never re-selects or widens that set. Vetting is EXACTLY ONE agent-
+    firm evaluation of that (already-intersected) survivor set; if the intersection
+    is empty (nothing selected last night, or every selected ticker was removed
+    by the revision engine), no LLM call is made at all.
+    engine.agent_firm_daily.begin_run()/finish_run() make a same-session retry
+    never re-bill the firm, and record whether the revision engine found a
+    material change for any selected ticker (plan_changed).
     """
     if _holiday_skip("run_premarket_firm_scan"):
         handle = current_job()
@@ -1197,6 +1209,24 @@ def run_premarket_firm_scan():
     logger.info(f"[{now_str}] Revision: {len(survivors)} survive of {len(base_rows)} "
                 f"base candidates ({n_removed} removed)")
 
+    # ── 4b. Enforce the strict daily ticker boundary ─────────────────────────
+    # Run 2 targets ONLY the ticker set Run 1 (post_close) selected and stored —
+    # it never re-selects or widens the pool (engine.agent_firm_daily contract).
+    from engine import agent_firm_daily as _afd
+    with db_connect(DB_PATH) as _plan_conn:
+        _daily_plan = _afd.load_plan(_plan_conn, date_str)
+    _selected_tickers = {p["ticker"] for p in _daily_plan}
+    if not _selected_tickers:
+        logger.info(f"[{now_str}] Premarket firm: no post-close plan found for {date_str} "
+                    f"— nothing to adjust, skipping LLM review")
+        survivors = []
+    else:
+        _outside = [r["ticker"] for r in survivors if r["ticker"] not in _selected_tickers]
+        if _outside:
+            logger.info(f"[{now_str}] Premarket firm: {len(_outside)} EOD survivor(s) outside "
+                        f"the post-close selected set excluded from LLM review: {_outside}")
+        survivors = [r for r in survivors if r["ticker"] in _selected_tickers]
+
     # ── 5. Agent Firm vetting of the survivors (vetting, never promotion) ────
     from engine.agent_firm_context import build_candidate_context, reset_batch_context
     _firm.reset_market_ctx()
@@ -1237,11 +1267,44 @@ def run_premarket_firm_scan():
 
     decisions = []
     if candidates:
+        # Strict 2-invocations-per-trading-day contract: this is Run 2
+        # (premarket). session_date matches Run 1's — the plan Run 1 produced
+        # FOR today is exactly what this run adjusts.
+        _tickers = [c.ticker for c in candidates]
+        with db_connect(DB_PATH) as _guard_conn:
+            _guard = _afd.begin_run(_guard_conn, date_str, _afd.RUN_PREMARKET, _tickers)
+        if not _guard.should_call:
+            # A SUCCESS already exists for this session (defense-in-depth backstop
+            # — the _job_sentinel dedup guard above normally catches this first).
+            # Never re-bill the firm for the same session.
+            logger.info(f"[{now_str}] Premarket firm: LLM already ran for session "
+                        f"{date_str} — skipping duplicate invocation")
+            return
         try:
             decisions = _firm.evaluate_staged(candidates)
+            # plan_changed: did the pre-firm revision engine find any material
+            # change for a selected ticker (anything but RETAIN)? This is the
+            # same materiality signal engine.premarket_revision already computed
+            # from overnight news/flow/corp-actions — reused, not recomputed.
+            _changed_tickers = {
+                d.ticker for d in decisions_rev
+                if d.ticker in _selected_tickers and d.action != _wl.ACTION_RETAIN
+            }
+            with db_connect(DB_PATH) as _guard_conn:
+                _afd.finish_run(
+                    _guard_conn, _guard.run_id, status="success",
+                    provider=",".join(sorted({p for d in decisions for p in d.providers_used})) or None,
+                    reason=f"{len(_tickers)} candidate(s) reviewed",
+                    result={d.ticker: d.decision for d in decisions},
+                    plan_changed=bool(_changed_tickers),
+                )
+                _afd.persist_plan(_guard_conn, date_str, survivors, decisions,
+                                  source=_afd.RUN_PREMARKET)
         except Exception as e:
             logging.error(f"[premarket_firm] firm eval error: {e}")
             logger.warning(f"[{now_str}] Premarket firm eval error: {e}")
+            with db_connect(DB_PATH) as _guard_conn:
+                _afd.finish_run(_guard_conn, _guard.run_id, status="failed", reason=str(e))
             return
 
     # ── 6. Publish the revised, frozen premarket plan ────────────────────────
@@ -1296,10 +1359,17 @@ def run_premarket_firm_scan():
 def run_eod_trade_plan():
     """16:40 WIB — single consolidated, agent-ranked trade plan for the next session.
 
-    Merges every long signal source (reversal watchlist + bullish/volume screen +
-    today's premarket approvals) into one pool, runs the top-8 by confluence through
-    the agent firm, and sends ONE Telegram message with firm-APPROVED longs only.
-    Shorts are intentionally excluded — they are exit/SL triggers, not entries.
+    This is Run 1 of the strict 2-invocations-per-trading-day Agent Firm contract
+    (engine.agent_firm_daily, 2026-09-15): merges every long signal source
+    (reversal watchlist + bullish/volume screen + today's premarket approvals)
+    into one pool, caps it at MAX_DAILY_TICKERS (3, or fewer if fewer qualify —
+    was 8 before this change) by confluence, sends that set through EXACTLY ONE
+    agent-firm evaluation, and persists the result as the canonical plan for the
+    next trading session — engine.agent_firm_daily.begin_run()/finish_run() make
+    a same-session retry never re-bill the firm. run_premarket_firm_scan() reads
+    this SAME ticker set back the next morning; it never re-selects. Sends ONE
+    Telegram message with firm-APPROVED longs only. Shorts are intentionally
+    excluded — they are exit/SL triggers, not entries.
 
     Runs after the 16:15 screener EOD (reversal watchlist) and 16:30 premover scan so
     all source tables are settled. Fail-open: if the firm is disabled or errors, falls
@@ -1311,6 +1381,7 @@ def run_eod_trade_plan():
             handle.mark_skipped("holiday")
         return
     from engine import trade_plan as tp
+    from engine import agent_firm_daily as _afd
     from engine.agent_firm import firm as _firm
     from engine.agent_firm.schemas import SignalCandidate as _SC
 
@@ -1348,7 +1419,11 @@ def run_eod_trade_plan():
     try:
         cands = tp.gather_long_candidates(conn, date_str)
         regime = tp.get_regime(conn, date_str)
-        top = tp.select_top(cands, n=8) if cands else []
+        # 2026-09-15: capped at MAX_DAILY_TICKERS (3), not 8 — the strict
+        # 2-invocations-per-trading-day contract (engine.agent_firm_daily) sends
+        # this SAME ticker set to exactly one post-close and one premarket LLM
+        # call; it does not re-rank or widen the pool itself.
+        top = tp.select_top(cands, n=_afd.MAX_DAILY_TICKERS) if cands else []
 
         # Tier A directional pre-screen BEFORE the firm (gated by EDGE_SCORE_MODE):
         # drops directionally-dead candidates so they never cost an LLM call.
@@ -1460,17 +1535,47 @@ def run_eod_trade_plan():
         for c in top
     ]
 
+    # Strict 2-invocations-per-trading-day contract: this is Run 1 (post_close).
+    # session_date is the NEXT trading session — the plan this run produces is
+    # FOR that session, and Run 2 (premarket, run_premarket_firm_scan) looks up
+    # its ticker set under that same session_date the following morning.
+    session_date = _afd.next_trading_session(now.date()).isoformat()
+    _tickers = [c["ticker"] for c in top]
+    with db_connect(DB_PATH) as _guard_conn:
+        _guard = _afd.begin_run(_guard_conn, session_date, _afd.RUN_POST_CLOSE, _tickers)
+
     degraded = False
-    try:
-        decisions = _firm.evaluate_staged(candidates)
-        firm_ran = any(d.decision in ("approve", "veto") for d in decisions)
-        if firm_ran:
-            ranked = tp.rank_approved(top, decisions)
-        else:
-            ranked, degraded = tp.fallback_rank(top), True   # firm disabled/bypassed
-    except Exception as e:
-        logging.error(f"[eod_trade_plan] firm eval error (fail-open): {e}")
+    if not _guard.should_call:
+        # A SUCCESS already exists for this session (defense-in-depth backstop —
+        # the _job_sentinel dedup guard above normally catches this first). Never
+        # re-bill the firm for the same session; skip straight to reporting with
+        # a deterministic fallback rank, exactly like a firm-disabled run.
+        logger.info(f"[{now_str}] EOD trade plan: post-close LLM already ran for "
+                    f"session {session_date} — skipping duplicate invocation")
+        decisions = []
         ranked, degraded = tp.fallback_rank(top), True
+    else:
+        try:
+            decisions = _firm.evaluate_staged(candidates)
+            firm_ran = any(d.decision in ("approve", "veto") for d in decisions)
+            if firm_ran:
+                ranked = tp.rank_approved(top, decisions)
+            else:
+                ranked, degraded = tp.fallback_rank(top), True   # firm disabled/bypassed
+            with db_connect(DB_PATH) as _guard_conn:
+                _afd.finish_run(
+                    _guard_conn, _guard.run_id, status="success",
+                    provider=",".join(sorted({p for d in decisions for p in d.providers_used})) or None,
+                    reason=f"{len(_tickers)} candidate(s) selected",
+                    result={d.ticker: d.decision for d in decisions},
+                )
+                _afd.persist_plan(_guard_conn, session_date, top, decisions,
+                                  source=_afd.RUN_POST_CLOSE)
+        except Exception as e:
+            logging.error(f"[eod_trade_plan] firm eval error (fail-open): {e}")
+            ranked, degraded = tp.fallback_rank(top), True
+            with db_connect(DB_PATH) as _guard_conn:
+                _afd.finish_run(_guard_conn, _guard.run_id, status="failed", reason=str(e))
 
     # `degraded=True` on every path where `decisions` could be unbound (the
     # except block above never assigns it) — this guard also avoids

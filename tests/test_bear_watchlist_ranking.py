@@ -1,156 +1,33 @@
-"""Phase 2.2 — bear watchlist agent ranking digest.
+"""Tests for rank_bear_watchlist_and_notify().
 
-Tests for rank_bear_watchlist_and_notify():
-- Sorted by confidence descending
-- Skipped when watchlist is empty / firm disabled / all vetoed
-- Ranking is LOGGED, never sent via Telegram (log-only by design since the
-  2026-06-16 lean-notification audit, commit 89baa33).
+REMOVED 2026-09-15: this ranking called the firm on up to 20 tickers per scan
+cycle, outside the strict 2-invocations-per-trading-day contract
+(engine.agent_firm_daily). It is now a pure no-op kept only so the
+scheduled_multi_strategy_scan() call site needs no change — these tests
+prove exactly that, and that it never imports or calls the firm.
 """
-import logging
-import sqlite3
 import sys
-from unittest.mock import MagicMock, patch
 
-import pytest
-
-import scheduler.scanner  # noqa: F401 — pre-load to keep in sys.modules across patch.dict
+from scheduler.scanner import rank_bear_watchlist_and_notify
 
 
-def _mock_firm_module(decisions):
-    m = MagicMock()
-    m.evaluate_staged = MagicMock(return_value=decisions)
-    return m
+def test_ranking_is_a_noop_for_a_nonempty_watchlist():
+    assert rank_bear_watchlist_and_notify(["BBCA", "BBRI"], "2026-06-05", "10:00") is None
 
 
-def _mock_config_module(is_active=True):
-    m = MagicMock()
-    m.is_active = MagicMock(return_value=is_active)
-    return m
+def test_ranking_is_a_noop_for_an_empty_watchlist():
+    assert rank_bear_watchlist_and_notify([], "2026-06-05", "10:00") is None
 
 
-@pytest.fixture
-def isolated_db(tmp_path):
-    """Temp DB with an empty agent_decisions table, wired into scanner.DB_PATH.
-
-    The ranking fn queries agent_decisions to skip already-approved tickers;
-    without this the test would depend on the ambient (gitignored) live DB and
-    break in CI. Empty table → no tickers pre-approved → all are ranked.
-
-    AF-2 WP2: rank_bear_watchlist_and_notify() now also populates Tier 1 context
-    per candidate (build_risk_context/build_execution_context import paper_trade
-    directly, with its own module-level DB_PATH) — also pinned to this same temp
-    DB so context population never falls back to the ambient live DB either. The
-    temp DB has no ohlcv/stockbit_flow/wf_scores/paper_trades tables, so context
-    population fails soft to empty defaults (CLAUDE.md fail-soft convention),
-    which these tests don't inspect.
-    """
-    import paper_trade
-    db = tmp_path / "wf.db"
-    conn = sqlite3.connect(db)
-    conn.execute(
-        "CREATE TABLE agent_decisions "
-        "(ticker TEXT, strategy TEXT, decision TEXT, scan_time TEXT)"
-    )
-    conn.commit()
-    conn.close()
-    with patch.object(scheduler.scanner, "DB_PATH", str(db)), \
-         patch.object(paper_trade, "DB_PATH", str(db)):
-        yield str(db)
+def test_ranking_never_sends_telegram(monkeypatch):
+    sent = []
+    monkeypatch.setattr("scheduler.scanner.send_telegram", sent.append)
+    rank_bear_watchlist_and_notify(["BBCA"], "2026-06-05", "10:00")
+    assert sent == []
 
 
-def _call_ranking(tickers, mock_firm, mock_cfg, caplog):
-    """Run the ranking; return the list of "(no alert)" ranking log messages.
-
-    Asserts the log-only contract: send_telegram is never called.
-    """
-    sent_messages = []
-    # Patch the package attributes too (the lazy ``from engine.agent_firm import
-    # firm`` reads those), so the mock holds even after the real submodules are
-    # imported by an earlier test in the same session. create=True because the
-    # package only gains ``firm``/``config`` attrs once a submodule is imported.
-    import engine.agent_firm as _pkg
-    with patch.object(_pkg, "firm", mock_firm, create=True), \
-         patch.object(_pkg, "config", mock_cfg, create=True), \
-         patch.dict(sys.modules, {
-             "engine.agent_firm.firm":   mock_firm,
-             "engine.agent_firm.config": mock_cfg,
-         }), patch("scheduler.scanner.send_telegram", side_effect=sent_messages.append):
-        from scheduler.scanner import rank_bear_watchlist_and_notify
-        with caplog.at_level(logging.INFO):
-            rank_bear_watchlist_and_notify(tickers, "2026-06-05", "10:00")
-    # Log-only by design: this ranking must never fire a Telegram alert.
-    assert sent_messages == [], "bear watchlist ranking must not send Telegram"
-    return [r.message for r in caplog.records if "(no alert)" in r.message]
-
-
-def test_ranking_skipped_when_no_tickers(isolated_db, caplog):
-    """No ranking logged when watchlist is empty."""
-    logs = _call_ranking([], _mock_firm_module([]), _mock_config_module(), caplog)
-    assert logs == []
-
-
-def test_ranking_skipped_when_firm_disabled(isolated_db, caplog):
-    """No ranking logged when agent firm is inactive."""
-    decisions = [MagicMock(ticker="BBCA", decision="approve", confidence=0.8, rationale="strong")]
-    logs = _call_ranking(["BBCA"], _mock_firm_module(decisions), _mock_config_module(is_active=False), caplog)
-    assert logs == []
-
-
-def test_ranking_log_contains_tickers(isolated_db, caplog):
-    """Logged ranking mentions each approved ticker."""
-    decisions = [
-        MagicMock(ticker="BBCA", decision="approve", confidence=0.82, rationale="support holding"),
-        MagicMock(ticker="BBRI", decision="approve", confidence=0.71, rationale="accumulation signal"),
-    ]
-    logs = _call_ranking(["BBCA", "BBRI"], _mock_firm_module(decisions), _mock_config_module(), caplog)
-    assert len(logs) == 1
-    msg = logs[0]
-    assert "BBCA" in msg
-    assert "BBRI" in msg
-
-
-def test_ranking_sorted_by_confidence_descending(isolated_db, caplog):
-    """Tickers ranked highest confidence first in the logged ranking."""
-    decisions = [
-        MagicMock(ticker="MDKA", decision="approve", confidence=0.55, rationale="weak"),
-        MagicMock(ticker="BBCA", decision="approve", confidence=0.90, rationale="strong"),
-        MagicMock(ticker="AMMN", decision="approve", confidence=0.72, rationale="moderate"),
-    ]
-    logs = _call_ranking(
-        ["MDKA", "BBCA", "AMMN"],
-        _mock_firm_module(decisions),
-        _mock_config_module(),
-        caplog,
-    )
-    assert len(logs) == 1
-    msg = logs[0]
-    bbca_pos  = msg.index("BBCA")
-    ammn_pos  = msg.index("AMMN")
-    mdka_pos  = msg.index("MDKA")
-    assert bbca_pos < ammn_pos < mdka_pos, "BBCA(0.90) must appear before AMMN(0.72) before MDKA(0.55)"
-
-
-def test_ranking_excludes_vetoed_tickers(isolated_db, caplog):
-    """Vetoed tickers are not included in the ranked digest."""
-    decisions = [
-        MagicMock(ticker="BBCA", decision="approve", confidence=0.80, rationale="ok"),
-        MagicMock(ticker="MDKA", decision="veto",    confidence=0.30, rationale="risky"),
-    ]
-    logs = _call_ranking(
-        ["BBCA", "MDKA"],
-        _mock_firm_module(decisions),
-        _mock_config_module(),
-        caplog,
-    )
-    assert len(logs) == 1
-    assert "BBCA" in logs[0]
-    assert "MDKA" not in logs[0]
-
-
-def test_ranking_no_message_when_all_vetoed(isolated_db, caplog):
-    """No ranking logged if all watchlist tickers are vetoed."""
-    decisions = [
-        MagicMock(ticker="BBCA", decision="veto", confidence=0.2, rationale="bad"),
-    ]
-    logs = _call_ranking(["BBCA"], _mock_firm_module(decisions), _mock_config_module(), caplog)
-    assert logs == []
+def test_ranking_never_imports_or_touches_the_firm_module(monkeypatch):
+    """A None entry in sys.modules makes any `from engine.agent_firm import
+    firm` raise ImportError — proving the new body never even attempts it."""
+    monkeypatch.setitem(sys.modules, "engine.agent_firm.firm", None)
+    rank_bear_watchlist_and_notify(["BBCA"], "2026-06-05", "10:00")  # must not raise

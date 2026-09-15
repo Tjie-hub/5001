@@ -53,7 +53,7 @@ def test_pricing_defaults(monkeypatch):
     cfg = reload_config()
     assert cfg.PRICE_INPUT_PER_M == pytest.approx(0.435)
     assert cfg.PRICE_OUTPUT_PER_M == pytest.approx(0.870)
-    assert cfg.MODEL_ID == "glm-5.2"
+    assert cfg.MODEL_ID == "glm-5.3-flash"
 
 
 def test_tavily_config_defaults(monkeypatch):
@@ -86,10 +86,20 @@ def test_zai_key_falls_back_to_deprecated_deepseek_var(monkeypatch, caplog):
     assert cfg.ZAI_API_KEY == "old-deepseek-key"
 
 
-def test_provider_mode_defaults_to_zai(monkeypatch):
+def test_provider_mode_defaults_to_auto(monkeypatch):
+    """2026-09-15: default flipped from single-provider 'zai' to 'auto' — a
+    from-scratch deployment (no AGENT_FIRM_PROVIDER override) must exercise the
+    Claude-primary/GLM-fallback hierarchy, not silently run single-provider."""
     monkeypatch.delenv("AGENT_FIRM_PROVIDER", raising=False)
     cfg = reload_config()
-    assert cfg.PROVIDER_MODE == "zai"
+    assert cfg.PROVIDER_MODE == "auto"
+
+
+def test_provider_order_defaults_to_claude_primary(monkeypatch):
+    """2026-09-15: Claude Sonnet is PRIMARY, GLM-5.3 Flash (zai) is FALLBACK."""
+    monkeypatch.delenv("AGENT_FIRM_PROVIDER_ORDER", raising=False)
+    cfg = reload_config()
+    assert cfg.PROVIDER_ORDER == ["claude", "zai"]
 
 
 def test_provider_order_parses_csv(monkeypatch):

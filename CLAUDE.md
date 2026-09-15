@@ -18,6 +18,14 @@ with no raw SQL/data retrieval inside any specialist. See `Audit/ADR-AF-002_CLOS
 the full WP1-4 implementation/audit/validation trail this section closes out, and
 `Audit/ADR-AF-002_HANDOFF_CHECKLIST.md` for the operational handoff. Next Production Engine
 milestone: see `Audit/PRODUCTION_ENGINE_NEXT_MILESTONE.md`.
+**Amended:** 2026-09-15 — Agent Firm provider hierarchy flipped: **Claude Sonnet is now PRIMARY,
+GLM-5.3 Flash (`zai`) is the sole FALLBACK** (`AGENT_FIRM_PROVIDER_ORDER=claude,zai`, `AGENT_FIRM_MODEL=glm-5.3-flash`;
+code-level defaults in `engine/agent_firm/config.py` updated to match — `AGENT_FIRM_PROVIDER` now
+defaults to `auto`, not single-provider `zai`). No router/circuit-breaker/quota-hold logic changed —
+`providers/router.py` already tries `PROVIDER_ORDER` fresh, in order, on every invocation, so this
+was a configuration-only change. Applies uniformly to all three Agent Firm call sites (post-close,
+premarket, and the intraday exit-veto in `monitor.py`), which all share one router built from this
+same config.
 
 > This document is the canonical workspace operating manual for Claude sessions in this
 > repository. It defines how work should be performed but does not supersede repository source
@@ -29,7 +37,7 @@ milestone: see `Audit/PRODUCTION_ENGINE_NEXT_MILESTONE.md`.
 An Indonesian stock market (IDX) algorithmic trading suite: a Flask app (port 5001) that scans
 IDX30/LQ45/IDX80 tickers with multiple quantitative strategies, manages paper trades with automatic
 SL/TP via an exit kernel, fetches intraday flow/orderbook data from Stockbit, and sends Telegram
-alerts. An optional multi-provider LLM "agent firm" (Z.ai primary, Claude CLI fallback) reviews
+alerts. An optional multi-provider LLM "agent firm" (Claude Sonnet primary, GLM-5.3 Flash fallback) reviews
 signals before they trigger trades. A separate `research/` subsystem runs walk-forward backtests,
 a statistical gatekeeper, and regime analysis against the same data, under a CI-enforced boundary
 that keeps research and production code from contaminating each other.
@@ -295,7 +303,7 @@ route (fail-closed: defaults to admin-only). Full detail: `docs/SECURITY.md`.
 
 ### Provider failover (`engine/agent_firm/`)
 
-Multi-provider LLM router (Z.ai primary, Claude CLI fallback via `AGENT_FIRM_PROVIDER_ORDER`) with
+Multi-provider LLM router (Claude Sonnet primary, GLM-5.3 Flash (`zai`) fallback via `AGENT_FIRM_PROVIDER_ORDER`) with
 a per-provider circuit breaker and quota-aware routing that holds a session-limited provider out of
 rotation until its advertised reset time (see `docs/OPERATIONS.md` "Provider failover"). Every
 router decision is persisted to `provider_events`. Both providers share subscription-plan 5-hour

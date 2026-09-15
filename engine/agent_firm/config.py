@@ -41,7 +41,7 @@ FIRM_ENFORCE = _env_bool("AGENT_FIRM_ENFORCE", False)
 DAILY_SPEND_CAP_USD = float(os.getenv("AGENT_FIRM_DAILY_CAP", "5.0"))
 KILL_SWITCH_FILE = Path(os.getenv("AGENT_FIRM_KILL_FILE", "/tmp/agent_firm.disable"))
 
-MODEL_ID = os.getenv("AGENT_FIRM_MODEL", "glm-5.2")
+MODEL_ID = os.getenv("AGENT_FIRM_MODEL", "glm-5.3-flash")
 
 ZAI_API_KEY = os.getenv("ZAI_API_KEY", "")
 ZAI_BASE_URL = os.getenv("ZAI_BASE_URL", "https://api.z.ai/api/coding/paas/v4")
@@ -61,8 +61,14 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 TAVILY_MAX_RESULTS = int(os.getenv("AGENT_FIRM_TAVILY_MAX", "5"))
 
 # --- Provider routing (Firm LLM Provider Abstraction, 2026-07-08) ----------
-
-PROVIDER_MODE = os.getenv("AGENT_FIRM_PROVIDER", "zai")
+# Hierarchy (2026-09-15): Claude Sonnet is PRIMARY, GLM-5.3 Flash (zai) is the
+# sole FALLBACK. "auto" is the only mode that exercises PROVIDER_ORDER at all
+# (see providers/factory.py::_validate) — ProviderRouter.generate() always
+# tries _routed in that fixed order on every call (providers/router.py), so
+# Claude is retried first on every invocation regardless of whether a prior
+# call fell back to GLM; only Claude's own circuit breaker / quota hold moves
+# it out of first position for that one call.
+PROVIDER_MODE = os.getenv("AGENT_FIRM_PROVIDER", "auto")
 PROVIDER_ORDER = [
     p.strip() for p in os.getenv("AGENT_FIRM_PROVIDER_ORDER", "claude,zai").split(",")
     if p.strip()

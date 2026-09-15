@@ -80,6 +80,22 @@ def _seed_eod_base_plan(db, ticker="BBRI", base_date="2026-08-31"):
     return base_date
 
 
+def _seed_daily_plan(db, ticker):
+    """2026-09-15: run_premarket_firm_scan() now only vets the ticker set
+    run_eod_trade_plan() selected and persisted the previous evening
+    (engine.agent_firm_daily) — a base plan alone is no longer enough to reach
+    the firm, this must exist too, under TODAY's session_date."""
+    import engine.agent_firm_daily as afd
+    from datetime import datetime
+    session_date = datetime.now(jobs_mod.WIB).strftime("%Y-%m-%d")
+    conn = sqlite3.connect(db)
+    try:
+        afd.persist_plan(conn, session_date, [{"ticker": ticker}], [],
+                         source=afd.RUN_POST_CLOSE)
+    finally:
+        conn.close()
+
+
 def _mock_firm_and_config(capture, is_active=True):
     mock_firm = MagicMock()
     mock_firm.evaluate_staged = MagicMock(side_effect=lambda c, **k: capture.append(c) or [])
@@ -93,6 +109,7 @@ class TestPremarketFirmScanContextWiring:
     def test_candidates_arrive_with_populated_tier1_context(self, tmp_path, monkeypatch):
         db = _seeded_db(tmp_path, "BBRI")
         _seed_eod_base_plan(db, "BBRI")
+        _seed_daily_plan(db, "BBRI")
         capture = []
         mock_firm, mock_cfg = _mock_firm_and_config(capture)
 
@@ -135,6 +152,7 @@ class TestPremarketFirmScanContextWiring:
         # and it must fail soft rather than raise.
         empty_db = str(tmp_path / "empty.db")
         _seed_eod_base_plan(empty_db, "BBRI")   # ledger only; no context tables
+        _seed_daily_plan(empty_db, "BBRI")
         monkeypatch.setattr(jobs_mod, "_holiday_skip", lambda name: False)
         monkeypatch.setattr(jobs_mod, "DB_PATH", empty_db)
         monkeypatch.setattr(
