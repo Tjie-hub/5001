@@ -1233,9 +1233,16 @@ def scheduled_multi_strategy_scan():
         _rs_breadth = _get_breadth_rs(_rs_conn, date_str)
         _rs_tech = _detect_tech_rs(_rs_conn, date_str)
         try:
-            _fb = _rs_conn.execute("SELECT SUM(lot_value) FROM broker_flow WHERE investor_type='Asing' AND side='BUY' AND trade_date<=? AND trade_date>=date(?,'-7 days')", (date_str, date_str)).fetchone()[0] or 0
-            _fs = _rs_conn.execute("SELECT SUM(lot_value) FROM broker_flow WHERE investor_type='Asing' AND side='SELL' AND trade_date<=? AND trade_date>=date(?,'-7 days')", (date_str, date_str)).fetchone()[0] or 0
-            _rs_foreign = _fb - _fs
+            # SUM(value) (signed IDR) — not (BUY lot_value) - (SELL lot_value), which is a D2
+            # defect: lot_value is unsigned on both sides, not a Rupiah value. Comparable to
+            # _foreign_owned_brokerage_flow_risk()'s IDR-calibrated thresholds. investor_type=
+            # 'Asing' = foreign-owned brokerage, not end-investor identity (D1). See
+            # docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md §C.2.
+            _rs_foreign = _rs_conn.execute(
+                "SELECT SUM(value) FROM broker_flow WHERE investor_type='Asing' "
+                "AND trade_date<=? AND trade_date>=date(?,'-7 days')",
+                (date_str, date_str),
+            ).fetchone()[0] or 0
         except Exception:
             _rs_foreign = None
         _rs_conn.close()

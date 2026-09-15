@@ -2,11 +2,11 @@
 """Composite market risk score combining all crash sensors.
 
 Weights (macro_idx.md design spec):
-  VPIN          30%
-  Accdist       20%
-  Breadth       20%
-  Technicals    15%
-  Foreign flow  15%
+  VPIN                          30%
+  Accdist                       20%
+  Breadth                       20%
+  Technicals                    15%
+  Foreign-owned brokerage flow  15%
 
 Score 0-100: 0=safe, 100=maximum risk.
 Tiers: GREEN <30 | YELLOW 30-50 | ORANGE 51-70 | RED 71-85 | CRITICAL >85
@@ -73,7 +73,10 @@ def _technicals_risk(tech: dict) -> float:
     return float(base)
 
 
-def _foreign_flow_risk(net_5d) -> float:
+def _foreign_owned_brokerage_flow_risk(net_5d) -> float:
+    """net_5d: signed IDR net (SUM(value)) of broker_flow rows where investor_type='Asing'
+    — i.e. flow through foreign-owned brokerages. This is brokerage ownership, not
+    end-investor identity (D1: docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md)."""
     if net_5d is None:
         return 40.0
     # Scale: -10B IDR → 90, 0 → 40, +5B → 10
@@ -114,7 +117,10 @@ def compute_market_risk_score(
         accdist_summary : from get_market_accdist_summary()
         breadth_summary : from get_market_breadth()
         technicals      : from detect_ihsg_technicals()
-        foreign_net_5d  : 5-day net foreign flow in IDR (negative = outflow)
+        foreign_net_5d  : 5-day net IDR flow through foreign-owned brokerages
+                          (investor_type='Asing'; negative = net sell). This is brokerage
+                          ownership, not end-investor identity — see D1 in
+                          docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md
 
     Returns dict with: score (0-100), tier, label (=tier), components dict.
     """
@@ -122,7 +128,7 @@ def compute_market_risk_score(
     c_accdist = _accdist_risk(accdist_summary)
     c_breadth = _breadth_risk(breadth_summary)
     c_tech = _technicals_risk(technicals)
-    c_foreign = _foreign_flow_risk(foreign_net_5d)
+    c_foreign = _foreign_owned_brokerage_flow_risk(foreign_net_5d)
 
     score = round(
         c_vpin * 0.30

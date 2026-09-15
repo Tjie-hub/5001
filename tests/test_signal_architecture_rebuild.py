@@ -180,8 +180,10 @@ def _rev_db():
                  " classification TEXT, detected_at TEXT)")
     conn.execute("CREATE TABLE news_mentions (ticker TEXT, date TEXT, count INT,"
                  " headlines_json TEXT, updated_at TEXT)")
+    # D1/D2 (2026-09-10): lot and value are signed (BUY positive, SELL negative);
+    # lot_value is unsigned on both sides. _overnight_foreign_net() reads SUM(value).
     conn.execute("CREATE TABLE broker_flow (ticker TEXT, trade_date TEXT,"
-                 " broker_code TEXT, side TEXT, lot INT, lot_value INT,"
+                 " broker_code TEXT, side TEXT, lot INT, lot_value INT, value INT,"
                  " investor_type TEXT)")
     conn.execute("CREATE TABLE vpin_scores (ticker TEXT, date TEXT, vpin REAL,"
                  " vpin_label TEXT, bucket_count INT, error TEXT)")
@@ -233,7 +235,7 @@ class TestPremarketIsARevision:
     def test_overnight_foreign_distribution_downgrades(self):
         conn = _rev_db()
         conn.execute("INSERT INTO broker_flow VALUES "
-                     "('AAA','2026-09-01','XX','SELL',1,5000000000,'Asing')")
+                     "('AAA','2026-09-01','XX','SELL',1,5000000000,-5000000000,'Asing')")
         conn.commit()
         ds = rev.revise(conn, BASE, base_date="2026-09-01", plan_date="2026-09-02")
         aaa = next(d for d in ds if d.ticker == "AAA")
@@ -243,7 +245,7 @@ class TestPremarketIsARevision:
     def test_overnight_foreign_accumulation_upgrades_and_reranks(self):
         conn = _rev_db()
         conn.execute("INSERT INTO broker_flow VALUES "
-                     "('BBB','2026-09-01','XX','BUY',1,5000000000,'Asing')")
+                     "('BBB','2026-09-01','XX','BUY',1,5000000000,5000000000,'Asing')")
         conn.commit()
         ds = rev.revise(conn, BASE, base_date="2026-09-01", plan_date="2026-09-02")
         assert [r["ticker"] for r in rev.apply(ds)] == ["BBB", "AAA"]
@@ -251,7 +253,7 @@ class TestPremarketIsARevision:
     def test_immaterial_foreign_flow_is_not_evidence(self):
         conn = _rev_db()
         conn.execute("INSERT INTO broker_flow VALUES "
-                     "('AAA','2026-09-01','XX','SELL',1,1000,'Asing')")
+                     "('AAA','2026-09-01','XX','SELL',1,1000,-1000,'Asing')")
         conn.commit()
         ds = rev.revise(conn, BASE, base_date="2026-09-01", plan_date="2026-09-02")
         assert next(d for d in ds if d.ticker == "AAA").action == wl.ACTION_RETAIN

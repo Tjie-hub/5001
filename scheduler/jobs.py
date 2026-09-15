@@ -537,10 +537,13 @@ def run_ohlcv_coverage_check(date_str: str = None):
 
 
 def run_foreign_snapshot():
-    """14:30 WIB — Pre-close foreign accumulation watchlist alert.
+    """14:30 WIB — Pre-close foreign-owned-brokerage flow watchlist alert.
 
-    Uses the most recently available broker_flow (Asing) data (fetched nightly at 20:15).
-    Sends top 5 buy + top 5 sell tickers ranked by 5-day score_pct.
+    Uses the most recently available broker_flow (investor_type='Asing', i.e. foreign-owned
+    brokerage) data (fetched nightly at 20:15). This is brokerage ownership, not end-investor
+    identity — it is not evidence of foreign investor buying/selling (D1, see
+    docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md). Sends top 5
+    buy + top 5 sell tickers ranked by 5-day score_pct.
     """
     if _holiday_skip("run_foreign_snapshot"):
         return
@@ -555,22 +558,22 @@ def run_foreign_snapshot():
         top_sell = [r for r in top_sell if r["score_pct"] < 0]
 
         latest = all_results[0]["latest_date"] if all_results else "N/A"
-        msg = f"🏛️ <b>Foreign Flow Snapshot — {dt.now(WIB).strftime('%d/%m %H:%M')}</b>\n"
+        msg = f"🏛️ <b>Foreign-Owned Brokerage Flow Snapshot — {dt.now(WIB).strftime('%d/%m %H:%M')}</b>\n"
         msg += f"<i>Data: {latest} | 5-day net / avg vol</i>\n\n"
 
         if top_buy:
-            msg += "<b>🟢 Top Foreign Accumulation:</b>\n"
+            msg += "<b>🟢 Top Foreign-Owned Brokerage Accumulation:</b>\n"
             for r in top_buy:
                 msg += f"  {r['ticker']}: {r['score_pct']:+.1f}% ({r['foreign_net_lots']:+,.0f} lots)\n"
         else:
-            msg += "<b>🟢 No significant foreign buying</b>\n"
+            msg += "<b>🟢 No significant foreign-owned brokerage buying</b>\n"
 
         if top_sell:
-            msg += "\n<b>🔴 Top Foreign Distribution:</b>\n"
+            msg += "\n<b>🔴 Top Foreign-Owned Brokerage Distribution:</b>\n"
             for r in top_sell:
                 msg += f"  {r['ticker']}: {r['score_pct']:+.1f}% ({r['foreign_net_lots']:+,.0f} lots)\n"
         else:
-            msg += "\n<b>🔴 No significant foreign selling</b>\n"
+            msg += "\n<b>🔴 No significant foreign-owned brokerage selling</b>\n"
 
         logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Foreign snapshot computed ({len(top_buy)} buy, {len(top_sell)} sell) — no alert")
     except Exception as e:
@@ -783,9 +786,17 @@ def run_market_health_report():
         breadth_s = get_market_breadth(conn, date_str)
         tech_s = detect_ihsg_technicals(conn, date_str)
         try:
-            fb = conn.execute("SELECT SUM(lot_value) FROM broker_flow WHERE investor_type='Asing' AND side='BUY' AND trade_date<=? AND trade_date>=date(?,'-7 days')", (date_str, date_str)).fetchone()[0] or 0
-            fs = conn.execute("SELECT SUM(lot_value) FROM broker_flow WHERE investor_type='Asing' AND side='SELL' AND trade_date<=? AND trade_date>=date(?,'-7 days')", (date_str, date_str)).fetchone()[0] or 0
-            foreign_net = fb - fs
+            # SUM(value) — value is already signed (BUY positive, SELL negative) and is the
+            # only column comparable to _foreign_owned_brokerage_flow_risk()'s IDR-calibrated thresholds.
+            # Previously (BUY lot_value) - (SELL lot_value): lot_value is unsigned on both
+            # sides and not a Rupiah value at all, a D2 defect (see
+            # docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md §C.1).
+            # investor_type='Asing' = foreign-owned brokerage, not end-investor identity (D1).
+            foreign_net = conn.execute(
+                "SELECT SUM(value) FROM broker_flow WHERE investor_type='Asing' "
+                "AND trade_date<=? AND trade_date>=date(?,'-7 days')",
+                (date_str, date_str),
+            ).fetchone()[0] or 0
         except Exception:
             foreign_net = None
         risk = compute_market_risk_score(vpin_s, accdist_s, breadth_s, tech_s, foreign_net)

@@ -12,8 +12,8 @@ internals. This is the same shape engine/edge_enrich.py already uses for engine/
 No duplicated deterministic calculations: every builder below either wraps an existing
 canonical function (tech_direction, detect_regime, has_catalyst, calc_sma/calc_adx/etc.,
 support_resistance/detect_patterns) or performs a small, genuinely new aggregation
-(net_foreign_14d's SUM, trend_7d's rolling-sign, mentions_count_7d's COUNT) that has no
-existing implementation elsewhere to duplicate.
+(net_foreign_owned_brokerage_lots_14d's SUM, trend_7d's rolling-sign, mentions_count_7d's
+COUNT) that has no existing implementation elsewhere to duplicate.
 
 Status (AF-2 WP1-4, all complete): every builder below is called from all five live
 SignalCandidate construction sites — scheduler/scanner.py's run_agent_firm_gate()/
@@ -162,19 +162,18 @@ def build_flow_context(conn: sqlite3.Connection, ticker: str) -> FlowContext:
     if row:
         verdict, smart_money, composite_score, foreign_score = row
 
-    net_foreign_row = conn.execute(
-        "SELECT SUM(lot_value) FROM broker_flow WHERE ticker=? AND investor_type='Asing' "
-        "AND side='BUY' AND trade_date >= date('now', '-14 days')",
+    # SUM(lot) — NOT (BUY lot_value) - (SELL lot_value). broker_flow.lot is already signed
+    # (BUY positive, SELL negative); lot_value is unsigned on both sides, so a side-split
+    # subtraction of lot_value is a different, wrong quantity (D2 defect; see
+    # docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md §C.4). This is
+    # a brokerage-ownership net (investor_type='Asing' = foreign-owned brokerage), not an
+    # end-investor foreign-flow figure (D1 — see the FlowContext field docstring).
+    net_foreign_owned_brokerage_lots_row = conn.execute(
+        "SELECT SUM(lot) FROM broker_flow WHERE ticker=? AND investor_type='Asing' "
+        "AND trade_date >= date('now', '-14 days')",
         (ticker,),
     ).fetchone()
-    net_buy = net_foreign_row[0] or 0
-    net_sell_row = conn.execute(
-        "SELECT SUM(lot_value) FROM broker_flow WHERE ticker=? AND investor_type='Asing' "
-        "AND side='SELL' AND trade_date >= date('now', '-14 days')",
-        (ticker,),
-    ).fetchone()
-    net_sell = net_sell_row[0] or 0
-    net_foreign_14d = int(net_buy - net_sell)
+    net_foreign_owned_brokerage_lots_14d = int(net_foreign_owned_brokerage_lots_row[0] or 0)
 
     bar_rows = conn.execute(
         "SELECT trade_date, bar_time, buy_lot, sell_lot, delta, net_value "
@@ -201,7 +200,7 @@ def build_flow_context(conn: sqlite3.Connection, ticker: str) -> FlowContext:
         smart_money=smart_money,
         composite_score=composite_score,
         foreign_score=foreign_score,
-        net_foreign_14d=net_foreign_14d,
+        net_foreign_owned_brokerage_lots_14d=net_foreign_owned_brokerage_lots_14d,
         trend_7d=trend_7d,
         flow_bars_recent=bars[:20],
     )

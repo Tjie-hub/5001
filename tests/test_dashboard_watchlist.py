@@ -1,9 +1,15 @@
 """Tests for D2 — /api/dashboard/watchlist aggregation.
 
 Tests the pure engine.dashboard.get_watchlist() function.
-BUY WATCH: hammer (>3% intraday bounce) + foreign BUY >5B today + volume >50M
-AVOID:     foreign SELL >100B in 3d + YTD drop >20%
-WAIT:      hammer + foreign net sell today
+BUY WATCH: hammer (>3% intraday bounce) + foreign-owned-brokerage BUY >5B today + volume >50M
+AVOID:     foreign-owned-brokerage SELL >100B in 3d + YTD drop >20%
+WAIT:      hammer + foreign-owned-brokerage net sell today
+
+"Foreign" here means investor_type='Asing' in broker_flow — brokerage ownership, not
+end-investor identity (D1). Fixture rows carry `value`, broker_flow's real signed IDR column
+(BUY positive, SELL negative) — the engine sums it directly (SUM(value)), never
+(BUY lot_value) - (SELL lot_value), which is the D2 anti-pattern this suite guards against. See
+docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md.
 """
 import sqlite3
 import tempfile
@@ -30,7 +36,7 @@ def _make_db(rows_ohlcv=None, rows_broker_flow=None):
             investor_type TEXT,
             side TEXT,
             lot_volume INTEGER,
-            lot_value REAL
+            value REAL
         );
     """)
     if rows_ohlcv:
@@ -41,7 +47,7 @@ def _make_db(rows_ohlcv=None, rows_broker_flow=None):
         )
     if rows_broker_flow:
         conn.executemany(
-            "INSERT INTO broker_flow (trade_date,ticker,investor_type,side,lot_value) "
+            "INSERT INTO broker_flow (trade_date,ticker,investor_type,side,value) "
             "VALUES (?,?,?,?,?)",
             rows_broker_flow,
         )
@@ -55,6 +61,15 @@ def _ohlcv(date, ticker, low, close, volume, open_=None):
     o = open_ if open_ is not None else low * 1.005
     h = close * 1.005
     return (date, ticker, o, h, low, close, volume)
+
+
+def _flow_row(date, ticker, side, magnitude):
+    """broker_flow.value is signed: BUY positive, SELL negative (matches the real vendor
+    column — see the D1/D2 audit). Tests here pass a positive magnitude per side and this
+    helper applies the correct sign, so a test can't accidentally reintroduce the D2
+    unsigned-magnitude anti-pattern."""
+    signed = magnitude if side == 'BUY' else -magnitude
+    return (date, ticker, 'Asing', side, signed)
 
 
 # ── Shape ─────────────────────────────────────────────────────────────────────
@@ -84,11 +99,11 @@ def test_watchlist_empty_db_returns_empty_lists():
 # ── BUY WATCH ─────────────────────────────────────────────────────────────────
 
 def test_watchlist_buy_watch_appears_with_hammer_and_foreign_buy():
-    """BBRI: bounce 3.09%, vol 100M, foreign net buy 6B → in buy_watch."""
+    """BBRI: bounce 3.09%, vol 100M, foreign-owned-brokerage net buy 6B → in buy_watch."""
     ohlcv = [_ohlcv(DATE, 'BBRI', low=3880, close=4000, volume=100_000_000)]
     flow = [
-        (DATE, 'BBRI', 'Asing', 'BUY',  7_000_000_000),
-        (DATE, 'BBRI', 'Asing', 'SELL', 1_000_000_000),
+        _flow_row(DATE, 'BBRI', 'BUY',  7_000_000_000),
+        _flow_row(DATE, 'BBRI', 'SELL', 1_000_000_000),
     ]
     db = _make_db(rows_ohlcv=ohlcv, rows_broker_flow=flow)
     from engine.dashboard import get_watchlist
@@ -104,7 +119,7 @@ def test_watchlist_buy_watch_appears_with_hammer_and_foreign_buy():
 
 def test_watchlist_buy_watch_entry_has_all_display_fields():
     ohlcv = [_ohlcv(DATE, 'BBCA', low=8800, close=9100, volume=80_000_000)]
-    flow = [(DATE, 'BBCA', 'Asing', 'BUY', 10_000_000_000)]
+    flow = [_flow_row(DATE, 'BBCA', 'BUY', 10_000_000_000)]
     db = _make_db(rows_ohlcv=ohlcv, rows_broker_flow=flow)
     from engine.dashboard import get_watchlist
     result = get_watchlist(db, DATE)
@@ -116,9 +131,9 @@ def test_watchlist_buy_watch_entry_has_all_display_fields():
 
 
 def test_watchlist_buy_watch_excluded_when_volume_low():
-    """Hammer + foreign buy but volume only 10M (< 50M) → NOT in buy_watch."""
+    """Hammer + foreign-owned-brokerage buy but volume only 10M (< 50M) → NOT in buy_watch."""
     ohlcv = [_ohlcv(DATE, 'SMGR', low=6200, close=6400, volume=10_000_000)]
-    flow = [(DATE, 'SMGR', 'Asing', 'BUY', 8_000_000_000)]
+    flow = [_flow_row(DATE, 'SMGR', 'BUY', 8_000_000_000)]
     db = _make_db(rows_ohlcv=ohlcv, rows_broker_flow=flow)
     from engine.dashboard import get_watchlist
     result = get_watchlist(db, DATE)
@@ -127,9 +142,9 @@ def test_watchlist_buy_watch_excluded_when_volume_low():
 
 
 def test_watchlist_buy_watch_excluded_when_foreign_buy_below_threshold():
-    """Hammer + volume OK but foreign net buy only 4B (< 5B) → NOT in buy_watch."""
+    """Hammer + volume OK but foreign-owned-brokerage net buy only 4B (< 5B) → NOT in buy_watch."""
     ohlcv = [_ohlcv(DATE, 'INDF', low=6500, close=6720, volume=60_000_000)]
-    flow = [(DATE, 'INDF', 'Asing', 'BUY', 4_000_000_000)]
+    flow = [_flow_row(DATE, 'INDF', 'BUY', 4_000_000_000)]
     db = _make_db(rows_ohlcv=ohlcv, rows_broker_flow=flow)
     from engine.dashboard import get_watchlist
     result = get_watchlist(db, DATE)
@@ -140,13 +155,13 @@ def test_watchlist_buy_watch_excluded_when_foreign_buy_below_threshold():
 # ── AVOID ─────────────────────────────────────────────────────────────────────
 
 def test_watchlist_avoid_appears_with_heavy_foreign_sell_and_ytd_drop():
-    """TLKM: YTD -22%, foreign SELL 120B in 3d → in avoid."""
+    """TLKM: YTD -22%, foreign-owned-brokerage SELL 120B in 3d → in avoid."""
     jan_row = _ohlcv('2026-01-02', 'TLKM', low=3550, close=3600, volume=50_000_000)
     today_row = _ohlcv(DATE, 'TLKM', low=2780, close=2800, volume=30_000_000)
     flow = [
-        ('2026-06-03', 'TLKM', 'Asing', 'SELL', 40_000_000_000),
-        ('2026-06-04', 'TLKM', 'Asing', 'SELL', 40_000_000_000),
-        (DATE,         'TLKM', 'Asing', 'SELL', 40_000_000_000),
+        _flow_row('2026-06-03', 'TLKM', 'SELL', 40_000_000_000),
+        _flow_row('2026-06-04', 'TLKM', 'SELL', 40_000_000_000),
+        _flow_row(DATE,         'TLKM', 'SELL', 40_000_000_000),
     ]
     db = _make_db(rows_ohlcv=[jan_row, today_row], rows_broker_flow=flow)
     from engine.dashboard import get_watchlist
@@ -161,14 +176,14 @@ def test_watchlist_avoid_appears_with_heavy_foreign_sell_and_ytd_drop():
 
 
 def test_watchlist_avoid_excluded_when_ytd_drop_insufficient():
-    """Heavy foreign sell but YTD only -5% → NOT in avoid."""
+    """Heavy foreign-owned-brokerage sell but YTD only -5% → NOT in avoid."""
     # ASII: jan=5200, today=4940 → YTD ≈ -5%
     jan_row = _ohlcv('2026-01-02', 'ASII', low=5150, close=5200, volume=50_000_000)
     today_row = _ohlcv(DATE, 'ASII', low=4920, close=4940, volume=40_000_000)
     flow = [
-        ('2026-06-03', 'ASII', 'Asing', 'SELL', 40_000_000_000),
-        ('2026-06-04', 'ASII', 'Asing', 'SELL', 40_000_000_000),
-        (DATE,         'ASII', 'Asing', 'SELL', 40_000_000_000),
+        _flow_row('2026-06-03', 'ASII', 'SELL', 40_000_000_000),
+        _flow_row('2026-06-04', 'ASII', 'SELL', 40_000_000_000),
+        _flow_row(DATE,         'ASII', 'SELL', 40_000_000_000),
     ]
     db = _make_db(rows_ohlcv=[jan_row, today_row], rows_broker_flow=flow)
     from engine.dashboard import get_watchlist
@@ -180,11 +195,11 @@ def test_watchlist_avoid_excluded_when_ytd_drop_insufficient():
 # ── WAIT ──────────────────────────────────────────────────────────────────────
 
 def test_watchlist_wait_appears_with_hammer_but_foreign_selling():
-    """ASII: bounce 3.85%, vol 80M, foreign net sell today → wait not buy_watch."""
+    """ASII: bounce 3.85%, vol 80M, foreign-owned-brokerage net sell today → wait not buy_watch."""
     ohlcv = [_ohlcv(DATE, 'ASII', low=5200, close=5400, volume=80_000_000)]
     flow = [
-        (DATE, 'ASII', 'Asing', 'SELL', 20_000_000_000),
-        (DATE, 'ASII', 'Asing', 'BUY',   1_000_000_000),
+        _flow_row(DATE, 'ASII', 'SELL', 20_000_000_000),
+        _flow_row(DATE, 'ASII', 'BUY',   1_000_000_000),
     ]
     db = _make_db(rows_ohlcv=ohlcv, rows_broker_flow=flow)
     from engine.dashboard import get_watchlist
@@ -200,7 +215,7 @@ def test_watchlist_hammer_below_threshold_excluded_from_buy_and_wait():
     """Bounce 0.67% < 3% → excluded from buy_watch and wait regardless of foreign flow."""
     # (3010 - 2990) / 2990 * 100 = 0.67%
     ohlcv = [(DATE, 'BMRI', 3000, 3020, 2990, 3010, 80_000_000)]
-    flow = [(DATE, 'BMRI', 'Asing', 'BUY', 10_000_000_000)]
+    flow = [_flow_row(DATE, 'BMRI', 'BUY', 10_000_000_000)]
     db = _make_db(rows_ohlcv=ohlcv, rows_broker_flow=flow)
     from engine.dashboard import get_watchlist
     result = get_watchlist(db, DATE)
@@ -210,3 +225,24 @@ def test_watchlist_hammer_below_threshold_excluded_from_buy_and_wait():
         [e['ticker'] for e in result['wait']]
     )
     assert 'BMRI' not in all_tickers
+
+
+# ── D2 regression ─────────────────────────────────────────────────────────────
+
+def test_watchlist_foreign_net_is_sum_of_signed_value_not_buy_minus_sell_lot_value():
+    """The historical D2 defect computed
+    SUM(lot_value WHERE side=BUY) - SUM(lot_value WHERE side=SELL); lot_value is unsigned
+    on both sides, so that formula is a different, wrong quantity from the true signed net.
+    This fixture uses `value` (the real signed column) directly and proves the aggregation
+    is a plain SUM, not a side-filtered subtraction."""
+    ohlcv = [_ohlcv(DATE, 'UNVR', low=4000, close=4200, volume=90_000_000)]
+    flow = [
+        (DATE, 'UNVR', 'Asing', 'BUY',  9_500_000_000),
+        (DATE, 'UNVR', 'Asing', 'SELL', -3_500_000_000),
+    ]
+    db = _make_db(rows_ohlcv=ohlcv, rows_broker_flow=flow)
+    from engine.dashboard import get_watchlist
+    result = get_watchlist(db, DATE)
+
+    entry = next(e for e in result['buy_watch'] if e['ticker'] == 'UNVR')
+    assert entry['foreign_net_today'] == 6_000_000_000

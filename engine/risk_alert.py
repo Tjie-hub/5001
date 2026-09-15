@@ -75,7 +75,7 @@ def route_risk_alert(
             f"AccDist: {components.get('accdist', '?'):.1f} | "
             f"Breadth: {components.get('breadth', '?'):.1f}\n"
             f"Technicals: {components.get('technicals', '?'):.1f} | "
-            f"Foreign: {components.get('foreign_flow', '?'):.1f}\n\n"
+            f"Foreign-Broker: {components.get('foreign_flow', '?'):.1f}\n\n"
             f"<i>Immediate action may be required.</i>"
         )
         send_telegram(msg)

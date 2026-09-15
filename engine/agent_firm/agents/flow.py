@@ -4,8 +4,13 @@ WP3 (Specialist Context Consumption Migration): this agent no longer receives ra
 stockbit_flow/broker_flow/stockbit_flow_bars rows or sums lots itself —
 engine.agent_firm_context.build_flow_context() (Production Engine) already computed
 verdict/smart_money/composite_score/foreign_score (passthroughs of stockbit_flow's own
-columns) and net_foreign_14d/trend_7d (the only genuinely new aggregations, per ADR-AF-001).
-This agent's job is interpretation of those facts, not re-aggregation.
+columns) and net_foreign_owned_brokerage_lots_14d/trend_7d (the only genuinely new
+aggregations, per ADR-AF-001). This agent's job is interpretation of those facts, not
+re-aggregation.
+
+net_foreign_owned_brokerage_lots_14d is a brokerage-ownership net (investor_type='Asing'),
+not an end-investor foreign-flow figure — see the FlowContext docstring in ../schemas.py and
+docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md (finding D1).
 """
 
 import json

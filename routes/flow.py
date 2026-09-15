@@ -288,15 +288,16 @@ def api_market_risk():
     tech_s = detect_ihsg_technicals(conn, query_date)
 
     try:
-        foreign_buy = conn.execute(
-            "SELECT SUM(lot_value) FROM broker_flow WHERE investor_type='Asing' AND side='BUY' AND trade_date<=? AND trade_date>=date(?,'-7 days')",
+        # SUM(value) (signed IDR) — not (BUY lot_value) - (SELL lot_value), a D2 defect
+        # (lot_value is unsigned on both sides, not a Rupiah value). Comparable to
+        # compute_market_risk_score()'s IDR-calibrated thresholds. investor_type='Asing' is
+        # foreign-owned brokerage flow, not end-investor identity (D1). See
+        # docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md §C.6.
+        foreign_net = conn.execute(
+            "SELECT SUM(value) FROM broker_flow WHERE investor_type='Asing' "
+            "AND trade_date<=? AND trade_date>=date(?,'-7 days')",
             (query_date, query_date),
         ).fetchone()[0] or 0
-        foreign_sell = conn.execute(
-            "SELECT SUM(lot_value) FROM broker_flow WHERE investor_type='Asing' AND side='SELL' AND trade_date<=? AND trade_date>=date(?,'-7 days')",
-            (query_date, query_date),
-        ).fetchone()[0] or 0
-        foreign_net = foreign_buy - foreign_sell
     except Exception:
         foreign_net = None
 

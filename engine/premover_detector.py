@@ -214,7 +214,9 @@ def score_ticker(df: pd.DataFrame, ihsg_df: pd.DataFrame = None,
         score += 10
         reasons.append(f'RS_POS({rs:.2f})')
 
-    # 5 pts: positive foreign/smart-money net flow (stockbit)
+    # 5 pts: positive Stockbit composite flow score (vendor-computed; not derived from
+    # broker_flow.investor_type, so not subject to the D1 "Asing = foreign investor"
+    # mislabeling — see docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md)
     if flow_score is not None and flow_score > 0:
         score += 5
         reasons.append(f'FLOW_POS({flow_score:+.0f})')

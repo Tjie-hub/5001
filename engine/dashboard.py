@@ -75,14 +75,17 @@ def _safe_noconn(fn, date):
 
 
 def _get_foreign_flow(conn: sqlite3.Connection, date: str) -> dict:
-    """Compute Asing net flow: today, 5d, 20d from broker_flow table."""
+    """Compute foreign-owned-brokerage net flow (investor_type='Asing'): today, 5d, 20d IDR
+    net from broker_flow. SUM(value) — value is already signed (BUY positive, SELL negative)
+    and IDR-denominated, comparable to compute_market_risk_score()'s calibration. Previously
+    (BUY lot_value) - (SELL lot_value): lot_value is unsigned on both sides and not a Rupiah
+    value, a D2 defect. investor_type='Asing' is brokerage ownership, not end-investor
+    identity (D1). See docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md
+    §B.8/§C.3."""
     try:
         def _net(days: int) -> float:
             row = conn.execute(
-                "SELECT "
-                "  COALESCE(SUM(CASE WHEN side='BUY'  THEN lot_value ELSE 0 END), 0) "
-                "- COALESCE(SUM(CASE WHEN side='SELL' THEN lot_value ELSE 0 END), 0) "
-                "FROM broker_flow "
+                "SELECT COALESCE(SUM(value), 0) FROM broker_flow "
                 "WHERE investor_type='Asing' "
                 "  AND trade_date<=? AND trade_date>=date(?,?)",
                 (date, date, f'-{days} days'),
@@ -90,10 +93,7 @@ def _get_foreign_flow(conn: sqlite3.Connection, date: str) -> dict:
             return float(row[0]) if row else 0.0
 
         today_net = conn.execute(
-            "SELECT "
-            "  COALESCE(SUM(CASE WHEN side='BUY'  THEN lot_value ELSE 0 END), 0) "
-            "- COALESCE(SUM(CASE WHEN side='SELL' THEN lot_value ELSE 0 END), 0) "
-            "FROM broker_flow "
+            "SELECT COALESCE(SUM(value), 0) FROM broker_flow "
             "WHERE investor_type='Asing' AND trade_date=?",
             (date,),
         ).fetchone()
@@ -231,9 +231,13 @@ def get_strategy_pnl(db_path: str) -> dict[str, Any]:
 def get_watchlist(db_path: str, date: str) -> dict[str, Any]:
     """Compute BUY WATCH / AVOID / WAIT ticker lists for the dashboard.
 
-    BUY WATCH: intraday bounce >3% + volume >50M + foreign net buy today >5B
-    AVOID:     foreign net sell in 3d > 100B AND YTD drop >20%
-    WAIT:      intraday bounce >3% + volume >50M + foreign net sell today
+    "Foreign" below means investor_type='Asing' in broker_flow — flow through foreign-owned
+    brokerages, not end-investor identity (D1: see
+    docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md).
+
+    BUY WATCH: intraday bounce >3% + volume >50M + foreign-owned-brokerage net buy today >5B
+    AVOID:     foreign-owned-brokerage net sell in 3d > 100B AND YTD drop >20%
+    WAIT:      intraday bounce >3% + volume >50M + foreign-owned-brokerage net sell today
     """
     conn = db_connect(db_path)
     try:
@@ -264,13 +268,13 @@ def get_watchlist(db_path: str, date: str) -> dict[str, Any]:
             ):
                 jan_closes[row[0]] = float(row[1])
 
-        # Foreign flow: today and last-3-days per ticker
+        # Foreign-owned-brokerage flow (investor_type='Asing'): today and last-3-days per
+        # ticker. SUM(value) — value is already signed IDR; previously (BUY lot_value) -
+        # (SELL lot_value), a D2 defect (lot_value is unsigned on both sides). See
+        # docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md §C.3.
         foreign_today: dict[str, float] = {}
         for row in conn.execute(
-            "SELECT ticker,"
-            "  SUM(CASE WHEN side='BUY' THEN lot_value ELSE 0 END)"
-            "- SUM(CASE WHEN side='SELL' THEN lot_value ELSE 0 END) "
-            "FROM broker_flow "
+            "SELECT ticker, SUM(value) FROM broker_flow "
             "WHERE investor_type='Asing' AND trade_date=? "
             "GROUP BY ticker",
             (date,),
@@ -279,10 +283,7 @@ def get_watchlist(db_path: str, date: str) -> dict[str, Any]:
 
         foreign_3d: dict[str, float] = {}
         for row in conn.execute(
-            "SELECT ticker,"
-            "  SUM(CASE WHEN side='BUY' THEN lot_value ELSE 0 END)"
-            "- SUM(CASE WHEN side='SELL' THEN lot_value ELSE 0 END) "
-            "FROM broker_flow "
+            "SELECT ticker, SUM(value) FROM broker_flow "
             "WHERE investor_type='Asing' "
             "  AND trade_date<=? AND trade_date>=date(?,'-3 days') "
             "GROUP BY ticker",

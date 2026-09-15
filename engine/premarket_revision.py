@@ -72,8 +72,11 @@ RISK_OFF_TIERS = frozenset({"CRITICAL", "RED"})
 
 VPIN_TOXIC_LABELS = frozenset({"EXTREME", "CRITICAL"})
 
-# A single session's foreign net turning sharply negative is evidence; noise is
-# not. Expressed in rupiah of net lot value over the settled overnight session.
+# A single session's foreign-owned-brokerage net turning sharply negative is
+# evidence; noise is not. Expressed in rupiah, net over the settled overnight
+# session (SUM(value) where investor_type='Asing' -- brokerage ownership, not
+# end-investor identity; see D1 in
+# docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md).
 FOREIGN_NET_MATERIAL = 1_000_000_000
 
 
@@ -143,21 +146,23 @@ def _overnight_news(conn, ticker, since_date):
 
 
 def _overnight_foreign_net(conn, ticker, session_date):
+    """Net IDR flow through foreign-owned brokerages (investor_type='Asing') on
+    `session_date`. SUM(value) -- value is already signed (BUY positive, SELL
+    negative); previously (BUY lot_value) - (SELL lot_value), a D2 defect
+    (lot_value is unsigned on both sides, not a Rupiah value). investor_type=
+    'Asing' is brokerage ownership, not end-investor identity (D1). See
+    docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md."""
     try:
-        buy = conn.execute(
-            "SELECT SUM(lot_value) FROM broker_flow WHERE ticker=? AND "
-            "investor_type='Asing' AND side='BUY' AND trade_date=?",
+        net = conn.execute(
+            "SELECT SUM(value) FROM broker_flow WHERE ticker=? AND "
+            "investor_type='Asing' AND trade_date=?",
             (ticker, session_date)).fetchone()[0] or 0
-        sell = conn.execute(
-            "SELECT SUM(lot_value) FROM broker_flow WHERE ticker=? AND "
-            "investor_type='Asing' AND side='SELL' AND trade_date=?",
-            (ticker, session_date)).fetchone()[0] or 0
+        net = int(net)
     except Exception:
         return None
-    net = int(buy) - int(sell)
     if abs(net) < FOREIGN_NET_MATERIAL:
         return None
-    return {"net_lot_value": net, "trade_date": session_date}
+    return {"net_value": net, "trade_date": session_date}
 
 
 def _vpin(conn, ticker, since_date):
@@ -257,17 +262,17 @@ def revise(conn, base_rows: list[dict[str, Any]], *, base_date: str,
             continue
 
         foreign = ev.get("foreign_flow")
-        if foreign and foreign["net_lot_value"] < 0:
+        if foreign and foreign["net_value"] < 0:
             decisions.append(RevisionDecision(
                 ticker, ACTION_DOWNGRADE, R_FOREIGN_DISTRIBUTION,
-                f"settled overnight foreign net {foreign['net_lot_value']:,} on "
-                f"{foreign['trade_date']}", ev_full, row))
+                f"settled overnight foreign-owned-brokerage net {foreign['net_value']:,} "
+                f"IDR on {foreign['trade_date']}", ev_full, row))
             continue
-        if foreign and foreign["net_lot_value"] > 0:
+        if foreign and foreign["net_value"] > 0:
             decisions.append(RevisionDecision(
                 ticker, ACTION_UPGRADE, R_FOREIGN_ACCUMULATION,
-                f"settled overnight foreign net +{foreign['net_lot_value']:,} on "
-                f"{foreign['trade_date']}", ev_full, row))
+                f"settled overnight foreign-owned-brokerage net +{foreign['net_value']:,} "
+                f"IDR on {foreign['trade_date']}", ev_full, row))
             continue
 
         if "news" in ev:

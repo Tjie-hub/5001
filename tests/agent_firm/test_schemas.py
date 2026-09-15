@@ -126,11 +126,11 @@ def test_signal_candidate_accepts_context_objects():
         ticker="BBRI", strategy="momentum_following",
         score=4.2, scan_time="2026-05-19T16:00:00+07:00",
         technical=TechnicalContext(sma20=100.0, mechanical_direction="BULLISH"),
-        flow=FlowContext(verdict="BULLISH", net_foreign_14d=5000),
+        flow=FlowContext(verdict="BULLISH", net_foreign_owned_brokerage_lots_14d=5000),
     )
     assert c.technical.sma20 == 100.0
     assert c.technical.mechanical_direction == "BULLISH"
-    assert c.flow.net_foreign_14d == 5000
+    assert c.flow.net_foreign_owned_brokerage_lots_14d == 5000
 
 
 def test_signal_candidate_serializes_nested_context_to_json():

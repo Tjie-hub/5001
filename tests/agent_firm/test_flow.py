@@ -20,7 +20,7 @@ def _make_candidate(flow_ctx=None):
 def _make_flow_context(**overrides):
     base = dict(
         verdict="ACCUMULATING", smart_money="YES", composite_score=8,
-        foreign_score=2.5, net_foreign_14d=3000, trend_7d="accumulating",
+        foreign_score=2.5, net_foreign_owned_brokerage_lots_14d=3000, trend_7d="accumulating",
     )
     base.update(overrides)
     return FlowContext(**base)
@@ -40,7 +40,7 @@ async def test_flow_returns_ok_on_success():
     fake_client.generate.return_value = _response(json.dumps({
         "flow_verdict": "ACCUMULATING",
         "smart_money_signal": "BUY",
-        "net_foreign_14d": 3000,
+        "net_foreign_owned_brokerage_lots_14d": 3000,
         "reasoning": "Consistent net buying with smart money",
     }))
     result = await flow.run(_make_candidate(_make_flow_context()), fake_client)
@@ -58,7 +58,7 @@ async def test_flow_prompt_payload_carries_flow_context_not_raw_rows():
         captured["body"] = messages
         return _response(json.dumps({
             "flow_verdict": "ACCUMULATING", "smart_money_signal": "BUY",
-            "net_foreign_14d": 3000, "reasoning": "ok",
+            "net_foreign_owned_brokerage_lots_14d": 3000, "reasoning": "ok",
         }))
 
     fake_client = AsyncMock()
@@ -66,7 +66,7 @@ async def test_flow_prompt_payload_carries_flow_context_not_raw_rows():
     await flow.run(_make_candidate(_make_flow_context()), fake_client)
     payload = json.loads(captured["body"][1]["content"])
     assert payload["flow_context"]["verdict"] == "ACCUMULATING"
-    assert payload["flow_context"]["net_foreign_14d"] == 3000
+    assert payload["flow_context"]["net_foreign_owned_brokerage_lots_14d"] == 3000
     assert "stockbit_flow_14d" not in payload
     assert "broker_flow_14d" not in payload
 
@@ -79,7 +79,7 @@ async def test_flow_missing_context_degrades_to_default_not_raise():
         captured["body"] = messages
         return _response(json.dumps({
             "flow_verdict": "NEUTRAL", "smart_money_signal": "NEUTRAL",
-            "net_foreign_14d": 0, "reasoning": "insufficient flow data",
+            "net_foreign_owned_brokerage_lots_14d": 0, "reasoning": "insufficient flow data",
         }))
 
     fake_client = AsyncMock()

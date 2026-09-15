@@ -50,12 +50,19 @@ class TechnicalContext(BaseModel):
 class FlowContext(BaseModel):
     """Precomputed flow facts for one ticker. `verdict`/`smart_money`/`composite_score`/
     `foreign_score` are passthroughs of stockbit_flow's own columns (flow_filter.py already
-    computes them) — never re-derived (Audit findings F1, F2; ADR-AF-001)."""
+    computes them) — never re-derived (Audit findings F1, F2; ADR-AF-001).
+
+    `net_foreign_owned_brokerage_lots_14d` is SUM(lot) over broker_flow rows where
+    investor_type='Asing' — i.e. net lots transacted through foreign-owned brokerages. This
+    is brokerage ownership, NOT end-investor identity: it is not evidence of foreign investor
+    accumulation/distribution, institutional activity, or any other beneficial-owner class
+    (docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md, finding D1).
+    Named `net_foreign_14d` before the D1/D2 remediation."""
     verdict: Optional[str] = None
     smart_money: Optional[str] = None
     composite_score: Optional[int] = None
     foreign_score: Optional[float] = None
-    net_foreign_14d: Optional[int] = None
+    net_foreign_owned_brokerage_lots_14d: Optional[int] = None
     trend_7d: Literal["accumulating", "distributing", "flat"] = "flat"
     flow_bars_recent: list[dict[str, Any]] = Field(default_factory=list)
 

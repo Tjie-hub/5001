@@ -1,8 +1,12 @@
 """Tests for D1 — /api/dashboard/risk aggregation.
 
 Tests the pure engine.dashboard.get_risk_dashboard() function.
-Foreign net flow, IHSG technicals, breadth, VPIN, and accdist
-are all aggregated into a single dict.
+Foreign-owned-brokerage net flow (investor_type='Asing' — brokerage ownership, not
+end-investor identity; D1), IHSG technicals, breadth, VPIN, and accdist are all aggregated
+into a single dict. Fixture rows carry `value`, broker_flow's real signed IDR column (BUY
+positive, SELL negative) — the engine sums it directly (SUM(value)), never
+(BUY lot_value) - (SELL lot_value), the D2 anti-pattern. See
+docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md.
 """
 import sqlite3
 import tempfile
@@ -34,7 +38,7 @@ def _make_db(rows_ohlcv=None, rows_broker_flow=None, rows_daily_screen=None,
             investor_type TEXT,
             side TEXT,
             lot_volume INTEGER,
-            lot_value REAL
+            value REAL
         );
         CREATE TABLE daily_screen (
             ticker TEXT, trade_date TEXT,
@@ -53,7 +57,7 @@ def _make_db(rows_ohlcv=None, rows_broker_flow=None, rows_daily_screen=None,
         )
     if rows_broker_flow:
         conn.executemany(
-            "INSERT INTO broker_flow (trade_date,ticker,investor_type,side,lot_value) "
+            "INSERT INTO broker_flow (trade_date,ticker,investor_type,side,value) "
             "VALUES (?,?,?,?,?)", rows_broker_flow
         )
     if rows_daily_screen:
@@ -129,11 +133,12 @@ def test_risk_dashboard_empty_db_does_not_crash(tmp_path):
 
 def test_risk_dashboard_foreign_flow_outflow(tmp_path):
     broker_rows = [
-        # Today: Asing SELL 10B, BUY 2B → today net = -8B
-        (DATE, 'BBRI', 'Asing', 'SELL', 10_000_000_000),
+        # Today: Asing SELL 10B, BUY 2B → today net = -8B. `value` is signed
+        # (BUY positive, SELL negative), matching the real broker_flow column.
+        (DATE, 'BBRI', 'Asing', 'SELL', -10_000_000_000),
         (DATE, 'BBRI', 'Asing', 'BUY',   2_000_000_000),
         # 3 days ago: SELL 5B
-        ('2026-06-02', 'TLKM', 'Asing', 'SELL', 5_000_000_000),
+        ('2026-06-02', 'TLKM', 'Asing', 'SELL', -5_000_000_000),
     ]
     db = _make_db(rows_broker_flow=broker_rows)
     with patch('flow_filter._DB_PATH', db):
@@ -149,7 +154,7 @@ def test_risk_dashboard_foreign_flow_outflow(tmp_path):
 def test_risk_dashboard_foreign_flow_inflow(tmp_path):
     broker_rows = [
         (DATE, 'BBRI', 'Asing', 'BUY', 6_000_000_000),
-        (DATE, 'BBRI', 'Asing', 'SELL', 1_000_000_000),
+        (DATE, 'BBRI', 'Asing', 'SELL', -1_000_000_000),
     ]
     db = _make_db(rows_broker_flow=broker_rows)
     with patch('flow_filter._DB_PATH', db):
@@ -174,3 +179,24 @@ def test_risk_dashboard_ytd_computed(tmp_path):
     ytd = result['ihsg']['ytd_pct']
     assert ytd is not None
     assert abs(ytd - (-14.29)) < 0.5
+
+
+# ── D2 regression ─────────────────────────────────────────────────────────────
+
+def test_risk_dashboard_foreign_flow_is_sum_of_signed_value_not_buy_minus_sell_lot_value(tmp_path):
+    """D2: SUM(value) directly, never (BUY lot_value) - (SELL lot_value) — lot_value is
+    unsigned on both sides, a different (wrong) quantity from the true signed net. This
+    fixture includes a side/sign disagreement (a BUY row carrying a negative value) to prove
+    the implementation is a plain sum, not a side-filtered subtraction."""
+    broker_rows = [
+        (DATE, 'BBRI', 'Asing', 'BUY', -2_000_000_000),   # side/sign disagreement, as seen live
+        (DATE, 'BBRI', 'Asing', 'SELL', 500_000_000),      # side/sign disagreement, as seen live
+        (DATE, 'BBRI', 'Asing', 'BUY', 9_000_000_000),
+    ]
+    db = _make_db(rows_broker_flow=broker_rows)
+    with patch('flow_filter._DB_PATH', db):
+        from engine.dashboard import get_risk_dashboard
+        result = get_risk_dashboard(db, DATE)
+
+    correct_sum_value = -2_000_000_000 + 500_000_000 + 9_000_000_000  # == 7.5B
+    assert result['foreign_flow']['today'] == correct_sum_value == 7_500_000_000

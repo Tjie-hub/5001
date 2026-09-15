@@ -285,7 +285,11 @@ def get_flow_from_db(ticker, trade_date=None):
 
 
 def get_foreign_accumulation(ticker, days=5, db_path=None):
-    """Net foreign (Asing) flow score over last N trading dates.
+    """Net foreign-owned-brokerage (investor_type='Asing') flow score over last N trading
+    dates. This is brokerage ownership, not end-investor identity — 'Asing' does not mean
+    "foreign investor" (D1: see
+    docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md). Arithmetic is
+    SUM(lot) — already D2-clean, no BUY/SELL subtraction.
 
     Returns dict or None if fewer than `days` dates exist for this ticker.
     Keys: ticker, foreign_net_lots, avg_daily_vol_lots, score_pct, dates_used, latest_date
@@ -340,7 +344,9 @@ def get_foreign_accumulation(ticker, days=5, db_path=None):
 
 
 def get_top_foreign_accumulation(tickers=None, days=5, top_n=10, db_path=None):
-    """Return top N tickers ranked by foreign accumulation score_pct.
+    """Return top N tickers ranked by foreign-owned-brokerage accumulation score_pct
+    (investor_type='Asing' — brokerage ownership, not end-investor identity; see D1 in
+    docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md).
 
     If tickers is None, queries all tickers that have Asing data.
     Returns list of dicts (same shape as get_foreign_accumulation), sorted desc by score_pct.

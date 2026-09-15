@@ -47,7 +47,7 @@ def _seed_full_db(path, tickers):
     conn.execute("""CREATE TABLE stockbit_flow (ticker TEXT, trade_date TEXT, verdict TEXT,
         smart_money TEXT, composite_score INT, foreign_score REAL)""")
     conn.execute("""CREATE TABLE broker_flow (ticker TEXT, trade_date TEXT, broker_code TEXT,
-        side TEXT, lot_value REAL, investor_type TEXT)""")
+        side TEXT, lot INT, lot_value REAL, investor_type TEXT)""")
     conn.execute("""CREATE TABLE stockbit_flow_bars (ticker TEXT, trade_date TEXT,
         bar_time TEXT, buy_lot INT, sell_lot INT, delta REAL, net_value REAL)""")
     conn.execute("""CREATE TABLE wf_scores (ticker TEXT, strategy TEXT, consistency_pct REAL,

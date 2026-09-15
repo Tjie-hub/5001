@@ -5,7 +5,9 @@ Called at 08:45 WIB by the scheduler. Covers:
   - Composite risk score + tier
   - VPIN avg + % above thresholds
   - Market breadth (adv/dec + % above MA20)
-  - Foreign flow 5-day net
+  - Foreign-owned brokerage flow 5-day net (investor_type='Asing'; brokerage ownership, not
+    end-investor identity — see D1 in
+    docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md)
   - IHSG technicals (death cross, support breaks)
 """
 
@@ -78,8 +80,9 @@ def build_market_health_report(
         f"<b>AccDist:</b> Dist {dist_pct:.1f}% / Acc {acc_pct:.1f}% [{ad_label}]"
     )
 
-    # Foreign flow
-    lines.append(f"<b>Foreign 5d:</b> {_fmt_idr(foreign_net_5d)} IDR")
+    # Foreign-owned brokerage flow (investor_type='Asing' — brokerage ownership, not
+    # end-investor identity)
+    lines.append(f"<b>Foreign-Owned Brokerage 5d:</b> {_fmt_idr(foreign_net_5d)} IDR")
 
     # IHSG technicals
     close = tech.get('close')

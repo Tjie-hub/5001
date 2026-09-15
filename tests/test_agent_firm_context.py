@@ -79,7 +79,7 @@ class TestFlowContext:
         conn.execute("CREATE TABLE stockbit_flow (ticker TEXT, trade_date TEXT, "
                      "verdict TEXT, smart_money TEXT, composite_score INT, foreign_score REAL)")
         conn.execute("CREATE TABLE broker_flow (ticker TEXT, trade_date TEXT, "
-                     "broker_code TEXT, side TEXT, lot_value REAL, investor_type TEXT)")
+                     "broker_code TEXT, side TEXT, lot INT, lot_value REAL, investor_type TEXT)")
         conn.execute("CREATE TABLE stockbit_flow_bars (ticker TEXT, trade_date TEXT, "
                      "bar_time TEXT, buy_lot INT, sell_lot INT, delta REAL, net_value REAL)")
         return conn
@@ -97,20 +97,35 @@ class TestFlowContext:
         assert ctx.composite_score == 7
         assert ctx.foreign_score == 2.1
 
-    def test_net_foreign_14d_is_buy_minus_sell(self):
+    def test_net_foreign_owned_brokerage_lots_uses_signed_sum_not_buy_minus_sell_lot_value(self):
+        """D2 regression (docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md):
+        broker_flow.lot is already signed (BUY positive, SELL negative) and side/sign can
+        disagree (a vendor rounding artifact) — the correct net is SUM(lot), never
+        SUM(lot_value WHERE side=BUY) - SUM(lot_value WHERE side=SELL). lot_value is unsigned
+        on both sides, so that anti-pattern computes a different, wrong quantity. This fixture
+        deliberately includes a BUY row with lot<0 and a SELL row with lot>0 (the documented
+        side/sign disagreement) to prove the implementation ignores `side` and `lot_value`
+        entirely for this figure."""
         conn = self._db()
-        conn.execute("INSERT INTO broker_flow VALUES ('BBRI', date('now'), 'BK', 'BUY', "
-                     "1000, 'Asing')")
-        conn.execute("INSERT INTO broker_flow VALUES ('BBRI', date('now'), 'BK', 'SELL', "
-                     "300, 'Asing')")
+        # side/sign intentionally disagree on rows 1 and 2 — proves SUM(lot) is used, not a
+        # side-filtered/side-signed construction.
+        conn.execute("INSERT INTO broker_flow VALUES ('BBRI', date('now'), 'BK1', 'BUY', "
+                     "-500, 50000, 'Asing')")
+        conn.execute("INSERT INTO broker_flow VALUES ('BBRI', date('now'), 'BK2', 'SELL', "
+                     "200, 80000, 'Asing')")
+        conn.execute("INSERT INTO broker_flow VALUES ('BBRI', date('now'), 'BK3', 'BUY', "
+                     "1000, 120000, 'Asing')")
         ctx = afc.build_flow_context(conn, "BBRI")
-        assert ctx.net_foreign_14d == 700
+        correct_sum_lot = -500 + 200 + 1000  # == 700
+        buggy_lot_value_buy_minus_sell = (50000 + 120000) - 80000  # == 90000, the D2 anti-pattern
+        assert ctx.net_foreign_owned_brokerage_lots_14d == correct_sum_lot == 700
+        assert ctx.net_foreign_owned_brokerage_lots_14d != buggy_lot_value_buy_minus_sell
 
     def test_no_flow_data_returns_defaults_not_an_error(self):
         conn = self._db()
         ctx = afc.build_flow_context(conn, "NODATA")
         assert ctx.verdict is None
-        assert ctx.net_foreign_14d == 0
+        assert ctx.net_foreign_owned_brokerage_lots_14d == 0
         assert ctx.trend_7d == "flat"
 
 
@@ -328,7 +343,7 @@ class TestBuildCandidateContext:
         conn.execute("CREATE TABLE stockbit_flow (ticker TEXT, trade_date TEXT, "
                      "verdict TEXT, smart_money TEXT, composite_score INT, foreign_score REAL)")
         conn.execute("CREATE TABLE broker_flow (ticker TEXT, trade_date TEXT, "
-                     "broker_code TEXT, side TEXT, lot_value REAL, investor_type TEXT)")
+                     "broker_code TEXT, side TEXT, lot INT, lot_value REAL, investor_type TEXT)")
         conn.execute("CREATE TABLE stockbit_flow_bars (ticker TEXT, trade_date TEXT, "
                      "bar_time TEXT, buy_lot INT, sell_lot INT, delta REAL, net_value REAL)")
         conn.execute("CREATE TABLE wf_scores (ticker TEXT, strategy TEXT, "
