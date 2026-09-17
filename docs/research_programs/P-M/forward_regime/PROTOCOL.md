@@ -266,6 +266,29 @@ record. Every entry carries `generated_utc` and a content fingerprint.
 
 ## 7. Governance status
 
+**Recorded attribute added 2026-09-17T07:38:52+00:00 — observability, NOT a spec change.** The ledger now records
+`ihsg_regime_at_entry` (BULL / BEAR / SIDEWAYS via the production
+`engine.regime_filter.detect_regime`). It **never filters, gates or sizes anything**: every signal
+the section 2 specification emits is recorded regardless of regime, and the section 3 endpoint is
+computed over all of them. Sections 2 and 3 are unchanged.
+
+Rationale, measured 2026-09-17. Regime is strongly informative *descriptively* — by IHSG regime at
+entry the backtest shows BULL **+6.74%**/trade, SIDEWAYS +1.51%, BEAR **-2.03%** (absolute, net) —
+but acting on it is not supportable and not attempted, for two reasons:
+
+1. **No sample.** Effective N for a regime claim is *episodes*, not sessions: **BULL 9**, BEAR 13,
+   SIDEWAYS 23 over five years. `regime_config.yaml` requires min_n = 100 per cell and the full
+   taxonomy is 12 cells; BULL has **98 sessions in total**. A BULL-specific rule would be fitted to
+   nine observations.
+2. **It is redundant, and gating actively hurts.** The stock-level filter already tapers exposure
+   without any market input — qualifying names per day run **66.0 (BULL) / 36.5 (SIDEWAYS) / 12.6
+   (BEAR)**, a ~5x automatic cut. Explicitly skipping BEAR entries *worsens* ex-2025 CAGR
+   (6.35% -> 5.31%) and max drawdown (-29.90% -> -34.98%), because it removes the counter-trend
+   leaders that carry the alpha. Entering only in BULL is catastrophic (CAGR 0.86%, ex-2025 -9.98%).
+
+The attribute exists so the 2029 decision can be informed by **forward** evidence on regime
+conditioning instead of a backtest fitted to nine episodes.
+
 - **Spec 002 supersedes 001**, which closed with **zero recorded trades**. HYP-PM-0010 and the
   Price-Trend {T1} family slot are **retained, not re-registered** — the mechanism, thresholds
   (.02/.30/.70), exit (3xATR14), horizon, benchmark and endpoint are unchanged; 002 adds a

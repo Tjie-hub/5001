@@ -30,6 +30,9 @@ scratch directory and are run with the repo venv from the repo root:
 | 21 | `filt.py` | six entry filters, split-sample — five rejected (see BOOK_OVERLAY_POLICY.md) |
 | 22 | `filtport.py` | portfolio-level test of the two surviving filters |
 | 23 | `audit2.py` | **execution audit**: next-open entry + equal-weight benchmark on the live spec |
+| 24 | `regime.py` | IHSG BULL/BEAR/SIDEWAYS history via production `detect_regime`; episode counts |
+| 25 | `regime_perf.py` | strategy performance by regime + regime-conditioning feasibility |
+| 26 | `bearskip.py` | absolute-return test of BEAR gating (rejected) |
 
 `SHA256SUMS.txt` fixes the content of each script as staged.
 

@@ -1,6 +1,14 @@
 """FWD-PM-REGIME-002 formation recorder.
 
 Appends closed trades to ledger.json. Read-only against the production DB.
+
+Records `ihsg_regime_at_entry` (BULL / BEAR / SIDEWAYS, from the production
+classifier `engine.regime_filter.detect_regime`) purely as an OBSERVABILITY
+attribute. It is never used to filter, gate or size anything: every signal the
+frozen section 2 specification emits is recorded regardless of regime, and the
+section 3 endpoint is computed over all of them. Its purpose is to let the 2029
+decision be informed by FORWARD evidence on regime conditioning rather than a
+backtest fitted to 9 BULL episodes.
 Run daily after the settled-bar write. Never back-fills: a trade whose entry
 predates `opened_utc` is refused, because replaying the backtest into this
 ledger would convert in-sample discovery into an apparent forward record.
@@ -13,6 +21,7 @@ import numpy as np, pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 from data.db import connect                      # the one sanctioned connection path
 from engine.exits.costs import COMMISSION_BUY, COMMISSION_SELL, SLIPPAGE
+from engine.regime_filter import detect_regime   # observability only — never gates anything
 
 HERE = Path(__file__).parent
 LEDGER = HERE / "ledger.json"
@@ -55,7 +64,27 @@ def features(df):
                  & (df.volume > 0) & (df.nz20 >= NZ_MIN)).fillna(False)
     return df
 
-def closed_trades(df, ihsg, opened):
+def ihsg_regimes(df, since):
+    """BULL/BEAR/SIDEWAYS per session from the production classifier.
+
+    Computed only for sessions at or after `since` (entries can only be as old
+    as the 60-session cap), each from history up to that bar — no look-ahead.
+    Fail-soft: any classifier error records None rather than dropping the trade,
+    because this attribute must never be able to block a formation.
+    """
+    ih = df[df.ticker == "IHSG"][["date", "open", "high", "low", "close", "volume"]]
+    ih = ih.sort_values("date").reset_index(drop=True)
+    out = {}
+    start = max(0, ih.index[ih.date >= since].min() - 1 if (ih.date >= since).any() else 0)
+    for i in range(int(start), len(ih)):
+        try:
+            out[ih.date.iloc[i]] = detect_regime(ih.iloc[max(0, i - 120):i + 1].copy())
+        except Exception:
+            out[ih.date.iloc[i]] = None
+    return out
+
+
+def closed_trades(df, ihsg, opened, regimes):
     out = []
     for tk, x in df.groupby("ticker", sort=False):
         up, lq = x.UP.values, x.liq.values
@@ -92,6 +121,7 @@ def closed_trades(df, ihsg, opened):
                 gross_return=round(float(gross), 6), net_return=round(float(net), 6),
                 ihsg_entry=float(ie), ihsg_exit=float(ix),
                 market_return=round(float(mkt), 6), excess=round(float(net - mkt), 6),
+                ihsg_regime_at_entry=regimes.get(pd.Timestamp(dt[i])),
                 generated_utc=datetime.now(timezone.utc).isoformat()))
     return out
 
@@ -102,10 +132,11 @@ def main():
     opened = pd.Timestamp(led["opened_utc"][:10])
     with connect(read_only=True) as conn:
         df = features(load_panel(conn))
+    regimes = ihsg_regimes(df, opened - pd.Timedelta(days=200))
     ih = df[df.ticker == "IHSG"].set_index("date")["close"].to_dict()
     df = df[df.ticker != "IHSG"]
     have = {(t["ticker"], t["entry_date"]) for t in led["trades"]}
-    new = [t for t in closed_trades(df, ih, opened) if (t["ticker"], t["entry_date"]) not in have]
+    new = [t for t in closed_trades(df, ih, opened, regimes) if (t["ticker"], t["entry_date"]) not in have]
     if not new:
         print("no new closed trades")
         return

@@ -19,13 +19,14 @@
     "market_return": "float",
     "excess": "float, net_return - market_return",
     "slot_count_at_entry": "int",
-    "generated_utc": "ISO8601"
+    "generated_utc": "ISO8601",
+    "ihsg_regime_at_entry": "BULL | BEAR | SIDEWAYS | null \u2014 engine.regime_filter.detect_regime on IHSG at the entry session. OBSERVABILITY ONLY: never filters, gates or sizes anything; every signal the frozen spec emits is recorded regardless of regime, and the section 3 endpoint is computed over all of them. Fail-soft: null on classifier error."
   },
   "trades": [],
   "hypothesis_id": "HYP-PM-0010",
-  "protocol_sha256": "54fc40dd5e41ca1314fb686fa299c6f942c59ddcf30bb8ce2c278f35acd67acd",
+  "protocol_sha256": "b16521a4009560c00e1c338c06a593c4e710b9b705f6beee9f02f9000f520aff",
   "first_eligible_entry": "2026-09-18",
   "supersedes": "FWD-PM-REGIME-001",
   "protocol_sha256_at_open": "6e7e1a7b632ef591f6ead576ac9495c8a9b2e38d9759eb3c1a7009d621c5b50d",
-  "_amendment_note": "limitations 9 and 10 appended 2026-09-17 after a post-opening execution audit; section 2 specification and section 3 decision rule UNCHANGED. protocol_sha256_at_open preserves the hash as frozen at opening."
+  "_amendment_note": "limitations 9 and 10 appended 2026-09-17 after a post-opening execution audit; section 2 specification and section 3 decision rule UNCHANGED. protocol_sha256_at_open preserves the hash as frozen at opening. | 2026-09-17T07:38:52+00:00: added ihsg_regime_at_entry as a recorded attribute (observability, not a spec change); section 2 specification and section 3 decision rule UNCHANGED."
 }
