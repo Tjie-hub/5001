@@ -1,0 +1,45 @@
+split ex-dates: 101 from corporate_actions, 299 after corporate_action_events
+
+================================================================================
+REVIEWER ROBUSTNESS CHECK v2 ON EXECUTOR C1
+================================================================================
+
+R-1a  REGIME BALANCE, at-band vs near-miss
+  regime     band    at-band  near-miss    shift
+  R1          .07      72.2%      85.1%   -13.0pp
+  R2          .15       2.2%       0.8%    +1.4pp
+  R3         tier       3.1%       0.8%    +2.3pp
+  R4          .15      22.6%      13.2%    +9.3pp
+
+  WITHIN-REGIME contrast:
+    R1   dates= 308  day-mean  -2.56%  NW(20) t= -1.69   events 1967 vs 1789
+    R2   dates=   7  (too few)   events 59 vs 17
+    R3   dates=   3  (too few)   events 85 vs 17
+    R4   dates=  72  day-mean  -7.57%  NW(20) t= -3.97   events 615 vs 278
+
+R-1b  PRICE-TIER BALANCE within R3 only (band<->tier bijective there)
+  tier            at-band  near-miss    shift
+  <=200             12.9%      11.8%    +1.2pp
+  200-5000          77.6%      76.5%    +1.2pp
+  >5000              9.4%      11.8%    -2.4pp
+
+R-2b  BANDWIDTH SENSITIVITY with event counts
+    cut       window  n_atband   n_near  dates  day-mean    NW t
+   0.95    0.85-0.95      2726     2101    390    -3.47%   -2.56
+   0.95    0.90-0.95      2726     1328    354    -1.82%   -1.22
+   0.97    0.85-0.97      1839     2988    395    -3.86%   -2.87
+   0.97    0.90-0.97      1839     2215    377    -2.84%   -1.99
+   0.99    0.85-0.99       775     4052    318    -1.04%   -0.73
+   0.99    0.90-0.99       775     3279    314    -0.55%   -0.37
+
+R-5  IS THE JUMP AT THE BAND, OR AT THE ANALYST'S 0.95 THRESHOLD?
+     mean excess by depth bin (all big falls), to locate any discontinuity
+  depth [0.50,0.70) n= 5985  mean excess  -0.45%   vs 0.70-0.85 baseline:  -1.21% t= -1.28
+  depth [0.70,0.80) n= 1565  mean excess  +0.11%   vs 0.70-0.85 baseline:  +0.10% t= +0.29
+  depth [0.80,0.85) n=  676  mean excess  +0.16%   vs 0.70-0.85 baseline:  +0.40% t= +0.55
+  depth [0.85,0.90) n=  773  mean excess  +0.06%   vs 0.70-0.85 baseline:  +0.16% t= +0.14
+  depth [0.90,0.95) n= 1328  mean excess  -2.24%   vs 0.70-0.85 baseline:  -3.28% t= -2.38
+  depth [0.95,0.97) n=  887  mean excess  -2.73%   vs 0.70-0.85 baseline:  -4.02% t= -2.18
+  depth [0.97,0.99) n= 1064  mean excess  -4.94%   vs 0.70-0.85 baseline:  -6.80% t= -4.83
+  depth [0.99,1.01) n=  695  mean excess  -3.92%   vs 0.70-0.85 baseline:  -4.11% t= -2.45
+  depth [1.01,9.00) n=   80  mean excess -12.39%   vs 0.70-0.85 baseline: -12.75% t= -2.31

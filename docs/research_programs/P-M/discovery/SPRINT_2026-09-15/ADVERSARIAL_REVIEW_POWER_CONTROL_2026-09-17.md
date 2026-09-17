@@ -216,3 +216,39 @@ two corporate-action tables in `load_corporate_actions` (§4). Neither is urgent
 
 *Scope of this review: one control artifact, one harness, one market, in-sample. It does not
 re-adjudicate any family verdict, and no registry, protocol or production artifact was changed.*
+
+---
+
+## 7. ADDENDUM 2026-09-18 — regime balance (the round-3 pending item, now measured)
+
+`REVIEW_REGIME_BALANCE_2026-09-17.py`, log `cache/review_regime_balance_run.log`.
+
+**The at-band and near-miss cohorts are NOT balanced on regime.** at-band shifts −13.0pp out of
+R1 and +9.3pp into R4 relative to near-miss. Price-tier balance within R3 is clean (+1.2/+1.2/
+−2.4pp), so the tier confound raised in §1 is dismissed.
+
+| regime | band | events (at-band vs near-miss) | day-mean | NW(20) t |
+|---|---|---|---|---|
+| R1 | 0.07 | 1,967 vs 1,789 | −2.56% | **−1.69** |
+| R4 | 0.15 | 615 vs 278 | −7.57% | **−3.97** |
+| R2, R3 | — | 59 vs 17, 85 vs 17 | — | too few dates |
+
+The pooled C1 (−2.56) is therefore **partly composition**: the at-band cohort over-weights R4,
+and R4 is where the effect is large. Treat the pooled figure as an upper bound and the
+within-regime cells as the estimates.
+
+**Why R1 is weak is predicted by the onset result (§6/REVIEW_ONSET), not evidence against it.**
+R1's onset is at depth 0.90 while the near-miss control window is 0.85–0.95 — in R1 the CONTROL
+CONTAINS TREATED EVENTS. R4's onset is at 0.95, leaving its control clean, and R4 is the cell
+that returns t = −3.97. One control window, two regime-specific thresholds, and the regime whose
+threshold falls inside the window is exactly the one that washes out.
+
+The bandwidth table's event counts show the same mechanism from the other side: raising the cut
+to 0.99 shrinks at-band 2,726 → 775 while the 0.85–cut control GROWS 2,101 → 4,052, absorbing the
+treated 0.95–0.99 events. That quantifies the dilution the executor identified.
+
+**Open (added to the round-3 list): rerun R1's C1 against a 0.70–0.85 control, below R1's own
+onset.** If strongly negative, the mechanism holds in both regimes with power and the C1 dilution
+is fully explained. If not, the effect is R4-only and far narrower than either session has
+claimed. Until then the §6 disposition (NOT YET; blocked on decontamination and redundancy) is
+unchanged — this adds a third blocker rather than moving the verdict.
