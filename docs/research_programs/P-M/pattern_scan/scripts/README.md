@@ -15,6 +15,7 @@ Run from the repo root with `SP=<scratch dir>` pointing at a directory holding `
 | `brpt_all.py` | every pattern re-run on BRPT alone — the single-ticker trap |
 | `why.py` | ticker-demeaned panel + per-ticker effect distribution |
 | `verify.py` | bar-level verification that detectors fire on genuine instances |
+| `audit1.py` | **self-audit**: next-open entry vs close entry, IHSG vs equal-weight benchmark |
 
 `SHA256SUMS.txt` fixes the content as staged.
 

@@ -23,7 +23,9 @@
   },
   "trades": [],
   "hypothesis_id": "HYP-PM-0010",
-  "protocol_sha256": "6e7e1a7b632ef591f6ead576ac9495c8a9b2e38d9759eb3c1a7009d621c5b50d",
+  "protocol_sha256": "54fc40dd5e41ca1314fb686fa299c6f942c59ddcf30bb8ce2c278f35acd67acd",
   "first_eligible_entry": "2026-09-18",
-  "supersedes": "FWD-PM-REGIME-001"
+  "supersedes": "FWD-PM-REGIME-001",
+  "protocol_sha256_at_open": "6e7e1a7b632ef591f6ead576ac9495c8a9b2e38d9759eb3c1a7009d621c5b50d",
+  "_amendment_note": "limitations 9 and 10 appended 2026-09-17 after a post-opening execution audit; section 2 specification and section 3 decision rule UNCHANGED. protocol_sha256_at_open preserves the hash as frozen at opening."
 }

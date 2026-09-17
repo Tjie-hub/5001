@@ -219,6 +219,50 @@ record. Every entry carries `generated_utc` and a content fingerprint.
 
    Recorded here so the tightening cannot be introduced later as a fresh idea. Adopting it requires
    a new spec id, a new protocol entry, and it inherits the 48-cell multiplicity count.
+9. **Return concentration is far more extreme than limitation 7 states.** *(appended 2026-09-17T07:28:36+00:00
+   after a post-opening execution audit; section 2 specification and section 3 decision rule are
+   UNCHANGED — this is disclosure, not a spec change.)*
+
+   Splitting the 7,194 backtest trades by exit reason:
+
+   | exit | N | share | mean days | net/trade | excess/trade |
+   |---|---|---|---|---|---|
+   | 3xATR trail | 6,957 | 96.7% | 18.5 | **+0.64%** | +0.74% (t 2.25) |
+   | 60-session cap | 237 | **3.3%** | 59.4 | **+45.93%** | +44.17% (t 12.85) |
+
+   - **The top 1% of trades (71) carry 85% of the total excess.**
+   - **66.5% of trades have negative excess.** Positive excess sums to +58,209pp against -42,590pp
+     negative, netting +15,620pp = +2.171%/trade.
+
+   The mechanism is therefore not "a trailing stop that works": it is 96.7% of trades cut near
+   break-even to fund 3.3% that run into the 60-session cap — and those cap-exits were **still
+   trending** when force-closed. Limitation 7's "median trade negative, 33% win rate" understates
+   this materially.
+
+   **Consequence for the >= 50 position floor:** at N_eff ~ 10 independent bets, missing even a
+   handful of those 71 trades destroys the result. The breadth floor is load-bearing for a far
+   sharper reason than diversification.
+
+10. **Execution audit — the frozen endpoint is conservative, not inflated.** *(appended 2026-09-17T07:28:36+00:00)*
+    The section 2 entry convention fills at the signal session's close. Because the regime state is
+    computed entirely from data through `t-1`, that signal is known before session `t` opens, so the
+    fill is executable and carries no look-ahead; bar-level verification confirms the exit likewise
+    uses only information available at its own close. Re-running under a stricter specification:
+
+    | specification | ex-2025 excess/trade | t |
+    |---|---|---|
+    | **A — close entry vs IHSG (the frozen section 3 reference)** | **+0.93%** | **2.83** |
+    | B — next-open entry vs IHSG | +0.85% | 2.60 |
+    | C — close entry vs equal-weight book | +1.33% | 4.13 |
+    | D — next-open entry vs equal-weight book | **+1.26%** | **3.90** |
+
+    Execution realism costs **0.08%/trade**. The frozen reference (A) sets a **harder** bar than the
+    most rigorous specification (D), so no reopening is warranted. Recorded because IHSG is a
+    large-cap index the average liquid stock beats by +0.35%/20d — a bias that flatters any long
+    signal, and which the section 3 endpoint carries.
+
+    Known approximation, carried: the exit is **close-triggered**; a real intraday stop would fire
+    earlier at a different price.
 
 ## 7. Governance status
 

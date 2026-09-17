@@ -135,3 +135,42 @@ statistic made visible.
 
 Nothing here is registered, promoted, or wired into production. `FWD-PM-REGIME-002` is untouched.
 The value of this scan is its negative results and the single-ticker finding in section 5.
+
+---
+
+## 7. Self-audit, appended 2026-09-17 — one arm was inflated by unrealistic entry
+
+The scan above entered at the **signal bar's close**. For patterns whose trigger *requires* that close
+(`close > hi20`, `close > lo20`), the close is not knowable until it is set, so it cannot be traded.
+The executable fill is the **next session's open**. Separately, IHSG is a large-cap index that the
+average liquid stock **beats**, so every long signal inherited a positive tilt.
+
+Both corrections applied together, against an **equal-weight liquid book** benchmark:
+
+| pattern | h | close entry vs IHSG | **NEXT-OPEN vs IHSG** | t | **NEXT-OPEN vs EW-book** | t |
+|---|---|---|---|---|---|---|
+| failed breakdown | 5 | -1.20 | **-1.21** | -9.53 | **-1.17** | **-12.24** |
+| failed breakdown | 20 | -1.51 | -1.52 | -5.86 | -1.53 | -7.98 |
+| **resistance breakout** | **5** | **+0.66** | **-0.11** | -0.85 | **-0.30** | **-2.67** |
+| resistance breakout | 20 | +2.10 | +1.31 | 4.68 | +0.81 | 3.41 |
+| failed breakout | 5 | -0.30 | -0.51 | -4.64 | -0.64 | -6.48 |
+| failed breakout | 20 | +0.36 | +0.15 | 0.64 | -0.17 | -0.85 |
+
+Benchmark bias, measured: unconditional liquid stock vs IHSG **+0.35%/20d (t 3.49)**; vs the
+equal-weight book **+0.10% (t 5.98)**.
+
+**Findings.**
+
+1. **The one positive short-horizon result in this scan was an artifact.** Resistance breakout at
+   5 days was **entirely the close-to-next-open gap** (+0.66% -> -0.11%), and turns **negative**
+   against a fair benchmark (-0.30%, t -2.67). Arm 4's 5-day figure in section 1 should be read as
+   refuted, not supportive. The 20-day figure survives but shrinks by roughly 60% (+2.10% -> +0.81%).
+2. **Every negative result is robust to both corrections**, and most become *more* negative under the
+   fair benchmark. The refutations in section 1 stand, and if anything were understated.
+3. **Targeting gap, owned:** the "sweep + order flow" arm (section 2) used **end-of-day** net flow.
+   The mechanism actually claimed — were buyers absorbing *at the sweep low*? — requires intraday
+   flow at that moment. The test run was a weaker proxy than the question deserved. This limitation
+   should have been stated when the arm was reported, not at audit.
+
+Scripts: `scripts/audit1.py`. Detector correctness was separately verified (section 4) and is
+unaffected.
