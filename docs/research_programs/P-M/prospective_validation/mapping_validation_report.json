@@ -1,0 +1,99 @@
+{
+ "classes": {
+  "EMPTY": 3,
+  "EVALUABLE": 30877
+ },
+ "comparison": {
+  "match_rate": 0.014329,
+  "matched": 440,
+  "mismatched": 30266,
+  "no_target": 171
+ },
+ "comparison_target": "stockbit_flow.net_value  [order-trade/trade-book/chart]",
+ "content_sha256": "1c0fe166c7d8de89f9e98f1646371ef9747f528b24d09881628892382f40f207",
+ "corpus": {
+  "rows": 30880,
+  "sessions": 386
+ },
+ "declared_formula": "sum_buy(bval) + sum_sell(sval)  [marketdetectors broker_summary]",
+ "evaluable_share": 0.999903,
+ "failures": [
+  "match rate 1.4329% < 99% among EVALUABLE cells with a target",
+  "ZERO-SUM INVARIANT: the declared formula evaluates to exactly 0 on 100.00% of EVALUABLE cells. broker_summary returns the complete broker population, whose signed values sum to zero by construction, so this signal is identically zero and can never fire. The endpoint is wrong, not the tolerance."
+ ],
+ "generated_utc": "2026-09-16T07:16:12+00:00",
+ "mismatch_examples": [
+  {
+   "computed": 0.0,
+   "session": "2025-01-02",
+   "target": -10932243000.0,
+   "ticker": "ACES"
+  },
+  {
+   "computed": 0.0,
+   "session": "2025-01-02",
+   "target": -5178585000.0,
+   "ticker": "ADMR"
+  },
+  {
+   "computed": 0.0,
+   "session": "2025-01-02",
+   "target": 21335250000.0,
+   "ticker": "ADRO"
+  },
+  {
+   "computed": 0.0,
+   "session": "2025-01-02",
+   "target": 2109969000.0,
+   "ticker": "AKRA"
+  },
+  {
+   "computed": 0.0,
+   "session": "2025-01-02",
+   "target": -13091667500.0,
+   "ticker": "AMMN"
+  },
+  {
+   "computed": 0.0,
+   "session": "2025-01-02",
+   "target": -785175000.0,
+   "ticker": "AMRT"
+  },
+  {
+   "computed": 0.0,
+   "session": "2025-01-02",
+   "target": 8315700500.0,
+   "ticker": "ANTM"
+  },
+  {
+   "computed": 0.0,
+   "session": "2025-01-02",
+   "target": -1588771000.0,
+   "ticker": "ARTO"
+  },
+  {
+   "computed": 0.0,
+   "session": "2025-01-02",
+   "target": 7649388000.0,
+   "ticker": "ASII"
+  },
+  {
+   "computed": 0.0,
+   "session": "2025-01-02",
+   "target": 159781000.0,
+   "ticker": "AUTO"
+  }
+ ],
+ "spec": "G-7 signal-mapping validation",
+ "store": "docs/research_programs/P-M/dataset_b/store/DATASET_B_BROKER_FLOW_STORE_v1.sqlite",
+ "thresholds": {
+  "evaluable_share_min": 0.5,
+  "match_rate_min": 0.99,
+  "tolerance": 0.005
+ },
+ "verdict": "FAIL",
+ "zero_sum": {
+  "evaluable_cells_equal_zero": 30877,
+  "share_of_evaluable": 1.0
+ }
+}

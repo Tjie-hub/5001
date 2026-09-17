@@ -1,0 +1,31 @@
+{
+  "artifact": "P-M PROSPECTIVE ACTIVATION MANIFEST — TEMPLATE (fill at activation; not valid while any field is null)",
+  "protocol": {
+    "file": "PROSPECTIVE_PROTOCOL_V1.1_DRAFT_2026-09-16.md",
+    "frozen_name": "PROSPECTIVE_PROTOCOL_V1.1_FROZEN.md",
+    "sha256": null,
+    "approved_by_owner_utc": null,
+    "open_items_resolved": false
+  },
+  "power_option": {"chosen": null, "sigma_if_A": null, "delta_star": null, "alpha": null},
+  "estimand_decision_O12": {"proceed_with_day_weighted_primary": null, "decided_by": null, "decided_at_utc": null},
+  "universe": {"file": "universe_frozen.csv", "sha256": null, "T0_utc": null, "T0_wib": null, "n_tickers": null},
+  "capture": {
+    "service": "flow_capture_prospective/prospective_capture.py",
+    "code_sha256_at_freeze": null,
+    "activation_activated_utc": null,
+    "cadence": "EOD >= 18:30 WIB (operational target)",
+    "admissibility": "terminal SUCCESS/EMPTY, date_echo_match=1, truncation_suspected=0, captured_at_utc in [session day 16:10 WIB, T+5 WIB day]"
+  },
+  "mapping_validation": {
+    "report": "mapping_validation_report.json",
+    "sha256": null,
+    "exact_match_rate": null,
+    "evaluable_share": null,
+    "passed": null
+  },
+  "analysis": {"script": "analysis_primary_frozen.py", "sha256_at_freeze": null, "executed": false},
+  "independent_check": {"checker": null, "signoff_file": "independent_check_signoff.md", "sha256": null, "signed_at_utc": null},
+  "cohort_rule": "cohort A = captured_at_utc <= protocol_freeze_utc; cohort B = terminal capture with captured_at_utc > protocol_freeze_utc; primary uses B only",
+  "gate": {"report": "ACTIVATION_GATE.log", "all_mandatory_pass_at_activation": null}
+}
