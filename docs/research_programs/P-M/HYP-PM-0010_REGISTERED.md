@@ -54,3 +54,31 @@ Survivorship (corpus holds only names still listed as of 2026-09; bias optimisti
 2025 dominance; optimistic close-to-close fill assumptions; effective breadth ~10 from ~131 nominal
 positions; sector neutrality untested and unenforceable (no ticker→sector map for 77% of the
 universe); long-only, beta ~0.95; lottery-shaped distribution (median trade negative, 33% win rate).
+
+---
+
+## Supersession — spec 001 → 002 (2026-09-17T06:53:39+00:00)
+
+FWD-PM-REGIME-001 was closed with **zero recorded trades** and superseded by **FWD-PM-REGIME-002**
+(`P-M/forward_regime/PROTOCOL.md`, sha256 `6e7e1a7b632ef591f6ead576ac9495c8a9b2e38d9759eb3c1a7009d621c5b50d`).
+
+**Reason.** 001's universe filter admitted zero-volume carry-forward bars. On IDX a suspended or
+untraded name still prints a session, with OHLC repeated and volume 0; 001's audit checked only
+calendar gaps, found none, and wrongly concluded suspension contamination was absent. Because the
+Kaufman efficiency ratio's denominator stops growing when price is frozen, such a bar scores as a
+maximally clean trend. Zero-volume bars are 0.951% of liquid ticker-days but **4.778%** of
+regime-UP liquid ticker-days. Discovered via LIFE — 8 consecutive zero-volume sessions at 12725
+scoring ER 0.95, excluded by 001 only because its ADV20 peaked at Rp 976m against the Rp 1e9 floor.
+
+**Change.** 002 adds a traded-days guard: `volume > 0` on the entry bar and >= 18 of the trailing
+20 sessions traded. Mechanism, thresholds (.02/.30/.70), exit (3xATR14), horizon, benchmark and
+endpoint are **unchanged**.
+
+**Effect.** Removing the artifact **lowers** the measured effect, as expected: ex-2025
++1.106% -> **+0.928%**/trade (t 3.35 -> 2.83). The decision point therefore moves from 24 to
+**36 months**; 24 becomes a second interim read.
+
+**Hypothesis identity.** HYP-PM-0010 and its Price-Trend {T1} family slot are **retained, not
+re-registered**. No forward observation existed when 002 was written, so the re-spec cannot be
+outcome-driven, and the mechanism is unchanged. **Flagged for owner override:** the conservative
+reading would make 002 HYP-PM-0011 and advance the family to 2 members.

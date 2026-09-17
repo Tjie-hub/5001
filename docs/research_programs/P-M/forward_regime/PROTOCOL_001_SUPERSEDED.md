@@ -1,31 +1,21 @@
-# FWD-PM-REGIME-002 — forward test of the trend-regime entry + 3xATR exit rule
+# FWD-PM-REGIME-001 — forward test of the trend-regime entry + 3xATR exit rule
 
-**Status:** **OPEN** · **Hypothesis:** HYP-PM-0010 (retained) · **Family:** P-M · Price-Trend {T1} (member 1)
-**Supersedes:** FWD-PM-REGIME-001 (opened and closed 2026-09-17, **zero recorded trades**)
-**Opened:** 2026-09-17T06:53:11+00:00 · **First eligible entry:** 2026-09-18
-**Spec frozen.** Section 2 and the section 3 decision rule are closed. Any change requires a new,
-dated, superseding protocol entry and a new spec id.
+**Status:** **SUPERSEDED by FWD-PM-REGIME-002 on 2026-09-17T06:53:11+00:00** — closed with **zero recorded trades**.
+> Superseded because the universe filter admitted zero-volume carry-forward bars (IDX suspensions
+> appear as repeated OHLC on consecutive dates, not as calendar gaps). Limitation 1 below states
+> "trading gaps > 30 days: zero, so suspension contamination is absent" — **that statement is wrong**
+> and is corrected in 002. Discovered via LIFE (8 consecutive zero-volume sessions at 12725 scoring
+> efficiency ratio 0.95). No forward evidence was observed before superseding; the ledger was empty.
+> Body below is preserved unedited.
 
-## 0. Why 002 exists
-
-001's universe filter admitted **zero-volume carry-forward bars**. On IDX a suspended or untraded
-name is not a calendar gap — the session still appears, with OHLC repeated from the prior close and
-volume 0. 001's survivorship audit checked only date gaps, found none, and recorded "suspension
-contamination is absent". That conclusion was **wrong**.
-
-The failure is not cosmetic. The Kaufman efficiency ratio divides net move by the sum of absolute
-daily moves, so a frozen price **stops growing the denominator** and drives ER toward 1.0. A
-non-trading stock therefore scores as a maximally clean trend. Measured: zero-volume bars are
-**0.951%** of liquid ticker-days but **4.778%** of regime-UP liquid ticker-days — a 5x
-over-representation. At entry level the onset rule absorbs most of it (1.04% of entries on a
-zero-volume bar, 1.93% within 5 sessions of one), but the contamination is real and directional.
-
-Found via **LIFE** (insurance): ran 5675 -> 12725 (+124% in 7 sessions) then printed **8 consecutive
-zero-volume sessions** at 12725, scoring ER 0.86 -> 0.95. 001's liquidity floor excluded it only by
-accident of size — peak ADV20 Rp 976m against the Rp 1e9 floor, **97.6% of the threshold**.
-
-Removing the contamination **lowers** the measured effect (ex-2025 +1.106% -> +0.928%/trade), which
-is the expected direction: the artifact was inflating it. Section 3 is re-powered accordingly.
+**Status (original):** OPEN · **Hypothesis:** HYP-PM-0010 · **Family:** P-M · Price-Trend {T1} (member 1)
+**Drafted:** 2026-09-17 · **Opened:** 2026-09-17T06:35:57+00:00 · **First eligible entry:** 2026-09-18
+**Spec frozen.** The specification in section 2 and the decision rule in section 3 are now closed.
+Any change requires a new, dated, superseding protocol entry and a new spec id.
+**Amended 2026-09-17** (pre-opening, therefore permitted): added section 2.1 (operator cost,
+sensitivity, breakeven), section 4.1 (three tested-and-rejected policy overlays) and
+limitation 8 (the unexploited tightening). No change to the section 2 frozen specification or
+the section 3 decision rule.
 
 ## 1. What is being tested
 
@@ -43,7 +33,6 @@ the TUGU/SMMT case that opened the session; that hypothesis was separately refut
 | | |
 |---|---|
 | universe | `adv20 >= Rp 1e9` (20-session mean of close x volume, shifted 1); `close >= Rp 50`; >= 25 prior sessions; `is_final = 1` bars only |
-| **traded-days guard (NEW in 002)** | entry bar must have **`volume > 0`**, and **at least 18 of the trailing 20 sessions** must have `volume > 0`. The regime state is computed over a 20-session window, so the guard must cover that window; allowing 2 stale sessions tolerates ordinary illiquidity without admitting a frozen quote. Chosen on data-hygiene grounds **before** looking at which variant performed best — across no-guard / vol>0 / >=18-of-20 / 20-of-20 the ex-2025 excess moved 0.78 / 0.85 / 0.83 / 0.80 (%), i.e. within noise, confirming the guard is hygiene and not a performance lever. |
 | regime state | evaluated on data through `t-1` only (no look-ahead) |
 | — slope | `ema20(t-1) / ema20(t-11) - 1 > +0.02` |
 | — efficiency | Kaufman ER(20) `= abs(close(t-1) - close(t-21)) / sum(abs(daily close changes), 20) >= 0.30` |
@@ -89,33 +78,27 @@ economics across the plausible range, ex-2025 basis, ~12.6 round trips per slot 
 
 ## 3. Pre-declared decision rule
 
-Backtest reference under the 002 universe, 2021-07-05 to 2026-09-16:
+Backtest reference, 2021-07-05 to 2026-09-16, 7,422 trades over 1,162 entry-date clusters:
 
-| basis | trades | entry-date clusters | mean excess / trade | clustered SE | t |
-|---|---|---|---|---|---|
-| full sample | 7,194 | 1,154 | +2.171% | 0.345% | 6.29 |
-| **ex-2025 (planning basis)** | **5,391** | **925** | **+0.928%** | **0.328%** | **2.83** |
-
-Calendar 2025 contributed +85.5% of a +147% total in the 001 study and inflates every full-sample
-statistic; ex-2025 is the planning basis. Under 001 these were +2.260% / +1.106% (t 3.35) — the
-reduction is the removed zero-volume artifact, not a change of mechanism.
-
-Power on the ex-2025 effect, one-sided alpha 0.05, 80% power, ~5.8 trades/day:
-
-| elapsed | entry-date clusters | SE | detectable effect |
+| basis | mean excess / trade | clustered SE | t |
 |---|---|---|---|
-| 12 months | ~250 | 0.631% | +1.569% / trade |
-| 24 months | ~500 | 0.446% | +1.110% / trade |
-| **36 months** | ~756 | 0.363% | +0.902% / trade |
+| full sample | +2.260% | 0.350% | 6.45 |
+| **ex-2025 (planning basis)** | **+1.106%** | **0.330%** | **3.35** |
 
-The planning effect of **+0.928%** is detectable only at ~34 months, so the decision point moves to
-**36 months** (001 placed it at 24 — that is now underpowered and 24 becomes a second interim).
+The ex-2025 figure is the planning basis because calendar 2025 contributed +85.5% of a +147% total
+and inflates every full-sample statistic in this study.
+
+Power on the ex-2025 effect, one-sided alpha 0.05, 80% power, ~5.9 trades/day:
+
+| elapsed | entry-date clusters | SE | detectable effect | status |
+|---|---|---|---|---|
+| 12 months | ~250 | 0.637% | +1.58% / trade | **underpowered** — interim read only, no decision |
+| **24 months** | **~514** | **0.444%** | **+1.10% / trade** | powered for the planning effect — **decision point** |
 
 - **At 12 months:** report only. No decision, no spec change, no stopping.
-- **At 24 months:** report only. Explicitly **not** a decision point in 002.
-- **At 36 months (~756 trading days):**
-  - **PASS** — mean excess `>= +0.46%` / trade **and** one-sided clustered `t > 1.65`.
-  - **FAIL** — mean excess `<= 0`, **or** mean `< +0.30%` / trade.
+- **At 24 months (~514 trading days):**
+  - **PASS** — mean excess `>= +0.55%` / trade **and** one-sided clustered `t > 1.65`.
+  - **FAIL** — mean excess `<= 0`, **or** mean `< +0.30%` / trade (under a third of the planning estimate).
   - **INCONCLUSIVE** — anything else. Not a pass; the candidate stays parked.
 - Early stopping is permitted in one direction only: if after 12 months the mean is below
   `-0.50%` / trade, the rule is abandoned.
@@ -178,16 +161,11 @@ record. Every entry carries `generated_utc` and a content fingerprint.
 
 ## 6. Known limitations, carried
 
-1. **Survivorship — unquantified; and the 001 suspension claim was WRONG.** Across all 959 tickers
-   the maximum lag between a ticker's last bar and the panel end is 61 days; no series terminates
-   mid-sample. The corpus therefore holds only names still listed as of 2026-09, and any stock
-   delisted during 2021-2026 is absent. Bias **optimistic**, magnitude **not measured**.
-   **Correction to 001:** 001 recorded "trading gaps > 30 days: zero, so suspension contamination is
-   absent." Calendar gaps are indeed zero, but that is not the same claim — IDX suspensions appear as
-   **zero-volume carry-forward bars on consecutive dates**, which the audit script (`delist.py`) never
-   checked. Zero-volume bars are 0.951% of liquid ticker-days and 4.778% of regime-UP liquid
-   ticker-days. 002's traded-days guard addresses the signal contamination; it does **not** address
-   universe survivorship, which remains open and unmeasured.
+1. **Survivorship — unquantified, direction known.** Across all 959 tickers the maximum lag between
+   a ticker's last bar and the panel end is **61 days**; no ticker's series terminates mid-sample.
+   The corpus therefore contains only names still listed as of 2026-09, and any stock delisted
+   during 2021-2026 is absent entirely. Bias is **optimistic**; magnitude is **not measured**.
+   Trading gaps > 30 days: **zero**, so suspension contamination is absent.
 2. **2025 dominance.** Full-sample Sharpe 1.13 / CAGR 20.0%; ex-2025 Sharpe 0.51 / CAGR 7.4%.
    Excess over IHSG ex-2025: +9.48%/yr at Sharpe 0.68. Underwrite the second set.
 3. **Fill assumptions are optimistic.** Close-to-close fills, flat per-leg cost, no market impact,
@@ -222,14 +200,6 @@ record. Every entry carries `generated_utc` and a content fingerprint.
 
 ## 7. Governance status
 
-- **Spec 002 supersedes 001**, which closed with **zero recorded trades**. HYP-PM-0010 and the
-  Price-Trend {T1} family slot are **retained, not re-registered** — the mechanism, thresholds
-  (.02/.30/.70), exit (3xATR14), horizon, benchmark and endpoint are unchanged; 002 adds a
-  data-hygiene guard and re-powers the decision point. No forward observation existed when 002 was
-  written (the 001 ledger was empty), so the re-spec cannot be outcome-driven. Registering a second
-  hypothesis for one mechanism risked once would inflate the family count rather than protect it.
-  **This is a governance judgement and is flagged for owner override:** if the owner prefers the
-  conservative reading, 002 becomes HYP-PM-0011 and Price-Trend {T1} advances to 2 members.
 - **REGISTERED as HYP-PM-0010**, 2026-09-17T06:35:57+00:00, owner decision of 2026-09-17.
 - **Family: P-M · Price-Trend {T1}** — a NEW family opened at this registration (D-028, PG-3).
   Scope, declared here and binding: **directional trend features derived from OHLCV**

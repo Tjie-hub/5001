@@ -25,6 +25,8 @@ scratch directory and are run with the repo venv from the repo root:
 | 16 | `tune.py` `tune2.py` | 48-cell split-sample threshold tuning; IS->OOS rank corr 0.779 |
 | 17 | `policy.py` | ATR-multiple sweep + IHSG downtrend filter (both rejected) |
 | 18 | `side.py` | SIDEWAYS support/resistance mean reversion (rejected, t = -4.8 to -7.3) |
+| 19 | `zvguard.py` | zero-volume contamination + traded-days guard variants (002) |
+| 20 | `ref002.py` | re-derives the 002 reference effect and power under the guard |
 
 `SHA256SUMS.txt` fixes the content of each script as staged.
 
@@ -36,6 +38,10 @@ scratch directory and are run with the repo venv from the repo root:
 - contamination guards: split dates excluded; single-session moves beyond +/-35% excluded (305 bars)
 
 ## Known defects in these scripts
+
+- `delist.py` checks **calendar-date gaps only**. IDX suspensions print zero-volume
+  carry-forward bars on consecutive dates, which it never detects — this is the defect that
+  caused spec 001 to be superseded. Use `zvguard.py` for suspension/staleness auditing.
 
 - `port.py` contains a first-pass position cap that selects `names[:cap]` in insertion order
   (alphabetical, persistent). **That row is invalid.** `port2.py` supersedes it with seeded random

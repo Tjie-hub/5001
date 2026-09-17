@@ -105,3 +105,18 @@
   **untested and unenforceable** (no ticker→sector map exists for 77% of the universe;
   `engine/sector_rotation.py` maps 82 of 959 tickers and returns a permissive `"sector unknown"`
   for the rest).
+- **HYP-PM-0010 spec supersession, 2026-09-17T06:53:39+00:00** — FWD-PM-REGIME-001 closed with **zero recorded trades**
+  and was superseded by **FWD-PM-REGIME-002**. 001's universe filter admitted zero-volume
+  carry-forward bars (IDX suspensions print a repeated-OHLC session, not a calendar gap; 001's audit
+  checked only gaps and wrongly recorded "suspension contamination is absent"). A frozen price drives
+  the Kaufman efficiency ratio toward 1.0 because its denominator stops growing, so a non-trading
+  stock scores as a pristine trend — zero-volume bars are 0.951% of liquid ticker-days but **4.778%**
+  of regime-UP liquid ticker-days. Found via **LIFE** (8 consecutive zero-volume sessions at 12725,
+  ER 0.95; excluded by 001 only because ADV20 peaked at Rp 976m vs the Rp 1e9 floor). 002 adds a
+  traded-days guard (`volume > 0` at entry, >= 18 of trailing 20 sessions traded); mechanism and all
+  thresholds unchanged. Removing the artifact **lowers** the effect — ex-2025 +1.106% → **+0.928%**
+  /trade, t 3.35 → 2.83 — so the decision point moves **24 → 36 months** and 24 becomes a second
+  interim. **HYP-PM-0010 and its {T1} family slot are retained, not re-registered** (no forward
+  observation existed; mechanism unchanged), **flagged for owner override** — the conservative
+  reading would register HYP-PM-0011 and advance {T1} to 2 members.
+

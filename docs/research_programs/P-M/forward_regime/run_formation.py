@@ -1,4 +1,4 @@
-"""FWD-PM-REGIME-001 formation recorder.
+"""FWD-PM-REGIME-002 formation recorder.
 
 Appends closed trades to ledger.json. Read-only against the production DB.
 Run daily after the settled-bar write. Never back-fills: a trade whose entry
@@ -20,6 +20,7 @@ BUY = COMMISSION_BUY + SLIPPAGE                  # 0.25%
 SELL = COMMISSION_SELL + SLIPPAGE                # 0.35%
 SLOPE_MIN, ER_MIN, PA_MIN, ATR_MULT, CAP = 0.02, 0.30, 0.70, 3.0, 60
 ADV_MIN, PX_MIN, WARMUP = 1e9, 50.0, 25
+NZ_MIN = 18          # 002: >=18 of trailing 20 sessions must have traded (volume>0)
 
 def load_panel(conn):
     df = pd.read_sql(
@@ -42,11 +43,16 @@ def features(df):
     df["pa"] = g.apply(lambda x: (x.close > x.ema20).rolling(20, min_periods=20).mean(),
                        include_groups=False).reset_index(level=0, drop=True)
     df["n"] = g.cumcount()
+    # 002 traded-days guard: a suspended IDX name prints a zero-volume carry-forward bar,
+    # which drives Kaufman ER toward 1.0 because the denominator stops growing.
+    df["nz"] = (df.volume > 0).astype(int)
+    df["nz20"] = g["nz"].transform(lambda s: s.shift(1).rolling(20, min_periods=20).sum())
     gg = df.groupby("ticker", sort=False)
     # state is evaluated on data through t-1 only
     df["UP"] = ((gg["slope"].shift(1) > SLOPE_MIN) & (gg["er"].shift(1) >= ER_MIN)
                 & (gg["pa"].shift(1) >= PA_MIN)).fillna(False)
-    df["liq"] = ((df.adv20 >= ADV_MIN) & (df.close >= PX_MIN) & (df.n >= WARMUP)).fillna(False)
+    df["liq"] = ((df.adv20 >= ADV_MIN) & (df.close >= PX_MIN) & (df.n >= WARMUP)
+                 & (df.volume > 0) & (df.nz20 >= NZ_MIN)).fillna(False)
     return df
 
 def closed_trades(df, ihsg, opened):

@@ -1,9 +1,9 @@
 {
-  "spec_id": "FWD-PM-REGIME-002",
+  "spec_id": "FWD-PM-REGIME-001",
   "protocol": "PROTOCOL.md",
-  "opened_utc": "2026-09-17T06:53:30+00:00",
+  "opened_utc": "2026-09-17T06:35:57+00:00",
   "family": "P-M \u00b7 Price-Trend {T1}",
-  "_comment": "Append-only. One object per closed trade. Never back-filled: no trade with entry_date earlier than opened_utc may be inserted. Entries additionally require volume>0 on the entry bar and >=18 of the trailing 20 sessions traded.",
+  "_comment": "Append-only. One object per closed trade. Never back-filled: no trade with entry_date earlier than opened_utc may be inserted. Every append carries generated_utc and a content fingerprint.",
   "schema": {
     "ticker": "str",
     "entry_date": "YYYY-MM-DD (WIB)",
@@ -23,7 +23,9 @@
   },
   "trades": [],
   "hypothesis_id": "HYP-PM-0010",
-  "protocol_sha256": "6e7e1a7b632ef591f6ead576ac9495c8a9b2e38d9759eb3c1a7009d621c5b50d",
+  "protocol_sha256": "4d3d27dabbb93c2bc89519d3b9f2d2bd894a0e503660258a7765f2f7568b6255",
   "first_eligible_entry": "2026-09-18",
-  "supersedes": "FWD-PM-REGIME-001"
+  "status": "SUPERSEDED by FWD-PM-REGIME-002",
+  "closed_utc": "2026-09-17T06:53:30+00:00",
+  "closed_reason": "universe filter admitted zero-volume carry-forward bars; zero trades recorded"
 }
