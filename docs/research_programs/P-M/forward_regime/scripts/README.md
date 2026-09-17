@@ -27,6 +27,8 @@ scratch directory and are run with the repo venv from the repo root:
 | 18 | `side.py` | SIDEWAYS support/resistance mean reversion (rejected, t = -4.8 to -7.3) |
 | 19 | `zvguard.py` | zero-volume contamination + traded-days guard variants (002) |
 | 20 | `ref002.py` | re-derives the 002 reference effect and power under the guard |
+| 21 | `filt.py` | six entry filters, split-sample — five rejected (see BOOK_OVERLAY_POLICY.md) |
+| 22 | `filtport.py` | portfolio-level test of the two surviving filters |
 
 `SHA256SUMS.txt` fixes the content of each script as staged.
 

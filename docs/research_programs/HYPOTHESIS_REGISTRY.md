@@ -119,4 +119,13 @@
   interim. **HYP-PM-0010 and its {T1} family slot are retained, not re-registered** (no forward
   observation existed; mechanism unchanged), **flagged for owner override** — the conservative
   reading would register HYP-PM-0011 and advance {T1} to 2 members.
+- **Book-level overlay declared 2026-09-17** (`BOOK_OVERLAY_POLICY.md`) — volatility exclusion is
+  applied at **allocation**, outside every frozen spec. It is **not a hypothesis and consumes no
+  family slot**: its evidential home is FWD-PM-VOLEX-001. Owner chose this over widening
+  `Price-Trend {T1}` to cover volatility/dispersion features, which would have been irreversible
+  (families widen, never narrow). **FWD-PM-REGIME-002's endpoint remains computed on the unfiltered
+  signal set** — the overlay never touches the ledger, and combined book performance is not evidence
+  for either test. Five other entry filters (slope-Q5, slope-Q4+Q5, extension-Q5, and combinations)
+  were measured and rejected; none changed the win rate, which stayed 32-34% across all six — the
+  losses are the mechanism, not a removable subset.
 
