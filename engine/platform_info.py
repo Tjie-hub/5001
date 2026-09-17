@@ -49,3 +49,61 @@ def get_capabilities() -> dict:
     data = dict(config_info_mod.get_runtime_config())
     data["resource_groups"] = sorted(g["name"] for g in get_resource_catalog())
     return data
+
+
+def get_runtime_status() -> dict:
+    """Status-footer read model (Phase 9 B5 blocker U-2: "backend-owned").
+
+    Every field is derived from existing production state — nothing hardcoded:
+
+      * environment — utils.release's own source distinction
+        ("working-tree" -> dev, "release" -> release); never a fabricated
+        env name.
+      * snapshot    — the latest watchlist_snapshot row (date + strategy),
+        i.e. the most recent production snapshot actually written by the
+        premarket/EOD trade-plan jobs.
+      * freshness   — latest bar/flow dates the pipelines have stored.
+      * components  — engine.health.get_health()'s component states
+        (database, scheduler), the same source /api/v1/health serves.
+    """
+    import sqlite3
+    from data.db import connect as db_connect
+
+    import config
+    from engine.health import get_health
+
+    release = config_info_mod.get_config_summary()
+    source = (release.get("release_source") or "working-tree")
+    environment = "release" if source == "release" else "dev"
+
+    snapshot = None
+    freshness = {"ohlcv": None, "stockbit_flow": None}
+    conn = db_connect(config.DB_PATH, read_only=True)
+    try:
+        row = conn.execute(
+            "SELECT date, strategy FROM watchlist_snapshot "
+            "ORDER BY date DESC LIMIT 1"
+        ).fetchone()
+        if row:
+            snapshot = {"date": row[0], "strategy": row[1]}
+        row = conn.execute("SELECT MAX(date) FROM ohlcv").fetchone()
+        freshness["ohlcv"] = row[0] if row else None
+        row = conn.execute("SELECT MAX(trade_date) FROM stockbit_flow").fetchone()
+        freshness["stockbit_flow"] = row[0] if row else None
+    except sqlite3.Error:
+        pass
+    finally:
+        conn.close()
+
+    health = get_health(config.DB_PATH)
+
+    return {
+        "environment": environment,
+        "release_source": source,
+        "version": release.get("version"),
+        "timezone": "WIB (UTC+7)",
+        "snapshot": snapshot,
+        "freshness": freshness,
+        "components": health.get("components", {}),
+        "overall": health.get("overall"),
+    }

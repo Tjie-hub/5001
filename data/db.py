@@ -1,10 +1,22 @@
 import sqlite3
 import os
 from contextlib import contextmanager
+from pathlib import Path
 
 DB_PATH = os.getenv('DB_PATH', os.path.join(os.path.dirname(__file__), 'walkforward.db'))
 
-def connect(path=None, timeout=30):
+DEFAULT_BUSY_TIMEOUT_MS = 30_000
+# Long-running research writes contend with the nightly backfills and the live
+# app on an 8.5 GB WAL database. 30 s was not enough: the 2026-09-02 rule-parity
+# run computed for 229 minutes and then lost every result to
+# `database is locked` at its single final write (audit P-1). Batch writers pass
+# a longer timeout AND commit in bounded chunks -- the timeout alone is not the
+# fix, it just stops a transient writer from costing a whole run.
+LONG_WRITE_BUSY_TIMEOUT_MS = 300_000
+
+
+def connect(path=None, timeout=30, busy_timeout_ms=DEFAULT_BUSY_TIMEOUT_MS,
+            read_only=False):
     """The one SQLite entry point: timeout + busy_timeout + WAL.
 
     Drop-in replacement for ``sqlite3.connect(path)`` — no row_factory, same
@@ -12,10 +24,32 @@ def connect(path=None, timeout=30):
     connection to any of our DBs should come through here so lock-hardening
     lives in exactly one place (audit item 3.3; the 2026-06 lock bugs were all
     missing-pragma variants of the same defect).
+
+    ``read_only=True`` opens a ``mode=ro`` URI handle for readers that must
+    never write (dashboard/API queries). Added 2026-09-16 because three engine
+    modules (platform_info, trade_flow, ticker_detail) were hand-rolling that
+    URI with their own raw ``sqlite3.connect`` — the exact bypass this module
+    exists to prevent. Their connections were *behaviourally* fine (Python's
+    ``timeout=`` already maps to sqlite3_busy_timeout, so they did get 30 s);
+    the defect was structural: any future change here — a different
+    busy_timeout, a new pragma, pooling — would have silently skipped them,
+    which is how the 2026-06 lock bugs propagated in the first place.
+    The path is converted with ``Path.as_uri()`` rather than an f-string
+    because DB_PATH contains a space ("10 Projects") and may contain ``?`` or
+    ``#`` on other installs. WAL is skipped on a read-only handle (it cannot
+    set journal_mode); busy_timeout still applies.
     """
-    conn = sqlite3.connect(path or DB_PATH, timeout=timeout)
+    target = path or DB_PATH
+    if read_only:
+        uri = str(target)
+        if not uri.startswith("file:"):
+            uri = Path(uri).resolve().as_uri()
+        uri += ("&" if "?" in uri else "?") + "mode=ro"
+        conn = sqlite3.connect(uri, uri=True, timeout=timeout)
+    else:
+        conn = sqlite3.connect(target, timeout=timeout)
     try:
-        conn.execute("PRAGMA busy_timeout=30000")
+        conn.execute(f"PRAGMA busy_timeout={int(busy_timeout_ms)}")
         conn.execute("PRAGMA journal_mode=WAL")
     except sqlite3.OperationalError:
         pass  # :memory:/read-only paths may reject WAL — timeout still applies
