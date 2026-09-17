@@ -289,6 +289,27 @@ but acting on it is not supportable and not attempted, for two reasons:
 The attribute exists so the 2029 decision can be informed by **forward** evidence on regime
 conditioning instead of a backtest fitted to nine episodes.
 
+**Weekly regime added 2026-09-17T08:04:36+00:00 — same observability terms.** `ihsg_weekly_regime_at_entry` records
+`detect_regime` on W-FRI IHSG bars, from the last week **closed strictly before** the entry date (an
+entry mid-week cannot see the in-progress bar). Together the two fields give a 3x3
+weekly-by-daily alignment state per trade.
+
+Why recorded and not acted on: the weekly series has **239 usable bars and 13 episodes in five
+years — BULL only 3**. Conditioning on it would fit to three observations. Its value is as
+*context* (is the daily move with or against the larger trend), not as a selector. Measured
+divergences in 2026: weekly BULL while daily BEAR for 3 weeks in February (weekly lags at turns);
+weekly BEAR while daily BULL for the single week of 2026-04-24 — the 5-session daily-BULL episode
+that returned **-15.7%**; and weekly BEAR with daily SIDEWAYS for the 11 weeks to 2026-09-18, the
+current state. These are single instances, recorded so the alignment question can be answered
+forward rather than fitted.
+
+Timeframes deliberately NOT added: **4h** is structurally broken on IDX (the session is
+09:00-11:59 plus 13:30-16:14, split by a 90-minute break, giving ~1.5 bars/day); the IDX-native
+analogue is AM/PM session bars. **1h** is constructible from `stockbit_flow_bars` (which reconciles
+to daily OHLCV: 96% exact on highs and lows, 100% on closes) but spans only 2025-01 onward — one
+bull-to-bear cycle — so no intraday regime rule could be validated on it. Intraday belongs to
+execution timing, where its effect is already demonstrated, not to regime conditioning.
+
 - **Spec 002 supersedes 001**, which closed with **zero recorded trades**. HYP-PM-0010 and the
   Price-Trend {T1} family slot are **retained, not re-registered** — the mechanism, thresholds
   (.02/.30/.70), exit (3xATR14), horizon, benchmark and endpoint are unchanged; 002 adds a

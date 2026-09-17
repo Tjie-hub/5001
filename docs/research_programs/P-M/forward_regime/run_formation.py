@@ -2,9 +2,10 @@
 
 Appends closed trades to ledger.json. Read-only against the production DB.
 
-Records `ihsg_regime_at_entry` (BULL / BEAR / SIDEWAYS, from the production
-classifier `engine.regime_filter.detect_regime`) purely as an OBSERVABILITY
-attribute. It is never used to filter, gate or size anything: every signal the
+Records `ihsg_regime_at_entry` and `ihsg_weekly_regime_at_entry`
+(BULL / BEAR / SIDEWAYS, from the production classifier
+`engine.regime_filter.detect_regime` on daily and weekly IHSG bars) purely as
+OBSERVABILITY attributes. It is never used to filter, gate or size anything: every signal the
 frozen section 2 specification emits is recorded regardless of regime, and the
 section 3 endpoint is computed over all of them. Its purpose is to let the 2029
 decision be informed by FORWARD evidence on regime conditioning rather than a
@@ -84,7 +85,38 @@ def ihsg_regimes(df, since):
     return out
 
 
-def closed_trades(df, ihsg, opened, regimes):
+def weekly_regimes(df, since):
+    """BULL/BEAR/SIDEWAYS from WEEKLY IHSG bars, keyed by the week's close date.
+
+    No look-ahead, and this is the subtle part: an entry on a Wednesday can only
+    see the last CLOSED weekly bar, never the in-progress one. `weekly_at` below
+    therefore selects the latest week whose close date is strictly BEFORE the
+    entry date.
+    """
+    ih = df[df.ticker == "IHSG"].set_index("date").sort_index()
+    wk = ih.resample("W-FRI").agg(
+        open=("open", "first"), high=("high", "max"),
+        low=("low", "min"), close=("close", "last"),
+        volume=("volume", "sum")).dropna().reset_index()
+    wk = wk[wk.date >= since - pd.Timedelta(weeks=70)].reset_index(drop=True)
+    out = []
+    for i in range(len(wk)):
+        if i < 30:
+            out.append((wk.date.iloc[i], None)); continue
+        try:
+            out.append((wk.date.iloc[i], detect_regime(wk.iloc[max(0, i - 60):i + 1].copy())))
+        except Exception:
+            out.append((wk.date.iloc[i], None))
+    return out
+
+
+def weekly_at(weeks, entry_date):
+    """Regime of the last weekly bar CLOSED strictly before `entry_date`."""
+    prior = [r for (d0, r) in weeks if d0 < entry_date]
+    return prior[-1] if prior else None
+
+
+def closed_trades(df, ihsg, opened, regimes, weeks):
     out = []
     for tk, x in df.groupby("ticker", sort=False):
         up, lq = x.UP.values, x.liq.values
@@ -122,6 +154,7 @@ def closed_trades(df, ihsg, opened, regimes):
                 ihsg_entry=float(ie), ihsg_exit=float(ix),
                 market_return=round(float(mkt), 6), excess=round(float(net - mkt), 6),
                 ihsg_regime_at_entry=regimes.get(pd.Timestamp(dt[i])),
+                ihsg_weekly_regime_at_entry=weekly_at(weeks, pd.Timestamp(dt[i])),
                 generated_utc=datetime.now(timezone.utc).isoformat()))
     return out
 
@@ -133,10 +166,11 @@ def main():
     with connect(read_only=True) as conn:
         df = features(load_panel(conn))
     regimes = ihsg_regimes(df, opened - pd.Timedelta(days=200))
+    weeks = weekly_regimes(df, opened - pd.Timedelta(days=200))
     ih = df[df.ticker == "IHSG"].set_index("date")["close"].to_dict()
     df = df[df.ticker != "IHSG"]
     have = {(t["ticker"], t["entry_date"]) for t in led["trades"]}
-    new = [t for t in closed_trades(df, ih, opened, regimes) if (t["ticker"], t["entry_date"]) not in have]
+    new = [t for t in closed_trades(df, ih, opened, regimes, weeks) if (t["ticker"], t["entry_date"]) not in have]
     if not new:
         print("no new closed trades")
         return

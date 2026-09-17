@@ -33,6 +33,8 @@ scratch directory and are run with the repo venv from the repo root:
 | 24 | `regime.py` | IHSG BULL/BEAR/SIDEWAYS history via production `detect_regime`; episode counts |
 | 25 | `regime_perf.py` | strategy performance by regime + regime-conditioning feasibility |
 | 26 | `bearskip.py` | absolute-return test of BEAR gating (rejected) |
+| 27 | `bullrank.py` | per-strategy ranking inside BULL, vs the BULL baseline control |
+| 28 | `regmap.py` | full regime x strategy screening; UP-state vs onset reconciliation |
 
 `SHA256SUMS.txt` fixes the content of each script as staged.
 
