@@ -1,0 +1,244 @@
+[
+ {
+  "arm": "uniform",
+  "m": 2500,
+  "delta_bp": 0,
+  "detect": 0,
+  "kills": {
+   "G1": 20
+  },
+  "median_t": null,
+  "median_fm_dates": 0,
+  "median_ev_bp": 19.16661828144724,
+  "median_tickers": 485
+ },
+ {
+  "arm": "uniform",
+  "m": 10000,
+  "delta_bp": 0,
+  "detect": 0,
+  "kills": {
+   "G1": 20
+  },
+  "median_t": null,
+  "median_fm_dates": 0,
+  "median_ev_bp": 20.738880363071694,
+  "median_tickers": 542
+ },
+ {
+  "arm": "clustered",
+  "m": 2500,
+  "delta_bp": 0,
+  "detect": 0,
+  "kills": {
+   "G1": 12,
+   "G3": 6,
+   "G5": 1,
+   "G2": 1
+  },
+  "median_t": 1.7293054852415672,
+  "median_fm_dates": 9,
+  "median_ev_bp": 84.10440561115229,
+  "median_tickers": 500
+ },
+ {
+  "arm": "clustered",
+  "m": 10000,
+  "delta_bp": 0,
+  "detect": 0,
+  "kills": {
+   "G1": 16,
+   "G2": 1,
+   "G5": 3
+  },
+  "median_t": 2.6117447363074002,
+  "median_fm_dates": 32,
+  "median_ev_bp": 14.656033636254335,
+  "median_tickers": 545
+ },
+ {
+  "arm": "correlated",
+  "m": 2500,
+  "delta_bp": 0,
+  "detect": 0,
+  "kills": {
+   "G1": 20
+  },
+  "median_t": null,
+  "median_fm_dates": 0,
+  "median_ev_bp": 19.958412545477987,
+  "median_tickers": 438
+ },
+ {
+  "arm": "correlated",
+  "m": 10000,
+  "delta_bp": 0,
+  "detect": 0,
+  "kills": {
+   "G1": 20
+  },
+  "median_t": null,
+  "median_fm_dates": 0,
+  "median_ev_bp": 22.454728210753924,
+  "median_tickers": 506
+ },
+ {
+  "arm": "uniform",
+  "m": 2500,
+  "delta_bp": 80,
+  "detect": 14,
+  "kills": {
+   "G1": 6
+  },
+  "median_t": 4.485388157941763,
+  "median_fm_dates": 368,
+  "median_ev_bp": 99.1666182814473,
+  "median_tickers": 485
+ },
+ {
+  "arm": "uniform",
+  "m": 10000,
+  "delta_bp": 80,
+  "detect": 19,
+  "kills": {
+   "G1": 1
+  },
+  "median_t": 8.338283954720323,
+  "median_fm_dates": 370,
+  "median_ev_bp": 100.73888036307176,
+  "median_tickers": 542
+ },
+ {
+  "arm": "clustered",
+  "m": 2500,
+  "delta_bp": 80,
+  "detect": 5,
+  "kills": {
+   "G1": 6,
+   "G2": 4,
+   "G3": 5
+  },
+  "median_t": 1.9668982175484124,
+  "median_fm_dates": 9,
+  "median_ev_bp": 164.10440561115237,
+  "median_tickers": 500
+ },
+ {
+  "arm": "clustered",
+  "m": 10000,
+  "delta_bp": 80,
+  "detect": 5,
+  "kills": {
+   "G1": 9,
+   "G2": 1,
+   "G3": 5
+  },
+  "median_t": 2.0912471907987475,
+  "median_fm_dates": 33,
+  "median_ev_bp": 94.65603363625438,
+  "median_tickers": 545
+ },
+ {
+  "arm": "correlated",
+  "m": 2500,
+  "delta_bp": 80,
+  "detect": 14,
+  "kills": {
+   "G1": 4,
+   "G3": 2
+  },
+  "median_t": 3.6619307090542867,
+  "median_fm_dates": 368,
+  "median_ev_bp": 99.95841254547803,
+  "median_tickers": 438
+ },
+ {
+  "arm": "correlated",
+  "m": 10000,
+  "delta_bp": 80,
+  "detect": 17,
+  "kills": {
+   "G1": 3
+  },
+  "median_t": 6.750156843361391,
+  "median_fm_dates": 370,
+  "median_ev_bp": 102.45472821075397,
+  "median_tickers": 506
+ },
+ {
+  "arm": "clustered",
+  "m": 2500,
+  "delta_bp": 150,
+  "detect": 8,
+  "kills": {
+   "G2": 6,
+   "G3": 3,
+   "G1": 3
+  },
+  "median_t": 2.828977208510251,
+  "median_fm_dates": 9,
+  "median_ev_bp": 234.10440561115234,
+  "median_tickers": 500
+ },
+ {
+  "arm": "clustered",
+  "m": 10000,
+  "delta_bp": 150,
+  "detect": 16,
+  "kills": {
+   "G1": 4
+  },
+  "median_t": 3.025500473387563,
+  "median_fm_dates": 33,
+  "median_ev_bp": 164.65603363625436,
+  "median_tickers": 545
+ },
+ {
+  "arm": "correlated",
+  "m": 2500,
+  "delta_bp": 150,
+  "detect": 20,
+  "kills": {},
+  "median_t": 6.155689853594496,
+  "median_fm_dates": 368,
+  "median_ev_bp": 169.95841254547804,
+  "median_tickers": 438
+ },
+ {
+  "arm": "correlated",
+  "m": 10000,
+  "delta_bp": 150,
+  "detect": 20,
+  "kills": {},
+  "median_t": 12.559456952721407,
+  "median_fm_dates": 370,
+  "median_ev_bp": 172.454728210754,
+  "median_tickers": 506
+ },
+ {
+  "arm": "clustered",
+  "m": 2500,
+  "delta_bp": 300,
+  "detect": 15,
+  "kills": {
+   "G1": 1,
+   "G2": 2,
+   "G3": 2
+  },
+  "median_t": 3.9526544062672238,
+  "median_fm_dates": 9,
+  "median_ev_bp": 384.10440561115234,
+  "median_tickers": 500
+ },
+ {
+  "arm": "clustered",
+  "m": 10000,
+  "delta_bp": 300,
+  "detect": 20,
+  "kills": {},
+  "median_t": 5.361331944085514,
+  "median_fm_dates": 33,
+  "median_ev_bp": 314.65603363625445,
+  "median_tickers": 545
+ }
+]

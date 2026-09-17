@@ -1,0 +1,26 @@
+split ex-dates: 101 from corporate_actions, 299 after adding corporate_action_events (+198 the original implementation could not see)
+admissible ticker-days: 290,977
+
+==============================================================================
+HAC AUDIT — same data, same events, overlap-corrected inference
+==============================================================================
+
+A. POOLED ARB-CONTACT EXCESS — as reported vs day-collapsed vs NW
+  as reported (pooled-event iid)          n=  2726  excess   -4.18%  t=  -8.11
+  day-collapsed series                   n=  589  mean  -5.798%   t_iid=  -6.78   t_NW(20)=  -5.08   inflation x 1.33
+  -> effective n falls 2,726 -> 589 days before any HAC term
+
+B. C2 DAY-CLUSTERED BAND DUMMY — as reported vs NW(20)
+  BAND DUMMY (C2 coefficient series)     n=  497  mean  -2.874%   t_iid=  -2.56   t_NW(20)=  -1.98   inflation x 1.29
+  fall-size coefficient series           n=  497  mean +25.371%   t_iid=  +2.59   t_NW(20)=  +1.86   inflation x 1.39
+
+C. NON-OVERLAPPING SUBSAMPLE — every 21st admissible session only
+  offset  0: n=  117 sessions= 52  excess   -4.47%  t=  -1.64  (iid ok: non-overlapping)
+  offset  7: n=   97 sessions= 51  excess   -6.12%  t=  -2.49  (iid ok: non-overlapping)
+  offset 14: n=  182 sessions= 51  excess   -5.36%  t=  -2.89  (iid ok: non-overlapping)
+
+D. AUTOCORRELATION of the day-collapsed contact series (why the above)
+  lag:        1      2      5     10     15     20
+  rho:     0.24   0.08  -0.01  -0.01  -0.02   0.04
+
+[exited with code 0]

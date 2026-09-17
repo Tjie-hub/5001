@@ -1,0 +1,42 @@
+
+=== 4a  AT-BAND HEADLINE EXCLUDING depth>1.0 ===
+  at-band incl. deep tail                              dates= 390  day-mean  -3.47%  NW(20) t= -2.56
+  at-band EXCL depth>1.0 (0.95-1.00)                   dates= 387  day-mean  -3.01%  NW(20) t= -2.10
+  C1(b) at-band-excl vs shallower (<85%)               dates= 577  day-mean  -5.30%  NW(20) t= -4.55
+  C1(c) at-band-excl vs ALL other big falls            dates= 577  day-mean  -5.17%  NW(20) t= -4.46
+  incl n=2726 mean=-4.18% | excl-deep n=2599 mean=-4.01% | deep tail n=127 mean=-7.51%
+
+=== 4b  DEPTH >= 1.01 ROWS: identification and classification ===
+  count: 127
+  with a CA event within +/-10 days: 22
+  action_type histogram: {'rightissue': 12, 'rups': 8, 'tenderoffer': 1, 'dividend': 1}
+  unmatched |ret| histogram (top 8): [(0.15, 41), (0.1, 7), (0.097, 6), (0.096, 5), (0.098, 4), (0.085, 4), (0.084, 4), (0.094, 3)]
+  unmatched band histogram: {0.07: 59, 0.15: 45, 0.25: 1}
+  WITHOUT any CA event nearby: 105
+    BNBR   2026-05-18  ret=-0.362 band=0.15 depth=2.41
+    COCO   2026-07-27  ret=-0.220 band=0.15 depth=1.47
+    CASH   2022-01-18  ret=-0.100 band=0.07 depth=1.43
+    EURO   2023-02-10  ret=-0.100 band=0.07 depth=1.43
+    FLMC   2022-02-22  ret=-0.100 band=0.07 depth=1.43
+    FLMC   2022-03-08  ret=-0.100 band=0.07 depth=1.43
+    UVCR   2022-01-25  ret=-0.100 band=0.07 depth=1.43
+    UVCR   2022-02-21  ret=-0.100 band=0.07 depth=1.43
+    CHIP   2023-05-30  ret=-0.100 band=0.07 depth=1.42
+    EURO   2023-02-13  ret=-0.099 band=0.07 depth=1.42
+    FLMC   2022-02-10  ret=-0.099 band=0.07 depth=1.41
+    FLMC   2022-02-11  ret=-0.098 band=0.07 depth=1.40
+    SMKM   2023-05-31  ret=-0.098 band=0.07 depth=1.40
+    FLMC   2022-02-15  ret=-0.098 band=0.07 depth=1.40
+    IRSX   2026-03-05  ret=-0.209 band=0.15 depth=1.40
+
+=== 4c  REDUNDANCY vs LIVE FWD-PM-VOLEX-001 OVERLAY ===
+  depth>=0.90: distinct fall tickers=509, tickers ever inside overlay=508 (100%)
+    ticker-months: fall=2101, overlay-eligible months sum=15454, intersections=2041 (share=97.1%)
+    sample (mo, fall, overlay, inter): [('2021-10', 84, 273, 83), ('2021-11', 69, 289, 69), ('2021-12', 94, 305, 93), ('2022-01', 110, 297, 106), ('2022-02', 106, 295, 105), ('2022-03', 104, 298, 104), ('2022-06', 105, 290, 104), ('2022-07', 101, 286, 100)]
+    monthly overlap share of fall tickers: mean=94% median=100% over 49 months
+  depth>=0.95: distinct fall tickers=484, tickers ever inside overlay=483 (100%)
+    ticker-months: fall=1639, overlay-eligible months sum=15454, intersections=1596 (share=97.4%)
+    sample (mo, fall, overlay, inter): [('2021-10', 64, 273, 63), ('2021-11', 51, 289, 51), ('2021-12', 66, 305, 65), ('2022-01', 90, 297, 86), ('2022-02', 87, 295, 86), ('2022-03', 78, 298, 78), ('2022-06', 83, 290, 83), ('2022-07', 73, 286, 72)]
+    monthly overlap share of fall tickers: mean=97% median=100% over 47 months
+
+(executor round-3 complete)

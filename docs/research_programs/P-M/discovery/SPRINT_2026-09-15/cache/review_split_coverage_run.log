@@ -1,0 +1,7 @@
+corporate_actions splits=101  events splits=292  MISSING from corporate_actions=198
+
+SPRINT PANEL (in-sample): unadjusted split ex-dates with a price bar = 3; |move|>30% = 3; surviving the |ret|>0.9 guard = 2
+   RMKE   2026-07-17  raw ret   -82.1%
+   RAJA   2026-07-16  raw ret   -81.0%
+
+PSEUDO-OOS: unadjusted split ex-dates with a price bar = 0; |move|>30% = 0; surviving the |ret|>0.9 guard = 0

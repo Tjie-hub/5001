@@ -1,0 +1,43 @@
+split ex-dates: 101 from corporate_actions, 299 after corporate_action_events
+
+==============================================================================
+REVIEWER ROBUSTNESS CHECK ON EXECUTOR C1
+==============================================================================
+
+R-1  PRICE-TIER BALANCE (band width is price-tiered; depth normalises it away)
+  tier              at-band    near-miss      shift
+  <=200                0.4%         0.1%      +0.3pp
+  200-5000             2.4%         0.6%      +1.8pp
+  >5000               97.2%        99.3%      -2.1pp
+
+  WITHIN-TIER contrast (at-band vs near-miss, same tier only):
+    <=200        dates=   0  (too few)  events 11 vs 2
+    200-5000     dates=   2  (too few)  events 66 vs 13
+    >5000        dates= 387  day-mean  -3.28%  NW(20) t= -2.43   events 2649 vs 2086
+
+R-2  BANDWIDTH SENSITIVITY of the at-band vs near-miss contrast
+   at-band cut     near-miss window  dates   day-mean     NW t
+          0.95            0.70-0.95    465     -4.66%    -3.94
+          0.95            0.80-0.95    414     -4.33%    -3.39
+          0.95            0.85-0.95    390     -3.47%    -2.56
+          0.95            0.90-0.95    354     -1.82%    -1.22
+          0.97            0.70-0.97    441     -4.71%    -4.60
+          0.97            0.80-0.97    408     -4.63%    -3.37
+          0.97            0.85-0.97    395     -3.86%    -2.87
+          0.97            0.90-0.97    377     -2.84%    -1.99
+          0.99            0.70-0.99    341     -2.03%    -1.56
+          0.99            0.80-0.99    321     -1.87%    -1.37
+          0.99            0.85-0.99    318     -1.04%    -0.73
+          0.99            0.90-0.99    314     -0.55%    -0.37
+
+R-3  MIN_EACH SENSITIVITY (executor used min_each=1)
+  min_each=1: dates= 390  day-mean  -3.47%  NW(20) t= -2.56
+  min_each=2: dates= 296  day-mean  -2.37%  NW(20) t= -1.96
+  min_each=3: dates= 230  day-mean  -2.05%  NW(20) t= -1.87
+  min_each=5: dates= 129  day-mean  -1.16%  NW(20) t= -1.14
+
+R-4  THE POOLED-EVENT FORM the executor's '(ref)' line claims but does not compute
+  pooled-event two-sample (the handover's form): -2.78%  t=-3.76 (n 2726 vs 2101)
+  -> day-collapsed + NW(20) equivalent: t=-2.56  deflation x1.47
+
+[exited with code 0]

@@ -1,0 +1,12 @@
+split ex-dates: 101 from corporate_actions, 299 after corporate_action_events
+
+=== C1 DIFFERENCE-IN-MEANS, DAY-COLLAPSED + NW(20) ===
+  (a) at-band vs near-miss (85-95%)            dates= 390  day-mean  -3.47%  NW(20) t= -2.56   rho1=-0.05   event-w contrast  -2.78% (events 2726 vs 2101)
+  (b) at-band vs shallower big falls (<85%)    dates= 589  day-mean  -5.27%  NW(20) t= -4.77   rho1=+0.24   event-w contrast  -3.91% (events 2726 vs 52520)
+  (c) at-band vs ALL other big falls           dates= 589  day-mean  -5.15%  NW(20) t= -4.68   rho1=+0.23   event-w contrast  -3.87% (events 2726 vs 54621)
+  (d) near-miss vs shallow (monotonicity)      dates= 438  day-mean  -1.18%  NW(20) t= -1.01   rho1=+0.05   event-w contrast  -1.13% (events 2101 vs 52520)
+
+=== reference: pooled-event form (MEASURED, fixes executor defect 1) ===
+  (ref) at-band vs near-miss [pooled-event]    [POOLED-EVENT] events 2726/2101  contrast  -2.78%  t_iid= -3.76
+
+(split ex-dates unioned from both tables; suspension pad +/-20; liquidity floor Rp1e9; price floor 50; same construction as REVIEW_BAND_INDEP_SOURCE_2026-09-16.py)

@@ -1,0 +1,25 @@
+pool 111511 cells / 376 dates, base h5=+0.00213
+
+arm          m      delta   detect   first-gate kills            median fm_t  median #FM dates
+uniform       2500    +0bp   0/20   0%  {'G1': 20}                      nan        0
+uniform      10000    +0bp   0/20   0%  {'G1': 20}                      nan        0
+clustered     2500    +0bp   0/20   0%  {'G1': 12, 'G3': 6, 'G5': 1, 'G2': 1}     1.73        9
+clustered    10000    +0bp   0/20   0%  {'G1': 16, 'G2': 1, 'G5': 3}     2.61       32
+correlated    2500    +0bp   0/20   0%  {'G1': 20}                      nan        0
+correlated   10000    +0bp   0/20   0%  {'G1': 20}                      nan        0
+uniform       2500   +80bp  14/20  70%  {'G1': 6}                      4.49      368
+uniform      10000   +80bp  19/20  95%  {'G1': 1}                      8.34      370
+clustered     2500   +80bp   5/20  25%  {'G1': 6, 'G2': 4, 'G3': 5}     1.97        9
+clustered    10000   +80bp   5/20  25%  {'G1': 9, 'G2': 1, 'G3': 5}     2.09       33
+correlated    2500   +80bp  14/20  70%  {'G1': 4, 'G3': 2}             3.66      368
+correlated   10000   +80bp  17/20  85%  {'G1': 3}                      6.75      370
+clustered     2500  +150bp   8/20  40%  {'G2': 6, 'G3': 3, 'G1': 3}     2.83        9
+clustered    10000  +150bp  16/20  80%  {'G1': 4}                      3.03       33
+correlated    2500  +150bp  20/20 100%  {}                             6.16      368
+correlated   10000  +150bp  20/20 100%  {}                            12.56      370
+clustered     2500  +300bp  15/20  75%  {'G1': 1, 'G2': 2, 'G3': 2}     3.95        9
+clustered    10000  +300bp  20/20 100%  {}                             5.36       33
+
+wrote adv_power_check.json
+
+[exited with code 0]
