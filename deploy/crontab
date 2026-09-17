@@ -82,3 +82,13 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # were never fetched at all (2026-07-09, 2026-07-24).
 # Repair a stranded session with: scripts/repair_provisional_bars.py --apply
 0 9 * * * cd $D && $W provisional_bars_check venv/bin/python3 scripts/check_provisional_bars.py
+
+# FWD-PM-REGIME-001 forward test (HYP-PM-0010, family P-M Price-Trend {T1}),
+# opened 2026-09-17. Appends CLOSED trades to
+# docs/research_programs/P-M/forward_regime/ledger.json. Read-only against the
+# DB. Never back-fills: entries dated before opened_utc are refused, because
+# replaying the backtest would turn in-sample discovery into an apparent
+# forward record. Runs after the 16:15 EOD is_final=1 write and after the
+# 09:00 provisional-bars dead-man's-switch, so a stranded session is flagged
+# before it can be silently recorded as a formation.
+30 9 * * * cd $D && $W fwd_regime_formation venv/bin/python3 docs/research_programs/P-M/forward_regime/run_formation.py

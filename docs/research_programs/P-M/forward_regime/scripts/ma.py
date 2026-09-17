@@ -1,0 +1,21 @@
+import os,sys; sys.path.insert(0,os.environ['SP'])
+import pandas as pd, numpy as np, warnings, pickle; warnings.filterwarnings('ignore')
+SP=os.environ['SP']
+df=pd.read_pickle(f"{SP}/panel2.pkl").reset_index(drop=True)
+g=df.groupby('ticker',sort=False)
+df['ema20'] =g['close'].transform(lambda s:s.ewm(span=20,adjust=False,min_periods=20).mean())
+pv=(df.close*df.volume)
+df['vwma20']=(pv.groupby(df.ticker).transform(lambda s:s.rolling(20,min_periods=20).sum())
+             / g['volume'].transform(lambda s:s.rolling(20,min_periods=20).sum()))
+df['atr14']=g.apply(lambda x:(x.high-x.low).rolling(14,min_periods=14).mean(),include_groups=False).reset_index(level=0,drop=True)
+# trend quality
+df['slope']=(df.ema20/g['ema20'].shift(10)-1)
+df['absmv']=g['close'].transform(lambda s:s.diff().abs().rolling(20,min_periods=20).sum())
+df['ER']=(g['close'].transform(lambda s:(s-s.shift(20)).abs()))/df['absmv'].replace(0,np.nan)  # Kaufman efficiency
+above=(df.close>df.ema20).astype(float)
+df['pct_above']=g.apply(lambda x:(x.close>x.ema20).rolling(20,min_periods=20).mean(),include_groups=False).reset_index(level=0,drop=True)
+df['cross']=g.apply(lambda x:(np.sign(x.close-x.ema20).diff().abs()>0).rolling(20,min_periods=20).sum(),include_groups=False).reset_index(level=0,drop=True)
+df['vw_ema']=(df.vwma20/df.ema20-1)
+df.to_pickle(f"{SP}/ma.pkl")
+print("built. non-null ema20:",int(df.ema20.notna().sum()),"vwma20:",int(df.vwma20.notna().sum()))
+print(df[['ER','slope','pct_above','cross','vw_ema']].describe().loc[['mean','25%','50%','75%']].to_string())
