@@ -78,3 +78,20 @@ data/reports/
 
 # Session scratch working files
 scratchpad/
+
+# DSH audit 2026-08-29: archived historical documentation (kept on disk, not tracked)
+docs/archive/
+
+# DSH audit 2026-08-29: root disposable artifacts
+TOWR.md
+TOWR_chart.png
+WhatsApp_TOWR.jpeg
+
+# DSH audit 2026-08-29: speculative PLAN notes
+PLAN/crypto-*.md
+PLAN/wildcat-*.md
+
+# Mimosa session telemetry (hook state, run history, per-session reports).
+# Machine-local tooling output, not research artefacts; 11 of these were committed
+# by a directory-level `git add` on 2026-09-17 and excised before push.
+.mimosa/

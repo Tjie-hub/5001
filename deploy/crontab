@@ -32,6 +32,14 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 
 # Research (M3: off the production scheduler)
 5 16 * * 5   cd $D && $W research_wf_refresh venv/bin/python3 -m research.cli wf-refresh
+# Rule-parity walk-forward (audit 2026-09-02, finding L-1): the SAME study with the
+# weekly-MTF gate production actually applies, written to wf_edge_rule keyed by
+# rule_id. engine/admission.py will not admit a gated strategy on any other
+# evidence, and refuses evidence older than WF_EDGE_MAX_AGE_DAYS (14), so this must
+# run at least as often as that window. Saturday 06:00 — after Friday's wf-refresh
+# has finished (that job runs ~2.5h from 16:05) and clear of every weekday job;
+# the run itself takes several hours over the full 959-ticker corpus.
+0 6 * * 6    cd $D && $W research_wf_parity venv/bin/python3 -m research.cli wf-parity
 15 8 * * 1-5 cd $D && $W research_backtest_cache venv/bin/python3 -m research.cli backtest-cache
 # Monthly window roller — FIRST SUNDAY only (audit R-9). Vanilla cron ORs dom+dow,
 # so the old "0 10 1-7 * 0" fired every day 1-7 AND every Sunday (~11x/month).
@@ -40,6 +48,14 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # first Sunday. Roller only appends windows, so the old over-firing was wasteful
 # not harmful; this makes cadence match the documented monthly intent.
 0 10 1-7 * * [ "$(date +\%u)" = "7" ] && cd $D && $W research_roller venv/bin/python3 -m research.cli roller
+
+# Forward test FWD-PM-VOLEX-001 (opened 2026-09-16) -- volatility-exclusion rule.
+# Weekly, not monthly, on purpose: the script's own calendar-month guard allows at
+# most ONE formation per month, while the scorer needs to run often so matured
+# formations (entry +21 sessions) are scored promptly rather than up to a month late.
+# Research-side only: reads ohlcv read-only, writes just its own append-only ledger.
+# Protocol + frozen spec: docs/research_programs/P-M/forward_exclusion/PROTOCOL.md
+30 7 * * 1   cd $D && $W research_fwd_volex venv/bin/python3 docs/research_programs/P-M/forward_exclusion/run_forward.py
 
 # Nightly DB backup (walkforward.db + research.db) and the weekly restore
 # drill moved OFF cron to systemd --user timers on 2026-08-15 (P2-6):
@@ -56,3 +72,13 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # backup gap already happened once, 2026-07-25/26, and went undetected until
 # manually noticed). Checks the three jobs above's own cron_wrap.sh log mtimes.
 0 7 * * * cd $D && $W backup_heartbeat_check venv/bin/python3 scripts/check_backup_heartbeat.py
+
+# OHLCV finalisation dead-man's-switch (2026-09-16). The 16:15 EOD scraper
+# writes is_final=1; when it does not complete, that session's intraday bars
+# stay is_final=0 FOREVER and every research query (which filters is_final=1)
+# silently sees ~135 of ~915 tickers instead of failing. Five such sessions had
+# accumulated undetected -- cron_wrap.sh only alerts on a job that fired and
+# FAILED, and the partial EOD run exits 0. Also flags THIN sessions whose bars
+# were never fetched at all (2026-07-09, 2026-07-24).
+# Repair a stranded session with: scripts/repair_provisional_bars.py --apply
+0 9 * * * cd $D && $W provisional_bars_check venv/bin/python3 scripts/check_provisional_bars.py
