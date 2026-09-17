@@ -128,4 +128,18 @@
   for either test. Five other entry filters (slope-Q5, slope-Q4+Q5, extension-Q5, and combinations)
   were measured and rejected; none changed the win rate, which stayed 32-34% across all six — the
   losses are the mechanism, not a removable subset.
+- **Exploratory pattern scan, 2026-09-17** (`P-M/pattern_scan/PATTERN_SCAN_2026-09-17.md`) —
+  ~12 unregistered arms measured on one corpus: liquidity sweep (production `engine/smc.py`, N=36,739,
+  ex-2025 **-1.33%**, t **-7.16**), failed breakdown (**-1.94%**, t **-7.15**), failed breakout,
+  resistance breakout, falling wedge (x2), Wedge Pop (Kell, **-1.89%**, t -4.01), Episodic Pivot
+  (Qullamaggie). **Every mean-reversion pattern is significantly NEGATIVE** — anti-edges, not nulls.
+  Only continuation is positive and it collapses outside 2025. Flow confirmation does not rescue the
+  sweep. **Consumes no family slot** and is deliberately NOT filed in `FAILURE_REGISTRY.md`, whose
+  counts feed family denominators and which records only *registered* hypotheses. Any future
+  registration drawn from this scan inherits its ~12-arm multiplicity. Two findings worth carrying:
+  (a) `stockbit_flow.composite_score` is **unpopulated**, so the engine's composite flow score has
+  never been testable; (b) **single-ticker validation is worthless here** — every refuted pattern
+  looks profitable on BRPT, which sits at the **91st percentile** of a per-ticker distribution where
+  only **35%** of tickers are positive (median -1.59%, 10th/90th -9.23%/+4.15%). A randomly chosen
+  ticker has a ~35% chance of appearing to confirm a genuinely negative effect.
 
