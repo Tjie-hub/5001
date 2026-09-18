@@ -33,6 +33,8 @@ scratch directory and are run with the repo venv from the repo root:
 | 24 | `regime.py` | IHSG BULL/BEAR/SIDEWAYS history via production `detect_regime`; episode counts |
 | 25 | `regime_perf.py` | strategy performance by regime + regime-conditioning feasibility |
 | 26 | `bearskip.py` | absolute-return test of BEAR gating (rejected) |
+| 27 | `tiers.py` | 3-tier regime states (LONG=weekly / MID=production daily / SHORT=fast variant) -> `tiers.pkl`; 1,099 dated states |
+| 28 | `table27.py` | 27-cell alignment table, alignment score, era check; all-three-BULL = 0 of 1,099 |
 | 27 | `bullrank.py` | per-strategy ranking inside BULL, vs the BULL baseline control |
 | 28 | `regmap.py` | full regime x strategy screening; UP-state vs onset reconciliation |
 
@@ -56,3 +58,9 @@ scratch directory and are run with the repo venv from the repo root:
   selection across 5 seeds; use `port2.py` for any cap result.
 - `sec.py`'s random-basket correlation baseline (rho = 0.123) samples alphabetically, not randomly.
   Treat it as approximate.
+
+
+**Staged 2026-09-18.** `tiers.py` and `table27.py` were missed in the original
+staging pass and were recovered from the originating session's scratch directory,
+then re-run to confirm they reproduce the published figures exactly. They are the
+evidence behind claims C-7 and C-8 of the forward-regime review brief.
