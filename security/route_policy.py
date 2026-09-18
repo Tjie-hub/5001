@@ -112,6 +112,26 @@ POLICY = {
     "/api/v1/registry/status": VIEWER,
     "/api/v1/market/summary": VIEWER,
     "/api/v1/search/instruments": VIEWER,
+    "/api/v1/tickers/<symbol>": VIEWER,
+    "/api/v1/tickers/<symbol>/trade-flow": VIEWER,
+    "/api/v1/runtime": VIEWER,
+    # --- investments (consolidation 2026-09-03: ex-5003 canonical ledger) ---
+    "/api/v1/investments/summary": VIEWER,
+    "/api/v1/investments/holdings": VIEWER,
+    "/api/v1/investments/transactions": {"GET": VIEWER, "POST": OPERATOR},
+    "/api/v1/investments/transactions/<int:txn_id>": {"DELETE": OPERATOR},
+    "/api/v1/investments/dividends": {"GET": VIEWER, "POST": OPERATOR},
+    "/api/v1/investments/dividends/<int:row_id>": {"DELETE": OPERATOR},
+    "/api/v1/investments/funds": {"GET": VIEWER, "POST": OPERATOR},
+    "/api/v1/investments/funds/<fund_id>/redeem": {"POST": OPERATOR},
+    "/api/v1/investments/funds/<fund_id>/nav": {"POST": OPERATOR},
+    "/api/v1/investments/funds/<fund_id>": {"DELETE": OPERATOR},
+    "/api/v1/investments/closed-equity": {"GET": VIEWER, "POST": OPERATOR},
+    "/api/v1/investments/closed-equity/<int:row_id>": {"DELETE": OPERATOR},
+    "/api/v1/investments/prices": {"GET": VIEWER, "POST": OPERATOR},
+    "/api/v1/investments/prices/refresh": {"POST": OPERATOR},
+    "/api/v1/investments/export": VIEWER,
+    "/api/v1/investments/import": {"POST": OPERATOR},
 }
 
 

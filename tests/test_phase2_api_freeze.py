@@ -26,18 +26,36 @@ Post-freeze addition (2026-08-20, Production OS Slice 5): /api/v1/search/
 instruments was added to back the Search Workspace's instrument search
 (routes/v1/search.py over the new engine.instrument_search module) --
 same post-freeze-extension pattern.
+
+Post-freeze addition (2026-09-02, Production OS Ticker D4 slice 1):
+/api/v1/tickers/<symbol> backs the Ticker workspace's detail view
+(routes/v1/ticker_detail.py over the new engine.ticker_detail module), and
+/api/v1/runtime backs the global StatusFooter's backend-owned values
+(platform.py over engine.platform_info.get_runtime_status) -- same
+post-freeze-extension pattern.
+
+Post-freeze addition (2026-09-03, investments consolidation): the 16
+/api/v1/investments/* routes back the one portfolio ledger (routes/v1/
+investments.py over data/investments.py, absorbing the ex-5003 Investment
+Dashboard). These are the v1 layer's first WRITE endpoints, so this
+inventory's second element grew from a single level to route_policy.py's
+{method: level} convention for mixed/write-only routes (reads VIEWER,
+state-changing writes OPERATOR); the OpenAPI half of this file documents
+the GET surface only, as before.
 """
 import importlib
 import sqlite3
 
 import pytest
 
-from security.auth import PUBLIC, VIEWER
+from security.auth import PUBLIC, VIEWER, OPERATOR
 
 # (path, required auth level) for every endpoint on api_v1_bp, as of the
 # Phase 2 freeze (2026-08-06). PUBLIC entries: none currently -- every v1
 # endpoint is VIEWER, including /api/v1/openapi.json (Task 1 decision:
-# not PUBLIC, unlike /health).
+# not PUBLIC, unlike /health). Mixed/write-only routes carry a
+# {method: level} mapping instead of a single level (route_policy.py
+# convention, first needed by the investments consolidation).
 API_V1_ENDPOINTS = [
     ("/api/v1/", VIEWER),
     ("/api/v1/openapi.json", VIEWER),
@@ -75,16 +93,47 @@ API_V1_ENDPOINTS = [
     ("/api/v1/registry/status", VIEWER),
     ("/api/v1/market/summary", VIEWER),
     ("/api/v1/search/instruments", VIEWER),
+    ("/api/v1/tickers/<symbol>", VIEWER),
+    ("/api/v1/tickers/<symbol>/trade-flow", VIEWER),
+    ("/api/v1/runtime", VIEWER),
+    ("/api/v1/investments/summary", VIEWER),
+    ("/api/v1/investments/holdings", VIEWER),
+    ("/api/v1/investments/transactions", {"GET": VIEWER, "POST": OPERATOR}),
+    ("/api/v1/investments/transactions/<int:txn_id>", {"DELETE": OPERATOR}),
+    ("/api/v1/investments/dividends", {"GET": VIEWER, "POST": OPERATOR}),
+    ("/api/v1/investments/dividends/<int:row_id>", {"DELETE": OPERATOR}),
+    ("/api/v1/investments/funds", {"GET": VIEWER, "POST": OPERATOR}),
+    ("/api/v1/investments/funds/<fund_id>/redeem", {"POST": OPERATOR}),
+    ("/api/v1/investments/funds/<fund_id>/nav", {"POST": OPERATOR}),
+    ("/api/v1/investments/funds/<fund_id>", {"DELETE": OPERATOR}),
+    ("/api/v1/investments/closed-equity", {"GET": VIEWER, "POST": OPERATOR}),
+    ("/api/v1/investments/closed-equity/<int:row_id>", {"DELETE": OPERATOR}),
+    ("/api/v1/investments/prices", {"GET": VIEWER, "POST": OPERATOR}),
+    ("/api/v1/investments/prices/refresh", {"POST": OPERATOR}),
+    ("/api/v1/investments/export", VIEWER),
+    ("/api/v1/investments/import", {"POST": OPERATOR}),
 ]
 
-# GET-able paths only (excludes dynamic <param> rules, which aren't
-# real HTTP-callable without a concrete value) for the live-request checks.
-CONCRETE_GET_ENDPOINTS = [p for p, _ in API_V1_ENDPOINTS if "<" not in p]
 
-# OpenAPI uses {param} templating, not Flask's <param>.
+def _getable(entry):
+    """A plain-level entry is GET-able (every pre-investments route is a GET);
+    a {method: level} entry only when it maps GET."""
+    path, spec = entry
+    return path if not isinstance(spec, dict) or "GET" in spec else None
+
+
+# GET-able, HTTP-callable-now paths only (excludes dynamic <param> rules,
+# which aren't real HTTP-callable without a concrete value, and write-only
+# routes) for the live-request checks.
+CONCRETE_GET_ENDPOINTS = [p for p in map(_getable, API_V1_ENDPOINTS)
+                          if p and "<" not in p]
+
+# OpenAPI uses {param} templating, not Flask's <param>. The spec documents
+# the GET surface only.
 OPENAPI_PATH_KEYS = [
     p.replace("<date_str>", "{date}").replace("<job_id>", "{job_id}")
-    for p, _ in API_V1_ENDPOINTS
+    .replace("<symbol>", "{symbol}")
+    for p in map(_getable, API_V1_ENDPOINTS) if p
 ]
 
 
@@ -108,6 +157,15 @@ def make_client(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "DB_PATH", str(db))
     import screener.db as screener_db_mod
     monkeypatch.setattr(screener_db_mod, "DB_PATH", str(db))
+    # data.db.DB_PATH is a module global captured at import; some tests
+    # rebind it (reload under their own env), so pin it here too or the
+    # investments/ticker-detail endpoints read whatever DB another test
+    # last bound -- the source of a full-suite-only envelope failure.
+    import data.db as data_db_mod
+    monkeypatch.setattr(data_db_mod, "DB_PATH", str(db))
+
+    from data.investments import init_investment_tables
+    init_investment_tables(str(db))
 
     from forward_testing.storage.db import init_ft_tables
     init_ft_tables(str(db))
@@ -150,14 +208,24 @@ class TestEveryV1RouteHasTheExpectedAuthorization:
     def test_all_match_the_known_inventory(self):
         from security.route_policy import required_level
         for path, expected in API_V1_ENDPOINTS:
-            assert required_level(path, "GET") == expected, f"{path} auth mismatch"
+            if isinstance(expected, dict):
+                for method, level in expected.items():
+                    assert required_level(path, method) == level, (
+                        f"{path} {method} auth mismatch"
+                    )
+            else:
+                assert required_level(path, "GET") == expected, f"{path} auth mismatch"
 
     def test_no_v1_route_is_public(self):
         """Every v1 endpoint requires at least a VIEWER credential (in
         enforce mode) -- unlike legacy /health, nothing under /api/v1 is
         PUBLIC. If this ever changes it must be a deliberate decision, not
         a classification slip caught only by the fail-closed default."""
-        assert all(level != PUBLIC for _, level in API_V1_ENDPOINTS)
+        assert all(
+            level != PUBLIC
+            for _, spec in API_V1_ENDPOINTS
+            for level in (spec.values() if isinstance(spec, dict) else (spec,))
+        )
 
 
 class TestEveryV1EndpointDocumented:

@@ -29,7 +29,10 @@ from routes.v1 import watchlists  # noqa: E402,F401 -- registers /watchlists* on
 from routes.v1 import snapshots  # noqa: E402,F401 -- registers /snapshots* on api_v1_bp
 from routes.v1 import reports  # noqa: E402,F401 -- registers /reports* on api_v1_bp
 from routes.v1 import candidates  # noqa: E402,F401 -- registers /candidates* on api_v1_bp
-from routes.v1 import platform  # noqa: E402,F401 -- registers /version,/capabilities,/resources on api_v1_bp
+from routes.v1 import platform  # noqa: E402,F401 -- registers /version,/capabilities,/resources,/runtime on api_v1_bp
 from routes.v1 import registry  # noqa: E402,F401 -- registers /registry/status on api_v1_bp
 from routes.v1 import market  # noqa: E402,F401 -- registers /market/summary on api_v1_bp
 from routes.v1 import search  # noqa: E402,F401 -- registers /search/instruments on api_v1_bp
+from routes.v1 import ticker_detail  # noqa: E402,F401 -- registers /tickers/<symbol> on api_v1_bp
+from routes.v1 import trade_flow  # noqa: E402,F401 -- registers /tickers/<symbol>/trade-flow on api_v1_bp
+from routes.v1 import investments  # noqa: E402,F401 -- registers /investments* on api_v1_bp

@@ -225,7 +225,90 @@ _PATHS = {
         "in_lq45, in_idx80}], count}; 400 MISSING_QUERY if ?q= is absent "
         "or blank; zero matches is a valid 200 empty result, not an error",
     ),
+    "/api/v1/tickers/{symbol}": _get(
+        "Ticker workspace detail (Production Decision OS D4 slice 1) -- "
+        "per-ticker assembly of identity/index membership, latest live-"
+        "convention price bar, regime + ADX band (engine.regime_filter + "
+        "engine.indicators, banded with the scanner's own threshold), the "
+        "production admission chain replayed per regime-map candidate "
+        "(engine.admission verdicts incl. blocking stage/reason), latest "
+        "scan signals, flow state + foreign accumulation, watchlist "
+        "snapshot memberships, agent-firm decisions, open paper position, "
+        "merged production activity timeline, market context (same "
+        "aggregator as /market/summary) and per-source data freshness",
+        "Standard envelope wrapping {symbol, identity, price, regime, "
+        "production_admission, signals, flow, watchlist_membership, "
+        "agent_decisions, position, timeline, market_context, "
+        "data_freshness, as_of}; 400 INVALID_SYMBOL for malformed symbols; "
+        "404 TICKER_NOT_FOUND when the symbol has neither ohlcv history "
+        "nor an idx_tickers row; optional sections degrade to null rather "
+        "than erroring the whole read model",
+    ),
+    "/api/v1/tickers/{symbol}/trade-flow": _get(
+        "Ticker workspace Trade Flow section -- cumulative buy/sell trade "
+        "flow over an inclusive date range, derived read-only from "
+        "stockbit_flow_bars (vendor trade-book 1m bars; cumulative "
+        "buy/sell lots de-cumulated per session and chained across the "
+        "range; value = delta lots x 100 shares x minute price). No new "
+        "classification: the vendor aggressor split is used as ingested; "
+        "Big Money is reported unavailable (no production size definition)",
+        "Standard envelope wrapping {symbol, metric, requested, coverage, "
+        "sessions, missing_sessions, session_marks, series {time, cum_buy, "
+        "cum_sell, net_flow, price}, totals, anomaly_minutes, big_money, "
+        "filters_supported, as_of}; 400 INVALID_SYMBOL / INVALID_DATE / "
+        "INVALID_DATE_RANGE / UNSUPPORTED_METRIC; 404 NO_TRADE_FLOW_DATA "
+        "when the ticker has no intraday flow rows at all",
+    ),
+    "/api/v1/runtime": _get(
+        "Status-footer read model (Phase 9 B5 blocker U-2: backend-owned "
+        "footer values) -- environment derived from utils.release's source "
+        "distinction, release version, latest watchlist_snapshot row, "
+        "global ohlcv/flow freshness, and engine.health component states",
+        "Standard envelope wrapping {environment, release_source, version, "
+        "timezone, snapshot: {date, strategy} | null, freshness: {ohlcv, "
+        "stockbit_flow}, components, overall}",
+    ),
+    "/api/v1/investments/summary": _get(
+        "Canonical investment portfolio overview (consolidation 2026-09-03, "
+        "ex-5003): value, cost basis, unrealized/realized, dividends, total "
+        "return, allocation",
+        "Standard envelope wrapping the summary dict",
+    ),
+    "/api/v1/investments/holdings": _get(
+        "Open equity holdings computed from the transaction ledger "
+        "(average cost incl. 0.15% buy fee; breakeven/net-if-sold at 0.25% "
+        "sell fee)",
+        "Standard envelope wrapping {holdings: [...], totals: {...}}",
+    ),
+    "/api/v1/investments/transactions": _get(
+        "Full equity transaction ledger (oldest first)",
+        "Standard envelope wrapping [{id, date, ticker, type, price, qty, notes}]",
+    ),
+    "/api/v1/investments/dividends": _get(
+        "Dividend journal with gross/tax/net per row",
+        "Standard envelope wrapping [{id, date, ticker, per_share, qty, tax_pct, gross, tax, net}]",
+    ),
+    "/api/v1/investments/funds": _get(
+        "Mutual fund positions (?status=ALL|OPEN|CLOSED)",
+        "Standard envelope wrapping [{id, name, status, entry/exit dates, NAVs, "
+        "units, cost_basis, total_return, net_pl, pl_pct}]",
+    ),
+    "/api/v1/investments/closed-equity": _get(
+        "Closed equity trade journal",
+        "Standard envelope wrapping [{id, entry_date, exit_date, ticker, "
+        "entry_price, exit_price, qty, net_pl, pl_pct}]",
+    ),
+    "/api/v1/investments/prices": _get(
+        "Current price overrides/cache by ticker",
+        "Standard envelope wrapping {TICKER: {price, source: manual|yahoo, updated_at}}",
+    ),
+    "/api/v1/investments/export": _get(
+        "Full-ledger export in the Investment Dashboard snapshot shape "
+        "{txns, CEQ, mfOpen, CMF, divs, eqPrices} (backup / migration format)",
+        "Standard envelope wrapping the snapshot dict",
+    ),
 }
+
 
 
 def build_spec() -> dict:

@@ -23,3 +23,9 @@ def platform_capabilities():
 @api_v1_bp.route("/resources", methods=["GET"])
 def platform_resources():
     return ok({"resources": platform_info_mod.get_resource_catalog()})
+
+
+@api_v1_bp.route("/runtime", methods=["GET"])
+def platform_runtime():
+    """Status-footer read model (environment, snapshot, freshness, health)."""
+    return ok(platform_info_mod.get_runtime_status())
