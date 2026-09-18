@@ -21,13 +21,22 @@ import sqlite3
 from data.db import connect as db_connect
 import logging
 import feedparser
+import requests
 from datetime import datetime, date, timedelta
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 
 _DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "walkforward.db")
 
 # Indonesian locale + " saham" qualifier reduces off-topic hits (e.g. ASII as a name match)
 _RSS_URL = "https://news.google.com/rss/search?q={query}&hl=id&gl=ID&ceid=ID:id"
+
+# The batch job holds one SQLite write connection across ~958 tickers, so the
+# network leg must be bounded (2026-07-24 incident) -- never feedparser.parse(url).
+_RSS_TIMEOUT_S = 10
+# Server-side fetch target is pinned: scheme + host are constants and `ticker`
+# is quote_plus-encoded into the query value, so it can never steer the request
+# elsewhere. The guard below makes that explicit and redirects stay off.
+_RSS_HOST = "news.google.com"
 
 # Some publishers block the default feedparser UA
 feedparser.USER_AGENT = "Mozilla/5.0 (compatible; idx-walkforward/1.0)"
@@ -66,10 +75,19 @@ def fetch_news_for_ticker(ticker, today=None):
         today = date.today()
     query = quote_plus(f"{ticker} saham")
     url = _RSS_URL.format(query=query)
+    parts = urlparse(url)
+    if parts.scheme != "https" or parts.netloc != _RSS_HOST:
+        logging.warning(f"[news] {ticker} refusing off-target RSS URL: {url}")
+        return 0, []
     try:
-        feed = feedparser.parse(url)
+        resp = requests.get(url, timeout=_RSS_TIMEOUT_S, allow_redirects=False)
+        resp.raise_for_status()
+        feed = feedparser.parse(resp.content)
+    except requests.exceptions.Timeout:
+        logging.warning(f"[news] {ticker} RSS timeout >{_RSS_TIMEOUT_S}s -- degrading to 0")
+        return 0, []
     except Exception as e:
-        logging.warning(f"[news] {ticker} RSS parse error: {e}")
+        logging.warning(f"[news] {ticker} RSS fetch error: {e}")
         return 0, []
 
     headlines = []
