@@ -99,7 +99,8 @@ class TestWatchlistUpdateReportWiring:
         monkeypatch.setattr("engine.trade_plan.select_top", lambda c, n=8: c)
         monkeypatch.setattr("engine.trade_plan.get_vpin_gate", lambda conn, date_str: None)
         monkeypatch.setattr("config.edge_mode", lambda: "off")
-        monkeypatch.setattr(jobs_mod, "send_telegram", lambda msg: sent.append(msg))
+        monkeypatch.setattr(jobs_mod, "send_telegram",
+                            lambda msg, **kw: sent.append(msg))   # real fn takes category=
 
         mock_firm, mock_cfg = _mock_firm_and_config()
         import engine.agent_firm as _pkg
@@ -284,7 +285,8 @@ class TestPersistentActiveWatchlistWiring:
                             select_top or (lambda c, n=8: c))
         monkeypatch.setattr("engine.trade_plan.get_vpin_gate", lambda conn, date_str: None)
         monkeypatch.setattr("config.edge_mode", lambda: "off")
-        monkeypatch.setattr(jobs_mod, "send_telegram", lambda msg: sent.append(msg))
+        monkeypatch.setattr(jobs_mod, "send_telegram",
+                            lambda msg, **kw: sent.append(msg))   # real fn takes category=
 
         mock_firm, mock_cfg = _mock_firm_and_config()
         import engine.agent_firm as _pkg

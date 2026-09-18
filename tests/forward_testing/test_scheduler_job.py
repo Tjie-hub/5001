@@ -52,7 +52,8 @@ def test_cycle_sends_forward_test_telegram_report(ft_db, repo, monkeypatch):
     message (audit 2026-07-28) — reporting only, no change to ingest/open/exit."""
     import scheduler.jobs as jobs_mod
     sent = []
-    monkeypatch.setattr(jobs_mod, "send_telegram", lambda text: sent.append(text))
+    monkeypatch.setattr(jobs_mod, "send_telegram",
+                        lambda text, **kw: sent.append(text))   # real fn takes category=
 
     _seed(ft_db)
     jobs_mod.run_forward_test_cycle(db_path=ft_db, run_date="2026-06-26")   # ingest only
@@ -66,7 +67,8 @@ def test_cycle_sends_forward_test_telegram_report(ft_db, repo, monkeypatch):
 def test_cycle_dedup_guard_sends_telegram_only_once_per_run_date(ft_db, repo, monkeypatch):
     import scheduler.jobs as jobs_mod
     sent = []
-    monkeypatch.setattr(jobs_mod, "send_telegram", lambda text: sent.append(text))
+    monkeypatch.setattr(jobs_mod, "send_telegram",
+                        lambda text, **kw: sent.append(text))   # real fn takes category=
 
     _seed(ft_db)
     jobs_mod.run_forward_test_cycle(db_path=ft_db, run_date="2026-06-26")
