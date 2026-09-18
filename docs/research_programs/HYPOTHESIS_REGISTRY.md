@@ -2,7 +2,7 @@
 
 > The operating index of hypotheses across active programs. A hypothesis is **counted in its program's multiplicity family from G1/REGISTERED and never leaves** (PG-3, OS-10). This registry is append-only in spirit: status advances by adding a superseding record, never by silent edit ([[HYPOTHESIS_LIFECYCLE]] HL-1/HL-2).
 
-**Owner:** Research Director / CRO · **Last updated:** 2026-09-17 · **Governed by:** [[HYPOTHESIS_LIFECYCLE]] · [[RESEARCH_PROGRAM]]
+**Owner:** Research Director / CRO · **Last updated:** 2026-09-18 · **Governed by:** [[HYPOTHESIS_LIFECYCLE]] · [[RESEARCH_PROGRAM]]
 
 ## Registered & in-flight
 
@@ -15,7 +15,7 @@
 | **HYP-PM-0006** | P-M · C-family · **C7** intensity-state | gross/ADV20 ≥ 2.0 state → registered outcome (directional forward return; high vs non-high daily contrast) | **REGISTERED** 2026-09-11 (`C7_REGISTRATION_v1_2026-09-11.md`) · pending execution (gated) | `C7_REGISTRATION_v1_2026-09-11.md` · `C7_REGISTRATION_READINESS_2026-09-11.md` | **C-family registered** (3rd member — not yet executed) |
 | **HYP-PM-0009** | P-M · {I5,I6,I7,I12} | **I7 intraday execution timing** — informed/size-constrained execution back-loads within the session; conditional on a net-buying day, back-loaded net buying is followed by higher subsequent return than front-loaded net buying of the same sign (M2 · adverse selection) | **FAILED** (F2) 2026-09-15 · was REGISTERED 2026-09-14 · executed once (EXP-PM-0009/R2) | [[HYP-PM-0009_REGISTERED]] · sha256 `d19dfd0f…` · [[FAILURE_ENTRY]] · DECISION_LOG **D-050**/D-051 · cohort v004 `e1375264…` | **consumed** (3rd P-M member) |
 | **HYP-PA-0001** | P-A · {I2,I3,I8} | reconstitution closing-auction dislocation (I8→I2) | **FAILED** (F2) 2026-08-19 · was REGISTERED 2026-07-19T00:19:47Z | [[HYP-PA-0001_REGISTERED]] · sha256 `3692e69a…` · [[FAILURE_ENTRY]] · [[EVIDENCE_PACKAGE]] | **consumed** (1st P-A member) |
-| **HYP-PM-0010** | P-M · **Price-Trend {T1}** (NEW family) | time-series momentum: trend-state onset (EMA20 slope>+2%, Kaufman ER(20)>=0.30, >=70% closes above EMA20, all at t-1) entered at close, exited on a 3xATR14 trailing stop, 60-session cap | **REGISTERED → IN_TESTING** 2026-09-17T06:35:57Z · forward test FWD-PM-REGIME-001 OPEN, ledger empty, first eligible entry 2026-09-18 | [[HYP-PM-0010_REGISTERED]] · protocol sha256 `4d3d27da…` · `P-M/forward_regime/PROTOCOL.md` | **Price-Trend {T1} opened** (1st member) |
+| **HYP-PM-0010** | P-M · **Price-Trend {T1}** (NEW family) | time-series momentum: trend-state onset (EMA20 slope>+2%, Kaufman ER(20)>=0.30, >=70% closes above EMA20, all at t-1) entered at close, exited on a 3xATR14 trailing stop, 60-session cap | **REGISTERED → IN_TESTING** 2026-09-17T06:35:57Z · forward test **FWD-PM-REGIME-002 OPEN**, ledger empty (0 trades), first eligible entry 2026-09-18 · was FWD-PM-REGIME-001, closed 2026-09-17T06:53:39Z with zero recorded trades and superseded (zero-volume carry-forward guard; see the supersession record below) | [[HYP-PM-0010_REGISTERED]] · `P-M/forward_regime/PROTOCOL.md` — 002 protocol sha256 at open `6e7e1a7b…`, current `4063752e…` (three post-opening amendments, each recorded as observability-only: limitations 9–10, then the daily and weekly IHSG regime fields; cumulative diff +88/−0) · was 001 sha256 `4d3d27da…` | **Price-Trend {T1} opened** (1st member) |
 
 ## Status legend
 
