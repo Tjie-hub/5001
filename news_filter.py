@@ -30,8 +30,10 @@ _DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "wal
 # Indonesian locale + " saham" qualifier reduces off-topic hits (e.g. ASII as a name match)
 _RSS_URL = "https://news.google.com/rss/search?q={query}&hl=id&gl=ID&ceid=ID:id"
 
-# The batch job holds one SQLite write connection across ~958 tickers, so the
-# network leg must be bounded (2026-07-24 incident) -- never feedparser.parse(url).
+# One unbounded request stalls the whole ~958-ticker sweep, and the sweep feeds
+# a scheduled job -- so the network leg is bounded (2026-07-24 incident class)
+# and never feedparser.parse(url), which takes no timeout. The DB half of that
+# incident is handled separately: run_news_batch writes only after fetching.
 _RSS_TIMEOUT_S = 10
 # Server-side fetch target is pinned: scheme + host are constants and `ticker`
 # is quote_plus-encoded into the query value, so it can never steer the request
@@ -232,31 +234,54 @@ def get_spiking_tickers(conn=None):
 
 
 def run_news_batch(tickers=None, delay=1.0):
-    """Fetch news for all tickers, persist counts. Returns rows-saved count."""
+    """Fetch news for all tickers, persist counts. Returns rows-saved count.
+
+    Compute-then-write: the whole RSS sweep runs with NO database connection
+    open, and every row is written in one short transaction at the end. The
+    earlier shape held a write connection across the full ~958-ticker sweep
+    (committing every 20), so the write lock was held for the duration of the
+    network work and blocked every other writer -- the 2026-07-24 incident
+    class. Bounding the per-request leg (_RSS_TIMEOUT_S) caps one request; it
+    does not cap the transaction. This is the same remedy applied to the
+    walk-forward refresh lock: do the slow part first, touch the DB last.
+    """
     if tickers is None:
         tickers = _load_tickers()
     if not tickers:
         print("[News] No tickers to fetch")
         return 0
-    conn = db_connect(_DB_PATH)
-    _ensure_table(conn)
     today_str = str(date.today())
     today_obj = date.today()
-    saved = 0
+
+    # ── Phase 1: fetch. No DB connection is open anywhere in this loop. ──
+    fetched = []
     for i, ticker in enumerate(tickers, 1):
         try:
             count, headlines = fetch_news_for_ticker(ticker, today=today_obj)
-            save_news_count(ticker, count, headlines, trade_date=today_str, conn=conn)
-            saved += 1
+            fetched.append((ticker, count, headlines))
             if i % 20 == 0:
-                conn.commit()
                 sys.stdout.write(f"\r  [{i}/{len(tickers)}] {ticker} ({count} hits)      ")
                 sys.stdout.flush()
         except Exception as e:
             logging.warning(f"[news] {ticker} error: {e}")
         time.sleep(delay)
-    conn.commit()
-    conn.close()
+
+    # ── Phase 2: write. One transaction, no network inside it. ──
+    saved = 0
+    conn = db_connect(_DB_PATH)
+    try:
+        _ensure_table(conn)
+        for ticker, count, headlines in fetched:
+            try:
+                save_news_count(ticker, count, headlines,
+                                trade_date=today_str, conn=conn)
+                saved += 1
+            except Exception as e:
+                logging.warning(f"[news] {ticker} save error: {e}")
+        conn.commit()
+    finally:
+        conn.close()
+
     print(f"\n[News] {saved}/{len(tickers)} tickers saved for {today_str}")
     return saved
 
