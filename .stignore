@@ -41,3 +41,11 @@ venv
 **/*.tmp
 **/dive_smoketest*
 out/dive_smoketest*
+
+// Credentials / secrets must never sync between machines (B-4 fix, 2026-09-04,
+// zcode-windows-infra session). .env hard-wires DB_PATH + carries tokens/passwords;
+// .stockbit_token* is a live session credential. .env.example stays synced (template).
+.env
+.env.*
+!.env.example
+.stockbit_token*
