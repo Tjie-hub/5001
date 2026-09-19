@@ -102,6 +102,37 @@ period, weighting scheme or composite can raise t, because none of them changes
 the Sharpe ratio or the elapsed calendar time — and those two numbers alone
 determine it.
 
+## 3c. The Sharpe axis, searched explicitly — and it does not close the gap
+
+Since t = Sharpe x sqrt(years) and years are fixed, Sharpe is the only remaining
+lever. Every construction so far was optimised for *return*; this searches the
+risk-adjusted axis directly. **Required: Sharpe >= 1.64.**
+
+| construction | ret %/yr | Sharpe | t | maxDD | years needed |
+|---|---|---|---|---|---|
+| raw book (net) | +8.45 | 0.63 | 1.36 | −19.5% | 32.6 |
+| excess vs liquid universe | +8.42 | 0.87 | 1.90 | −14.6% | 16.7 |
+| excess vs IHSG | +7.85 | 0.75 | 1.64 | −10.8% | 22.6 |
+| beta-hedged vs IHSG (β=0.70) | +8.30 | 0.86 | 1.88 | −9.5% | 17.2 |
+| vol-targeted (12m trailing) | +5.30 | 0.41 | 0.84 | −23.8% | 76.3 |
+| drawdown-managed (flat below −10%) | +4.57 | 0.41 | 0.89 | −19.8% | 76.3 |
+| **beta-hedged + vol-targeted** | **+10.75** | **0.94** | **1.94** | **−10.4%** | **14.4** |
+
+Beta-hedging genuinely helps — Sharpe 0.63 → 0.86 and drawdown −19.5% → −9.5% —
+and stacking vol-targeting on the hedged series gives the best construction found
+anywhere in this program: **+10.75%/yr, Sharpe 0.94, maxDD −10.4%**.
+
+Note that vol-targeting and drawdown-management *hurt* when applied to the raw
+book (Sharpe 0.41 each) and only help on the hedged series. Risk management is
+not free here.
+
+But **0.94 against a required 1.64** is 57% of the way. The years-needed figure
+falls from 32.6 to 14.4 — a real improvement, and still 3x the 4.8 available.
+
+With the return axis, the risk-adjusted axis, the frequency axis, the composite
+axis and the sample axis all searched and all closed, there is no remaining
+specification-level route to significance on this data.
+
 ## 4. What this leaves
 
 Three honest options, in order of evidentiary quality:
