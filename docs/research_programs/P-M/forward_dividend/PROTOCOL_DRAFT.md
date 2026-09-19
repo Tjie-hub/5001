@@ -1,3 +1,14 @@
+# FWD-PM-DIVYIELD-001 — PROTOCOL (DRAFT, **SUPERSEDED 2026-09-19**)
+
+> **SUPERSEDED — do not register.** Two findings later the same day disqualified
+> this candidate. Gap 1 showed the signal is ~61% sector composition: its pooled
+> +0.909%/mo falls to +0.353%/mo (t 1.03) under sector neutrality. The extended
+> 26-year panel then put it at t 1.79 (2021-26), t 2.53 (pre-2021) and t 3.36
+> (full) sector-neutral — below the 3.57 bar throughout.
+> The replacement candidate is `../forward_volex/PROTOCOL_DRAFT.md`
+> (FWD-PM-VOLEX-SN-001), which clears the bar out-of-sample.
+> This file is preserved unedited below as the record of what was drafted.
+
 # FWD-PM-DIVYIELD-001 — PROTOCOL (DRAFT, NOT REGISTERED)
 
 **Status:** DRAFT. **Not registered. No family slot consumed. Not open.**
