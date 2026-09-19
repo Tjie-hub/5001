@@ -71,6 +71,37 @@ underperforming).
 A survivorship-contaminated 20-year panel would likely make the volatility
 overlay look **better** than it is, which is the worst possible failure mode here.
 
+## 3b. The last escape route, closed: rebalancing frequency buys nothing
+
+The ceiling above rests on 57 *monthly* observations, so the obvious objection is
+to sample faster. Tested directly on the dividend + vol-exclusion book, with
+Newey-West standard errors to absorb any autocorrelation that faster rebalancing
+of a slow signal would induce:
+
+| rebalance | obs | obs/yr | turnover | NET %/yr | t (iid) | t (NW) | AC(1) |
+|---|---|---|---|---|---|---|---|
+| monthly | 56 | 11.6 | 0.15 | +9.36 | 1.47 | 1.65 | −0.01 |
+| fortnightly | 119 | 24.2 | 0.09 | +8.57 | 1.42 | 1.44 | +0.11 |
+| weekly | 238 | 48.1 | 0.06 | +9.31 | 1.46 | 1.51 | −0.07 |
+| daily | 1,187 | 239.1 | 0.02 | +9.23 | 1.58 | 1.50 | +0.04 |
+
+**A 21× increase in observations produces no increase in t.** Autocorrelation is
+negligible at every frequency, so this is not a standard-error correction artefact
+— the additional observations carry no additional information.
+
+The reason is arithmetic rather than incidental:
+
+> **t ≈ Sharpe × √(calendar years).** Sampling frequency cancels out of both the
+> numerator and the denominator.
+
+Sharpe 0.63 × √4.8 = 1.38, which is what every row above reports. Solving for the
+bar: (3.57 / 0.63)² = **32.1 years**, independently reproducing §2's 32.6.
+
+This closes the last specification-level escape. No rebalancing schedule, holding
+period, weighting scheme or composite can raise t, because none of them changes
+the Sharpe ratio or the elapsed calendar time — and those two numbers alone
+determine it.
+
 ## 4. What this leaves
 
 Three honest options, in order of evidentiary quality:
