@@ -7,6 +7,11 @@
   purge that deleted real sessions of illiquid names (C-5).
 - corporate_actions: dividends/splits from yfinance. The ohlcv basis is RAW
   exchange prices (single basis, C-4); research adjusts via this table.
+- ticker_sector: ticker -> sector/industry reference map (added 2026-09-19).
+  Before this existed the only sector source was engine/sector_rotation.py,
+  covering 82 of 959 names, which made sector concentration the single largest
+  untestable confound in P-M research. Testing it once labels existed cut the
+  then-best candidate's t from 2.29 to 1.03, so the gap was not cosmetic.
 """
 import sqlite3
 
@@ -16,6 +21,13 @@ from data.db import connect as db_connect
 _DDL = """
 CREATE TABLE IF NOT EXISTS trading_calendar (
     date       TEXT PRIMARY KEY,
+    source     TEXT,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS ticker_sector (
+    ticker     TEXT PRIMARY KEY,
+    sector     TEXT,
+    industry   TEXT,
     source     TEXT,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
@@ -32,7 +44,7 @@ CREATE TABLE IF NOT EXISTS corporate_actions (
 
 
 def ensure_market_data_schema(db_path: str = DB_PATH) -> None:
-    """Idempotent. Adds ohlcv.is_final (legacy rows -> 1) + the two tables."""
+    """Idempotent. Adds ohlcv.is_final (legacy rows -> 1) + the reference tables."""
     conn = db_connect(db_path, timeout=30)
     try:
         conn.execute("PRAGMA busy_timeout=30000")

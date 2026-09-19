@@ -1,10 +1,20 @@
 import os
 import csv
 import time
-from datetime import datetime, timedelta
+import logging
+from datetime import datetime, timedelta, timezone
 
 import yfinance as yf
 from data.db import get_db
+
+# IDX trading clock (Asia/Jakarta — fixed UTC+7, no DST). Finality decisions
+# key on this calendar date, never on the host clock's timezone.
+_WIB = timezone(timedelta(hours=7))
+
+
+def _wib_today() -> str:
+    """Current calendar date in WIB."""
+    return datetime.now(_WIB).strftime("%Y-%m-%d")
 
 # ── Index Constituents (preserved for backward compat) ───────────────────────
 IDX30 = [
@@ -105,6 +115,7 @@ def _save_df(ticker, df) -> int:
     })
     df["date"] = df["date"].astype(str).str[:10]
     import math
+    wib_today = _wib_today()
     conn = get_db()
     saved = 0
     for _, row in df.iterrows():
@@ -115,14 +126,19 @@ def _save_df(ticker, df) -> int:
             # Phase 2A: yfinance NEVER overwrites an existing bar (the scraper
             # is the EOD authority); it fills gaps (is_final=1, settled
             # history) and repairs NULL-close placeholder rows only.
+            # C1 finality guard (bootstrap audit 2026-09-16): a bar dated the
+            # current WIB day is provisional (is_final=0) from this path —
+            # settled same-day bars come only from the 16:15 EOD scraper
+            # (screener/idx_scraper.save_ohlcv_to_db).
+            is_final = 0 if row["date"] == wib_today else 1
             conn.execute(
                 """INSERT INTO ohlcv (ticker,date,open,high,low,close,volume,is_final)
-                   VALUES (?,?,?,?,?,?,?,1)
+                   VALUES (?,?,?,?,?,?,?,?)
                    ON CONFLICT(ticker,date) DO UPDATE SET
                      open=excluded.open, high=excluded.high, low=excluded.low,
-                     close=excluded.close, volume=excluded.volume, is_final=1
+                     close=excluded.close, volume=excluded.volume, is_final=excluded.is_final
                    WHERE ohlcv.close IS NULL""",
-                (ticker, row["date"], row["open"], row["high"], row["low"], close_val, row["volume"]),
+                (ticker, row["date"], row["open"], row["high"], row["low"], close_val, row["volume"], is_final),
             )
             saved += 1
         except Exception:
@@ -135,21 +151,38 @@ def _save_df(ticker, df) -> int:
 
 def _save_actions(conn, ticker, df) -> int:
     """Persist non-zero dividends/splits into corporate_actions. Fail-soft if
-    the table is missing (pre-migration DB)."""
+    the table is missing (pre-migration DB).
+
+    LIMITATION (measured 2026-09-19): this can only capture actions that land on
+    a row of the fetched OHLCV frame. A dividend whose ex-date has no saved bar
+    is invisible here -- 4 of 52 known-absent 2026 events fit that shape. Use
+    `scripts/backfill_corporate_actions.py` to reconcile against the full
+    per-ticker action history rather than relying on this path alone.
+
+    The previous version swallowed every exception silently, so a schema problem
+    or a bad row looked identical to "no actions". Failures are now logged and
+    counted; the call site still never raises, because a corporate-action write
+    must not take down an OHLCV fetch.
+    """
     n = 0
-    try:
-        for _, row in df.iterrows():
-            for col, action in (("dividends", "dividend"), ("splits", "split")):
+    failed = 0
+    for _, row in df.iterrows():
+        for col, action in (("dividends", "dividend"), ("splits", "split")):
+            try:
                 val = row.get(col)
-                if val is not None and not (isinstance(val, float) and (val != val)) and float(val) != 0.0:
-                    conn.execute(
-                        "INSERT OR REPLACE INTO corporate_actions (ticker,date,action,value,source)"
-                        " VALUES (?,?,?,?,'yfinance')",
-                        (ticker, row["date"], action, float(val)),
-                    )
-                    n += 1
-    except Exception:
-        pass
+                if val is None or (isinstance(val, float) and (val != val)) or float(val) == 0.0:
+                    continue
+                conn.execute(
+                    "INSERT OR REPLACE INTO corporate_actions (ticker,date,action,value,source)"
+                    " VALUES (?,?,?,?,'yfinance')",
+                    (ticker, row["date"], action, float(val)),
+                )
+                n += 1
+            except Exception as e:
+                failed += 1
+                logging.warning("[actions] %s %s %s: %s", ticker, row.get("date"), action, e)
+    if failed:
+        logging.warning("[actions] %s: %d action row(s) failed to persist", ticker, failed)
     return n
 
 
