@@ -2,7 +2,7 @@
 
 > The operating index of hypotheses across active programs. A hypothesis is **counted in its program's multiplicity family from G1/REGISTERED and never leaves** (PG-3, OS-10). This registry is append-only in spirit: status advances by adding a superseding record, never by silent edit ([[HYPOTHESIS_LIFECYCLE]] HL-1/HL-2).
 
-**Owner:** Research Director / CRO · **Last updated:** 2026-09-18 · **Governed by:** [[HYPOTHESIS_LIFECYCLE]] · [[RESEARCH_PROGRAM]]
+**Owner:** Research Director / CRO · **Last updated:** 2026-09-20 · **Governed by:** [[HYPOTHESIS_LIFECYCLE]] · [[RESEARCH_PROGRAM]]
 
 ## Registered & in-flight
 
@@ -12,7 +12,7 @@
 | **HYP-PM-0003** | P-M · {I5,I6,I7,I12} | M2.1 adverse-selection permanence (I7), `broker_flow`/Dataset A instrument (distinct from HYP-PM-0002's `stockbit_flow_bars`) | **FAILED** (F2) 2026-09-09 · was REGISTERED 2026-09-09T09:22:00Z | [[HYP-PM-0003_REGISTERED]] · sha256 `a2db9204…` · [[FAILURE_ENTRY]] · [[EVIDENCE_PACKAGE]] | **consumed** (2nd P-M member, independent — Option B/OS-10) |
 | **HYP-PM-0004** | P-M · C-family · **C2** conduit disagreement | foreign/locally-owned brokerage net-flow disagreement → forward-return resolution (unconditional daily contrast form) | **INVALID (governance)** — executed in G1 Run 1 2026-09-11, NOT CONFIRMED (Holm p = 1.0); registered species-mix control unimplementable (freq-dependent) | `docs/research_programs/P-M/g1_harness/G1_REGISTRATION_v1_2026-09-11.md` · `G1_FINAL_EXECUTION_REPORT_2026-09-11.md` · DECISION_LOG D-048 | **C-family consumed** (1st member) |
 | **HYP-PM-0005** | P-M · C-family · **C3** breadth surprise | breadth-surprise state (±0.30 vs trailing median) → forward-return continuation (daily state contrast) | **NOT CONFIRMED (VALID, bounded)** — executed G1 Run 1 2026-09-11, primary k=5 Holm p = 1.0; determinate null, 329 daily observations | same registration · `G1_FINAL_EXECUTION_REPORT_2026-09-11.md` | **C-family consumed** (2nd member) |
-| **HYP-PM-0006** | P-M · C-family · **C7** intensity-state | gross/ADV20 ≥ 2.0 state → registered outcome (directional forward return; high vs non-high daily contrast) | **REGISTERED** 2026-09-11 (`C7_REGISTRATION_v1_2026-09-11.md`) · pending execution (gated) | `C7_REGISTRATION_v1_2026-09-11.md` · `C7_REGISTRATION_READINESS_2026-09-11.md` | **C-family registered** (3rd member — not yet executed) |
+| **HYP-PM-0006** | P-M · C-family · **C7** intensity-state | gross/ADV20 ≥ 2.0 state → registered outcome (directional forward return; high vs non-high daily contrast) | **NOT CONFIRMED (VALID, determinate null)** — executed 2026-09-14 under D-049 R-6 (`run_id RUN-20260914T015335Z-41bea166a025`); was REGISTERED 2026-09-11 | `C7_REGISTRATION_v1_2026-09-11.md` · `C7_REGISTRATION_READINESS_2026-09-11.md` · [[C7_EXECUTION_REPORT_2026-09-14]] | **C-family consumed** (3rd member) |
 | **HYP-PM-0009** | P-M · {I5,I6,I7,I12} | **I7 intraday execution timing** — informed/size-constrained execution back-loads within the session; conditional on a net-buying day, back-loaded net buying is followed by higher subsequent return than front-loaded net buying of the same sign (M2 · adverse selection) | **FAILED** (F2) 2026-09-15 · was REGISTERED 2026-09-14 · executed once (EXP-PM-0009/R2) | [[HYP-PM-0009_REGISTERED]] · sha256 `d19dfd0f…` · [[FAILURE_ENTRY]] · DECISION_LOG **D-050**/D-051 · cohort v004 `e1375264…` | **consumed** (3rd P-M member) |
 | **HYP-PA-0001** | P-A · {I2,I3,I8} | reconstitution closing-auction dislocation (I8→I2) | **FAILED** (F2) 2026-08-19 · was REGISTERED 2026-07-19T00:19:47Z | [[HYP-PA-0001_REGISTERED]] · sha256 `3692e69a…` · [[FAILURE_ENTRY]] · [[EVIDENCE_PACKAGE]] | **consumed** (1st P-A member) |
 | **HYP-PM-0010** | P-M · **Price-Trend {T1}** (NEW family) | time-series momentum: trend-state onset (EMA20 slope>+2%, Kaufman ER(20)>=0.30, >=70% closes above EMA20, all at t-1) entered at close, exited on a 3xATR14 trailing stop, 60-session cap | **REGISTERED → IN_TESTING** 2026-09-17T06:35:57Z · forward test **FWD-PM-REGIME-002 OPEN**, ledger empty (0 trades), first eligible entry 2026-09-18 · was FWD-PM-REGIME-001, closed 2026-09-17T06:53:39Z with zero recorded trades and superseded (zero-volume carry-forward guard; see the supersession record below) | [[HYP-PM-0010_REGISTERED]] · `P-M/forward_regime/PROTOCOL.md` — 002 protocol sha256 at open `6e7e1a7b…`, current `4063752e…` (three post-opening amendments, each recorded as observability-only: limitations 9–10, then the daily and weekly IHSG regime fields; cumulative diff +88/−0) · was 001 sha256 `4d3d27da…` | **Price-Trend {T1} opened** (1st member) |
@@ -26,7 +26,7 @@
 | Program | Family (append-only) | Members registered | Notes |
 |---|---|---|---|
 | **P-M · Microstructure Flow** | {I5, I6, I7, I12} | **3** — HYP-PM-0001 (FAILED F2), HYP-PM-0003 (FAILED F2→INVALID-DATA), HYP-PM-0009 (FAILED F2) | family opened at first registration (D-028, PG-3); HYP-PM-0003 registered 2026-09-09 as the 2nd member, counted independently of unregistered HYP-PM-0002 (Option B/OS-10, CRO-adopted) — HYP-PM-0002 remains DRAFT and consumes no slot; HYP-PM-0009 executed once 2026-09-15, FAILED F2 (no power claim per D-050 — non-rejection is not evidence of absence) |
-| **P-M · C-family** | {C2, C3, C7} | **3** — HYP-PM-0004 (C2, INVALID), HYP-PM-0005 (C3, NOT CONFIRMED), HYP-PM-0006 (C7, pending execution) | family opened per **D-048** (2026-09-11, Owner Option B): separately-denominated from {I5,I6,I7,I12} — no I-taxonomy assignment made or inferred; C1a/C1b WITHDRAWN pre-execution and not counted; C2's INVALID is governance (controls unimplementable), not an empirical refutation; C7 execution gated (`c7_registered=false` + runs/<run_id> provenance wrapper per D-048) |
+| **P-M · C-family** | {C2, C3, C7} | **3** — HYP-PM-0004 (C2, INVALID), HYP-PM-0005 (C3, NOT CONFIRMED), HYP-PM-0006 (C7, NOT CONFIRMED) | family opened per **D-048** (2026-09-11, Owner Option B): separately-denominated from {I5,I6,I7,I12} — no I-taxonomy assignment made or inferred; C1a/C1b WITHDRAWN pre-execution and not counted; C2's INVALID is governance (controls unimplementable), not an empirical refutation; C7 executed 2026-09-14 under D-049 R-6 authorization, NOT CONFIRMED (Holm p=0.6128 at primary k=5) — see C7_EXECUTION_REPORT_2026-09-14.md |
 | **P-A · Auction Dislocation** | {I2, I3, I8} | **1** — HYP-PA-0001 | family opened at first registration (D-028, PG-3); registered 2026-07-19 on realized WP-D N=210/K=13 window |
 | **P-M · Price-Trend** | {T1} | **1** — HYP-PM-0010 (REGISTERED, in forward test) | family opened at this registration (D-028, PG-3), owner decision 2026-09-17. Scope: directional trend features derived from OHLCV (MA slope, Kaufman efficiency ratio, participation above a MA, ATR-based exits), liquid IDX, epoch 2021-07-05→2026-09-16. Separately denominated from {I5,I6,I7,I12} and from the C-family: uses **no** broker/flow instrument. No family was split — FWD-PM-VOLEX-001 (Parkinson-60 volatility exclusion) is an **unregistered** prospective record holding no slot. Widening {T1} to absorb volatility/dispersion features is permitted; narrowing or splitting is not. |
 
@@ -66,6 +66,17 @@
   (`HYP-PM-0006`) is REGISTERED and execution-gated. Full receipts: DECISION_LOG **D-048** ·
   `docs/research_programs/P-M/g1_harness/G1_FINAL_EXECUTION_REPORT_2026-09-11.md` ·
   `G1_POSTMORTEM_FAMILY_TRIAGE_2026-09-11.md`.
+- **HYP-PM-0006 (C7)** — **executed 2026-09-14** under **D-049 R-6** authorization (`g1_config.json`
+  `c7_registered: false → true`, the only parameter change; spec fixed verbatim by
+  `C7_REGISTRATION_v1_2026-09-11.md` §2/§3). Preflight: 13/13 gates PASS, Dataset B store sha256
+  `21661f03…` re-verified unchanged, PIT-aligned, production DB isolation confirmed (ro + query_only).
+  Deterministic suites 31/31 (C7 7/7, G1 16/16, provenance 8/8). **Primary k=5: θ = +13.38bp, NW t =
+  +0.5061, n=338 days, Holm p = 0.6128 — NOT CONFIRMED.** Secondary k∈{3,10} also non-significant
+  (p=0.768, 0.392). Cost-adjusted net −31.34bp to −54.08bp across horizons (sensitivity only, not the
+  verdict). Sealed: `run_id RUN-20260914T015335Z-41bea166a025`, output sha256 `c1cc10a2…`,
+  `valid_provenance=true`, `drifted_files=[]`. **Terminal per registered-run discipline — no rescue, no
+  C8 testing, no parameter changes authorized.** Receipts: DECISION_LOG **D-049** R-6 ·
+  `docs/research_programs/P-M/g1_harness/C7_EXECUTION_REPORT_2026-09-14.md`.
 - **HYP-PM-0009** — **REGISTERED 2026-09-14** per Owner/CRO ruling [[DECISION_LOG]] **D-050**. Mechanism
   **M2 / I7 · intraday execution timing**: informed and size-constrained participants back-load execution
   within the session, so conditional on a net-buying day, back-loaded net buying should be followed by
