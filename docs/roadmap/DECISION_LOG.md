@@ -1406,6 +1406,46 @@ here trivially: no all-broker net constructed; `identity_affected: false`) ·
 
 ---
 
+### D-052 · Price-Reversal {R1} family opened; HYP-PM-0012 (failed-breakdown anti-edge) registered; FWD-PM-FADE-001 opened
+**Status:** RECORDED · **Date:** 2026-09-21 · **Type:** Family open + registration act (D-028/PG-3) ·
+**Approval authority:** Owner instruction 2026-09-21 ("open new family" — approving Option A of
+`P-M/forward_fade/OWNER_DECISION_PACKAGE_R1_OPEN_2026-09-21.md`)
+
+**What was registered.** HYP-PM-0012 — the failed-breakdown anti-edge: `low(t) < lo20(t)` AND
+`close(t) > lo20(t)` (lo20 = prior-20-session rolling low, shifted 1) on the per-row liquid threshold
+universe (`adv20 >= Rp 1e9`, `close >= Rp 50`, >= 18/20 sessions traded), next-open fill, fixed
+h ∈ {5,10,20} holding periods, 0.60% RT, dual benchmark (IHSG + equal-weight liquid book, both
+required), one-way entry-date-clustered SE. Registered claim: forward excess is NEGATIVE; the
+tradeable form is an avoidance/exit overlay candidate, never a short and never a standalone entry.
+
+**In-sample basis (no confirmatory weight).** Three independent builds agree: h=20 −1.46% (t −5.64,
+IHSG) / −1.47% (t −8.20, EW-book); ex-2025 −1.88% (t −6.80, IHSG); 12,131 signals, 757 tickers, top
+name 0.6%. Discovery debt: 2026-09-17 ~12-arm pattern scan (+6 strictness variants); Bonferroni-18
+bar (z ≈ 2.99) cleared by every reported horizon.
+
+**Endpoint (frozen, protocol §3).** 12-month PROMOTE track t < −2.5 on BOTH benchmarks; 18-month
+final t < −3.0 both; REJECT if cumulative excess >= 0 on either benchmark or < 100 distinct
+signal-dates by month 12; decay haircut −0.5% vs IHSG at month 12.
+
+**Family.** P-M · Price-Reversal {R1} opened at this registration, member 1 of the family, scope:
+OHLCV-only short-horizon reversal anti-edges, separately denominated from all existing families.
+Widening permitted; narrowing/splitting not.
+
+**ID numbering ruling.** HYP-PM-0011 is reserved-retired (referenced only as the untaken
+"conservative reading" in the 2026-09-17 FWD-PM-REGIME-001→002 supersession note); this registration
+takes HYP-PM-0012.
+
+**Non-wiring clause.** FWD-PM-REGIME-002 is untouched. Any overlay use requires FADE-001 to clear a
+§3 checkpoint first (BOOK_OVERLAY_POLICY §4 two-stage rule).
+
+**Receipts:** `P-M/forward_fade/PROTOCOL.md` (registration sha256
+`e195967260888315028f33bbbea558ce2f8e02a9d049338cb655313c36a108c5`) ·
+`P-M/forward_fade/ledger.json` (opened empty; first eligible entry 2026-09-22) ·
+`P-M/HYP-PM-0012_REGISTERED.md` · `P-M/forward_fade/scripts/fade_failed_breakdown.py`
+(SHA256SUMS verified 2026-09-21).
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

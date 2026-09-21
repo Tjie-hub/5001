@@ -1,0 +1,22 @@
+{
+  "spec_id": "FWD-PM-FADE-001",
+  "protocol": "PROTOCOL.md",
+  "opened_utc": "2026-09-21T01:46:55+00:00",
+  "family": "P-M \u00b7 Price-Reversal {R1}",
+  "_comment": "Append-only. One object per signal, written when its h=20 window closes (or is censored at data end). Never back-filled: no entry with signal_date earlier than opened_utc may be inserted. Signals fill at the NEXT session's open; h in {5,10,20} fixed-horizon outcomes are recorded per signal; censored signals are flagged and excluded from the endpoint, never scored as wins or losses.",
+  "schema": {
+    "ticker": "str",
+    "signal_date": "YYYY-MM-DD (WIB), session t whose bar triggered: low(t) < lo20(t) and close(t) > lo20(t), lo20 = prior-20-session rolling low shifted 1",
+    "entry_date": "YYYY-MM-DD (WIB), first session strictly after signal_date; fill at its open",
+    "entry_open": "float",
+    "horizons": "object keyed '5','10','20'; each {exit_date, exit_close, gross_return, net_return (after 0.60% RT), ihsg_return, excess_ihsg, ewbook_return, excess_ewbook}; excess = net_return - benchmark return over the identical window",
+    "censored": "bool, data ended before the h=20 window closed; excluded from the endpoint",
+    "generated_utc": "ISO8601"
+  },
+  "trades": [],
+  "hypothesis_id": "HYP-PM-0012",
+  "protocol_sha256": "e195967260888315028f33bbbea558ce2f8e02a9d049338cb655313c36a108c5",
+  "first_eligible_entry": "2026-09-22",
+  "registered_under": "D-052",
+  "supersedes": null
+}

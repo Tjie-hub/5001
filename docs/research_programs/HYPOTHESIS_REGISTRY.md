@@ -2,7 +2,7 @@
 
 > The operating index of hypotheses across active programs. A hypothesis is **counted in its program's multiplicity family from G1/REGISTERED and never leaves** (PG-3, OS-10). This registry is append-only in spirit: status advances by adding a superseding record, never by silent edit ([[HYPOTHESIS_LIFECYCLE]] HL-1/HL-2).
 
-**Owner:** Research Director / CRO · **Last updated:** 2026-09-20 · **Governed by:** [[HYPOTHESIS_LIFECYCLE]] · [[RESEARCH_PROGRAM]]
+**Owner:** Research Director / CRO · **Last updated:** 2026-09-21 · **Governed by:** [[HYPOTHESIS_LIFECYCLE]] · [[RESEARCH_PROGRAM]]
 
 ## Registered & in-flight
 
@@ -16,6 +16,7 @@
 | **HYP-PM-0009** | P-M · {I5,I6,I7,I12} | **I7 intraday execution timing** — informed/size-constrained execution back-loads within the session; conditional on a net-buying day, back-loaded net buying is followed by higher subsequent return than front-loaded net buying of the same sign (M2 · adverse selection) | **FAILED** (F2) 2026-09-15 · was REGISTERED 2026-09-14 · executed once (EXP-PM-0009/R2) | [[HYP-PM-0009_REGISTERED]] · sha256 `d19dfd0f…` · [[FAILURE_ENTRY]] · DECISION_LOG **D-050**/D-051 · cohort v004 `e1375264…` | **consumed** (3rd P-M member) |
 | **HYP-PA-0001** | P-A · {I2,I3,I8} | reconstitution closing-auction dislocation (I8→I2) | **FAILED** (F2) 2026-08-19 · was REGISTERED 2026-07-19T00:19:47Z | [[HYP-PA-0001_REGISTERED]] · sha256 `3692e69a…` · [[FAILURE_ENTRY]] · [[EVIDENCE_PACKAGE]] | **consumed** (1st P-A member) |
 | **HYP-PM-0010** | P-M · **Price-Trend {T1}** (NEW family) | time-series momentum: trend-state onset (EMA20 slope>+2%, Kaufman ER(20)>=0.30, >=70% closes above EMA20, all at t-1) entered at close, exited on a 3xATR14 trailing stop, 60-session cap | **REGISTERED → IN_TESTING** 2026-09-17T06:35:57Z · forward test **FWD-PM-REGIME-002 OPEN**, ledger empty (0 trades), first eligible entry 2026-09-18 · was FWD-PM-REGIME-001, closed 2026-09-17T06:53:39Z with zero recorded trades and superseded (zero-volume carry-forward guard; see the supersession record below) | [[HYP-PM-0010_REGISTERED]] · `P-M/forward_regime/PROTOCOL.md` — 002 protocol sha256 at open `6e7e1a7b…`, current `4063752e…` (three post-opening amendments, each recorded as observability-only: limitations 9–10, then the daily and weekly IHSG regime fields; cumulative diff +88/−0) · was 001 sha256 `4d3d27da…` | **Price-Trend {T1} opened** (1st member) |
+| **HYP-PM-0012** | P-M · **Price-Reversal {R1}** (NEW family) | failed-breakdown anti-edge: sweep below the trailing 20-session low then close back above → **negative** forward excess (avoidance/anti-edge; no entry, never a short) | **REGISTERED → IN_TESTING** 2026-09-21 · forward test **FWD-PM-FADE-001 OPEN**, ledger empty (0 signals), first eligible entry 2026-09-22 | [[HYP-PM-0012_REGISTERED]] · `P-M/forward_fade/PROTOCOL.md` — registration sha256 `e1959672…` · spec frozen 2026-09-20 v1 (`scripts/fade_failed_breakdown.py`, SHA256SUMS) | **Price-Reversal {R1} opened** (1st member) |
 
 ## Status legend
 
@@ -29,6 +30,7 @@
 | **P-M · C-family** | {C2, C3, C7} | **3** — HYP-PM-0004 (C2, INVALID), HYP-PM-0005 (C3, NOT CONFIRMED), HYP-PM-0006 (C7, NOT CONFIRMED) | family opened per **D-048** (2026-09-11, Owner Option B): separately-denominated from {I5,I6,I7,I12} — no I-taxonomy assignment made or inferred; C1a/C1b WITHDRAWN pre-execution and not counted; C2's INVALID is governance (controls unimplementable), not an empirical refutation; C7 executed 2026-09-14 under D-049 R-6 authorization, NOT CONFIRMED (Holm p=0.6128 at primary k=5) — see C7_EXECUTION_REPORT_2026-09-14.md |
 | **P-A · Auction Dislocation** | {I2, I3, I8} | **1** — HYP-PA-0001 | family opened at first registration (D-028, PG-3); registered 2026-07-19 on realized WP-D N=210/K=13 window |
 | **P-M · Price-Trend** | {T1} | **1** — HYP-PM-0010 (REGISTERED, in forward test) | family opened at this registration (D-028, PG-3), owner decision 2026-09-17. Scope: directional trend features derived from OHLCV (MA slope, Kaufman efficiency ratio, participation above a MA, ATR-based exits), liquid IDX, epoch 2021-07-05→2026-09-16. Separately denominated from {I5,I6,I7,I12} and from the C-family: uses **no** broker/flow instrument. No family was split — FWD-PM-VOLEX-001 (Parkinson-60 volatility exclusion) is an **unregistered** prospective record holding no slot. Widening {T1} to absorb volatility/dispersion features is permitted; narrowing or splitting is not. |
+| **P-M · Price-Reversal** | {R1} | **1** — HYP-PM-0012 (REGISTERED, in forward test) | family opened at this registration (D-028, PG-3), owner decision 2026-09-21 (**D-052**). Scope: OHLCV-only short-horizon reversal anti-edges (negative forward excess), liquid IDX. Separately denominated from {I5,I6,I7,I12}, the C-family, and {T1}. Discovered in the 2026-09-17 ~12-arm pattern scan; the scan's multiplicity is carried by this registration (Bonferroni-18 cleared in-sample) and inherited by any future arm registered from it. Widening {R1} permitted; narrowing or splitting not. HYP-PM-0011 reserved-retired, never assigned (D-052). |
 
 ## Notes
 
@@ -153,4 +155,14 @@
   looks profitable on BRPT, which sits at the **91st percentile** of a per-ticker distribution where
   only **35%** of tickers are positive (median -1.59%, 10th/90th -9.23%/+4.15%). A randomly chosen
   ticker has a ~35% chance of appearing to confirm a genuinely negative effect.
+- **HYP-PM-0012 (Price-Reversal {R1}, opened 2026-09-21)** — registered under **D-052** per Owner
+  instruction (decision package `P-M/forward_fade/OWNER_DECISION_PACKAGE_R1_OPEN_2026-09-21.md`,
+  Option A). Failed-breakdown anti-edge: sweep below the trailing 20-session low, close back above
+  → forward excess NEGATIVE vs both benchmarks, net of 0.60% RT. In-sample: h=20 −1.46%/t −5.64
+  (IHSG), −1.47%/t −8.20 (EW-book), ex-2025 −1.88%/t −6.80; 12,131 signals, 757 tickers, top name
+  0.6%; three independent builds agree within 0.3pp; Bonferroni-18 cleared. Endpoint: 12-month
+  t < −2.5 BOTH benchmarks, 18-month t < −3.0 both; REJECT if cumulative excess >= 0 on either or
+  <100 signal-dates by month 12; decay haircut −0.5% at month 12. Anti-edge only — no entry, never
+  a short; any overlay use requires a §3 checkpoint first (BOOK_OVERLAY_POLICY §4) and FWD-PM-
+  REGIME-002 is untouched. HYP-PM-0011 reserved-retired, never assigned (D-052).
 
