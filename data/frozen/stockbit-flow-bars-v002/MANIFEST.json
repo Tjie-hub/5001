@@ -1,0 +1,84 @@
+{
+  "dataset_version": "stockbit-flow-bars-v002",
+  "freeze_status": "FROZEN",
+  "validation_status": "PASSED",
+  "freeze_timestamp": "2026-09-07T12:23:58+07:00",
+  "database": {
+    "path": "/home/tjiesar/10 Projects/idx-walkforward-5001/data/frozen/stockbit-flow-bars-v002/stockbit-flow-bars-v002.db",
+    "byte_size": 7789092864,
+    "sha256": "fa7f07b3415f4f644d083487db3613eb4c8c568e860f33b6ef43281764b61191",
+    "sha256_verification": "recomputed independently via Python hashlib (separate code path from the `sha256sum` CLI used for the primary hash) -- both runs agree exactly",
+    "built_via": "sqlite3 online-copy (ATTACH ... AS src, mode=ro) from the live production DB, followed by VACUUM (408.9s) to compact insertion-order fragmentation before hashing",
+    "post_vacuum_integrity_check": "ok",
+    "note": "This file is NOT a copy of data/walkforward.db. It is a narrow, purpose-built export -- only the tables below -- because the production DB is 13GB, live, and continuously written by the running idx-walkforward.service. The production DB itself was never modified, locked, or stopped."
+  },
+  "source": {
+    "production_db": "/home/tjiesar/10 Projects/idx-walkforward-5001/data/walkforward.db",
+    "production_db_byte_size_at_audit_time": 13346009088,
+    "production_db_pragma_integrity_check": "ok",
+    "note": "Read-only throughout. No writes, schema changes, or code changes were made to the production database at any point in this freeze."
+  },
+  "scope": {
+    "date_range_inclusive_start": "2025-01-02",
+    "date_range_exclusive_end": "2026-04-28",
+    "ticker_universe_size": 958,
+    "ticker_universe_source": "data.fetcher.load_all_tickers() (idx_tickers WHERE status='active')",
+    "tables_included": {
+      "stockbit_flow_bars": "77559605 rows -- minute-level flow bars, filtered to the date window. Primary dataset.",
+      "stockbit_flow": "295145 rows -- daily summary, filtered to the date window. Used to certify genuinely-empty sessions (the bars-vs-empty-session completion predicate).",
+      "idx_tickers": "972 rows -- FULL table, not filtered. The universe reference (includes inactive/suspended tickers for provenance).",
+      "trading_calendar": "309 rows -- filtered to the date window.",
+      "ohlcv": "309 rows -- restricted to ticker='IHSG' only, filtered to the date window. This is the calendar-confirmation subset used by the coverage predicate, NOT the full multi-ticker OHLCV corpus, which is explicitly out of scope for this dataset and NOT included."
+    },
+    "tables_explicitly_excluded": "Every other production table (ohlcv for non-IHSG tickers, paper_trades, agent_decisions, agent_traces, provider_events, research_* tables, ticks, bandar_detector, broker_flow, etc.) -- unrelated to this dataset by design, per explicit operator scoping decision (narrow export, not a full-DB clone)."
+  },
+  "coverage_summary": {
+    "expected_ticker_days": 296022,
+    "actual_bar_ticker_days": 239695,
+    "actual_bar_coverage_pct": 80.972,
+    "confirmed_empty_or_bars_ticker_days_complete": 295143,
+    "complete_coverage_pct": 99.7031,
+    "missing_ticker_days": 879,
+    "dates_fully_covered": 308,
+    "dates_partially_covered": 1,
+    "dates_zero_covered": 0
+  },
+  "fixture_exception": {
+    "date": "2025-04-14",
+    "reason": "Frozen Day-1 sign-off regression fixture (tools/agent_backfill_idx80.py::FROZEN_FIXTURE_DATES). The backfill orchestrator refuses by construction to ever launch a fetch for this date.",
+    "missing_cells_on_this_date": 879,
+    "complete_cells_on_this_date": 79,
+    "complete_cells_are_exactly": "the original, always-covered 79-ticker IDX80 set (26465 stockbit_flow_bars rows = ~335 bars x 79 tickers, matching the known per-session baseline exactly)",
+    "verified_no_missing_cells_outside_this_date": true,
+    "protection_status": "This date's cells are deliberately withheld and MUST NOT be backfilled through this dataset -- doing so would consume the reserved Day-1 sign-off fixture."
+  },
+  "anomalies": {
+    "foreign_key_check_violations": {
+      "count": 272,
+      "affected_tables": "agent_traces (child) -> agent_decisions (parent)",
+      "relevance_to_this_dataset": "None. Pre-existing condition in the production DB, unrelated tables, not included in this export, not caused by or related to the flow-bars backfill or this freeze.",
+      "action_taken": "None -- out of scope for this dataset. Flagged here for transparency only."
+    },
+    "duplicate_or_null_key_rows": "0 found in stockbit_flow_bars for the audited window"
+  },
+  "audit_artifact": "docs/audit/STOCKBIT_FLOW_BARS_FULL_UNIVERSE_BACKFILL_FINAL_AUDIT_2026-09-07.md",
+  "prior_provenance_trail": [
+    "docs/audit/STOCKBIT_FLOW_BARS_FULL_UNIVERSE_BACKFILL_READINESS_2026-09-01.md",
+    "docs/audit/DATA_FOUNDATION_STABILIZATION_AND_RECOVERABILITY_GATE_2026-09-01.md",
+    "backfill_flow_bars.log (2026-09-06, orchestrator execution log)",
+    "logs/agent_backfill_idx80_orchestrator.out (2026-09-06, full per-date supervisor report, final status PARTIAL by design -- see fixture_exception above)"
+  ],
+  "immutability_policy": {
+    "do_not_modify_after_hashing": true,
+    "do_not_backfill_against_this_file": true,
+    "do_not_widen_date_range_in_place": "A wider window is a NEW dataset version (e.g. stockbit-flow-bars-v003), never an in-place edit of v002.",
+    "do_not_alter_preregistration": true,
+    "next_verification_step": "Before any future use, re-run: python3 -c \"import hashlib; print(hashlib.sha256(open('stockbit-flow-bars-v002.db','rb').read()).hexdigest())\" and compare against sha256 above."
+  },
+  "windows_transfer": {
+    "status": "NOT YET DONE",
+    "canonical_source_machine": "Dell (this machine)",
+    "canonical_source_path": "/home/tjiesar/10 Projects/idx-walkforward-5001/data/frozen/stockbit-flow-bars-v002/stockbit-flow-bars-v002.db",
+    "next_action_required_on_windows": "Copy stockbit-flow-bars-v002.db (7789092864 bytes) + MANIFEST.json from this path to the Windows machine via whatever transfer channel the operator chooses (no transfer mechanism was specified/authorized in this session, so none was invoked). After transfer, recompute SHA-256 on the Windows copy and confirm it equals fa7f07b3415f4f644d083487db3613eb4c8c568e860f33b6ef43281764b61191 before treating the Windows copy as valid. The Dell copy remains canonical regardless of what happens on Windows."
+  }
+}
