@@ -1,0 +1,113 @@
+{
+  "artifact": "ARB_REGIME_TABLE_v1",
+  "created": "2026-09-14",
+  "status": "REFERENCE — not frozen, not a registration input until D-2 closes",
+  "purpose": "Canonical PIT regulatory auto-rejection band table for IDX regular-board equity securities. Separates documentary primary verification from behavioural corroboration and NEVER conflates them.",
+  "authority": "generated point-in-time record",
+  "confidence_vocabulary": {
+    "note": "Adopted verbatim from the repository's existing precedent, data/walkforward.db::idx80_reconstitution_periods, so the two PIT reference tables grade evidence on one scale.",
+    "PRIMARY_VERIFIED": "the issuing authority's own document was retrieved and read",
+    "CROSS_VALIDATED": "multiple independent contemporaneous sources agree; issuing document not retrieved",
+    "BRACKETED_RECONSTRUCTED": "derived by delta/inference from an adjacent verified state"
+  },
+  "hard_rule": "behaviourally_corroborated=true NEVER implies primary_verified=true. A regularity in prices is evidence about the world; a decree is evidence about the rule. They are different objects and are recorded in different fields.",
+  "scope_note": "Applies to regular-board (Papan Utama / Pengembangan / Ekonomi Baru) equity securities, ETF and DIRE. Papan Pemantauan Khusus trades by full call auction on a DIFFERENT mechanism (+/-10% symmetric above Rp10, +/-Rp1 at Rp1-10) and is NOT covered by any row below. IPO first trading day carries 2x bands referenced to the offer price and is NOT covered.",
+  "price_tiers": {
+    "basis": "previous closing price (regular board reference price)",
+    "tiers": [
+      {"from": 50, "to": 200, "ara_pct": 35},
+      {"from": 200, "to": 5000, "ara_pct": 25},
+      {"from": 5000, "to": null, "ara_pct": 20}
+    ],
+    "tier_stability": "ASSUMED CONSTANT ACROSS REGIMES — UNVERIFIED. LC-PM-0009 explicitly flags this ('no verification of whether any tier boundaries changed across regimes'). Not corroborated by this audit either."
+  },
+  "regimes": [
+    {
+      "regime": "R1",
+      "effective_from": "2020-03-XX",
+      "effective_to": "2023-06-02",
+      "ara": "tiered 35/25/20",
+      "arb": "DISPUTED — see discrepancy",
+      "arb_per_literature_card": -0.07,
+      "arb_per_local_behaviour": -0.10,
+      "source": "LC-PM-0009 (Q3, composite secondary reconstruction)",
+      "source_quality": "Q3",
+      "primary_verified": false,
+      "behaviourally_corroborated": true,
+      "behavioural_evidence": "HYP-PM-0008_R3_BOUNDARY_BEHAVIOURAL_AUDIT_2026-09-14 section E.1: across 2023-01..2023-05, 67148 observations over five months, the most negative daily move is exactly -10.0% in four of five months and -9.9% in the fifth. A -7% floor is breached on hundreds of observations; a -10% floor is never breached.",
+      "discrepancy": "LC-PM-0009 states ARB=7%. Local OHLCV behaviour for 2023-01..2023-05 indicates -10%. Most likely an undocumented intermediate relaxation -7% -> -10% at an unknown date before 2023-01. NOT RESOLVED. Bounding it requires scanning 2021-07-05..2022-12-31, which was outside the audited window and was not performed.",
+      "used_by_hyp_pm_0008": false
+    },
+    {
+      "regime": "R2",
+      "effective_from": "2023-06-05",
+      "effective_to": "2023-09-01",
+      "ara": "tiered 35/25/20",
+      "arb": -0.15,
+      "arb_symmetric": false,
+      "source": "Kep-00055/BEI/03-2023 (issued 2023-03-30), staged implementation, Tahap I; LC-PM-0009 + contemporaneous secondary reporting",
+      "source_quality": "Q3",
+      "primary_verified": false,
+      "behaviourally_corroborated": true,
+      "behavioural_evidence": "section E.1/E.2: 42112 observations over 2023-06..2023-08 with NO move beyond -15.0%; the -15% floor binds to within 0.43pp on each of the five sessions preceding 2023-09-04. First session 2023-06-05 prints exactly -15.00% where the prior session (2023-05-31) bottomed at -9.93% with zero moves beyond -10.5%.",
+      "boundary_precision": "SESSION-EXACT. 2023-05-31 is the last R1 session, 2023-06-05 the first R2 session; 2023-06-01/02 were IDX holidays and 06-03/04 a weekend.",
+      "used_by_hyp_pm_0008": false,
+      "role": "POSITIVE CONTROL — recovering this independently-documented boundary validated the detector before the R2->R3 boundary was assessed."
+    },
+    {
+      "regime": "R3",
+      "effective_from": "2023-09-04",
+      "effective_to": "2025-04-07",
+      "ara": "tiered 35/25/20",
+      "arb": "symmetric: equal and opposite to ARA (-35/-25/-20 by tier)",
+      "arb_symmetric": true,
+      "source": "Kep-00055/BEI/03-2023 (issued 2023-03-30), Auto Rejection Simetris Tahap II; LC-PM-0009 + contemporaneous secondary reporting",
+      "source_quality": "Q3",
+      "primary_verified": false,
+      "behaviourally_corroborated": true,
+      "behavioural_evidence": "section E.2/E.3: last R2 session 2023-09-01 bottoms at -14.57% with ZERO moves beyond -15.5%; first R3 session 2023-09-04 prints -34.94% with 2 moves beyond -15.5%. 103 'R3-only' moves follow (beyond flat -15%, inside the symmetric tier), 0 before. 41 of 104 land within 1.0pp of their exact tier floor, 20 within 0.2pp; they sort correctly across all three tiers (70 at 25%, 32 at 35%, 2 at 20%); 74 distinct tickers over 50 sessions.",
+      "boundary_precision": "SESSION-EXACT. 2023-09-02/03 was a weekend, so 2023-09-01 and 2023-09-04 are adjacent sessions and no intermediate date is admissible.",
+      "used_by_hyp_pm_0008": true,
+      "role": "CONTROL ARM of the HYP-PM-0008 primary contrast"
+    },
+    {
+      "regime": "R4",
+      "effective_from": "2025-04-08",
+      "effective_to": null,
+      "ara": "tiered 35/25/20 — UNCHANGED across the R3->R4 switch",
+      "arb": -0.15,
+      "arb_symmetric": false,
+      "arb_applies_to_all_price_ranges": true,
+      "source": "Kep-00003/BEI/04-2025 (Perubahan Peraturan Nomor II-A), established and effective 2025-04-08",
+      "source_quality": "Q3 secondary; same-day pre-open national financial press (Kontan, 2025-04-08 08:51 WIB) reporting decree number, effective date, 15% for 'seluruh rentang harga', and enumerated scope (Papan Utama, Pengembangan, Ekonomi Baru, ETF, DIRE)",
+      "primary_verified": false,
+      "behaviourally_corroborated": true,
+      "behavioural_evidence": "dataset_b/artifacts/OUTSIDE_BAND_INVESTIGATION_v1.json: a naive flat -15% ARB applied across the Dataset B window produces 15 breaches, 15/15 resolved, 0 unresolved; 13 sub-band down-moves are ALL dated before 2025-04-08 (range 2025-01-23..2025-03-18) against observed symmetric floors of -20/-25/-35%, and ZERO occur on or after 2025-04-08.",
+      "boundary_precision": "BOUNDED, NOT SESSION-EXACT, from local data alone: the last observed >15% down-move is 2025-03-18, so behaviour bounds the switch to (2025-03-18, first post-switch session]. The exact 2025-04-08 date rests on same-day secondary reporting.",
+      "compound_treatment": "2025-04-08 ALSO re-tiered the market-wide trading halt from a single 5% JCI drop to 8%/15%/20%. LC-PM-0009 condition 5 requires treating this as a compound treatment; HYP-PM-0008_SPEC section 7 exclusion E6 removes sessions where IHSG fell >= 8%.",
+      "used_by_hyp_pm_0008": true,
+      "role": "TREATMENT ARM of the HYP-PM-0008 primary contrast"
+    }
+  ],
+  "documentary_gap": {
+    "status": "OPEN — D-2 PRIMARY VERIFICATION NOT ESTABLISHED",
+    "missing_documents": [
+      "SK Direksi BEI Kep-00055/BEI/03-2023 (governs the R1->R2->R3 staged transitions)",
+      "SK Direksi BEI Kep-00003/BEI/04-2025 (governs the R3->R4 transition)"
+    ],
+    "acquisition_classification": "B — RECOVERABLE THROUGH LAWFUL EXTERNAL ACQUISITION",
+    "why_class_B": "The repository has ALREADY obtained official IDX regulatory documents through the Internet Archive. data/walkforward.db::idx80_reconstitution_periods cites, verbatim, three IDX Pengumuman PDFs retrieved '(via Wayback Machine)' — Peng-00139/BEI.POP/07-2025, Peng-00014/BEI.POP/01-2026, Peng-00067/BEI.POP/04-2026 — plus an official IDX XLSX for Peng-00012/BEI.POP/01-2025. A lawful, precedented, in-repo channel for IDX primary documents therefore EXISTS and has produced PRIMARY_VERIFIED rows before.",
+    "what_this_audit_attempted": "Wayback CDX index queried for the IDX rule PDFs and for the keputusan-direksi listing page. Archived snapshots of the listing page DO exist after the 2025-04-08 decree (2025-05-27, 2025-06-08, 2025-08-04, 2026-03-01, all HTTP 200), but the page is a JS-rendered SPA and the archived snapshot contains only the shell — the decree list is loaded from an API that was not archived. The specific decree PDF URLs were not located under the URL patterns tried.",
+    "not_attempted": "No circumvention of the idx.co.id WAF was attempted. The Internet Archive is a separate public archive, not a bypass of the live site's access control.",
+    "next_action": "Locate the decree PDF URL (IDX site API endpoint, a different archive snapshot, IDXNet/member portal, a subscribed vendor, or a direct request to IDX) and retrieve the two documents. On retrieval, set primary_verified=true and record the retrieval timestamp, source URL and document sha256 in this artifact."
+  },
+  "provenance": {
+    "behavioural_evidence_documents": [
+      "docs/research_programs/P-M/HYP-PM-0008_R3_BOUNDARY_BEHAVIOURAL_AUDIT_2026-09-14.md",
+      "docs/research_programs/P-M/dataset_b/artifacts/OUTSIDE_BAND_INVESTIGATION_v1.json"
+    ],
+    "literature_source": "docs/research_programs/P-M/LC-PM-0009.md (Q3, self-graded 'corroborated but NOT primary-verified')",
+    "band_model_reused_from": "docs/research_programs/P-M/dataset_b/foundation.py (ARA_TIERS, BAND_TOLERANCE=0.02, ara_arb, exceeds_band)",
+    "confidence_vocabulary_precedent": "data/walkforward.db::idx80_reconstitution_periods"
+  }
+}

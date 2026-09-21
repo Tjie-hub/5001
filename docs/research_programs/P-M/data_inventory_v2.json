@@ -1,0 +1,169 @@
+{
+  "artifact": "data_inventory_v2",
+  "created": "2026-09-14",
+  "authority": "generated point-in-time record",
+  "method": "read-only inspection of data/walkforward.db (file:...?mode=ro) and the frozen Dataset B store. No writes, no hypothesis execution, no return statistics.",
+  "classification_scale": {
+    "A": "PIT-complete and authoritative",
+    "B": "historically recoverable but incomplete",
+    "C": "prospective-only",
+    "D": "unavailable"
+  },
+  "headline_finding": "The binding constraint is NOT absence of raw data. Two of the three largest assets in the estate — 98,454,570 intraday flow bars and 20,203,151 ticks — have never been consumed by any registered hypothesis at their native resolution. Every P-M hypothesis to date collapsed its instrument to one scalar per ticker-day before testing. Separately, the one asset that IS identity-immune (aggressor-side buy/sell) is the one that was never used structurally.",
+
+  "part1_security_and_board_metadata": {
+    "main_board": {"class": "D", "evidence": "No board-classification field exists in any of the 82 production tables. Repo-wide grep for papan/pemantauan/board_type/main_board/development_board/DIRE/is_etf returns nothing.", "prospective_fixable": true},
+    "development_board": {"class": "D", "evidence": "as above", "prospective_fixable": true},
+    "new_economy_board": {"class": "D", "evidence": "as above", "prospective_fixable": true},
+    "papan_pemantauan_khusus": {
+      "class": "D",
+      "evidence": "No special-monitoring field. This is the exact instrument HYP-PM-0008_SPEC section 20 blocker B4 requires and cannot obtain. PPK is a DIFFERENT market mechanism (full call auction, +/-10% symmetric above Rp10) so its members must be removed from any auto-rejection study, and they cannot be identified.",
+      "prospective_fixable": true,
+      "note": "IDX publishes the PPK list daily. Forward capture is straightforward; historical reconstruction back to 2023 is not, unless archived snapshots exist."
+    },
+    "etf": {"class": "D", "evidence": "no instrument-type field", "prospective_fixable": true},
+    "dire": {"class": "D", "evidence": "no instrument-type field", "prospective_fixable": true},
+    "ipo_first_day": {
+      "class": "B",
+      "evidence": "No listing-date table. idx_tickers.first_seen is 2026-04-24/27 for all 972 rows — it records when OUR scraper first saw the ticker, not the IDX listing date. A first-appearance proxy over ohlcv is computable but left-censored at the corpus start 2021-07-05.",
+      "recoverable": "partially — first appearance in ohlcv is a lower bound on listing date for post-2021-07-05 listings only"
+    },
+    "listing_date": {"class": "B", "evidence": "as ipo_first_day; no authoritative field", "recoverable": "external acquisition required for pre-2021-07-05 listings"},
+    "suspension_status": {
+      "class": "B",
+      "evidence": "suspension_events EXISTS: 3,189 rows, 956 tickers, 2022-04-28..2026-07-17, columns (ticker,last_normal_date,resume_date,missing_td,gap_pct,classification). BUT it is DERIVED by gap detection, not an authoritative IDX suspension feed: classification breakdown is data_gap=2,830 / suspension=359, i.e. 89% of rows are our own missing data rather than observed exchange suspensions.",
+      "correction": "An earlier audit in this session stated 'no suspension table exists'. That was WRONG. The table exists; it is derived rather than authoritative, which is a different and weaker defect.",
+      "recoverable": "usable as a declared proxy today; an authoritative feed requires external acquisition"
+    },
+    "index_membership_idx80": {
+      "class": "B",
+      "evidence": "idx80_membership_history (640 rows, 101 tickers) + idx80_reconstitution_periods (8 periods P0..P7), covering 2025-01-02..2026-08-02 ONLY. Carries effective_from/effective_to, membership_status, confidence, and a source string citing actual IDX announcement numbers. Confidence breakdown: PRIMARY_VERIFIED 320, CROSS_VALIDATED 160, BRACKETED_RECONSTRUCTED 160.",
+      "significance": "This is the repository's EXEMPLAR of a correct PIT reference table and the template every other classification table should follow. It also proves an IDX primary-document acquisition channel exists (see part2).",
+      "gap": "no coverage before 2025-01-02, so it cannot serve any 2023-window study"
+    },
+    "delisting_corporate_event": {
+      "class": "B",
+      "evidence": "corporate_action_events: 12,353 rows, 954 tickers, 2009-01-07..2026-11-24 (forward-dated = announced), types dividend/rups/rightissue/tenderoffer/stocksplit/warrant/bonus/stock_reverse, with raw_json retained. Materially richer than corporate_actions (2,171 rows), which is what the research pipeline actually consumes.",
+      "information_discarded": "corporate_action_events.raw_json is retained but the research path uses the 2,171-row corporate_actions projection. 10,182 event rows and all raw payloads are not reached by any research code."
+    },
+    "idx_tickers_snapshot": {
+      "class": "D_for_research",
+      "evidence": "972 rows, all first_seen 2026-04-24/27. in_idx80 already REJECTED FOR RESEARCH USE by DATASET_B_SEMANTIC_REGISTER_v1 ('a stale single snapshot written 2026-04-27; NOT historical membership')."
+    }
+  },
+
+  "part2_arb_regime_table": {
+    "artifact": "docs/research_programs/P-M/reference/ARB_REGIME_TABLE_v1.json",
+    "feasibility": "BUILT — the table is constructible today and has been built",
+    "documentary_gap_class": "B",
+    "class_B_justification": "idx80_reconstitution_periods cites three official IDX Pengumuman PDFs retrieved '(via Wayback Machine)' plus one official IDX XLSX. A lawful, precedented channel for IDX primary documents exists in this repository and has produced PRIMARY_VERIFIED rows.",
+    "attempted_this_audit": "Wayback CDX queried; archived keputusan-direksi listing snapshots exist post-2025-04-08 (2025-05-27, 2025-06-08, 2025-08-04, 2026-03-01, HTTP 200) but the page is a JS-rendered SPA and only the shell was archived. Decree PDF URLs not located under the patterns tried.",
+    "waf_circumvention": "NONE ATTEMPTED. Internet Archive is a separate public archive, not a bypass of idx.co.id access control.",
+    "r1_discrepancy": "LC-PM-0009 states R1 ARB = 7%; local OHLCV behaviour for 2023-01..2023-05 (67,148 obs) shows a hard floor at exactly -10.0%. Unresolved; does not affect HYP-PM-0008, which excludes R1."
+  },
+
+  "part3_capturability_legs": {
+    "note": "Mechanical/legal feasibility only. No return, cost, or profitability quantity was computed.",
+    "limit_down_continuation_short_leg": {"verdict": "NOT CAPTURABLE", "evidence": "Capturing a predicted DOWNWARD continuation requires short exposure. LC-PM-0006 records IDX as order-driven with no designated market maker; DISCOVERY_2026-08-21_M2x_short_horizon section 7 records that IDX short-selling rules were 'not extractable from the official page fetched', and DISCOVERY_2026-08-21_M6_I1_price_limits excludes shorting as the capture leg (EX4-adjacent, 'IDX does not practically permit'). No borrow/short-availability data exists in any of the 82 tables.", "data_missing": false, "reason": "structural, not a data gap"},
+    "limit_up_continuation_long_leg": {"verdict": "NOT CAPTURABLE", "evidence": "LC-PM-0007 (Q4, J.Econometrics): at an upper-limit hit the queue is composed of buyers and a late arrival does not execute — 'the mechanism that creates the effect excludes you from it'.", "data_missing": false},
+    "queue_position": {"verdict": "UNKNOWN — DATA MISSING", "evidence": "No order-book, queue-depth or order-event data exists. ZCODE_ALPHA_DISCOVERY_FAMILY_MAP section 6 lists order book as 'unavailable in market — blocked permanently'. ticks (20.2M rows, 2026-04-18..2026-09-14) carries price/volume/tick_type but no queue state."},
+    "late_arrival_eligibility": {"verdict": "UNKNOWN — DATA MISSING", "evidence": "depends on queue position; same gap"},
+    "t_plus_2_settlement": {"verdict": "CAPTURABLE", "evidence": "IDX regular market settles T+2; the SPEC's k=1 close-to-close horizon does not require intraday round-tripping or settlement netting. No held data contradicts this. Documentary basis: LC-PM-0006 market-design card."},
+    "short_selling_availability": {"verdict": "UNKNOWN — DATA MISSING", "evidence": "No short-eligibility list, no borrow data, no fee data in any table. LC-PM-0009 notes the short-selling eligibility list was republished 2023-04-03 but it was never captured."},
+    "ordinary_board_constraints": {"verdict": "UNKNOWN — DATA MISSING", "evidence": "board membership unavailable (part1); a PPK name trades by call auction and cannot execute a continuous-session strategy at all"},
+    "auction_close_execution": {"verdict": "UNKNOWN — DATA MISSING", "evidence": "stockbit_flow_bars ends at 16:14 with a structural gap at 15:50-15:59 (the pre-closing/closing auction window). The closing auction itself is not observable in any held table."},
+    "suspension_constraints": {"verdict": "CAPTURABLE (as a declared proxy)", "evidence": "suspension_events plus session-calendar non-consecutiveness plus zero volume; declared as a proxy, not a measurement"},
+    "summary": "Of 9 legs: 1 CAPTURABLE, 1 CAPTURABLE-as-proxy, 2 NOT CAPTURABLE for structural reasons that no data acquisition would change, and 5 UNKNOWN-DATA-MISSING. The two NOT CAPTURABLE verdicts are the ones that bind HYP-PM-0008, and they are market-structure facts, not data gaps."
+  },
+
+  "part4_intraday_flow": {
+    "table": "stockbit_flow_bars",
+    "rows": 98454570,
+    "coverage": {"from": "2025-01-02", "to": "2026-09-11", "distinct_sessions": 399, "tickers_per_session_observed": [828, 859]},
+    "session_coverage_vs_calendar": {"calendar_sessions_in_window": 400, "present": 399, "missing": ["2026-08-25"], "coverage_pct": 99.75},
+    "grid_structure": {"bar_interval": "1 minute", "session_grid": "09:00-11:59, 13:30-15:49, 16:00-16:14 = 335 bars", "gaps_are_structural": ["11:59->13:30 lunch break", "15:49->16:00 pre-closing/closing auction"]},
+    "internal_completeness": {"probe_date": "2026-03-10", "tickers": 859, "bars_per_ticker_min": 335, "bars_per_ticker_p50": 335, "bars_per_ticker_max": 335, "tickers_with_full_grid_pct": 100.0},
+    "fields": ["ticker", "trade_date", "bar_time", "buy_lot", "sell_lot", "buy_freq", "sell_freq", "net_value", "price", "delta"],
+    "identity_status": "IMMUNE. buy_lot and sell_lot are SEPARATE aggressor-side quantities that do not balance. FOUR_TEST_IDENTITY_AND_REGISTRY_AUDIT_2026-09-11 part D.2 independently verified this instrument is 'structurally immune' (BBCA 44.4M vs 63.9M shares; |NF| p50 = 0.175 — genuine variance). The all-broker-net identity that voided HYP-PM-0003, BFI-001's primary and C2 DOES NOT REACH THIS TABLE.",
+    "classification": "B — usable but incomplete",
+    "why_not_A": "The CONTENT is dense and complete; the PROVENANCE does not exist. stockbit_flow_bars has no captured_at, no retrieval timestamp, no request parameters, no response hash, no completeness flag, and no raw payload. Both writers (stockbit_fetcher.py:789, tools/backfill_flow_bars.py:154) use INSERT OR REPLACE, so any re-fetch silently overwrites history in place and leaves no trace. The table cannot be proven PIT and cannot be deterministically reconstructed.",
+    "prospective_fix": "docs/research_programs/P-M/prospective_capture/ — and the design is NOT novel: dataset_b's capture layer already implements exactly this pattern correctly (raw_responses with gzipped payloads, capture_manifest, capture_run_log with code_sha256). The fix is to replicate a proven in-repo pattern, not to invent one."
+  },
+
+  "part5_broker_interaction": {
+    "source": "frozen Dataset B store (read-only; sha256 verified unchanged)",
+    "store_sha256_verified": "21661f033145ef90657f... matches DATASET_B_FREEZE_MANIFEST_v1",
+    "broker_flow_b": {"rows": 1518727, "tickers": 101, "sessions": 386, "distinct_broker_codes": 95, "cells": 30877, "brokers_per_cell": {"min": 20, "p10": 36, "p50": 47, "p90": 65, "max": 88}, "truncated": false, "limit_param": 150},
+    "raw_responses": {"rows": 30880, "note": "gzipped immutable raw API payloads with captured_at_utc and capture_version — full provenance"},
+    "capture_run_log": {"rows": 3, "fields": ["run_id", "code_sha256", "roster_artifact_sha256", "cells_intended", "cells_attempted", "cells_success", "cells_empty", "cells_failed", "cadence_s", "limit_param", "host"]},
+    "reconstructable": {
+      "broker_x_ticker_x_date": "EXISTING DATA SUFFICIENT — 1,518,727 rows, full population (not top-25 truncated), median 47 brokers per ticker-day",
+      "broker_concentration": "EXISTING DATA SUFFICIENT — HHI computable per side per cell; already partly consumed as BFI-001 F4_conc",
+      "broker_persistence": "EXISTING DATA SUFFICIENT — 386 consecutive sessions, 95 brokers",
+      "broker_pair_interaction": "EXISTING DATA SUFFICIENT — co-presence of any broker pair in a ticker-day is directly observable; 95 brokers = 4,465 unordered pairs",
+      "broker_coalition_group_structure": "EXISTING DATA PARTIALLY SUFFICIENT — co-presence and daily net tilt are observable, but ZCODE_ALPHA_DISCOVERY_FAMILY_MAP family N already measured avg pairwise daily tilt correlation at -0.065 with 80%/day dominant-broker identity churn, i.e. the structure was looked for and not found at DAILY resolution",
+      "initiator_absorber_chaser": "NEW DATA REQUIRED — these are ORDERING concepts. broker_flow_b is a daily NET per broker with no intraday time dimension, so who moved first is unobservable. The intraday table that does have time (stockbit_flow_bars) has no broker dimension.",
+      "daily_flow_price_alignment": "EXISTING DATA SUFFICIENT — broker_flow_b joined to ohlcv on (ticker, date)"
+    },
+    "the_missing_cross": "broker identity x intraday time. It exists in NEITHER table and is NOT disclosed by IDX at broker level intraday (ZCODE_ALPHA_DISCOVERY_FAMILY_MAP section 6: 'Intraday broker timing (not disclosed at broker level) — blocked'). This is a genuine class-D unavailability, not a pipeline defect."
+  },
+
+  "part6_information_loss": {
+    "principle": "Separate what was never collected from what was collected and then discarded.",
+    "chains": [
+      {
+        "hypothesis": "C3 (HYP-PM-0005) breadth surprise",
+        "raw": "broker_flow_b 1,518,727 broker rows / 30,877 ticker-day cells / 95 broker identities / median 47 brokers per cell",
+        "materialization": "per ticker-day counts of net-buying vs net-selling brokers",
+        "feature": "breadth imbalance scalar, then a +/-0.30-vs-trailing-median binary state",
+        "tested": "one daily cross-sectional state-contrast series, 329 daily observations",
+        "discarded": "broker IDENTITY entirely; per-broker magnitudes; the full distribution behind the count; all intraday timing (never held for broker data)",
+        "compression": "1,518,727 broker rows -> 329 daily numbers"
+      },
+      {
+        "hypothesis": "C7 (HYP-PM-0006) intensity state",
+        "raw": "same 1,518,727 broker rows, plus ohlcv close x volume",
+        "materialization": "gross = sum of |value| per ticker-session; ADV20 = 20-session median traded value, shift(1)",
+        "feature": "intensity = gross/ADV20, then a binary state at >= 2.0",
+        "tested": "one daily high-vs-non-high contrast series",
+        "discarded": "everything that distinguishes one broker from another; the entire magnitude distribution above and below the 2.0 threshold; the sign/direction of each broker's participation; all intraday shape",
+        "compression": "1,518,727 broker rows -> one binary flag per ticker-day"
+      },
+      {
+        "hypothesis": "HYP-PM-0001 (and HYP-PM-0002 draft)",
+        "raw": "stockbit_flow_bars — 98,454,570 one-minute aggressor-side bars with SEPARATE buy_lot/sell_lot",
+        "materialization": "OFI_day = sum(delta) / sum(buy_lot + sell_lot), one scalar per ticker-day",
+        "feature": "sign(OFI_day)",
+        "tested": "signed reversal at k=15",
+        "discarded": "335 bars per ticker-session collapsed to ONE number, then to ONE BIT. Intraday timing, shape, front/back-loading, within-day reversal, the buy/sell split itself, and buy_freq/sell_freq were all summed away.",
+        "compression": "98,454,570 bars -> one sign per ticker-day"
+      }
+    ],
+    "genuinely_missing": [
+      "broker identity at intraday resolution (not disclosed by IDX — permanent)",
+      "order book / queue depth / order events (unavailable in market — permanent)",
+      "client identity (unavailable — permanent)",
+      "board classification incl. Papan Pemantauan Khusus (exists at IDX, never captured — fixable prospectively)",
+      "short-sell eligibility and borrow (exists at IDX, never captured — fixable prospectively)",
+      "authoritative suspension feed (exists at IDX, only a derived proxy held)",
+      "the two ARB decrees as documents (exist, class B, lawful channel proven)"
+    ],
+    "held_but_discarded": [
+      "98,454,570 intraday flow bars — never consumed at native resolution by ANY registered hypothesis",
+      "20,203,151 ticks (2026-04-18..2026-09-14, 868 tickers) — consumed only by the VPIN path, never by a registered P-M hypothesis",
+      "buy_freq / sell_freq on the intraday table — note broker_flow.freq is UNKNOWN/FORBIDDEN, but these are a DIFFERENT field from a different endpoint and were the trusted reference used to condemn broker_flow.freq",
+      "broker identity — 95 codes, present in every Dataset B cell, collapsed to counts (C3) or summed away (C7)",
+      "the magnitude distribution either side of every threshold C3/C7 binarized",
+      "corporate_action_events.raw_json and ~10,182 event rows not reached by the research path",
+      "bandar_detector.total_buyer/total_seller — the ONLY uncensored participation measure in the estate, VERIFIED, and unused by any registered hypothesis"
+    ],
+    "verdict": "Both causes are real, but they are not equal in size. The permanent unavailabilities are narrow and specific (intraday broker identity, order book, client identity). The discarded-information set is enormous and includes the single largest identity-immune asset in the estate."
+  },
+
+  "data_quality_defects_found": {
+    "stockbit_flow_empty_dates": {"rows": 98, "detail": "trade_date is NULL or '' — valid range otherwise 2025-01-02..2026-09-14"},
+    "ohlcv_mixed_adjustment_basis": {"tickers_with_fractional_close": 139, "of_total": 959, "pct": 14.5, "detail": "A fractional close proves an in-place split adjustment was applied inside ohlcv. 14.5% of the universe carries one, while corporate_actions holds only 2,171 rows. DATASET_B_SEMANTIC_REGISTER_v1 already grades ohlcv.close/volume 'VERIFIED WITH DEFECT'; this quantifies it for the first time. Any CA-based exclusion is blind to adjustments with no matching CA row — this is exactly how the WICO 2023-07-20 anomaly evaded exclusion in the R3 boundary audit."},
+    "ownership_composition_empty": {"rows": 0, "detail": "table exists, never populated"},
+    "suspension_events_is_derived": {"detail": "89% of rows classified data_gap (our own missing data) rather than suspension (359 rows)"}
+  }
+}

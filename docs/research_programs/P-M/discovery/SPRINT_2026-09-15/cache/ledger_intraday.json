@@ -1,0 +1,298 @@
+[
+ {
+  "id": "D1-dip-lateflow-confirms_r-0.02",
+  "meta": {
+   "family": "D",
+   "def": "ret1<=-2% & day bar-net>0 & late-30m net>=0 & day_nv_z>=1",
+   "source": "frozen v002 minute bars",
+   "grain": "ticker-day (full canvas, v002 window)"
+  },
+  "n_obs": 456,
+  "n_tickers": 208,
+  "avg_per_day": 0.8336380255941499,
+  "status": "KILL(too-few-obs)"
+ },
+ {
+  "id": "D1-dip-lateflow-confirms_r-0.03",
+  "meta": {
+   "family": "D",
+   "def": "ret1<=-3% & day bar-net>0 & late-30m net>=0 & day_nv_z>=1",
+   "source": "frozen v002 minute bars",
+   "grain": "ticker-day (full canvas, v002 window)"
+  },
+  "n_obs": 372,
+  "n_tickers": 180,
+  "avg_per_day": 0.680073126142596,
+  "status": "KILL(too-few-obs)"
+ },
+ {
+  "id": "D2-latebuy-muted-close_0.6",
+  "meta": {
+   "family": "D",
+   "def": "last-30m net share>=60% & day_nv_z>=1.5 & |intraday ret|<=1%",
+   "grain": "ticker-day (v002 window)"
+  },
+  "n_obs": 78,
+  "n_tickers": 55,
+  "avg_per_day": 0.1425959780621572,
+  "status": "KILL(too-few-obs)"
+ },
+ {
+  "id": "D2-latebuy-muted-close_0.75",
+  "meta": {
+   "family": "D",
+   "def": "last-30m net share>=75% & day_nv_z>=1.5 & |intraday ret|<=1%",
+   "grain": "ticker-day (v002 window)"
+  },
+  "n_obs": 62,
+  "n_tickers": 43,
+  "avg_per_day": 0.113345521023766,
+  "status": "KILL(too-few-obs)"
+ },
+ {
+  "id": "D3-heavy-tape-buying_0.5",
+  "meta": {
+   "family": "D",
+   "def": "net in top-vol-quintile buckets >= 50% of |day net| & vol_z>=1.5 & day net>0",
+   "grain": "ticker-day (v002 window)"
+  },
+  "n_obs": 465,
+  "n_tickers": 233,
+  "avg_per_day": 0.850091407678245,
+  "status": "KILL(too-few-obs)"
+ },
+ {
+  "id": "D3-heavy-tape-buying_0.7",
+  "meta": {
+   "family": "D",
+   "def": "net in top-vol-quintile buckets >= 70% of |day net| & vol_z>=1.5 & day net>0",
+   "grain": "ticker-day (v002 window)"
+  },
+  "n_obs": 296,
+  "n_tickers": 184,
+  "avg_per_day": 0.5411334552102377,
+  "status": "KILL(too-few-obs)"
+ },
+ {
+  "id": "D4-earlyflow-pricelag_z1.0",
+  "meta": {
+   "family": "D",
+   "def": "z60(net by 10:30)>=1.0 & vwap move to 10:30 <= 0",
+   "grain": "ticker-day (v002 window)"
+  },
+  "n_obs": 2048,
+  "n_tickers": 386,
+  "avg_per_day": 3.7440585009140768,
+  "min_obs_req": 300,
+  "min_tickers_req": 40,
+  "h1": {
+   "gross_mean": -9.108887244853764e-05,
+   "gross_med": 0.0,
+   "hit": 0.41064453125,
+   "net_floor": -0.006091088872448538,
+   "nw_t_perday": 0.591,
+   "nw_p_perday": 0.5544,
+   "by_subperiod": {
+    "2025H1": -0.001384,
+    "2025H2": 0.004329,
+    "2026H1": -0.004555,
+    "2026H2": null
+   },
+   "subperiod_min": -0.004555
+  },
+  "h5": {
+   "gross_mean": 0.002511818039485732,
+   "gross_med": -1.1102230246251565e-16,
+   "hit": 0.47509765625,
+   "net_floor": -0.0034881819605142683,
+   "nw_t_perday": 1.571,
+   "nw_p_perday": 0.1162,
+   "by_subperiod": {
+    "2025H1": -0.006731,
+    "2025H2": 0.025752,
+    "2026H1": -0.017534,
+    "2026H2": null
+   },
+   "subperiod_min": -0.017534
+  },
+  "h10": {
+   "gross_mean": 0.010836051588560304,
+   "gross_med": -1.1102230246251565e-16,
+   "hit": 0.4794921875,
+   "net_floor": 0.004836051588560304,
+   "nw_t_perday": 2.352,
+   "nw_p_perday": 0.0186,
+   "by_subperiod": {
+    "2025H1": -0.005071,
+    "2025H2": 0.054233,
+    "2026H1": -0.02849,
+    "2026H2": null
+   },
+   "subperiod_min": -0.02849
+  },
+  "h20": {
+   "gross_mean": 0.023106191070221355,
+   "gross_med": -0.0022781161374310077,
+   "hit": 0.48193359375,
+   "net_floor": 0.017106191070221356,
+   "nw_t_perday": 3.255,
+   "nw_p_perday": 0.0011,
+   "by_subperiod": {
+    "2025H1": 0.011797,
+    "2025H2": 0.088042,
+    "2026H1": -0.053243,
+    "2026H2": null
+   },
+   "subperiod_min": -0.053243
+  },
+  "status": "KILL(cost)"
+ },
+ {
+  "id": "D4-earlyflow-pricelag_z1.5",
+  "meta": {
+   "family": "D",
+   "def": "z60(net by 10:30)>=1.5 & vwap move to 10:30 <= 0",
+   "grain": "ticker-day (v002 window)"
+  },
+  "n_obs": 1122,
+  "n_tickers": 346,
+  "avg_per_day": 2.0511882998171846,
+  "min_obs_req": 300,
+  "min_tickers_req": 40,
+  "h1": {
+   "gross_mean": 0.0006804544890133866,
+   "gross_med": 0.0,
+   "hit": 0.4055258467023173,
+   "net_floor": -0.0053195455109866134,
+   "nw_t_perday": 0.456,
+   "nw_p_perday": 0.6486,
+   "by_subperiod": {
+    "2025H1": -0.000484,
+    "2025H2": 0.006754,
+    "2026H1": -0.007127,
+    "2026H2": null
+   },
+   "subperiod_min": -0.007127
+  },
+  "h5": {
+   "gross_mean": 0.0028125873697906765,
+   "gross_med": -1.1102230246251565e-16,
+   "hit": 0.4750445632798574,
+   "net_floor": -0.0031874126302093237,
+   "nw_t_perday": 1.432,
+   "nw_p_perday": 0.1522,
+   "by_subperiod": {
+    "2025H1": -0.008561,
+    "2025H2": 0.031842,
+    "2026H1": -0.026523,
+    "2026H2": null
+   },
+   "subperiod_min": -0.026523
+  },
+  "h10": {
+   "gross_mean": 0.009380334001366899,
+   "gross_med": -0.003883870192576633,
+   "hit": 0.46524064171123,
+   "net_floor": 0.0033803340013668984,
+   "nw_t_perday": 1.781,
+   "nw_p_perday": 0.0749,
+   "by_subperiod": {
+    "2025H1": -0.008187,
+    "2025H2": 0.05139,
+    "2026H1": -0.031551,
+    "2026H2": null
+   },
+   "subperiod_min": -0.031551
+  },
+  "h20": {
+   "gross_mean": 0.02493672521397331,
+   "gross_med": -0.00888906447534743,
+   "hit": 0.46524064171123,
+   "net_floor": 0.018936725213973313,
+   "nw_t_perday": 3.174,
+   "nw_p_perday": 0.0015,
+   "by_subperiod": {
+    "2025H1": 0.001744,
+    "2025H2": 0.09295,
+    "2026H1": -0.048544,
+    "2026H2": null
+   },
+   "subperiod_min": -0.048544
+  },
+  "status": "KILL(cost)"
+ },
+ {
+  "id": "D5-red-reversal-flowconfirm",
+  "meta": {
+   "family": "D",
+   "def": "ret1<=-3% & day bar-net>0 & intraday close-loss recovered >= half",
+   "grain": "ticker-day (v002 window)"
+  },
+  "n_obs": 889,
+  "n_tickers": 273,
+  "avg_per_day": 1.6252285191956124,
+  "min_obs_req": 300,
+  "min_tickers_req": 40,
+  "h1": {
+   "gross_mean": -0.01836072752477657,
+   "gross_med": -0.012987012987012991,
+   "hit": 0.3734533183352081,
+   "net_floor": -0.024360727524776568,
+   "nw_t_perday": -3.051,
+   "nw_p_perday": 0.0023,
+   "by_subperiod": {
+    "2025H1": -0.018988,
+    "2025H2": 0.000733,
+    "2026H1": -0.024951,
+    "2026H2": null
+   },
+   "subperiod_min": -0.024951
+  },
+  "h5": {
+   "gross_mean": -0.030551104140872105,
+   "gross_med": -0.04166666666666652,
+   "hit": 0.36220472440944884,
+   "net_floor": -0.03655110414087211,
+   "nw_t_perday": -2.129,
+   "nw_p_perday": 0.0333,
+   "by_subperiod": {
+    "2025H1": -0.053815,
+    "2025H2": 0.045952,
+    "2026H1": -0.051974,
+    "2026H2": null
+   },
+   "subperiod_min": -0.053815
+  },
+  "h10": {
+   "gross_mean": 0.01094006763586229,
+   "gross_med": -0.0030211480362537513,
+   "hit": 0.47131608548931386,
+   "net_floor": 0.004940067635862289,
+   "nw_t_perday": -0.736,
+   "nw_p_perday": 0.4617,
+   "by_subperiod": {
+    "2025H1": -0.064855,
+    "2025H2": 0.10217,
+    "2026H1": -0.003067,
+    "2026H2": null
+   },
+   "subperiod_min": -0.064855
+  },
+  "h20": {
+   "gross_mean": 0.016982717878377483,
+   "gross_med": -0.012612690707351049,
+   "hit": 0.4645669291338583,
+   "net_floor": 0.010982717878377483,
+   "nw_t_perday": -0.583,
+   "nw_p_perday": 0.5599,
+   "by_subperiod": {
+    "2025H1": -0.046055,
+    "2025H2": 0.110628,
+    "2026H1": -0.00094,
+    "2026H2": null
+   },
+   "subperiod_min": -0.046055
+  },
+  "status": "KILL(cost)"
+ }
+]

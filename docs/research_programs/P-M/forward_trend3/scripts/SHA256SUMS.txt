@@ -1,0 +1,1 @@
+90d40283a45be10733dbfc476f9bb5190a9aa51863fab9954e38af526c2aa2f4  donchian3_regime.py

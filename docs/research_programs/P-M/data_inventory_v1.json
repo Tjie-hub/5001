@@ -1,0 +1,199 @@
+{
+ "artifact": "P-M DATA INVENTORY",
+ "version": "v1",
+ "built_utc": "2026-09-14",
+ "scope": "raw-field inventory across all P-M research data stores; classification A=PIT-complete historical, B=historically available but incomplete, C=prospective capture only, D=unavailable",
+ "classification_legend": {
+   "A": "PIT-complete historical — research-grade for its declared grain/window",
+   "B": "historically available but incomplete — gaps quantified; recoverability stated",
+   "C": "prospective capture only — no trustworthy history before the capture start",
+   "D": "unavailable — no source exists; no fabrication attempted"
+ },
+ "stores": {
+  "dataset_b_broker_flow_store": {
+   "path": "docs/research_programs/P-M/dataset_b/store/DATASET_B_BROKER_FLOW_STORE_v1.sqlite",
+   "sha256": "21661f033145ef90657f8d133ced62a3cd4ba85cdaa7ece2a4b19f4940b755a8",
+   "frozen": true,
+   "window": ["2025-01-02", "2026-08-27"],
+   "sessions": 386,
+   "cells": {"intended": 30880, "success": 30877, "empty": 3, "failed": 0, "truncated": 0},
+   "universe_note": "IDX100 PIT roster (80 members/session typical, 101 distinct incl. RAJA); RAJA quarantined (corporate-action adjustment basis)",
+   "fields": [
+    {"table": "broker_flow_b", "field": "ticker", "grain": "ticker x date x broker x side", "coverage": "101 tickers", "pit": "A", "semantic": "VERIFIED", "defects": "none", "research_use": "join key"},
+    {"table": "broker_flow_b", "field": "trade_date", "grain": "as above", "coverage": "386 sessions", "pit": "A", "semantic": "VERIFIED", "defects": "none", "research_use": "session key (session-calendar aligned)"},
+    {"table": "broker_flow_b", "field": "broker_code", "grain": "as above", "coverage": "95 brokers", "pit": "A", "semantic": "VERIFIED", "defects": "vendor codes are pseudonymous and may not be stable across the whole window (broker identity persistence unverified at the code level)", "research_use": "broker-level structure, concentration, persistence"},
+    {"table": "broker_flow_b", "field": "value", "grain": "as above", "coverage": "1,518,727 rows", "pit": "A", "semantic": "VERIFIED WITH DEFECT", "defects": "SIGNED net per broker-side; derive direction from sign(value), never from side column (~0.1-0.2% vendor rounding defect on lot/side)", "research_use": "broker magnitudes, signed flow; all-broker aggregate net is the exchange accounting identity (integer-exact 0 over the store) — NOT a directional predictor (D-049 gate)"},
+    {"table": "broker_flow_b", "field": "side", "grain": "as above", "coverage": "BUY 802,352 / SELL 716,375", "pit": "A", "semantic": "VERIFIED WITH DEFECT", "defects": "757 BUY rows carry lot<0 and 1,822 SELL rows carry lot>0 — vendor rounding; use sign(value)", "research_use": "reference only"},
+    {"table": "broker_flow_b", "field": "lot", "grain": "as above", "coverage": "present", "pit": "A", "semantic": "VERIFIED WITH DEFECT", "defects": "same rounding defect as side", "research_use": "secondary magnitude (shares)"},
+    {"table": "broker_flow_b", "field": "lot_value", "grain": "as above", "coverage": "present", "pit": "A", "semantic": "PARTIALLY VERIFIED", "defects": "vendor-computed; rounding defects", "research_use": "secondary"},
+    {"table": "broker_flow_b", "field": "value_total", "grain": "as above", "coverage": "present", "pit": "A", "semantic": "PARTIALLY VERIFIED", "defects": "vendor-side aggregate; semantics not independently reconciled", "research_use": "reference only"},
+    {"table": "broker_flow_b", "field": "avg_price", "grain": "as above", "coverage": "present", "pit": "A", "semantic": "VERIFIED (via close/VWAP basis detector)", "defects": "broker-session VWAP; basis mismatches quarantined (RAJA)", "research_use": "flow VWAP x price alignment"},
+    {"table": "broker_flow_b", "field": "freq", "grain": "as above", "coverage": "no NULLs, range 1..202,764", "pit": "A (values), D (semantics)", "semantic": "UNKNOWN — FORBIDDEN as ticket denominator (SEMANTIC_REGISTER_v1; C1a/C1b withdrawn over this)", "defects": "vendor does not document whether freq = trade count, order count, or tick count; may include odd lots", "research_use": "raw passthrough only; DO NOT use as transaction-count denominator"},
+    {"table": "broker_flow_b", "field": "investor_type", "grain": "as above", "coverage": "Lokal 886,679 / Asing 511,520 / Pemerintah 120,528", "pit": "A", "semantic": "VERIFIED as BROKERAGE OWNERSHIP", "defects": "brokerage ownership (foreign/local/government-owned broker), NOT end-investor identity — never describe as institutional/retail investor flow", "research_use": "broker-ownership splits only"},
+    {"table": "bandar_detector_b", "field": "total_buyer/total_seller", "grain": "ticker x date", "coverage": "30,877", "pit": "A", "semantic": "VERIFIED", "defects": "UNCENSORED net-buying/net-selling broker counts (vendor probe confirmed); distinct from capped broker rows", "research_use": "breadth/participation"},
+    {"table": "bandar_detector_b", "field": "top1/top3/top5/top10_accdist, broker_accdist", "grain": "ticker x date", "coverage": "30,877", "pit": "A", "semantic": "PARTIALLY VERIFIED", "defects": "vendor-computed concentration; definition not independently reconciled", "research_use": "concentration cross-check (we compute our own in v_b_concentration)"},
+    {"table": "bandar_detector_b", "field": "value/volume", "grain": "ticker x date", "coverage": "30,877", "pit": "A", "semantic": "VERIFIED", "defects": "NET CROSSED value/volume — NOT market traded totals; never a denominator", "research_use": "reference only"},
+    {"table": "capture_manifest", "field": "status/http_status/requested|returned windows/date_echo_match/truncation flags/latency/retries", "grain": "ticker x session", "coverage": "30,880", "pit": "A", "semantic": "VERIFIED", "defects": "none", "research_use": "capture completeness audit trail"},
+    {"table": "raw_responses", "field": "raw_json_gz", "grain": "ticker x session", "coverage": "30,880 gzip bodies", "pit": "A", "semantic": "VERIFIED (re-parseable; deterministic reconstruction possible)", "defects": "none", "research_use": "raw re-parse, semantics audits"}
+   ]
+  },
+  "stockbit_flow_bars_frozen_v002": {
+   "path": "data/frozen/stockbit-flow-bars-v002/stockbit-flow-bars-v002.db",
+   "sha256": "fa7f07b3415f4f644d083487db3613eb4c8c568e860f33b6ef43281764b61191",
+   "frozen": true,
+   "window": ["2025-01-02", "2026-04-28"],
+   "fields": [
+    {"table": "stockbit_flow_bars", "field": "ticker/trade_date/bar_time", "grain": "ticker x date x minute", "coverage": "77,559,605 rows; 900 tickers; bar_time 09:00-16:14 WIB (no seconds, no tz column — WIB by session convention)", "pit": "B (see below)", "semantic": "VERIFIED structure; PIT integrity of vendor history established at capture time only", "defects": "vendor history for a past date is NOT stable across fetch cohorts (2025-08-05..2025-09-17 stretch refetched 2026-09 with 5-26% nonzero daily summaries vs ~86% healthy baseline; IHSG volume flat across the stretch — empties there are NOT trustworthy); 2025-04-14 reserved fixture (879 cells)", "research_use": "intraday sequencing, temporal structure, event-window flow"},
+    {"table": "stockbit_flow_bars", "field": "buy_lot/sell_lot/buy_freq/sell_freq", "grain": "ticker x date x minute", "coverage": "present", "pit": "B", "semantic": "PARTIALLY VERIFIED", "defects": "per-minute signed lots; freq semantics same UNKNOWN question as broker_flow.freq", "research_use": "intraday flow magnitudes; freq passthrough only"},
+    {"table": "stockbit_flow_bars", "field": "net_value/price/delta", "grain": "ticker x date x minute", "coverage": "present", "pit": "B", "semantic": "PARTIALLY VERIFIED", "defects": "price = minute close (integer rupiah); delta semantics vendor-defined", "research_use": "intraday flow x price co-registration"},
+    {"table": "stockbit_flow", "field": "buy_lot/sell_lot/net_lot/net_value", "grain": "ticker x date", "coverage": "295,145 rows in-window", "pit": "B", "semantic": "VERIFIED (NF ratification D-049 R-3)", "defects": "used as completeness oracle for empty-session classification — oracle quality is cohort-dependent (see suspect stretch)", "research_use": "daily flow control; coverage classification"},
+    {"table": "ohlcv (IHSG only)", "field": "volume", "grain": "index x date", "coverage": "309 dates", "pit": "A", "semantic": "VERIFIED", "defects": "restricted to IHSG in this store", "research_use": "market-activity cross-check"},
+    {"table": "trading_calendar", "field": "date", "grain": "session", "coverage": "309 dates in-window", "pit": "A", "semantic": "VERIFIED", "defects": "none", "research_use": "session grid"}
+   ],
+   "coverage_numbers": {
+    "expected_ticker_days": 296022,
+    "bar_present": 239695,
+    "bar_present_pct": 80.97,
+    "complete_incl_confirmed_empty": 295143,
+    "complete_pct": 99.7031,
+    "fixture_exception": "2025-04-14 (879 cells, deliberately reserved, never backfilled)",
+    "suspect_empty_stretch": {"dates": ["2025-08-05", "2025-09-17"], "sessions": 30, "reason": "2026-09 refetch cohort returned 5-26% nonzero daily summaries for non-IDX80 names; contradicted by flat IHSG volume and by healthy 2025-02-10 control (835/958 nonzero, fetched 2026-08)", "classification": "B — treat non-IDX80 minute coverage on these 30 sessions as INCOMPLETE/untrusted (approx 24,810 ticker-days); recovery requires a clean refetch with probe validation; outcome uncertain (possible vendor retention horizon)"}
+   }
+  },
+  "stockbit_flow_bars_production": {
+   "path": "data/walkforward.db table stockbit_flow_bars",
+   "frozen": false,
+   "window": ["2025-01-02", "2026-09-11"],
+   "rows": 98454570,
+   "tickers": 900,
+   "grain": "ticker x date x minute (bar_time HH:MM WIB)",
+   "classification": "B",
+   "post_freeze_gaps_quantified": {
+    "true_gap_ticker_days": 4311,
+    "true_gap_dates": {"2026-05-29": 706, "2026-06-04": 704, "2026-07-13": 707, "2026-07-22": 1, "2026-07-23": 709, "2026-07-27": 707, "2026-09-08": 777},
+    "capture_outage_dates": ["2026-05-18", "2026-05-19", "2026-05-20", "2026-05-21", "2026-06-17", "2026-06-18", "2026-06-19"],
+    "capture_outage_note": "real IDX sessions (in calendar; ~959 final ohlcv bars each) with NO stockbit_flow summary rows (~879 tickers) and only IDX80-era bar leftovers (26,465 bars/79 tickers)",
+    "recoverability": "CAN FIX NOW via existing production tooling (tools/backfill_flow_bars.py + tools/flow_bars_gap.py gap predicate; vendor retention proven back to 2025-01 by the Sep-2026 full-universe backfill); NOT executed in this task — vendor-facing production write left to owner",
+    "production_writes_this_task": 0
+   }
+  },
+  "stockbit_flow_daily_production": {
+   "path": "data/walkforward.db table stockbit_flow",
+   "rows": 378057,
+   "window": ["2025-01-02", "2026-09-11"],
+   "classification": "B",
+   "fields": [
+    {"field": "buy_lot/sell_lot/net_lot", "semantic": "RATIFIED (D-049 R-3): NF = (buy_lot - sell_lot)/(buy_lot + sell_lot); T+1 availability; market-flow control only", "pit": "B (outage dates missing ~5,274 summary rows)"},
+    {"field": "last_price", "semantic": "single deflator; INTEGER rupiah", "pit": "B"},
+    {"field": "composite_score/verdict/smart_money/foreign_score", "semantic": "VENDOR SCORES — black-box; never research-grade predictors without documented vendor definitions", "pit": "B", "defects": "undocumented vendor analytics"}
+   ]
+  },
+  "production_broker_flow_live": {
+   "path": "data/walkforward.db table broker_flow",
+   "rows": 3070000,
+   "window": ["2025-01-02", "2026-09-11"],
+   "classification": "B (post 2026-04) / C (pre 2026-04 beyond IDX80)",
+   "critical_coverage_fact": "IDX80-scoped (96-99 tickers) 2025-01 through 2026-03; full-market (~830-870 tickers) from 2026-04 onward. Full-market broker-level history before 2026-04 exists ONLY for the IDX100 roster via the frozen Dataset B capture (per-symbol/date endpoint was proven fetchable in Sep 2026 back to 2025-01-02).",
+   "fields_note": "same schema/semantics/defects as broker_flow_b (incl. freq UNKNOWN, side defect, investor_type = brokerage ownership)"
+  },
+  "ohlcv_production": {
+   "path": "data/walkforward.db table ohlcv",
+   "rows": 1084738,
+   "window": ["2021-07-05", "2026-09-14"],
+   "classification": "A (settled daily window used by the program; is_final=1)",
+   "fields_note": "daily OHLCV; supports forward returns (registered machinery), event success/failure (band contacts, breakout/retest derivations), volatility/state transitions, close-only analysis — all without touching registered hypotheses",
+   "caveat": "mixed corporate-action adjustment basis handled by detect-unapplied-splits + quarantine (foundation.py), not blanket adjustment"
+  },
+  "ticks_production": {
+   "path": "data/walkforward.db table ticks",
+   "rows": 20200000,
+   "window": ["2026-04-18", "2026-09-14"],
+   "tickers": 868,
+   "classification": "C (prospective only — no history before 2026-04-18)",
+   "grain": "ticker x date x time (UNIQUE date,ticker,time)",
+   "note": "the only trade-tape table; too short for historical research, usable for prospective microstructure work"
+  },
+  "bandar_detector_production": {
+   "path": "data/walkforward.db table bandar_detector",
+   "window": ["2025-01-02", "2026-09-11"],
+   "tickers": 872,
+   "classification": "B",
+   "note": "accdist columns are vendor JSON/text in production; scalarized in Dataset B"
+  },
+  "broker_period_summary_production": {
+   "path": "data/walkforward.db table broker_period_summary",
+   "rows": 505726,
+   "fetch_dates": 5,
+   "window": ["2026-05-14", "2026-09-11"],
+   "classification": "C (prospective snapshots only)",
+   "note": "periodic broker summaries with raw_json retained"
+  },
+  "ownership_composition": {
+   "path": "data/walkforward.db table ownership_composition",
+   "grain": "ticker x report_date x holder_label",
+   "classification": "B/C (registry snapshots as fetched)",
+   "note": "closest available proxy for beneficial ownership structure — still registry-holder labels, NOT broker-level investor identity; use only for attribution context"
+  },
+  "suspension_events_production": {
+   "path": "data/walkforward.db table suspension_events",
+   "rows": 3189,
+   "window": ["2022-04-28", "2026-07-17"],
+   "classification": "A (for the Dataset B window)",
+   "fields": "ticker, last_normal_date, resume_date, missing_td, gap_pct, classification"
+  },
+  "corporate_actions": {
+   "path": "data/walkforward.db tables corporate_action_events (12,353) + corporate_actions (2,171)",
+   "classification": "A (for the Dataset B window; split ratio + applied-basis detection validated in foundation.py)",
+   "note": "4 splits in window (PTRO, CUAN, DSSA, RAJA); RAJA unadjusted basis -> quarantined"
+  },
+  "research_db": {
+   "path": "data/research.db",
+   "tables": ["hypotheses", "gate_decisions", "failure_registry", "research_runs"],
+   "classification": "A (governance metadata, not market data)",
+   "note": "read-only for this task; no writes"
+  }
+ },
+ "coverage_summary_counts": {
+  "broker_level_structure": {
+   "broker_identity": "A (frozen Dataset B, 95 brokers, IDX100 roster, 2025-01-02..2026-08-27); production live feed IDX80-only before 2026-04",
+   "broker_participation": "A via bandar total_buyer/total_seller + derived v_a_broker_day",
+   "broker_concentration": "A (derived: top1/top3/top5 shares, HHI from frozen rows; vendor accdist as cross-check)",
+   "broker_pairs": "PARTIAL — daily grain supports POTENTIAL-counterparty pairs only (17.27M buy-sell pairs in v_c_pair_structure); actual trade matching is D at daily grain; prospective intraday sequence (v002/prospective capture) is the only path to real matching",
+   "broker_persistence": "A (v_d_broker_persistence/activity views over frozen rows)",
+   "accumulation_distribution": "A at broker x ticker x day grain (signed net per broker, streaks derivable); vendor accdist cross-check available"
+  },
+  "temporal_structure": {
+   "stockbit_1min_availability": "B+ (frozen v002 near-complete 2025-01-02..2026-04-27; production continues to 2026-09-11 with quantified gaps: 4,311 true-gap ticker-days + 6 outage sessions)",
+   "intraday_sequencing_pit": "B — reconstructable from bar sequences within a session at capture-time fidelity; vendor refetch instability (suspect stretch) means PIT integrity holds ONLY at original capture time, motivating prospective raw capture",
+   "session_completeness": "A (calendar/roster artifacts validated; v002 99.70% complete incl. confirmed empties)"
+  },
+  "flow_price_information": {
+   "price_response_to_broker_flow": "A at daily grain (broker gross/net x daily OHLCV; v_f_flow_price); B at intraday grain (v002 bars carry minute price)",
+   "flow_price_disagreement": "A daily (e.g., broker direction vs close location, signed flow vs return) — derivable in views; no hypothesis attached",
+   "absorption_like": "derivable quantity set present (per-side magnitudes + counts + range/volume); nothing computed as a signal",
+   "impact_vs_adv": "A daily (broker_gross_over_traded_value, sb_lot_over_volume in v_f_flow_price); ADV20 machinery exists in harness conventions",
+   "delayed_response": "requires forward returns — OUT OF SCOPE for views by design (no outcome selection); the data layer supports it via registered forward-return machinery on request"
+  },
+  "event_conditioning_support": {
+   "breakouts_retests": "derivable from ohlcv (A) + flow joins (A) — no event objects created in this task",
+   "sweeps": "intraday high/low penetration derivable from ohlcv daily + v002 minute bars (B where bars exist)",
+   "limit_band_contacts": "A (v_g_event_flow: regime-aware ARUp/ARDn contact + exceeds flags, foundation.ara_arb)",
+   "suspensions_corporate_actions": "A (v_g_event_flow flags)",
+   "existing_event_objects": "bandar_detector flags and prior program event definitions joinable by (ticker, session)"
+  },
+  "attribution_semantics": {
+   "broker_attributed_flow": "LEGITIMATE (A) — broker_flow rows are broker-attributed by construction",
+   "foreign_owned_brokerage": "LEGITIMATE label for investor_type='Asing' (A) — brokerage ownership",
+   "local_owned_brokerage": "LEGITIMATE label for investor_type='Lokal' (A)",
+   "retail_investor_identity": "D — NOT AVAILABLE from any source in this repo; stockbit_flow is full-market retail-platform AGGREGATE flow (platform-level, not attributed), and broker investor_type is ownership, not end-investor identity. No view or field may promote broker ownership into investor identity.",
+   "pemerintah": "broker ownership label (government-owned broker); same restriction"
+  }
+ },
+ "unavailable_fundamentals": [
+  "identified buyer/seller counterparty per trade (trade-matching table) — D at any historical grain; prospective intraday co-movement is the only approximation",
+  "end-investor identity (retail vs institutional per order) — D",
+  "freq field semantics — D as used for transaction counts (vendor undocumented); field values exist (A) but are research-forbidden as denominators",
+  "broker_code stability guarantees across the full window — unverified; treat broker identity persistence as B until a broker-merge/rename audit is done",
+  "pre-2025-01 broker-level history — D in this repo (Dataset B window starts 2025-01-02; vendor historical availability beyond that not established)"
+ ]
+}

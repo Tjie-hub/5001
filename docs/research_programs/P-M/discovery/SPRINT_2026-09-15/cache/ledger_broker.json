@@ -1,0 +1,532 @@
+[
+ {
+  "id": "B1-top3conc+lean_z1.0",
+  "meta": {
+   "family": "B",
+   "def": "z60(top3_gross_share)>=1.0 & z60(top3_brokers_net)>=1",
+   "source": "Dataset B v_b_concentration + v_a_broker_day",
+   "grain": "ticker-day (IDX100)"
+  },
+  "n_obs": 493,
+  "n_tickers": 91,
+  "avg_per_day": 0.9012797074954296,
+  "status": "KILL(too-few-obs)"
+ },
+ {
+  "id": "B1-top3conc+lean_z1.5",
+  "meta": {
+   "family": "B",
+   "def": "z60(top3_gross_share)>=1.5 & z60(top3_brokers_net)>=1",
+   "source": "Dataset B v_b_concentration + v_a_broker_day",
+   "grain": "ticker-day (IDX100)"
+  },
+  "n_obs": 248,
+  "n_tickers": 81,
+  "avg_per_day": 0.453382084095064,
+  "status": "KILL(too-few-obs)"
+ },
+ {
+  "id": "B2-hhi+lean_z1.0",
+  "meta": {
+   "family": "B",
+   "def": "z60(hhi_gross)>=1.0 & z60(top3_brokers_net)>=1",
+   "grain": "ticker-day (IDX100)"
+  },
+  "n_obs": 506,
+  "n_tickers": 91,
+  "avg_per_day": 0.9250457038391224,
+  "min_obs_req": 500,
+  "min_tickers_req": 25,
+  "h1": {
+   "gross_mean": -0.0020616016240629985,
+   "gross_med": -0.0028256704980842984,
+   "hit": 0.3794466403162055,
+   "net_floor": -0.008061601624062999,
+   "nw_t_perday": -0.427,
+   "nw_p_perday": 0.6695,
+   "by_subperiod": {
+    "2025H1": -0.00296,
+    "2025H2": -0.000125,
+    "2026H1": -0.003405,
+    "2026H2": null
+   },
+   "subperiod_min": -0.003405
+  },
+  "h5": {
+   "gross_mean": 5.3946815535465224e-05,
+   "gross_med": -0.004837269585253323,
+   "hit": 0.4346076458752515,
+   "net_floor": -0.0059460531844645345,
+   "nw_t_perday": 0.449,
+   "nw_p_perday": 0.6531,
+   "by_subperiod": {
+    "2025H1": -0.000492,
+    "2025H2": 0.012514,
+    "2026H1": -0.014972,
+    "2026H2": null
+   },
+   "subperiod_min": -0.014972
+  },
+  "h10": {
+   "gross_mean": 0.0018615847328354285,
+   "gross_med": -0.005173796791443586,
+   "hit": 0.466,
+   "net_floor": -0.004138415267164571,
+   "nw_t_perday": 0.099,
+   "nw_p_perday": 0.9209,
+   "by_subperiod": {
+    "2025H1": -0.001732,
+    "2025H2": 0.030646,
+    "2026H1": -0.024984,
+    "2026H2": null
+   },
+   "subperiod_min": -0.024984
+  },
+  "h20": {
+   "gross_mean": 0.009591121976174274,
+   "gross_med": -0.008910851790108754,
+   "hit": 0.46153846153846156,
+   "net_floor": 0.0035911219761742743,
+   "nw_t_perday": 0.945,
+   "nw_p_perday": 0.3447,
+   "by_subperiod": {
+    "2025H1": 0.014334,
+    "2025H2": 0.045963,
+    "2026H1": -0.034016,
+    "2026H2": null
+   },
+   "subperiod_min": -0.034016
+  },
+  "status": "KILL(cost)"
+ },
+ {
+  "id": "B2-hhi+lean_z1.5",
+  "meta": {
+   "family": "B",
+   "def": "z60(hhi_gross)>=1.5 & z60(top3_brokers_net)>=1",
+   "grain": "ticker-day (IDX100)"
+  },
+  "n_obs": 314,
+  "n_tickers": 86,
+  "avg_per_day": 0.5740402193784278,
+  "status": "KILL(too-few-obs)"
+ },
+ {
+  "id": "B3-bandar-bigacc",
+  "meta": {
+   "family": "B",
+   "def": "long ticker-days where bandar regime == 'Big Acc'",
+   "grain": "ticker-day (IDX100)"
+  },
+  "n_obs": 6275,
+  "n_tickers": 100,
+  "avg_per_day": 11.471663619744058,
+  "min_obs_req": 500,
+  "min_tickers_req": 25,
+  "h1": {
+   "gross_mean": -0.0002028100241227869,
+   "gross_med": 0.0,
+   "hit": 0.41931854709096755,
+   "net_floor": -0.006202810024122787,
+   "nw_t_perday": -0.771,
+   "nw_p_perday": 0.4408,
+   "by_subperiod": {
+    "2025H1": -0.001473,
+    "2025H2": 0.001495,
+    "2026H1": -0.002511,
+    "2026H2": 0.004153
+   },
+   "subperiod_min": -0.002511
+  },
+  "h5": {
+   "gross_mean": 0.0009253417149869768,
+   "gross_med": -0.0033783783783783994,
+   "hit": 0.4660976002576904,
+   "net_floor": -0.005074658285013023,
+   "nw_t_perday": -0.097,
+   "nw_p_perday": 0.9226,
+   "by_subperiod": {
+    "2025H1": -0.001399,
+    "2025H2": 0.009893,
+    "2026H1": -0.012934,
+    "2026H2": 0.013291
+   },
+   "subperiod_min": -0.012934
+  },
+  "h10": {
+   "gross_mean": 0.0017893879793587208,
+   "gross_med": -0.004048582995951677,
+   "hit": 0.4686745047511677,
+   "net_floor": -0.004210612020641279,
+   "nw_t_perday": 0.019,
+   "nw_p_perday": 0.9852,
+   "by_subperiod": {
+    "2025H1": -0.000453,
+    "2025H2": 0.021326,
+    "2026H1": -0.028834,
+    "2026H2": 0.019613
+   },
+   "subperiod_min": -0.028834
+  },
+  "h20": {
+   "gross_mean": 0.0060320220979791775,
+   "gross_med": -0.0075472772841193025,
+   "hit": 0.4684106614017769,
+   "net_floor": 3.202209797917733e-05,
+   "nw_t_perday": 0.922,
+   "nw_p_perday": 0.3566,
+   "by_subperiod": {
+    "2025H1": 0.013906,
+    "2025H2": 0.035058,
+    "2026H1": -0.052147,
+    "2026H2": 0.039676
+   },
+   "subperiod_min": -0.052147
+  },
+  "status": "KILL(cost)"
+ },
+ {
+  "id": "B3b-bandar-bigdist[MIRROR]",
+  "meta": {
+   "family": "B",
+   "def": "long ticker-days where bandar regime == 'Big Dist' (mirror: label precedes rebound?)",
+   "grain": "ticker-day (IDX100)"
+  },
+  "n_obs": 7735,
+  "n_tickers": 101,
+  "avg_per_day": 14.140767824497258,
+  "min_obs_req": 500,
+  "min_tickers_req": 25,
+  "h1": {
+   "gross_mean": 0.0009422815915067789,
+   "gross_med": 0.0,
+   "hit": 0.43047221497521526,
+   "net_floor": -0.005057718408493221,
+   "nw_t_perday": 1.308,
+   "nw_p_perday": 0.1907,
+   "by_subperiod": {
+    "2025H1": 0.001014,
+    "2025H2": 0.00254,
+    "2026H1": -0.001671,
+    "2026H2": 0.00455
+   },
+   "subperiod_min": -0.001671
+  },
+  "h5": {
+   "gross_mean": 0.0017210385189958199,
+   "gross_med": -1.1102230246251565e-16,
+   "hit": 0.47603500065299725,
+   "net_floor": -0.0042789614810041805,
+   "nw_t_perday": 1.26,
+   "nw_p_perday": 0.2077,
+   "by_subperiod": {
+    "2025H1": 0.003033,
+    "2025H2": 0.008934,
+    "2026H1": -0.010541,
+    "2026H2": 0.015898
+   },
+   "subperiod_min": -0.010541
+  },
+  "h10": {
+   "gross_mean": 0.004404102142316686,
+   "gross_med": -1.1102230246251565e-16,
+   "hit": 0.48792270531400966,
+   "net_floor": -0.001595897857683314,
+   "nw_t_perday": 1.894,
+   "nw_p_perday": 0.0583,
+   "by_subperiod": {
+    "2025H1": 0.005259,
+    "2025H2": 0.018383,
+    "2026H1": -0.018232,
+    "2026H2": 0.030906
+   },
+   "subperiod_min": -0.018232
+  },
+  "h20": {
+   "gross_mean": 0.006638737308843592,
+   "gross_med": -0.003601895734597682,
+   "hit": 0.4814074370251899,
+   "net_floor": 0.0006387373088435917,
+   "nw_t_perday": 2.252,
+   "nw_p_perday": 0.0243,
+   "by_subperiod": {
+    "2025H1": 0.012195,
+    "2025H2": 0.034072,
+    "2026H1": -0.038227,
+    "2026H2": 0.057945
+   },
+   "subperiod_min": -0.038227
+  },
+  "status": "KILL(cost)"
+ },
+ {
+  "id": "B4-few-sellers_0.2",
+  "meta": {
+   "family": "B",
+   "def": "n_sell_brokers date-pctrank<=0.2 & z60(top3_brokers_net)>=1",
+   "grain": "ticker-day (IDX100)"
+  },
+  "n_obs": 74,
+  "n_tickers": 38,
+  "avg_per_day": 0.13528336380255943,
+  "status": "KILL(too-few-obs)"
+ },
+ {
+  "id": "B4-few-sellers_0.4",
+  "meta": {
+   "family": "B",
+   "def": "n_sell_brokers date-pctrank<=0.4 & z60(top3_brokers_net)>=1",
+   "grain": "ticker-day (IDX100)"
+  },
+  "n_obs": 224,
+  "n_tickers": 67,
+  "avg_per_day": 0.40950639853747717,
+  "status": "KILL(too-few-obs)"
+ },
+ {
+  "id": "B5-top3conc+lean+smallADV",
+  "meta": {
+   "family": "B",
+   "def": "B1(1.5) restricted to ADV60 < cross-sec median",
+   "grain": "ticker-day (IDX100)"
+  },
+  "n_obs": 0,
+  "n_tickers": 0,
+  "avg_per_day": 0.0,
+  "status": "KILL(too-few-obs)"
+ },
+ {
+  "id": "BL-broker-lean-z2",
+  "meta": {
+   "family": "BL",
+   "def": "z60(top3_brokers_net)>=2 (unconditioned)",
+   "grain": "ticker-day (IDX100)"
+  },
+  "n_obs": 940,
+  "n_tickers": 97,
+  "avg_per_day": 1.7184643510054844,
+  "min_obs_req": 500,
+  "min_tickers_req": 25,
+  "h1": {
+   "gross_mean": -0.0021911131597600196,
+   "gross_med": -0.004439560872735837,
+   "hit": 0.39445628997867804,
+   "net_floor": -0.00819111315976002,
+   "nw_t_perday": -1.181,
+   "nw_p_perday": 0.2375,
+   "by_subperiod": {
+    "2025H1": -0.00244,
+    "2025H2": -0.001256,
+    "2026H1": -0.005372,
+    "2026H2": null
+   },
+   "subperiod_min": -0.005372
+  },
+  "h5": {
+   "gross_mean": 0.006046880577378231,
+   "gross_med": -0.0028920736376045197,
+   "hit": 0.45610278372591007,
+   "net_floor": 4.6880577378231175e-05,
+   "nw_t_perday": 1.411,
+   "nw_p_perday": 0.1582,
+   "by_subperiod": {
+    "2025H1": 0.008978,
+    "2025H2": 0.017453,
+    "2026H1": -0.014592,
+    "2026H2": null
+   },
+   "subperiod_min": -0.014592
+  },
+  "h10": {
+   "gross_mean": 0.011896413694140894,
+   "gross_med": -0.0066006600660065695,
+   "hit": 0.4502673796791444,
+   "net_floor": 0.005896413694140894,
+   "nw_t_perday": 2.408,
+   "nw_p_perday": 0.0161,
+   "by_subperiod": {
+    "2025H1": 0.016138,
+    "2025H2": 0.032373,
+    "2026H1": -0.023538,
+    "2026H2": null
+   },
+   "subperiod_min": -0.023538
+  },
+  "h20": {
+   "gross_mean": 0.024753488025199763,
+   "gross_med": -0.008462051868802611,
+   "hit": 0.47071583514099785,
+   "net_floor": 0.018753488025199765,
+   "nw_t_perday": 2.569,
+   "nw_p_perday": 0.0102,
+   "by_subperiod": {
+    "2025H1": 0.046039,
+    "2025H2": 0.052936,
+    "2026H1": -0.04354,
+    "2026H2": null
+   },
+   "subperiod_min": -0.04354
+  },
+  "status": "WATCH(unstable)"
+ },
+ {
+  "id": "C2-broker-persist6d_any>=0.5%",
+  "meta": {
+   "family": "C",
+   "def": "exists broker: buy-side >=4 of last 6 sessions & 6d cum net >= 0.5% ADV60",
+   "grain": "ticker-day (IDX100)"
+  },
+  "n_obs": 30200,
+  "n_tickers": 101,
+  "avg_per_day": 55.21023765996344,
+  "min_obs_req": 500,
+  "min_tickers_req": 25,
+  "h1": {
+   "gross_mean": 0.0004437897992906115,
+   "gross_med": 0.0,
+   "hit": 0.4261682242990654,
+   "net_floor": -0.005556210200709389,
+   "nw_t_perday": 0.529,
+   "nw_p_perday": 0.5965,
+   "by_subperiod": {
+    "2025H1": 0.000271,
+    "2025H2": 0.002269,
+    "2026H1": -0.002534,
+    "2026H2": 0.004328
+   },
+   "subperiod_min": -0.002534
+  },
+  "h5": {
+   "gross_mean": 0.0018200823255813338,
+   "gross_med": -1.1102230246251565e-16,
+   "hit": 0.4759036144578313,
+   "net_floor": -0.004179917674418667,
+   "nw_t_perday": 0.96,
+   "nw_p_perday": 0.3373,
+   "by_subperiod": {
+    "2025H1": 0.001435,
+    "2025H2": 0.01149,
+    "2026H1": -0.012502,
+    "2026H2": 0.014863
+   },
+   "subperiod_min": -0.012502
+  },
+  "h10": {
+   "gross_mean": 0.00412527303779643,
+   "gross_med": -2.220446049250313e-16,
+   "hit": 0.48204664859619184,
+   "net_floor": -0.0018747269622035705,
+   "nw_t_perday": 1.5,
+   "nw_p_perday": 0.1337,
+   "by_subperiod": {
+    "2025H1": 0.004059,
+    "2025H2": 0.022858,
+    "2026H1": -0.024162,
+    "2026H2": 0.027325
+   },
+   "subperiod_min": -0.024162
+  },
+  "h20": {
+   "gross_mean": 0.009067338329399625,
+   "gross_med": -0.004651162790697216,
+   "hit": 0.475701925378749,
+   "net_floor": 0.003067338329399625,
+   "nw_t_perday": 2.229,
+   "nw_p_perday": 0.0258,
+   "by_subperiod": {
+    "2025H1": 0.017043,
+    "2025H2": 0.039819,
+    "2026H1": -0.044869,
+    "2026H2": 0.054477
+   },
+   "subperiod_min": -0.044869
+  },
+  "status": "KILL(cost)"
+ },
+ {
+  "id": "C2-broker-persist6d_top>=2.0%",
+  "meta": {
+   "family": "C",
+   "def": "exists broker: buy-side >=4 of last 6 sessions & 6d cum net >= 2.0% ADV60",
+   "grain": "ticker-day (IDX100)"
+  },
+  "n_obs": 30147,
+  "n_tickers": 101,
+  "avg_per_day": 55.11334552102377,
+  "min_obs_req": 500,
+  "min_tickers_req": 25,
+  "h1": {
+   "gross_mean": 0.00042363153074905755,
+   "gross_med": 0.0,
+   "hit": 0.4261401631670456,
+   "net_floor": -0.005576368469250943,
+   "nw_t_perday": 0.507,
+   "nw_p_perday": 0.6124,
+   "by_subperiod": {
+    "2025H1": 0.000297,
+    "2025H2": 0.002251,
+    "2026H1": -0.002598,
+    "2026H2": 0.004305
+   },
+   "subperiod_min": -0.002598
+  },
+  "h5": {
+   "gross_mean": 0.0018080434252758985,
+   "gross_med": -1.1102230246251565e-16,
+   "hit": 0.4758440339289905,
+   "net_floor": -0.004191956574724102,
+   "nw_t_perday": 0.958,
+   "nw_p_perday": 0.338,
+   "by_subperiod": {
+    "2025H1": 0.001488,
+    "2025H2": 0.011473,
+    "2026H1": -0.01256,
+    "2026H2": 0.014842
+   },
+   "subperiod_min": -0.01256
+  },
+  "h10": {
+   "gross_mean": 0.0040998838318616745,
+   "gross_med": -3.3306690738754696e-16,
+   "hit": 0.4819147866313566,
+   "net_floor": -0.0019001161681383256,
+   "nw_t_perday": 1.495,
+   "nw_p_perday": 0.135,
+   "by_subperiod": {
+    "2025H1": 0.004097,
+    "2025H2": 0.022802,
+    "2026H1": -0.024193,
+    "2026H2": 0.027261
+   },
+   "subperiod_min": -0.024193
+  },
+  "h20": {
+   "gross_mean": 0.00911749569140897,
+   "gross_med": -0.0046150718351859465,
+   "hit": 0.47591805974239515,
+   "net_floor": 0.0031174956914089696,
+   "nw_t_perday": 2.233,
+   "nw_p_perday": 0.0255,
+   "by_subperiod": {
+    "2025H1": 0.017232,
+    "2025H2": 0.03979,
+    "2026H1": -0.044802,
+    "2026H2": 0.054311
+   },
+   "subperiod_min": -0.044802
+  },
+  "status": "KILL(cost)"
+ },
+ {
+  "id": "C3-conc-persist-3d",
+  "meta": {
+   "family": "C",
+   "def": "top3-z>=1 & lean_z>=0 for 3 consecutive sessions",
+   "grain": "ticker-day (IDX100)"
+  },
+  "n_obs": 84,
+  "n_tickers": 44,
+  "avg_per_day": 0.15356489945155394,
+  "status": "KILL(too-few-obs)"
+ }
+]
