@@ -5,6 +5,19 @@
   "research_use": "each session carries a band_regime label. LC-PM-0009 states pooling across regimes without conditioning is void under B8.",
   "status": "VERIFIED"
  },
+ "all_broker_net_identity_gate": {
+  "applied_to": "G1 (C1a/C1b/C2/C3), C7, and all future broker-flow research",
+  "authorized_by": "Owner (D-049, DECISION_LOG 2j)",
+  "rule": "All-broker aggregate net flow constructed from the two sides of the same transaction population MUST NOT be treated as a directional predictor, in any form: raw net, net/gross ratios, sign() of such a net, abnormal-z of such a net, or decile/rank constructs. Any net/gross quantity must first establish that its numerator contains information not algebraically cancelled by the denominator/population construction.",
+  "status": "ADOPTED — PRE-EXECUTION GATE (D-049, 2026-09-11)",
+  "validation": [
+   "accounting identity check (per-aggregation-cell SUM(buy)-SUM(sell); report exact-zero/near-zero %)",
+   "semantic source verification (two-sides-of-same-trades vs independent-side observables)",
+   "aggregation-level verification (all-broker vs sub-aggregate variance sufficiency)",
+   "truncation behavior (predictor at actual disclosure level AND at full population)",
+   "PIT availability (formation-time facts)"
+  ]
+ },
  "bandar_detector.total_buyer / total_seller": {
   "evidence": "disclosed_rows == min(total, 25) in 30,626/30,626 ticker-days on both sides, zero mismatches; parsed from the same API response as broker_flow yet reaching 79 where broker rows cap at 25; live probe at full limit returned exactly total_buyer / total_seller rows",
   "meaning": "UNCENSORED count of brokers net-buying / net-selling that ticker-session",
@@ -13,7 +26,7 @@
  },
  "bandar_detector.value / volume": {
   "evidence": "value = volume*100*avg_price with standard deviation 0.0000 across 30,468 rows; live probe: bandar.volume equals the sum of positive net lots at ratio 1.0000",
-  "meaning": "NET CROSSED volume and its rupiah value \u2014 NOT market traded totals",
+  "meaning": "NET CROSSED volume and its rupiah value — NOT market traded totals",
   "research_use": "NEVER a denominator for concentration or market volume. Use ohlcv.volume for traded volume.",
   "status": "VERIFIED"
  },
@@ -42,7 +55,7 @@
   "status": "PARTIALLY VERIFIED"
  },
  "broker_flow.side": {
-  "evidence": "757 BUY rows carry lot<0 and 1,822 SELL rows carry lot>0 in the Dataset A window \u2014 vendor rounding where net lots and net value disagree in sign",
+  "evidence": "757 BUY rows carry lot<0 and 1,822 SELL rows carry lot>0 in the Dataset A window — vendor rounding where net lots and net value disagree in sign",
   "meaning": "the sign of the broker's net, not a raw buy/sell split",
   "research_use": "derive direction from sign(value), never from the side column",
   "status": "VERIFIED WITH DEFECT"
