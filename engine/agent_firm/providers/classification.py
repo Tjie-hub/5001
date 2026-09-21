@@ -62,6 +62,15 @@ _RESET = re.compile(
     re.IGNORECASE,
 )
 
+# z.ai code 1308 (audit 2026-07-21): "Your limit will reset at 2026-07-22
+# 00:56:18" — an ISO-8601 Y-M-D H:M:S timestamp with no zone. z.ai's API is
+# documented as UTC and the account dashboard confirms these are UTC, so the
+# parsed datetime is tagged UTC unconditionally. Must be tried BEFORE the
+# 12-hour _RESET pattern so the "00:56:18" portion isn't misread as 12-hour.
+_RESET_ISO = re.compile(
+    r"resets?\s+at\s+(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})",
+)
+
 
 @dataclass
 class ClassifiedFailure:
@@ -71,11 +80,25 @@ class ClassifiedFailure:
 
 
 def parse_session_reset(text: str, now: Optional[datetime] = None) -> Optional[datetime]:
-    """Extract the advertised reset time ("resets 6:20pm (Asia/Jakarta)") as
-    an aware datetime — the NEXT occurrence of that wall-clock time in the
-    stated zone. Returns None when no reset phrase is present."""
+    """Extract the advertised reset time as an aware datetime. Returns None
+    when no reset phrase is present.
+
+    Recognizes two formats:
+      * z.ai ISO (audit 2026-07-21): "reset at 2026-07-22 00:56:18" — parsed
+        as a UTC timestamp (z.ai's dashboard confirms UTC). Tried FIRST so
+        the H:M:S isn't misread by the 12-hour pattern below.
+      * Claude CLI 12-hour: "resets 6:20pm (Asia/Jakarta)" — the next
+        occurrence of that wall-clock time in the stated zone.
+    """
     if not text:
         return None
+    iso = _RESET_ISO.search(text)
+    if iso is not None:
+        y, mo, d, h, mi, s = (int(iso.group(i)) for i in range(1, 7))
+        try:
+            return datetime(y, mo, d, h, mi, s, tzinfo=timezone.utc)
+        except ValueError:
+            pass  # malformed calendar date — fall through to other patterns
     m = _RESET.search(text)
     if m is None:
         return None

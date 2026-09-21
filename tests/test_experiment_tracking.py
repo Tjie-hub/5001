@@ -107,6 +107,127 @@ def test_fingerprint_fail_soft_without_corporate_actions_table():
     assert len(fp["sha256"]) == 64
 
 
+# ─── Dataset metadata capture (dataset_meta_json) ────────────────────────────
+#
+# The structured {max_date,total_rows,sha256} dict the fingerprint function
+# already computes is persisted in dataset_meta_json at INSERT, alongside the
+# flat sha256 kept in dataset_fingerprint for back-compat. A reviewer can then
+# see how a run's input differed from a neighbor's without re-running the
+# fingerprint against historical data that may no longer exist in that form.
+
+def test_track_run_records_dataset_meta():
+    with tempfile.TemporaryDirectory() as tmp:
+        db = os.path.join(tmp, "t.db")
+        _mkdb(db).close()
+        with track_run("wf-refresh", db_path=db):
+            pass
+        conn = sqlite3.connect(db)
+        flat, meta_json = conn.execute(
+            "SELECT dataset_fingerprint, dataset_meta_json "
+            "FROM research_runs").fetchone()
+        conn.close()
+    assert flat and len(flat) == 64                 # legacy column preserved
+    assert meta_json                                # new column populated
+    meta = json.loads(meta_json)
+    assert set(meta) == {"max_date", "total_rows", "sha256"}
+    assert meta["sha256"] == flat                   # consistent with flat col
+    assert meta["max_date"] == "2025-01-01"         # structured diff visible
+    assert meta["total_rows"] == 1
+
+
+def test_dataset_meta_reflects_input_changes_between_runs():
+    """Two runs against different inputs must differ in both the flat hash and
+    the structured metadata, and the metadata must be the per-run snapshot —
+    not a shared value."""
+    with tempfile.TemporaryDirectory() as tmp:
+        db = os.path.join(tmp, "t.db")
+        conn = _mkdb(db)
+        conn.close()
+        with track_run("study", db_path=db):
+            pass
+        conn = sqlite3.connect(db)
+        conn.execute(
+            "INSERT INTO ohlcv (ticker,date,open,high,low,close,volume) "
+            "VALUES ('AAAA','2025-01-02',101,111,91,101,1000)")
+        conn.commit()
+        conn.close()
+        with track_run("study", db_path=db):
+            pass
+        conn = sqlite3.connect(db)
+        rows = conn.execute(
+            "SELECT dataset_fingerprint, dataset_meta_json "
+            "FROM research_runs ORDER BY started_at").fetchall()
+        conn.close()
+    assert len(rows) == 2
+    m1, m2 = json.loads(rows[0][1]), json.loads(rows[1][1])
+    assert rows[0][0] != rows[1][0]                 # hashes differ
+    assert m1["total_rows"] == 1 and m2["total_rows"] == 2
+    assert m1["max_date"] == "2025-01-01"
+    assert m2["max_date"] == "2025-01-02"
+
+
+# Pre-dataset_meta_json schema: research_runs as it existed before this change.
+_OLD_RESEARCH_RUNS_NO_META_DDL = """
+CREATE TABLE research_runs (
+    run_id TEXT PRIMARY KEY, kind TEXT NOT NULL, git_commit TEXT,
+    dataset_fingerprint TEXT, params_json TEXT, started_at TEXT NOT NULL,
+    finished_at TEXT, duration_s REAL, status TEXT NOT NULL,
+    metrics_json TEXT, error TEXT, environment_json TEXT)
+"""
+
+
+def test_dataset_meta_migration_and_historical_null():
+    """Old DB gains dataset_meta_json idempotently; historical rows stay NULL
+    (no backfill — mirrors the environment_json migration contract)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        db = os.path.join(tmp, "t.db")
+        conn = _mkdb(db)
+        conn.execute(_OLD_RESEARCH_RUNS_NO_META_DDL)
+        conn.execute(
+            "INSERT INTO research_runs (run_id, kind, started_at, status) "
+            "VALUES ('OLD','legacy','2025-01-01 00:00:00','DONE')")
+        conn.commit()
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(research_runs)")}
+        assert "dataset_meta_json" not in cols          # genuinely old schema
+        conn.close()
+
+        with track_run("study", db_path=db):            # triggers migration
+            pass
+
+        conn = sqlite3.connect(db)
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(research_runs)")}
+        assert "dataset_meta_json" in cols               # column added
+        old = conn.execute(
+            "SELECT dataset_meta_json FROM research_runs "
+            "WHERE run_id='OLD'").fetchone()[0]
+        new = conn.execute(
+            "SELECT dataset_meta_json FROM research_runs "
+            "WHERE run_id!='OLD'").fetchone()[0]
+        conn.close()
+    assert old is None                                  # no backfill
+    assert new and "total_rows" in json.loads(new)      # new run populated
+
+
+def test_dataset_meta_is_immutable_after_finalize(monkeypatch):
+    """_finalize() must never modify dataset_meta_json captured at INSERT
+    (same contract as environment_json)."""
+    frozen_fp = {"max_date": "2025-01-01", "total_rows": 1,
+                 "sha256": "0" * 64}
+    monkeypatch.setattr(tracking, "dataset_fingerprint",
+                        lambda conn: dict(frozen_fp))
+    with tempfile.TemporaryDirectory() as tmp:
+        db = os.path.join(tmp, "t.db")
+        _mkdb(db).close()
+        with track_run("study", db_path=db) as r:
+            r.metrics["x"] = 1                          # forces a _finalize UPDATE
+        conn = sqlite3.connect(db)
+        meta_json, status = conn.execute(
+            "SELECT dataset_meta_json, status FROM research_runs").fetchone()
+        conn.close()
+    assert status == "DONE"                             # finalize ran
+    assert json.loads(meta_json) == frozen_fp           # untouched by finalize
+
+
 # ─── track_run (Phase 3) ─────────────────────────────────────────────────────
 
 def test_track_run_records_success():

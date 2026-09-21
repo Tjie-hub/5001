@@ -61,6 +61,34 @@ def test_parse_reset_returns_none_when_absent():
     assert parse_session_reset("") is None
 
 
+# --- z.ai ISO-format reset time (audit 2026-07-21) ---------------------------
+# z.ai code 1308 returns: "Usage limit reached for 5 hour. Your limit will
+# reset at 2026-07-22 00:56:18" — an ISO 8601 timestamp (no zone). The pre-
+# existing _RESET regex matched only Claude's "resets 6:20pm (Asia/Jakarta)"
+# wording, so z.ai's 1308 was classified as a session limit with reset_time=None
+# → 15-min fallback hold → re-probed every 15 min for the entire 5-hour window.
+
+_ZAI_1308_MSG = (
+    "Error code: 429 - {'error': {'code': '1308', 'message': "
+    "'Usage limit reached for 5 hour. Your limit will reset at 2026-07-22 00:56:18'}}"
+)
+
+def test_parse_reset_extracts_zai_iso_format():
+    """z.ai's 1308 message names the reset time as an ISO timestamp. It must
+    be parsed (as UTC — z.ai returns server-local-naive timestamps that the
+    account dashboard confirms are UTC) so the router can hold to the real
+    horizon instead of the 15-min fallback."""
+    reset = parse_session_reset(_ZAI_1308_MSG)
+    assert reset is not None, "must extract z.ai ISO reset time (currently returns None — bug)"
+    assert reset == datetime(2026, 7, 22, 0, 56, 18, tzinfo=timezone.utc)
+
+
+def test_parse_reset_zai_format_within_full_message():
+    """The parser must find the reset inside the wrapped error dict string."""
+    reset = parse_session_reset("Usage limit reached for 5 hour. Your limit will reset at 2026-07-21 19:35:32")
+    assert reset == datetime(2026, 7, 21, 19, 35, 32, tzinfo=timezone.utc)
+
+
 # --- classify_cli_failure ----------------------------------------------------
 
 def test_session_limit_on_stdout_with_empty_stderr():

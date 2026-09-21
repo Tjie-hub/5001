@@ -6,9 +6,90 @@ import pytest
 from engine.agent_firm.providers.base import ProviderCapabilities, ProviderResponse
 from engine.agent_firm.providers.circuit_breaker import CircuitBreaker
 from engine.agent_firm.providers.errors import (
-    ProviderException, ProviderTimeout, ProviderUnavailable,
+    ProviderException, ProviderRateLimited, ProviderSessionLimit,
+    ProviderTimeout, ProviderUnavailable,
 )
 from engine.agent_firm.providers.router import ProviderRouter
+
+
+class _SpyGovernor:
+    """Records governor interactions so router↔governor wiring can be asserted
+    without the real adaptive state machine."""
+
+    def __init__(self, log=None):
+        self._log = log
+        self.acquired: list[str] = []
+        self.successes: list[str] = []
+        self.rate_limits: list[str] = []
+
+    async def acquire(self, provider, *, db_path=None):
+        self.acquired.append(provider)
+        if self._log is not None:
+            self._log.append(("acquire", provider))
+        return 0.0
+
+    def on_success(self, provider, *, db_path=None):
+        self.successes.append(provider)
+
+    def on_rate_limit(self, provider, *, db_path=None):
+        self.rate_limits.append(provider)
+
+    def snapshot(self):
+        return {}
+
+
+@pytest.mark.asyncio
+async def test_router_acquires_governor_permission_before_dispatch():
+    log = []
+    spy = _SpyGovernor(log)
+    p = _fake_provider("zai")
+
+    async def _gen(*a, **k):
+        log.append(("generate", "zai"))
+        return _resp("zai")
+
+    p.generate.side_effect = _gen
+    router = ProviderRouter([(p, CircuitBreaker())], governor=spy)
+    await router.generate([{"role": "user", "content": "x"}])
+    # Permission is requested from the governor BEFORE the provider is dispatched.
+    assert log == [("acquire", "zai"), ("generate", "zai")]
+
+
+@pytest.mark.asyncio
+async def test_router_reports_success_to_governor():
+    spy = _SpyGovernor()
+    p = _fake_provider("zai")
+    router = ProviderRouter([(p, CircuitBreaker())], governor=spy)
+    await router.generate([{"role": "user", "content": "x"}])
+    assert spy.successes == ["zai"]
+    assert spy.rate_limits == []
+
+
+@pytest.mark.asyncio
+async def test_router_reports_rate_limit_to_governor():
+    spy = _SpyGovernor()
+    p1 = _fake_provider("zai", generate_error=ProviderRateLimited("1302"))
+    p2 = _fake_provider("claude")
+    router = ProviderRouter([(p1, CircuitBreaker()), (p2, CircuitBreaker())],
+                            governor=spy)
+    await router.generate([{"role": "user", "content": "x"}])
+    # The 1302 feeds AIMD decrease; the successful failover feeds increase.
+    assert spy.rate_limits == ["zai"]
+    assert "claude" in spy.successes
+
+
+@pytest.mark.asyncio
+async def test_router_does_not_penalize_governor_on_session_limit():
+    """A session/usage-window limit (1308/1310) is handled by the quota hold,
+    NOT by the burst-rate governor — it must not trigger a multiplicative
+    decrease of the issue rate."""
+    spy = _SpyGovernor()
+    p1 = _fake_provider("zai", generate_error=ProviderSessionLimit("1308", reset_time=None))
+    p2 = _fake_provider("claude")
+    router = ProviderRouter([(p1, CircuitBreaker()), (p2, CircuitBreaker())],
+                            governor=spy)
+    await router.generate([{"role": "user", "content": "x"}])
+    assert spy.rate_limits == []
 
 
 def _resp(provider="claude") -> ProviderResponse:

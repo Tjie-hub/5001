@@ -46,6 +46,11 @@ feedparser.USER_AGENT = "Mozilla/5.0 (compatible; idx-walkforward/1.0)"
 SPIKE_MULTIPLIER = 3.0  # today_count >= MULTIPLIER × avg_30d
 SPIKE_FLOOR = 3         # today_count must also clear this absolute floor
 
+# run_news_batch holds one write connection open across the whole ticker loop
+# (2026-07-24 incident: an unbounded feedparser.parse(url) stalled on one feed
+# and blocked the DB for the rest of the day) — every fetch must be bounded.
+_RSS_TIMEOUT_S = 10
+
 
 def _ensure_table(conn):
     conn.execute("""
@@ -82,7 +87,10 @@ def fetch_news_for_ticker(ticker, today=None):
         logging.warning(f"[news] {ticker} refusing off-target RSS URL: {url}")
         return 0, []
     try:
-        resp = requests.get(url, timeout=_RSS_TIMEOUT_S, allow_redirects=False)
+        resp = requests.get(
+            url, timeout=_RSS_TIMEOUT_S, allow_redirects=False,
+            headers={"User-Agent": feedparser.USER_AGENT},
+        )
         resp.raise_for_status()
         feed = feedparser.parse(resp.content)
     except requests.exceptions.Timeout:

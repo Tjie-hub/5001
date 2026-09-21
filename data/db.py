@@ -164,6 +164,7 @@ def init_agent_firm_tables():
             duration_s REAL,
             request_id TEXT,
             failover INTEGER DEFAULT 0,
+            reset_time TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
         CREATE INDEX IF NOT EXISTS idx_provider_events_provider_date

@@ -9,8 +9,10 @@ failover.
 """
 
 import asyncio
+import re
 import time
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import openai
 from openai import AsyncOpenAI, APIError, APIStatusError, APITimeoutError, RateLimitError
@@ -24,18 +26,53 @@ from .errors import (
 from .registry import register
 
 # Z.ai error 1308: "Usage limit reached for 5 hour" — a subscription usage
-# window, not a transient burst limit (RCA 2026-07-10). No reset timestamp
-# is provided, so the Router falls back to its configured hold duration.
+# window, not a transient burst limit (RCA 2026-07-10).
 _SESSION_LIMIT_MSG = "usage limit reached"
+
+# Audit 2026-07-22: z.ai's genuine quota-exhaustion errors (1308 5-hour, 1310
+# weekly/monthly) carry "Your limit will reset at YYYY-MM-DD HH:MM:SS" — this
+# was previously discarded (reset_time hardcoded to None), forcing the
+# Router's 15-minute QUOTA_FALLBACK_HOLD_S fallback instead of the true
+# window and causing continuous re-probing of a provider already known (from
+# its own error response) to still be exhausted. Cross-checked against 3
+# independent production incidents (2026-07-13, 2026-07-21): the advertised
+# timestamp is unlabeled local time that only fits a "5 hour" window when
+# read as Asia/Jakarta (WIB) — the same fallback zone classification.py
+# already uses for Claude's differently-formatted reset phrase, and the
+# codebase-wide time convention (CLAUDE.md: "All times are WIB").
+_ZAI_RESET_TZ = ZoneInfo("Asia/Jakarta")
+_ZAI_RESET = re.compile(
+    r"reset\s+at\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})", re.IGNORECASE)
+
+
+def _parse_zai_reset(text: str) -> datetime | None:
+    """Extract z.ai's advertised reset timestamp, interpreted as WIB, as an
+    aware UTC datetime. Returns None on no match / unparseable text so a
+    wording change degrades to the pre-existing fallback-hold behavior
+    instead of crashing classification."""
+    m = _ZAI_RESET.search(text or "")
+    if m is None:
+        return None
+    try:
+        naive = datetime.strptime(m.group(1), "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return None
+    return naive.replace(tzinfo=_ZAI_RESET_TZ).astimezone(timezone.utc)
 
 
 def _classify(err: Exception) -> ProviderException:
     if isinstance(err, APITimeoutError):
         return ProviderTimeout(str(err))
     if isinstance(err, RateLimitError):
-        if _SESSION_LIMIT_MSG in str(err).lower():
-            return ProviderSessionLimit(str(err), reset_time=None)
-        return ProviderRateLimited(str(err))
+        text = str(err)
+        reset_time = _parse_zai_reset(text)
+        # A parseable reset timestamp is itself the signal of a sustained
+        # quota exhaustion (vs. a transient burst limit like code 1302/1305,
+        # which never carries one) — this also catches wording z.ai has not
+        # used yet, the exact gap that hid the 2026-07-13 Claude regression.
+        if reset_time is not None or _SESSION_LIMIT_MSG in text.lower():
+            return ProviderSessionLimit(text, reset_time=reset_time)
+        return ProviderRateLimited(text)
     if isinstance(err, APIStatusError) and err.status_code in (402, 403):
         return ProviderQuotaExceeded(str(err))
     return ProviderUnavailable(str(err))
@@ -58,10 +95,15 @@ class ZAIProvider:
         )
         self._model = model or config.MODEL_ID
         # Concurrency cap (RCA 2026-07-13): the firm fans out candidates with
-        # unbounded asyncio.gather(); without a throttle the ZAI endpoint sees
-        # 50+ req/s bursts and returns 429 code 1302 (per-minute rate limit),
-        # which opens the circuit and feeds the "all providers down" alert.
-        # Mirrors ClaudeProvider's semaphore.
+        # unbounded asyncio.gather(); this caps in-flight CONCURRENCY so a slow
+        # 250s call can't starve others. Mirrors ClaudeProvider's semaphore.
+        #
+        # Issue RATE is NO LONGER paced here (R-7 Tier 1): the per-provider
+        # token bucket used to reset its burst allowance every evaluate_staged()
+        # tick because this provider is rebuilt each tick. Rate pacing now lives
+        # in the PROCESS-GLOBAL adaptive governor (providers/governor.py),
+        # consulted by the Router before dispatch, so its AIMD state survives
+        # across ticks and event loops.
         self._semaphore = asyncio.Semaphore(
             max_concurrent if max_concurrent is not None else config.ZAI_MAX_CONCURRENT
         )
@@ -77,8 +119,10 @@ class ZAIProvider:
         last_err: Exception | None = None
         for attempt in range(max_retries + 1):
             try:
-                # Acquire the semaphore only around the HTTP call so pending
-                # tasks don't hold a slot while waiting on their retry backoff.
+                # Issue-rate pacing happens in the Router via the global
+                # governor (R-7 Tier 1). Here we only bound CONCURRENCY: acquire
+                # the semaphore around the HTTP call so pending tasks don't hold
+                # a slot while waiting on their retry backoff.
                 async with self._semaphore:
                     resp = await self._client.chat.completions.create(
                         model=self._model, messages=messages, timeout=timeout,

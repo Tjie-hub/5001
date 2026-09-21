@@ -24,6 +24,9 @@ EventType = Literal[
     # RCA 2026-07-10: session-limit lifecycle (limit hit with advertised
     # reset, request skipped during the hold, provider back after reset).
     "provider_session_limit", "provider_skipped", "provider_restored",
+    # R-7 Tier 1: adaptive governor AIMD transitions (rate pulled down on a
+    # 1302, recovered additively while requests succeed).
+    "governor_rate_decrease", "governor_rate_increase",
 ]
 
 

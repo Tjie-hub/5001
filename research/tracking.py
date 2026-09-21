@@ -15,6 +15,13 @@ captured automatically at the initial RUNNING INSERT and stored in the
 environment_json column, so reproducibility no longer depends on a hand-typed
 MANIFEST.md field. Capture is fail-soft (mirrors git_commit): any failure
 degrades to a sentinel, never a raised exception, and never fails a run.
+
+The structured dataset fingerprint ({max_date,total_rows,sha256}) is stored
+in dataset_meta_json alongside the legacy flat sha256 in dataset_fingerprint,
+so a future reviewer can see how a run's input differed from a neighbor's
+without re-running the fingerprint against a historical corpus that may no
+longer exist in that form. The flat column is preserved unchanged for
+back-compat with anything that already reads it.
 """
 import hashlib
 import json
@@ -39,6 +46,7 @@ CREATE TABLE IF NOT EXISTS research_runs (
     kind                TEXT NOT NULL,
     git_commit          TEXT,
     dataset_fingerprint TEXT,
+    dataset_meta_json   TEXT,
     params_json         TEXT,
     started_at          TEXT NOT NULL,
     finished_at         TEXT,
@@ -53,9 +61,16 @@ CREATE TABLE IF NOT EXISTS research_runs (
 
 def ensure_research_runs_table(conn) -> None:
     conn.execute(RESEARCH_RUNS_DDL)
-    # Backward-compatible migration for DBs created before Workstream C:
-    # adds the nullable environment_json column (idempotent no-op if present).
+    # Backward-compatible migrations for DBs created before each column
+    # existed. Each call is an idempotent no-op when the column is present
+    # (see ensure_column). environment_json = Workstream C provenance;
+    # dataset_meta_json = the structured {max_date,total_rows,sha256} dict
+    # the fingerprint function already computes, retained alongside the
+    # flat sha256 in dataset_fingerprint so a reviewer can see how a run's
+    # input differed from a neighbor's without re-running the fingerprint
+    # against a historical corpus that may no longer exist in that form.
     ensure_column(conn, "research_runs", "environment_json")
+    ensure_column(conn, "research_runs", "dataset_meta_json")
 
 
 def git_commit():
@@ -187,11 +202,12 @@ def track_run(kind: str, params: dict = None, db_path: str = None):
         fp = dataset_fingerprint(conn)
         conn.execute(
             "INSERT INTO research_runs (run_id, kind, git_commit, "
-            "dataset_fingerprint, params_json, environment_json, "
-            "started_at, status) "
-            "VALUES (?,?,?,?,?,?,?, 'RUNNING')",
+            "dataset_fingerprint, dataset_meta_json, params_json, "
+            "environment_json, started_at, status) "
+            "VALUES (?,?,?,?,?,?,?,?, 'RUNNING')",
             (run.run_id, kind, git_commit(), fp["sha256"],
-             json.dumps(params or {}), json.dumps(environment()),
+             json.dumps(fp), json.dumps(params or {}),
+             json.dumps(environment()),
              datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
         conn.commit()
     finally:

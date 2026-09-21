@@ -85,8 +85,51 @@ CLAUDE_MAX_CALLS_PER_DAY = int(os.getenv("AGENT_FIRM_CLAUDE_MAX_CALLS_PER_DAY", 
 # Mirrors CLAUDE_MAX_CONCURRENT's role for the Claude CLI semaphore.
 ZAI_MAX_CONCURRENT = int(os.getenv("AGENT_FIRM_ZAI_MAX_CONCURRENT", "4"))
 
+# ZAI issuance-rate cap (audit 2026-07-21). The semaphore above caps
+# CONCURRENCY; these cap request ISSUE RATE to avoid tripping z.ai's
+# short-window burst limit (HTTP 429 code 1302). Evidence: in the 12:16 UTC
+# replay, 24 requests at 5.8 RPM succeeded, then 12 requests issued inside a
+# single 5-second window ALL failed with 1302. Defaults: 3 req/s sustained,
+# burst of 3 — spreads a stage-1 fan-out (~12-32 requests) over a few seconds
+# while preserving concurrency for slow calls.
+ZAI_RATE_LIMIT_RPS = float(os.getenv("AGENT_FIRM_ZAI_RATE_RPS", "3"))
+ZAI_RATE_BURST = float(os.getenv("AGENT_FIRM_ZAI_RATE_BURST", "3"))
+
 CIRCUIT_FAILURES = int(os.getenv("AGENT_FIRM_CIRCUIT_FAILURES", "3"))
 CIRCUIT_COOLDOWN_S = float(os.getenv("AGENT_FIRM_CIRCUIT_COOLDOWN", "30"))
+
+# --- Adaptive provider governor (R-7 Tier 1) --------------------------------
+# A PROCESS-GLOBAL, AIMD-adaptive issue-rate governor replaces the previous
+# per-ZAIProvider token bucket (which reset its burst allowance every
+# evaluate_staged() tick — the cross-tick state-loss bug R-6 identified). The
+# governor owns issue RATE; the provider semaphore still owns CONCURRENCY.
+#
+# Non-regressive by construction: the rate STARTS at GOVERNOR_RATE_MAX (which
+# defaults to the previous constant ZAI_RATE_LIMIT_RPS), so steady-state
+# pacing is unchanged; the AIMD loop only pulls the rate DOWN on a 1302 and
+# lets it recover additively. See providers/governor.py.
+GOVERNOR_ENABLED = _env_bool("AGENT_FIRM_GOVERNOR", True)
+# Comma-separated providers that get an adaptive controller. Claude is
+# intentionally absent: its subprocess CLI has no HTTP short-window burst
+# limit — its constraint is the subscription window the Router already holds.
+GOVERNOR_PROVIDERS = [
+    p.strip() for p in os.getenv("AGENT_FIRM_GOVERNOR_PROVIDERS", "zai").split(",")
+    if p.strip()
+]
+# Hard ceiling / initial rate (reuses the existing ZAI knob so an operator's
+# current override keeps working) and floor.
+GOVERNOR_RATE_MAX = float(os.getenv("AGENT_FIRM_GOVERNOR_RATE_MAX", str(ZAI_RATE_LIMIT_RPS)))
+GOVERNOR_RATE_MIN = float(os.getenv("AGENT_FIRM_GOVERNOR_RATE_MIN", "0.5"))
+GOVERNOR_BURST = float(os.getenv("AGENT_FIRM_GOVERNOR_BURST", str(ZAI_RATE_BURST)))
+# AIMD tuning: additive step per recovery increase, minimum seconds between
+# increases, and the multiplicative decrease factor applied on a 1302.
+GOVERNOR_AI_STEP = float(os.getenv("AGENT_FIRM_GOVERNOR_AI_STEP", "0.5"))
+GOVERNOR_AI_INTERVAL_S = float(os.getenv("AGENT_FIRM_GOVERNOR_AI_INTERVAL", "10"))
+GOVERNOR_MD_FACTOR = float(os.getenv("AGENT_FIRM_GOVERNOR_MD_FACTOR", "0.5"))
+# Quiet window after a decrease during which no increase is attempted — the
+# anti-oscillation guard (lets a burst fully clear before probing back up).
+GOVERNOR_POST_DECREASE_COOLDOWN_S = float(
+    os.getenv("AGENT_FIRM_GOVERNOR_DECREASE_COOLDOWN", "30"))
 
 # --- Quota-aware routing (RCA 2026-07-10) -----------------------------------
 # When a provider reports a session/usage-window limit, the Router holds it
