@@ -22,8 +22,18 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent          # .../shock_absorption/scripts
 SA = HERE.parent                                # .../shock_absorption
-REPO = HERE.parents[4]                          # repo root
+REPO = HERE.parents[4].resolve()                # repo root (normalized)
 DB = REPO / "data" / "walkforward.db"
+
+# Path-containment guard (Mimosa hardening 2026-09-21, added POST-run): every
+# path this script touches must resolve inside the repo root, and the root must
+# look like this repo. Validation only -- the computed paths are identical to
+# the executed one-pass run recorded at b3f65bb.
+if not (REPO / "data" / "db.py").is_file():
+    raise SystemExit(f"repo root resolution failed: {REPO}")
+for _p in (HERE, SA, DB, SA / "results_2026-09-21.json"):
+    if not _p.resolve().is_relative_to(REPO):
+        raise SystemExit(f"path escapes repo root: {_p}")
 
 # ---- frozen constants (spec s3 / fade conventions) ----
 SHOCK_RET = 0.10        # single-session close-to-close up-shock
