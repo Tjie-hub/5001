@@ -78,11 +78,13 @@ this one's multiplicity debt.
 ## 6. Sanity anchors (validation, not tuning)
 
 The pipeline must attempt to reproduce the two anecdotes inside the window:
-- **TUGU**: shock 2026-09-16 (+15.7%); observed `top1_accdist` = Big Acc on 09-10/11/14
-  (pre-shock), Big Dist on 09-16. Anchor expectation stated in advance: the pre-shock
-  accumulation flag fires; whether the POST-shock marker fires depends on 09-17+ rows
-  (currently absent for TUGU — reported honestly as data-limited, not tuned around).
-- **SMMT**: shock 2026-09-16 (+12%); same treatment.
+- **TUGU**: shock 2026-09-16 (+12.03%; 09-15 close 1455 → 09-16 close 1630, verified); observed
+  `top1_accdist` = Big Acc on 09-10/11/14 (pre-shock), Big Dist on 09-16. Anchor expectation
+  stated in advance: the pre-shock accumulation flag fires; whether the POST-shock marker fires
+  depends on 09-17+ rows (currently absent for TUGU — reported honestly as data-limited, not
+  tuned around).
+- **SMMT**: shock 2026-09-16 (+15.67%; 09-15 close 2680 → 09-16 close 3100, verified); same
+  treatment.
 Failure of an anchor is reported as-is: it means the extracted story does not survive
 formalization, which is itself the finding.
 
