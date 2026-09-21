@@ -18,22 +18,49 @@ import { renderApp } from '../../tests/render-app'
 import { WORKSPACES } from './workspaces'
 
 describe('Phase 4 Appendix B — deep links resolve to their workspace', () => {
-  it.each(WORKSPACES.map((w) => [w.navPath, w.label] as const))(
-    'renders %s as the %s workspace',
-    async (path, label) => {
-      renderApp(path)
+  // ADR-006 §5 interim fix (2026-08-20): 'portfolio' is excluded here because
+  // its SPA <Route> was deliberately removed -- see the dedicated describe
+  // block below. It remains a full member of WORKSPACES (workspaces.ts is
+  // unchanged); only its SPA route registration is affected.
+  it.each(
+    WORKSPACES.filter((w) => w.id !== 'portfolio').map((w) => [w.navPath, w.label] as const),
+  )('renders %s as the %s workspace', async (path, label) => {
+    renderApp(path)
 
-      expect(
-        await screen.findByRole('heading', { level: 1, name: new RegExp(label) }),
-      ).toBeVisible()
-    },
-  )
+    expect(
+      await screen.findByRole('heading', { level: 1, name: new RegExp(label) }),
+    ).toBeVisible()
+  })
 
   it('resolves / to the primary operational workspace (UI-001)', async () => {
     renderApp('/')
 
     expect(await screen.findByRole('heading', { level: 1, name: /Decision Center/ })).toBeVisible()
     expect(window.location.pathname).toBe('/decision')
+  })
+})
+
+describe('ADR-006 §5 — /portfolio SPA route removed (interim fix, 2026-08-20)', () => {
+  it('does not render the empty Portfolio workspace shell at /portfolio', async () => {
+    renderApp('/portfolio')
+
+    expect(await screen.findByRole('heading', { level: 1, name: /page not found/i })).toBeVisible()
+    expect(screen.queryByRole('heading', { level: 1, name: /^Portfolio$/ })).not.toBeInTheDocument()
+  })
+
+  it('still lists Portfolio in the sidebar (workspaces.ts is unchanged) but its link leads to the not-found recovery page, not a crash', async () => {
+    const user = userEvent.setup()
+    renderApp('/decision')
+
+    const sidebar = screen.getByRole('navigation', { name: 'Workspaces' })
+    const portfolioLink = within(sidebar).getByRole('link', { name: /Portfolio/ })
+    expect(portfolioLink).toBeInTheDocument()
+
+    await user.click(portfolioLink)
+
+    expect(await screen.findByRole('heading', { level: 1, name: /page not found/i })).toBeVisible()
+    expect(window.location.pathname).toBe('/portfolio')
+    expect(screen.getByRole('navigation', { name: 'Workspaces' })).toBeInTheDocument()
   })
 })
 
@@ -91,10 +118,10 @@ describe('Phase 4 NP-05 — navigation is deterministic', () => {
     renderApp('/decision')
 
     const sidebar = screen.getByRole('navigation', { name: 'Workspaces' })
-    await user.click(within(sidebar).getByRole('link', { name: /Portfolio/ }))
+    await user.click(within(sidebar).getByRole('link', { name: /Search/ }))
 
-    expect(await screen.findByRole('heading', { level: 1, name: /Portfolio/ })).toBeVisible()
-    expect(window.location.pathname).toBe('/portfolio')
+    expect(await screen.findByRole('heading', { level: 1, name: /Search/ })).toBeVisible()
+    expect(window.location.pathname).toBe('/search')
   })
 
   it('produces the same destination for the same action', async () => {
@@ -146,5 +173,11 @@ describe('Phase 4 P4-06 §11 / NP-07 — unknown routes recover', () => {
 
     await screen.findByRole('heading', { level: 1, name: /page not found/i })
     expect(screen.getByRole('navigation', { name: 'Workspaces' })).toBeInTheDocument()
+  })
+
+  it('does not register the retired standalone /internal/operations route (ADR-008)', async () => {
+    renderApp('/internal/operations')
+
+    expect(await screen.findByRole('heading', { level: 1, name: /page not found/i })).toBeVisible()
   })
 })

@@ -1,0 +1,301 @@
+/* Trade Flow section — same visual language as the ticker detail page's
+ * region module (shell tokens only). The Buy/Sell/Price series colours are
+ * component-scoped custom properties: the design system's token pipeline
+ * (Workstream C) has no semantic up/down colours yet, so they are decided
+ * here, once, at the component boundary — not in design-system/tokens. */
+
+.section {
+  --tf-buy: #15803d;
+  --tf-sell: #dc2626;
+  --tf-price: #2563eb;
+  --tf-grid: color-mix(in srgb, var(--shell-border) 70%, transparent);
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+  background: var(--shell-surface-raised);
+  margin-block-end: var(--shell-gap);
+}
+
+:root[data-theme='dark'] .section {
+  --tf-buy: #22c55e;
+  --tf-sell: #ef4444;
+  --tf-price: #60a5fa;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-block-end: 0.75rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.netChip {
+  margin-inline-start: auto;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--shell-border);
+}
+
+.netChipAcc {
+  color: var(--tf-buy);
+  border-color: var(--tf-buy);
+}
+
+.netChipDist {
+  color: var(--tf-sell);
+  border-color: var(--tf-sell);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block-end: 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.navButton,
+.segmentButton,
+.select {
+  font-size: 0.8125rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+  background: var(--shell-surface);
+  color: var(--shell-text);
+}
+
+.navButton:disabled,
+.segmentButton:disabled,
+.select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.dateInput {
+  font-size: 0.8125rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+  background: var(--shell-surface);
+  color: var(--shell-text);
+}
+
+.rangeChip {
+  font-variant-numeric: tabular-nums;
+  color: var(--shell-text-muted);
+}
+
+.segmentGroup {
+  display: inline-flex;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+  overflow: hidden;
+  margin-inline-start: auto;
+}
+
+.segmentButton {
+  border: none;
+  border-radius: 0;
+}
+
+.segmentButtonActive {
+  background: var(--shell-accent);
+  color: var(--shell-accent-contrast);
+}
+
+.chartWrap {
+  position: relative;
+}
+
+.chartSvg {
+  display: block;
+}
+
+.gridline {
+  stroke: var(--tf-grid);
+  stroke-width: 1;
+}
+
+.sessionSeparator {
+  stroke: var(--shell-border);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.axisLabel {
+  fill: var(--shell-text-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.buyLine {
+  fill: none;
+  stroke: var(--tf-buy);
+  stroke-width: 1.6;
+}
+
+.sellLine {
+  fill: none;
+  stroke: var(--tf-sell);
+  stroke-width: 1.6;
+}
+
+.priceLine {
+  fill: none;
+  stroke: var(--tf-price);
+  stroke-width: 1.2;
+}
+
+.crosshair {
+  stroke: var(--shell-text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.tooltip {
+  position: absolute;
+  top: 0.5rem;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+  background: var(--shell-surface-raised);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.tooltipTime {
+  font-weight: 600;
+  color: var(--shell-text-muted);
+}
+
+.swatch {
+  display: inline-block;
+  inline-size: 0.6rem;
+  block-size: 0.6rem;
+  border-radius: 2px;
+  margin-inline-end: 0.3rem;
+}
+
+.swatchBuy {
+  background: var(--tf-buy);
+}
+
+.swatchSell {
+  background: var(--tf-sell);
+}
+
+.swatchPrice {
+  background: var(--tf-price);
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 1.25rem;
+  font-size: 0.8125rem;
+  margin-block: 0.5rem 0.75rem;
+}
+
+.netBarWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.75rem;
+  color: var(--shell-text-muted);
+}
+
+.netBar {
+  position: relative;
+  flex: 1;
+  block-size: 0.5rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--tf-sell),
+    color-mix(in srgb, var(--tf-sell) 35%, var(--tf-buy)),
+    var(--tf-buy)
+  );
+}
+
+.netMarker {
+  position: absolute;
+  top: -0.2rem;
+  block-size: 0.9rem;
+  inline-size: 0.28rem;
+  border-radius: 2px;
+  background: var(--shell-accent);
+  transform: translateX(-50%);
+}
+
+.totalsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  font-size: 0.8125rem;
+  margin-block-start: 0.75rem;
+}
+
+.totalsRow dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.totalsRow dt {
+  color: var(--shell-text-muted);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.buyValue {
+  color: var(--tf-buy);
+}
+
+.sellValue {
+  color: var(--tf-sell);
+}
+
+.notice {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: var(--shell-text-muted);
+}
+
+.warning {
+  color: #b45309;
+}
+
+:root[data-theme='dark'] .warning {
+  color: #fbbf24;
+}
+
+.skeleton {
+  block-size: 300px;
+  border-radius: var(--shell-radius);
+  background: var(--shell-surface);
+}
+
+.errorBox {
+  border: 1px solid var(--tf-sell);
+  border-radius: var(--shell-radius);
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+}

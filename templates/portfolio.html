@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Portfolio Backtest — IDX Suite{% endblock %}
+{% block title %}Portfolio — IDX Suite{% endblock %}
 {% block head %}
   <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
   <style>
@@ -11,6 +11,16 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; }
 
+    /* ── workspace tabs (consolidation 2026-09-03: backtest + canonical ledger) ── */
+    .pf-tabs { display: flex; gap: 4px; padding: 10px 20px 0; border-bottom: 1px solid var(--border);
+      background: var(--card); flex-wrap: wrap; }
+    .pf-tabs button { background: transparent; border: none; color: var(--mute); cursor: pointer;
+      font: 600 13px 'Inter', sans-serif; padding: 10px 14px; border-radius: 6px 6px 0 0; }
+    .pf-tabs button:hover { color: var(--text); }
+    .pf-tabs button.active { color: var(--text); background: var(--bg);
+      box-shadow: inset 0 -2px 0 var(--accent); }
+    .pf-tabpane.hidden { display: none; }
+
     .pf-bar { display: flex; align-items: center; gap: 12px; padding: 10px 20px;
       background: var(--card); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
     .pf-bar h1 { font-size: 16px; font-weight: 600; margin-right: 8px; }
@@ -18,10 +28,37 @@
       background: var(--card2); border: 1px solid var(--border); color: var(--text);
       padding: 6px 10px; border-radius: 6px; font-size: 13px; }
     .pf-bar label { color: var(--mute); font-size: 12px; }
+
+    .inv-bar { display: flex; align-items: center; gap: 10px; padding: 14px 20px 0; flex-wrap: wrap; }
+    .inv-bar h2 { font-size: 15px; font-weight: 600; margin-right: auto; }
+    .inv-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px; margin: 12px 20px 0; }
+    .inv-form label { display: block; color: var(--mute); font-size: 11px; margin-bottom: 3px;
+      text-transform: uppercase; letter-spacing: .04em; }
+    .inv-form input, .inv-form select {
+      background: var(--card2); border: 1px solid var(--border); color: var(--text);
+      padding: 6px 10px; border-radius: 6px; font-size: 13px; min-width: 110px; }
     .btn { padding: 7px 18px; border-radius: 6px; border: none; cursor: pointer;
       font-size: 13px; font-weight: 600; }
     .btn-primary { background: var(--accent); color: #fff; }
     .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-ghost { background: var(--card2); color: var(--text); border: 1px solid var(--border); }
+    .btn-danger { background: transparent; color: #ef4444; border: 1px solid rgba(239,68,68,.35);
+      padding: 3px 10px; font-size: 12px; }
+    .inv-error { display: none; margin: 12px 20px 0; padding: 10px 14px; border-radius: 8px;
+      background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.4); color: #fca5a5;
+      font-size: 13px; }
+    .inv-empty { color: var(--mute); font-size: 13px; padding: 12px 20px; }
+
+    .badge { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 999px;
+      border: 1px solid var(--border); color: var(--mute); text-transform: uppercase;
+      letter-spacing: .04em; vertical-align: middle; }
+    .badge.manual { color: #f59e0b; border-color: rgba(245,158,11,.4); }
+    .badge.yahoo  { color: #22c55e; border-color: rgba(34,197,94,.4); }
+    .buy  { color: #22c55e; font-weight: 600; }
+    .sell { color: #ef4444; font-weight: 600; }
+
     .spinner { display: none; color: var(--mute); font-size: 13px; }
 
     .metrics { display: flex; gap: 12px; padding: 16px 20px; flex-wrap: wrap; }
@@ -32,8 +69,16 @@
     .metric-card .value { font-size: 22px; font-weight: 700; }
     .pos { color: #22c55e; } .neg { color: #ef4444; } .neu { color: var(--text); }
 
+    .alloc-section { padding: 0 20px 16px; }
+    .alloc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; font-size: 13px; }
+    .alloc-row .tk { width: 60px; font-weight: 600; }
+    .alloc-row .track { flex: 1; height: 14px; background: var(--card); border-radius: 4px;
+      border: 1px solid var(--border); overflow: hidden; }
+    .alloc-row .fill { height: 100%; background: var(--accent); opacity: .75; }
+    .alloc-row .val { width: 170px; text-align: right; color: var(--mute); }
+
     .charts-grid { display: grid; grid-template-columns: 1fr 1fr;
-      gap: 16px; padding: 0 20px 16px; }
+      gap: 16px; padding: 16px 20px 16px; }
     @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
     .chart-panel { background: var(--card); border: 1px solid var(--border);
       border-radius: 8px; overflow: hidden; }
@@ -51,7 +96,7 @@
 
     .table-section { padding: 0 20px 16px; }
     .section-title { font-size: 13px; font-weight: 600; color: var(--mute);
-      text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
+      text-transform: uppercase; letter-spacing: .05em; margin: 18px 0 10px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th { background: var(--card2); padding: 8px 12px; text-align: left; color: var(--mute);
       font-weight: 500; cursor: pointer; user-select: none; font-size: 11px;
@@ -59,19 +104,46 @@
     th:hover { color: var(--text); }
     td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
     tr:hover td { background: var(--card2); }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    tfoot td { font-weight: 700; background: var(--card2); }
 
     .heatmap-section { padding: 0 20px 24px; }
     .heatmap { border-collapse: collapse; font-size: 12px; }
     .heatmap th { background: var(--card2); padding: 6px 10px; text-align: center;
-      color: var(--mute); font-weight: 500; border: 1px solid var(--border); }
+      color: var(--mute); font-weight: 500; border: 1px solid var(--border); cursor: default; }
     .heatmap td { padding: 6px 10px; text-align: center; border: 1px solid var(--border);
       min-width: 56px; }
 
     .notice { color: var(--mute); font-size: 12px; padding: 4px 0; }
     .hidden { display: none !important; }
+
+    /* minimal modal (redeem flow, ex-5003) */
+    .modal-back { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none;
+      align-items: center; justify-content: center; z-index: 50; }
+    .modal-back.open { display: flex; }
+    .modal { background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 20px; width: 340px; }
+    .modal h3 { font-size: 15px; margin-bottom: 12px; }
+    .modal .inv-form { margin: 0; padding: 0; border: none; background: transparent; }
+    .modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+    #divPreview { color: var(--mute); font-size: 12px; padding: 12px 20px 0; }
+    td.editable { cursor: pointer; }
+    td.editable:hover { color: var(--accent); }
   </style>
 {% endblock %}
 {% block content %}
+
+<nav class="pf-tabs" id="pfTabs">
+  <button data-tab="backtest" class="active">Backtest</button>
+  <button data-tab="overview">Overview</button>
+  <button data-tab="holdings">Holdings</button>
+  <button data-tab="funds">Mutual Funds</button>
+  <button data-tab="dividends">Dividends</button>
+  <button data-tab="closed">Closed</button>
+</nav>
+
+<!-- ═══════════════ Backtest (existing Production OS panel, unchanged) ═══════════════ -->
+<div class="pf-tabpane" id="tab-backtest">
 
 <div class="pf-bar">
   <h1>Portfolio Backtest</h1>
@@ -158,6 +230,165 @@
 <div class="heatmap-section hidden" id="heatmapSection">
   <div class="section-title">Return Correlation Matrix</div>
   <div id="heatmapContainer"></div>
+</div>
+
+</div><!-- /tab-backtest -->
+
+<!-- ═══════════════ Overview (canonical ledger, ex-5003 Investment Dashboard) ═══════════════ -->
+<div class="pf-tabpane hidden" id="tab-overview">
+  <div class="inv-error" id="ovError"></div>
+  <div class="metrics" id="ovMetrics"></div>
+  <div class="alloc-section">
+    <div class="section-title">Allocation by Open Position</div>
+    <div id="ovAlloc"></div>
+  </div>
+  <div class="table-section">
+    <div class="section-title">Closed Trade Journals</div>
+    <p class="notice" id="ovClosed"></p>
+    <p class="notice">Fee model: buy 0.15% (in avg cost) · sell 0.25% (in breakeven / net-if-sold) ·
+      dividend tax default 10%. Full investment context lives in
+      <a href="/intelligence" style="color:var(--accent)">Investment Intelligence</a>.</p>
+  </div>
+</div>
+
+<!-- ═══════════════ Holdings ═══════════════ -->
+<div class="pf-tabpane hidden" id="tab-holdings">
+  <div class="inv-error" id="hdError"></div>
+  <div class="inv-bar">
+    <h2>Open Equity Holdings</h2>
+    <span class="spinner" id="hdSpinner">⏳ Refreshing…</span>
+    <button class="btn btn-ghost" onclick="refreshPrices()">Refresh prices</button>
+    <button class="btn btn-ghost" onclick="toggleForm('hdForm')">+ Add transaction</button>
+  </div>
+  <form class="inv-form hidden" id="hdForm" onsubmit="return addTxn(event)">
+    <div><label>Date</label><input type="date" id="hdDate" required></div>
+    <div><label>Ticker</label><input id="hdTicker" placeholder="BBCA" required style="text-transform:uppercase"></div>
+    <div><label>Type</label><select id="hdType"><option>BUY</option><option>SELL</option></select></div>
+    <div><label>Price</label><input type="number" id="hdPrice" step="any" min="0" required></div>
+    <div><label>Qty</label><input type="number" id="hdQty" step="any" min="0" required></div>
+    <div><label>Notes</label><input id="hdNotes" placeholder="optional"></div>
+    <button class="btn btn-primary" type="submit">Save</button>
+  </form>
+  <div class="table-section">
+    <table id="hdTable">
+      <thead><tr>
+        <th>Ticker</th><th class="num">Tranches</th><th class="num">Shares</th>
+        <th class="num">Avg Cost</th><th class="num">Breakeven</th><th class="num">Price</th>
+        <th class="num">Value</th><th class="num">Unrealized P&L</th><th class="num">%</th>
+        <th class="num">Net if Sold</th><th class="num">Net %</th>
+      </tr></thead>
+      <tbody id="hdBody"></tbody>
+      <tfoot id="hdFoot"></tfoot>
+    </table>
+  </div>
+  <div class="table-section">
+    <div class="section-title">Transaction Ledger</div>
+    <table>
+      <thead><tr>
+        <th>Date</th><th>Ticker</th><th>Type</th><th class="num">Price</th>
+        <th class="num">Qty</th><th class="num">Value</th><th>Notes</th><th></th>
+      </tr></thead>
+      <tbody id="txnBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ Mutual Funds ═══════════════ -->
+<div class="pf-tabpane hidden" id="tab-funds">
+  <div class="inv-error" id="fdError"></div>
+  <div class="inv-bar">
+    <h2>Reksa Dana</h2>
+    <button class="btn btn-ghost" onclick="toggleForm('fdForm')">+ Add fund position</button>
+  </div>
+  <form class="inv-form hidden" id="fdForm" onsubmit="return addFund(event)">
+    <div><label>Fund name</label><input id="fdName" size="34" required></div>
+    <div><label>Entry date</label><input type="date" id="fdDate" required></div>
+    <div><label>Entry NAV</label><input type="number" id="fdNav" step="any" min="0" required></div>
+    <div><label>Cost basis (IDR)</label><input type="number" id="fdCost" step="any" min="0" required></div>
+    <button class="btn btn-primary" type="submit">Save</button>
+  </form>
+  <div class="table-section">
+    <div class="section-title">Open Positions</div>
+    <table>
+      <thead><tr>
+        <th>Fund</th><th>Entry Date</th><th class="num">Units</th><th class="num">Entry NAV</th>
+        <th class="num">Current NAV</th><th class="num">Value</th><th class="num">Cost</th>
+        <th class="num">P&amp;L</th><th class="num">%</th><th></th>
+      </tr></thead>
+      <tbody id="fdOpenBody"></tbody>
+    </table>
+  </div>
+  <div class="table-section">
+    <div class="section-title">Closed Positions</div>
+    <table>
+      <thead><tr>
+        <th>Fund</th><th>Entry</th><th>Exit</th><th class="num">Entry NAV</th>
+        <th class="num">Exit NAV</th><th class="num">Units</th><th class="num">Cost</th>
+        <th class="num">Net P&amp;L</th><th class="num">%</th>
+      </tr></thead>
+      <tbody id="fdClosedBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ Dividends ═══════════════ -->
+<div class="pf-tabpane hidden" id="tab-dividends">
+  <div class="inv-error" id="dvError"></div>
+  <div class="metrics" id="dvCards"></div>
+  <div class="inv-bar">
+    <h2>Dividend Journal</h2>
+    <button class="btn btn-ghost" onclick="toggleForm('dvForm')">+ Add dividend</button>
+  </div>
+  <form class="inv-form hidden" id="dvForm" onsubmit="return addDiv(event)">
+    <div><label>Date</label><input type="date" id="dvDate" required></div>
+    <div><label>Ticker</label><input id="dvTicker" required style="text-transform:uppercase"></div>
+    <div><label>Per share</label><input type="number" id="dvPer" step="any" min="0" required></div>
+    <div><label>Qty</label><input type="number" id="dvQty" step="any" min="0" required></div>
+    <div><label>Tax %</label><input type="number" id="dvTax" step="any" min="0" max="100" value="10"></div>
+    <button class="btn btn-primary" type="submit">Save</button>
+  </form>
+  <div id="divPreview"></div>
+  <div class="table-section">
+    <table>
+      <thead><tr>
+        <th>Date</th><th>Ticker</th><th class="num">Per Share</th><th class="num">Qty</th>
+        <th class="num">Gross</th><th class="num">Tax %</th><th class="num">Net</th>
+        <th>Notes</th><th></th>
+      </tr></thead>
+      <tbody id="dvBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ Closed ═══════════════ -->
+<div class="pf-tabpane hidden" id="tab-closed">
+  <div class="inv-error" id="clError"></div>
+  <div class="metrics" id="clCards"></div>
+  <div class="table-section">
+    <div class="section-title">Closed Equity Trades</div>
+    <table>
+      <thead><tr>
+        <th>Entry</th><th>Exit</th><th>Ticker</th><th class="num">Entry</th>
+        <th class="num">Exit</th><th class="num">Qty</th><th class="num">Net P&amp;L</th><th class="num">%</th><th></th>
+      </tr></thead>
+      <tbody id="clEqBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- redeem modal -->
+<div class="modal-back" id="redeemBack">
+  <div class="modal">
+    <h3 id="redeemTitle">Redeem fund</h3>
+    <form class="inv-form" onsubmit="return confirmRedeem(event)">
+      <div><label>Exit date</label><input type="date" id="rdDate" required></div>
+      <div><label>Exit NAV</label><input type="number" id="rdNav" step="any" min="0" required></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" onclick="closeRedeem()">Cancel</button>
+        <button class="btn btn-primary" type="submit">Redeem</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <script>
@@ -410,5 +641,321 @@ function renderHeatmap(correlation) {
 }
 
 init();
+</script>
+
+<script>
+/* ═══════════ Canonical investment ledger tabs (consolidation 2026-09-03,
+   ex-5003 Investment Dashboard) — data lives in the inv_* tables via
+   /api/v1/investments/*. ═══════════ */
+
+const _idr = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
+const fmtIDR = v => (v == null || isNaN(v)) ? '—' : _idr.format(v);
+const fmtPct = (v, signed) => (v == null || isNaN(v)) ? '—' : (signed && v > 0 ? '+' : '') + v.toFixed(2) + '%';
+const fmtNum = v => (v == null || isNaN(v)) ? '—' : Number(v).toLocaleString('id-ID', { maximumFractionDigits: 2 });
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const js = s => "'" + String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
+const signCls = v => v > 0 ? 'pos' : v < 0 ? 'neg' : 'neu';
+
+async function inv(path, opts) {
+  const r = await fetch(path, opts);
+  let body = null;
+  try { body = await r.json(); } catch (_) { /* non-JSON error page */ }
+  if (!r.ok || !body || body.ok === false) {
+    throw new Error((body && body.error && body.error.message) || ('HTTP ' + r.status));
+  }
+  return body.data;
+}
+const invPost = (path, payload) => inv(path, {
+  method: 'POST', headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify(payload || {}),
+});
+const invDelete = path => inv(path, { method: 'DELETE' });
+
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  if (!msg) { el.style.display = 'none'; return; }
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function toggleForm(id) { document.getElementById(id).classList.toggle('hidden'); }
+
+/* ── tab switching ── */
+const TAB_LOADERS = {
+  overview: loadOverview, holdings: loadHoldings, funds: loadFunds,
+  dividends: loadDividends, closed: loadClosed,
+};
+document.querySelectorAll('#pfTabs button').forEach(btn => {
+  btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+});
+function activateTab(name) {
+  document.querySelectorAll('#pfTabs button').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.pf-tabpane').forEach(p =>
+    p.classList.toggle('hidden', p.id !== 'tab-' + name));
+  try { localStorage.setItem('pf_tab', name); } catch (_) {}
+  if (TAB_LOADERS[name]) TAB_LOADERS[name]().catch(e => console.error(e));
+}
+const lastTab = (() => { try { return localStorage.getItem('pf_tab'); } catch (_) { return null; } })();
+if (lastTab && TAB_LOADERS[lastTab]) activateTab(lastTab);
+
+/* ── Overview ── */
+async function loadOverview() {
+  showErr('ovError', null);
+  try {
+    const s = await inv('/api/v1/investments/summary');
+    const cards = [
+      ['Portfolio Value', fmtIDR(s.portfolio_value), 'neu'],
+      ['Equity Cost Basis', fmtIDR(s.equity_cost_basis), 'neu'],
+      ['Unrealized P&L', fmtIDR(s.unrealized_pl) + ' (' + fmtPct(s.unrealized_pct) + ')', signCls(s.unrealized_pl)],
+      ['Realized P&L', fmtIDR(s.realized_pl) + ' (' + s.closed_equity_count + ' eq / ' + s.closed_fund_count + ' mf)', signCls(s.realized_pl)],
+      ['Dividends Received', fmtIDR(s.dividends_net) + ' (' + s.dividend_count + ')', signCls(s.dividends_net)],
+      ['Total Return', fmtIDR(s.total_return) + ' (' + fmtPct(s.total_return_pct, true) + ')', signCls(s.total_return)],
+    ];
+    document.getElementById('ovMetrics').innerHTML = cards.map(([l, v, c]) =>
+      '<div class="metric-card"><div class="label">' + l + '</div><div class="value ' + c + '">' + v + '</div></div>'
+    ).join('');
+    const maxV = Math.max(1, ...(s.allocation || []).map(a => a.value));
+    document.getElementById('ovAlloc').innerHTML = (s.allocation || []).length
+      ? s.allocation.map(a =>
+          '<div class="alloc-row"><span class="tk">' + esc(a.ticker) + '</span>' +
+          '<span class="track"><span class="fill" style="width:' + (a.value / maxV * 100).toFixed(1) + '%"></span></span>' +
+          '<span class="val">' + fmtIDR(a.value) + ' · ' + a.pct.toFixed(1) + '%</span></div>').join('')
+      : '<p class="inv-empty">No open equity positions.</p>';
+    document.getElementById('ovClosed').textContent =
+      'Realized equity ' + fmtIDR(s.realized_equity_pl) + ' · realized funds ' + fmtIDR(s.realized_fund_pl) +
+      ' · open fund positions ' + s.fund_open_count + (s.fund_open_count ? ' worth ' + fmtIDR(s.fund_open_value) : '');
+  } catch (e) { showErr('ovError', 'Failed to load overview: ' + e.message); }
+}
+
+/* ── Holdings ── */
+async function loadHoldings() {
+  showErr('hdError', null);
+  try {
+    const [h, txns] = await Promise.all([
+      inv('/api/v1/investments/holdings'),
+      inv('/api/v1/investments/transactions'),
+    ]);
+    document.getElementById('hdBody').innerHTML = h.holdings.map(row => {
+      const badge = row.price_source
+        ? ' <span class="badge ' + row.price_source + '" title="' + esc(row.price_updated_at || '') + '">' + row.price_source + '</span>'
+        : '';
+      return '<tr>' +
+        '<td><strong>' + esc(row.ticker) + '</strong></td>' +
+        '<td class="num">' + row.tranches + '</td>' +
+        '<td class="num">' + fmtNum(row.qty) + '</td>' +
+        '<td class="num">' + fmtNum(row.avg_price) + '</td>' +
+        '<td class="num">' + fmtNum(row.breakeven) + '</td>' +
+        '<td class="num">' + fmtNum(row.price) + badge + '</td>' +
+        '<td class="num">' + fmtIDR(row.market_value) + '</td>' +
+        '<td class="num ' + signCls(row.unrealized_pl) + '">' + fmtIDR(row.unrealized_pl) + '</td>' +
+        '<td class="num ' + signCls(row.unrealized_pl) + '">' + fmtPct(row.unrealized_pct, true) + '</td>' +
+        '<td class="num">' + fmtIDR(row.net_if_sold) + '</td>' +
+        '<td class="num ' + signCls(row.net_pl) + '">' + fmtPct(row.net_pct, true) + '</td>' +
+      '</tr>';
+    }).join('') || '<tr><td colspan="11" class="inv-empty">No open holdings — add a BUY transaction above.</td></tr>';
+    const t = h.totals;
+    document.getElementById('hdFoot').innerHTML =
+      '<tr><td colspan="6">Totals</td>' +
+      '<td class="num">' + fmtIDR(t.market_value) + '</td>' +
+      '<td class="num ' + signCls(t.unrealized_pl) + '">' + fmtIDR(t.unrealized_pl) + '</td>' +
+      '<td class="num ' + signCls(t.unrealized_pl) + '">' + fmtPct(t.unrealized_pct, true) + '</td>' +
+      '<td class="num">' + fmtIDR(t.net_if_sold) + '</td><td></td></tr>';
+    document.getElementById('txnBody').innerHTML = txns.slice().reverse().map(t =>
+      '<tr><td>' + esc(t.date) + '</td><td><strong>' + esc(t.ticker) + '</strong></td>' +
+      '<td class="' + t.type.toLowerCase() + '">' + t.type + '</td>' +
+      '<td class="num">' + fmtNum(t.price) + '</td><td class="num">' + fmtNum(t.qty) + '</td>' +
+      '<td class="num">' + fmtIDR(t.price * t.qty) + '</td>' +
+      '<td>' + esc(t.notes) + '</td>' +
+      '<td><button class="btn-danger btn" onclick="delTxn(' + t.id + ')">Delete</button></td></tr>'
+    ).join('') || '<tr><td colspan="8" class="inv-empty">No transactions recorded.</td></tr>';
+  } catch (e) { showErr('hdError', 'Failed to load holdings: ' + e.message); }
+}
+async function addTxn(ev) {
+  ev.preventDefault();
+  showErr('hdError', null);
+  try {
+    await invPost('/api/v1/investments/transactions', {
+      date: v('hdDate'), ticker: v('hdTicker'), type: v('hdType'),
+      price: +v('hdPrice'), qty: +v('hdQty'), notes: v('hdNotes'),
+    });
+    document.getElementById('hdForm').reset();
+    await loadHoldings();
+  } catch (e) { showErr('hdError', e.message); }
+  return false;
+}
+async function delTxn(id) {
+  showErr('hdError', null);
+  try { await invDelete('/api/v1/investments/transactions/' + id); await loadHoldings(); }
+  catch (e) { showErr('hdError', e.message); }
+}
+async function refreshPrices() {
+  const sp = document.getElementById('hdSpinner');
+  sp.style.display = 'inline';
+  showErr('hdError', null);
+  try {
+    const res = await invPost('/api/v1/investments/prices/refresh');
+    const failed = Object.entries(res).filter(([, r]) => r.error);
+    if (failed.length) showErr('hdError', 'Price refresh partially failed: ' +
+      failed.map(([t, r]) => t + ' (' + r.error + ')').join(', '));
+    await loadHoldings(); await loadOverview();
+  } catch (e) { showErr('hdError', e.message); }
+  finally { sp.style.display = 'none'; }
+}
+
+/* ── Mutual funds ── */
+let _redeemId = null;
+async function loadFunds() {
+  showErr('fdError', null);
+  try {
+    const open = await inv('/api/v1/investments/funds?status=OPEN');
+    const closed = await inv('/api/v1/investments/funds?status=CLOSED');
+    document.getElementById('fdOpenBody').innerHTML = open.map(f => {
+      const nav = f.current_nav ?? f.entry_nav;
+      const value = f.units * nav;
+      const pl = value - f.cost_basis;
+      const pct = f.cost_basis ? pl / f.cost_basis * 100 : 0;
+      return '<tr>' +
+        '<td>' + esc(f.name) + '</td><td>' + esc(f.entry_date) + '</td>' +
+        '<td class="num">' + fmtNum(f.units) + '</td><td class="num">' + fmtNum(f.entry_nav) + '</td>' +
+        '<td class="num editable" title="Click to update NAV" onclick="editNav(' + js(f.id) + ', ' + nav + ')">' + fmtNum(nav) + '</td>' +
+        '<td class="num">' + fmtIDR(value) + '</td><td class="num">' + fmtIDR(f.cost_basis) + '</td>' +
+        '<td class="num ' + signCls(pl) + '">' + fmtIDR(pl) + '</td>' +
+        '<td class="num ' + signCls(pl) + '">' + fmtPct(pct, true) + '</td>' +
+        '<td><button class="btn btn-ghost" onclick="openRedeem(' + js(f.id) + ', ' + js(f.name) + ')">Redeem</button></td>' +
+      '</tr>';
+    }).join('') || '<tr><td colspan="10" class="inv-empty">No open fund positions.</td></tr>';
+    document.getElementById('fdClosedBody').innerHTML = closed.map(f =>
+      '<tr><td>' + esc(f.name) + '</td><td>' + esc(f.entry_date) + '</td><td>' + esc(f.exit_date || '') + '</td>' +
+      '<td class="num">' + fmtNum(f.entry_nav) + '</td><td class="num">' + fmtNum(f.exit_nav) + '</td>' +
+      '<td class="num">' + fmtNum(f.units) + '</td><td class="num">' + fmtIDR(f.cost_basis) + '</td>' +
+      '<td class="num ' + signCls(f.net_pl) + '">' + fmtIDR(f.net_pl) + '</td>' +
+      '<td class="num ' + signCls(f.net_pl) + '">' + fmtPct(f.pl_pct, true) + '</td></tr>'
+    ).join('') || '<tr><td colspan="9" class="inv-empty">No closed fund positions yet.</td></tr>';
+  } catch (e) { showErr('fdError', 'Failed to load funds: ' + e.message); }
+}
+async function addFund(ev) {
+  ev.preventDefault();
+  showErr('fdError', null);
+  try {
+    await invPost('/api/v1/investments/funds', {
+      id: 'fund-' + Date.now(), name: v('fdName'), entry_date: v('fdDate'),
+      entry_nav: +v('fdNav'), cost_basis: +v('fdCost'),
+    });
+    document.getElementById('fdForm').reset();
+    await loadFunds(); await loadOverview();
+  } catch (e) { showErr('fdError', e.message); }
+  return false;
+}
+async function editNav(id, current) {
+  const next = prompt('Current NAV for this fund:', current);
+  if (next == null || next === '' || isNaN(+next) || +next <= 0) return;
+  showErr('fdError', null);
+  try {
+    await invPost('/api/v1/investments/funds/' + encodeURIComponent(id) + '/nav', { current_nav: +next });
+    await loadFunds(); await loadOverview();
+  } catch (e) { showErr('fdError', e.message); }
+}
+function openRedeem(id, name) {
+  _redeemId = id;
+  document.getElementById('redeemTitle').textContent = 'Redeem — ' + name;
+  document.getElementById('rdDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('redeemBack').classList.add('open');
+}
+function closeRedeem() { document.getElementById('redeemBack').classList.remove('open'); }
+async function confirmRedeem(ev) {
+  ev.preventDefault();
+  showErr('fdError', null);
+  try {
+    await invPost('/api/v1/investments/funds/' + encodeURIComponent(_redeemId) + '/redeem',
+                  { exit_date: v('rdDate'), exit_nav: +v('rdNav') });
+    closeRedeem();
+    await loadFunds(); await loadOverview();
+  } catch (e) { showErr('fdError', e.message); }
+  return false;
+}
+
+/* ── Dividends ── */
+async function loadDividends() {
+  showErr('dvError', null);
+  try {
+    const rows = await inv('/api/v1/investments/dividends');
+    const gross = rows.reduce((a, r) => a + r.gross, 0);
+    const tax = rows.reduce((a, r) => a + r.tax, 0);
+    const net = gross - tax;
+    document.getElementById('dvCards').innerHTML =
+      ['Payments|' + rows.length, 'Gross|' + fmtIDR(gross), 'Tax|' + fmtIDR(tax), 'Net|' + fmtIDR(net)]
+        .map(pair => { const [l, val] = pair.split('|');
+          return '<div class="metric-card"><div class="label">' + l + '</div><div class="value neu">' + val + '</div></div>'; })
+        .join('');
+    document.getElementById('dvBody').innerHTML = rows.map(r =>
+      '<tr><td>' + esc(r.date) + '</td><td><strong>' + esc(r.ticker) + '</strong></td>' +
+      '<td class="num">' + fmtNum(r.per_share) + '</td><td class="num">' + fmtNum(r.qty) + '</td>' +
+      '<td class="num">' + fmtIDR(r.gross) + '</td><td class="num">' + r.tax_pct + '%</td>' +
+      '<td class="num">' + fmtIDR(r.net) + '</td><td>' + esc(r.notes) + '</td>' +
+      '<td><button class="btn-danger btn" onclick="delDiv(' + r.id + ')">Delete</button></td></tr>'
+    ).join('') || '<tr><td colspan="9" class="inv-empty">No dividends recorded yet.</td></tr>';
+  } catch (e) { showErr('dvError', 'Failed to load dividends: ' + e.message); }
+}
+async function addDiv(ev) {
+  ev.preventDefault();
+  showErr('dvError', null);
+  try {
+    await invPost('/api/v1/investments/dividends', {
+      date: v('dvDate'), ticker: v('dvTicker'), per_share: +v('dvPer'),
+      qty: +v('dvQty'), tax_pct: +v('dvTax'),
+    });
+    document.getElementById('dvForm').reset();
+    document.getElementById('dvTax').value = 10;
+    document.getElementById('divPreview').textContent = '';
+    await loadDividends(); await loadOverview();
+  } catch (e) { showErr('dvError', e.message); }
+  return false;
+}
+async function delDiv(id) {
+  showErr('dvError', null);
+  try { await invDelete('/api/v1/investments/dividends/' + id); await loadDividends(); await loadOverview(); }
+  catch (e) { showErr('dvError', e.message); }
+}
+
+/* ── Closed ── */
+async function loadClosed() {
+  showErr('clError', null);
+  try {
+    const rows = await inv('/api/v1/investments/closed-equity');
+    const net = rows.reduce((a, r) => a + r.net_pl, 0);
+    document.getElementById('clCards').innerHTML =
+      '<div class="metric-card"><div class="label">Trades</div><div class="value neu">' + rows.length + '</div></div>' +
+      '<div class="metric-card"><div class="label">Net P&amp;L</div><div class="value ' + signCls(net) + '">' + fmtIDR(net) + '</div></div>' +
+      '<div class="metric-card"><div class="label">Winners</div><div class="value neu">' + rows.filter(r => r.net_pl > 0).length + ' / ' + rows.length + '</div></div>';
+    document.getElementById('clEqBody').innerHTML = rows.map(r =>
+      '<tr><td>' + esc(r.entry_date) + '</td><td>' + esc(r.exit_date) + '</td>' +
+      '<td><strong>' + esc(r.ticker) + '</strong></td>' +
+      '<td class="num">' + fmtNum(r.entry_price) + '</td><td class="num">' + fmtNum(r.exit_price) + '</td>' +
+      '<td class="num">' + fmtNum(r.qty) + '</td>' +
+      '<td class="num ' + signCls(r.net_pl) + '">' + fmtIDR(r.net_pl) + '</td>' +
+      '<td class="num ' + signCls(r.net_pl) + '">' + fmtPct(r.pl_pct, true) + '</td>' +
+      '<td><button class="btn-danger btn" onclick="delClosedEq(' + r.id + ')">Delete</button></td></tr>'
+    ).join('') || '<tr><td colspan="9" class="inv-empty">No closed equity trades yet — journal completed round-trips here when you exit a position.</td></tr>';
+  } catch (e) { showErr('clError', 'Failed to load closed trades: ' + e.message); }
+}
+async function delClosedEq(id) {
+  showErr('clError', null);
+  try { await invDelete('/api/v1/investments/closed-equity/' + id); await loadClosed(); await loadOverview(); }
+  catch (e) { showErr('clError', e.message); }
+}
+
+/* live dividend preview */
+['dvPer', 'dvQty', 'dvTax'].forEach(id =>
+  document.getElementById(id).addEventListener('input', () => {
+    const per = +document.getElementById('dvPer').value || 0;
+    const qty = +document.getElementById('dvQty').value || 0;
+    const tax = +document.getElementById('dvTax').value || 0;
+    const gross = per * qty;
+    document.getElementById('divPreview').textContent =
+      gross ? 'Preview — gross ' + fmtIDR(gross) + ' · tax ' + fmtIDR(gross * tax / 100) +
+              ' · net ' + fmtIDR(gross * (1 - tax / 100)) : '';
+  }));
+
+function v(id) { return document.getElementById(id).value.trim(); }
 </script>
 {% endblock %}

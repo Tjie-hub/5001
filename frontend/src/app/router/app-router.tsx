@@ -26,6 +26,8 @@ import { SettingsPage } from '@domains/settings/settings-page'
 import { WatchlistPage } from '@domains/watchlist/watchlist-page'
 import { MarketPage } from '@domains/market/market-page'
 import { SearchPage } from '@domains/search/search-page'
+import { TickerDetailPage } from '@domains/ticker/ticker-detail-page'
+import { IntelligencePage } from '@domains/intelligence/intelligence-page'
 
 function WorkspaceRoute({ id }: { id: WorkspaceId }) {
   return <WorkspaceShellPage workspace={getWorkspace(id)} />
@@ -35,11 +37,16 @@ function WorkspaceRoute({ id }: { id: WorkspaceId }) {
  * Ticker is the one workspace whose canonical route carries a resource
  * identifier. The symbol is read from the URL — Resource State is owned by the
  * Router (ADR-001 §3), never mirrored into component state.
+ *
+ * D4 slice 1 (2026-09-02): /ticker/:symbol now renders the real Ticker
+ * Detail workspace (domains/ticker) over GET /api/v1/tickers/:symbol; the
+ * symbol still lives only in the URL and is uppercased by the page. The
+ * /ticker index below stays on the placeholder shell.
  */
 function TickerRoute() {
-  const { symbol } = useParams<{ symbol: string }>()
+  const { symbol = '' } = useParams<{ symbol: string }>()
 
-  return <WorkspaceShellPage workspace={getWorkspace('ticker')} resourceId={symbol} />
+  return <TickerDetailPage key={symbol.toUpperCase()} />
 }
 
 export function AppRoutes() {
@@ -60,11 +67,41 @@ export function AppRoutes() {
           {/*
             Decision Center — the first Workstream D workspace built (see
             domains/decision/decision-page.tsx docstring). Settings, Watchlist,
-            Market and Search are also real (see their own docstrings below);
-            Ticker and Portfolio remain the generic placeholder shell.
+            Market, Search and the Ticker detail route are also real (see
+            their own docstrings); Portfolio and the /ticker index remain
+            the generic placeholder shell.
           */}
           <Route path={ROUTE_PATHS.decision} element={<DecisionPage />} />
-          <Route path={ROUTE_PATHS.portfolio} element={<WorkspaceRoute id="portfolio" />} />
+          {/*
+            Investment Intelligence — consolidation 2026-09-03: composes the
+            canonical investment portfolio (absorbed from the external
+            Investment Dashboard, ex-port 5003) with the watchlist / market /
+            registry read models inside the OS. See
+            domains/intelligence/intelligence-page.tsx and
+            docs/INTEGRATION_CONSOLIDATION_MAP_2026-09-03.md.
+          */}
+          <Route path={ROUTE_PATHS.intelligence} element={<IntelligencePage />} />
+          {/*
+            ADR-006 §5 (docs/OneDrive_2026-08-07/Frontend arch/
+            ADR-006_LEGACY_UI_DISPOSITION.md), interim fix, applied 2026-08-20:
+            no <Route> for ROUTE_PATHS.portfolio here. Flask's own
+            `@app.route("/portfolio")` (app.py) already serves a real, working
+            legacy page at this URL; this SPA's Portfolio workspace is still
+            an empty WorkspaceShellPage placeholder (Workstream D, blocked on
+            U-2/U-3/U-4). Registering the shell here made "/portfolio" race
+            two different applications depending on how the user arrived
+            (full page load -> Flask; client-side nav -> the empty SPA
+            shell) -- ADR-006 §5 calls this a live defect independent of
+            which of its three disposition options is eventually chosen.
+            Dropping the <Route> lets an unmatched client-side "/portfolio"
+            fall through to the `*` catch-all (NotFoundPage) instead of
+            rendering the misleading empty shell. The route is added back,
+            deliberately, when the real Portfolio workspace (D5) is built --
+            see ADR-006 §7 Q-3 for what "feature-complete" will mean then.
+            workspaces.ts's WORKSPACES entry for 'portfolio' is unchanged:
+            the seven-workspace list itself is not being altered here, only
+            this one route's SPA registration.
+          */}
           {/*
             Watchlist — Production OS Slice 2, first workspace built directly
             on the approved ADR-003 architecture. See

@@ -2,28 +2,22 @@
 
 Phase 9 implementation of the frozen frontend architecture.
 
-**Current state: Workstream A (Project Foundation) complete. The application is
-intentionally empty** — there is no shell, no routing, no design system and no
-workspace yet. Workstream A's exit criterion is that the quality gates pass on
-an empty application.
-
-**Decision Center update:** this claim is stale for Decision Center specifically
-— Workstream B (Shell + Router) is also complete, and Decision Center's
-Executive Summary region is real: it reads live scheduler, Edge Registry
-admission, and current-watchlist state through `/api/v1/*`
-(`src/domains/decision/decision-page.tsx`, `hooks.ts`), not a placeholder. The
-other five still-placeholder workspaces (Portfolio, Watchlist, Ticker, Market,
-Search) are unaffected by this milestone. See this repo's CLAUDE.md
-Decision-Making Hierarchy on trusting running-system state over a document's
-self-report.
-
-**ADR-008 update:** scheduler/job-history/system-status information (formerly
-a standalone, unreachable `/internal/operations` route) is now owned by the
-Settings workspace, under its already-frozen "System Information" / "Support &
-Diagnostics" regions — see
-`docs/OneDrive_2026-08-07/Frontend arch/ADR-008_OPERATIONS_DASHBOARD_SETTINGS_PLACEMENT.md`
-and `src/domains/settings/settings-page.tsx`. Not an eighth workspace; the
-frozen seven-workspace list is unchanged.
+**Current state (2026-08-20): Workstream A (Project Foundation) and Workstream
+B (Shell + Router) are complete. Workstream D (real workspace content) has
+started: Decision Center's Executive Summary region is real, reading live
+scheduler/registry/watchlist state through `/api/v1/*` (`src/domains/decision/`).
+Settings is also real: per ADR-008
+(`docs/OneDrive_2026-08-07/Frontend arch/ADR-008_OPERATIONS_DASHBOARD_SETTINGS_PLACEMENT.md`),
+scheduler/job-history/system-status information — formerly a standalone,
+unreachable `/internal/operations` route — is now owned by Settings' System
+Information / Support & Diagnostics regions (`src/domains/settings/`), reachable
+through the normal seven-workspace navigation. The other five workspaces
+(Portfolio, Watchlist, Ticker, Market, Search) are still the generic
+placeholder shell.** This supersedes the previous claim below that the app is
+"intentionally empty"; that was true only through Workstream A and is stale as
+a description of the app today — see this repo's CLAUDE.md Decision-Making
+Hierarchy on trusting
+running-system state over a document's self-report.
 
 ## Governing documents
 
@@ -44,6 +38,7 @@ anything structural.
 | ADR-003                               | APPROVED (2026-08-20) | Server State architecture (TanStack Query) |
 | ADR-005                               | PROPOSED             | Deployment strategy                     |
 | ADR-006                               | PROPOSED             | Legacy Flask UI disposition             |
+| ADR-008                               | APPROVED (2026-08-20) | Operations Dashboard under Settings     |
 
 ## Commands
 

@@ -1,11 +1,11 @@
 /**
  * Workspace registry — Phase 9 Workstream B (B2, B3).
  *
- * Single source of truth for the seven frozen workspaces. The router and the
- * sidebar both read from here, so navigation and routing cannot drift apart.
+ * Single source of truth for the workspaces. The router and the sidebar
+ * both read from here, so navigation and routing cannot drift apart.
  *
  * Authority:
- *   Phase 4 P4-02 §3   seven workspaces, flat, no nesting, no subordination
+ *   Phase 4 P4-02 §3   flat workspaces, no nesting, no subordination
  *   Phase 4 P4-02 §4   mutually exclusive responsibilities
  *   Phase 4 P4-03 §4   frozen sidebar order and separator placement
  *   Phase 4 Appendix B canonical route registry
@@ -13,7 +13,10 @@
  *   Phase 4 NP-03      every workspace directly reachable from global nav
  *
  * This file is frozen architecture expressed as data. Adding a workspace
- * requires an ADR (Phase 4 P4-16 §14) — not an edit here.
+ * requires an ADR (Phase 4 P4-16 §14) — not an edit here. The one
+ * exception to date is 'intelligence' (consolidation 2026-09-03),
+ * user-directed at the application level; see its entry comment and
+ * docs/INTEGRATION_CONSOLIDATION_MAP_2026-09-03.md.
  */
 
 /** Canonical route paths (Phase 4 Appendix B). */
@@ -21,6 +24,7 @@ export const ROUTE_PATHS = {
   home: '/',
   decision: '/decision',
   portfolio: '/portfolio',
+  intelligence: '/intelligence',
   watchlist: '/watchlist',
   ticker: '/ticker',
   tickerSymbol: '/ticker/:symbol',
@@ -30,7 +34,14 @@ export const ROUTE_PATHS = {
 } as const
 
 export type WorkspaceId =
-  'decision' | 'portfolio' | 'watchlist' | 'ticker' | 'market' | 'search' | 'settings'
+  | 'decision'
+  | 'portfolio'
+  | 'intelligence'
+  | 'watchlist'
+  | 'ticker'
+  | 'market'
+  | 'search'
+  | 'settings'
 
 export interface Workspace {
   readonly id: WorkspaceId
@@ -64,6 +75,18 @@ export const WORKSPACES: readonly Workspace[] = [
     responsibility: 'Evaluate',
     navPath: ROUTE_PATHS.portfolio,
     purpose: 'Assess portfolio quality, risk exposure, allocation and capacity.',
+  },
+  {
+    // Consolidation 2026-09-03 (user-directed, supersedes the frozen-seven
+    // ADR gate for this one addition): the intelligence layer the external
+    // Investment Dashboard (ex-port 5003) used to provide, composed inside
+    // the OS from the canonical portfolio + existing read models. See
+    // docs/INTEGRATION_CONSOLIDATION_MAP_2026-09-03.md.
+    id: 'intelligence',
+    label: 'Investment Intelligence',
+    responsibility: 'Synthesize',
+    navPath: ROUTE_PATHS.intelligence,
+    purpose: 'Synthesize the canonical portfolio with signals, risk and decisions.',
   },
   {
     id: 'watchlist',
@@ -129,7 +152,7 @@ export function getWorkspace(id: WorkspaceId): Workspace {
  * P4-02 §3 keeps all seven workspaces at the same level.
  */
 export const WORKSPACE_GROUPS: readonly (readonly Workspace[])[] = [
-  [getWorkspace('decision'), getWorkspace('portfolio')],
+  [getWorkspace('decision'), getWorkspace('portfolio'), getWorkspace('intelligence')],
   [
     getWorkspace('watchlist'),
     getWorkspace('ticker'),

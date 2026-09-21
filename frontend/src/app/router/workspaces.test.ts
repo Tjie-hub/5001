@@ -7,22 +7,29 @@
  * and navigation is structurally impossible.
  *
  * Authority:
- *   Phase 4 P4-02 §3   seven workspaces, flat, no nesting
+ *   Phase 4 P4-02 §3   flat workspaces, no nesting
  *   Phase 4 P4-03 §4   frozen sidebar order and separators
  *   Phase 4 Appendix B route registry
  *   Phase 4 NP-01      one responsibility per workspace
+ *
+ * Consolidation 2026-09-03: 'intelligence' joins the registry — the
+ * user-directed Investment Intelligence workspace that absorbed the external
+ * Investment Dashboard (ex-port 5003). See
+ * docs/INTEGRATION_CONSOLIDATION_MAP_2026-09-03.md; the frozen-seven
+ * assertions below were updated to eight as part of that change.
  */
 import { describe, expect, it } from 'vitest'
 import { ROUTE_PATHS, WORKSPACES, WORKSPACE_GROUPS } from './workspaces'
 
-describe('Phase 4 P4-02 §3 — the seven frozen workspaces', () => {
-  it('registers exactly seven workspaces', () => {
-    expect(WORKSPACES).toHaveLength(7)
+describe('Phase 4 P4-02 §3 — flat workspaces (seven frozen + consolidation)', () => {
+  it('registers exactly eight workspaces', () => {
+    expect(WORKSPACES).toHaveLength(8)
   })
 
-  it('registers exactly the frozen set', () => {
+  it('registers exactly the frozen set plus intelligence', () => {
     expect(WORKSPACES.map((w) => w.id).sort()).toEqual([
       'decision',
+      'intelligence',
       'market',
       'portfolio',
       'search',
@@ -38,13 +45,14 @@ describe('Phase 4 P4-02 §3 — the seven frozen workspaces', () => {
     expect(responsibilities).toEqual([
       'Decide',
       'Evaluate',
+      'Synthesize',
       'Observe',
       'Investigate',
       'Understand',
       'Discover',
       'Configure',
     ])
-    expect(new Set(responsibilities).size).toBe(7)
+    expect(new Set(responsibilities).size).toBe(8)
   })
 })
 
@@ -53,6 +61,7 @@ describe('Phase 4 P4-03 §4 — frozen sidebar order', () => {
     expect(WORKSPACES.map((w) => w.label)).toEqual([
       'Decision Center',
       'Portfolio',
+      'Investment Intelligence',
       'Watchlist',
       'Ticker',
       'Market',
@@ -63,7 +72,7 @@ describe('Phase 4 P4-03 §4 — frozen sidebar order', () => {
 
   it('groups the sidebar with the two frozen separators', () => {
     expect(WORKSPACE_GROUPS.map((g) => g.map((w) => w.id))).toEqual([
-      ['decision', 'portfolio'],
+      ['decision', 'portfolio', 'intelligence'],
       ['watchlist', 'ticker', 'market', 'search'],
       ['settings'],
     ])
@@ -82,6 +91,7 @@ describe('Phase 4 Appendix B — canonical routes', () => {
       home: '/',
       decision: '/decision',
       portfolio: '/portfolio',
+      intelligence: '/intelligence',
       watchlist: '/watchlist',
       ticker: '/ticker',
       tickerSymbol: '/ticker/:symbol',

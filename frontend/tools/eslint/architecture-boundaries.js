@@ -24,10 +24,15 @@
 
 const RULE = '@typescript-eslint/no-restricted-imports'
 
-/** The seven frozen workspaces (Phase 4 P4-02 §3, Phase 7 v1.1 §4). */
+/**
+ * The frozen workspaces (Phase 4 P4-02 §3, Phase 7 v1.1 §4) plus
+ * 'intelligence' (consolidation 2026-09-03 — see
+ * docs/INTEGRATION_CONSOLIDATION_MAP_2026-09-03.md).
+ */
 export const WORKSPACES = [
   'decision',
   'portfolio',
+  'intelligence',
   'watchlist',
   'ticker',
   'market',
@@ -44,11 +49,13 @@ export const WORKSPACES = [
  * Everything not listed is denied. Workspaces that need to share data do so
  * through `models/` — ADR-001 §4 is explicit that domain ownership lives in
  * `models/` and `api/`, not in folder adjacency. Widening this map is an
- * architecture change and requires an ADR.
+ * architecture change and requires an ADR. Intelligence deliberately shares
+ * through `api/` + `models/` only (no domain imports), so it gets no edge.
  */
 export const PERMITTED_WORKSPACE_EDGES = {
   decision: ['market', 'portfolio', 'watchlist'],
   portfolio: [],
+  intelligence: [],
   watchlist: [],
   ticker: [],
   market: [],

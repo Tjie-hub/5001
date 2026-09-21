@@ -4,7 +4,7 @@
 |---|---|
 | ADR ID | FRONTEND-ADR-008 |
 | Title | Operations Dashboard placement — scheduler/job-history and system-status information belongs to the Settings workspace, not a new primary workspace |
-| Status | **PROPOSED — awaiting owner approval.** No code, route, or file has been changed as part of this document. |
+| Status | **APPROVED — 2026-08-20, by Owner.** See "Ratification Note" after §17 below: implementation (commit `67537e6d475f229575c9668c534f95339ff3b3bb`) landed before formal ratification; verified on ratification to match this decision unchanged. |
 | Date | 2026-08-20 |
 | Depends On | `PHASE_4_UX_BLUEPRINT_v1.1.md` §P4-02 (FROZEN), §P4-16.14 (FROZEN) · `SETTINGS_DESIGN_SPEC_v1.0_FROZEN.md` (FROZEN) · `FRONTEND_ARCHITECTURE_RECONCILIATION_ADR_001.md` (APPROVED) |
 | Authority | P4-16 §14 Change Control names "workspace additions," "navigation hierarchy changes," "context ownership changes," and "state ownership changes" as requiring an ADR. This document is that ADR for the Operations Dashboard's placement. |
@@ -328,12 +328,39 @@ open and undecided.
 **This ADR requires Tjie's explicit approval before any implementation step in §11 or
 "Implementation After Approval" below is performed.** Per `P4-16` §16 Governance Workflow
 (`Proposal → Architecture Review → ADR → Approval → Implementation → Verification → Release`), this
-document is the ADR stage. No implementation, file move, route change, or commit has been made as
-part of producing it.
+document is the ADR stage.
 
 ---
 
-**Status: PROPOSED — awaiting owner approval.**
+# 18. Ratification Note (2026-08-20)
+
+**Approved by Tjie, 2026-08-20**, as part of Production OS Slice 1 (governance cleanup).
+
+Recorded honestly, out of the §16/§17 workflow's normal sequence: the §11 implementation steps
+were already carried out and committed (`67537e6d475f229575c9668c534f95339ff3b3bb`) **before** this
+ADR was formally approved — the decision this document records was correct and the code already
+matches it, but the paperwork trailed the implementation rather than gating it. On ratification,
+the implementation was re-verified against this ADR's own decision and requirements:
+
+- `frontend/src/domains/operations/` no longer exists as a separate directory; its former contents
+  (`hooks.ts`, `scheduler-banner.tsx`, `job-table.tsx`, `job-detail-panel.tsx`, `status-badge.tsx`,
+  `format.ts`, and their `.module.css` files) live under `frontend/src/domains/settings/`, matching
+  §7's ownership assignment and §11's relocation plan.
+- `frontend/src/app/router/app-router.tsx` has no `/internal/operations` route; `ROUTE_PATHS.settings`
+  renders `SettingsPage`, a real implementation (not the generic `WorkspaceShellPage`), matching §9.
+- `frontend/src/domains/settings/settings-page.tsx`'s own docstring cites this ADR by file path and
+  restates §5's decision and §7's information-ownership split (scheduler state → System Information,
+  job history/drill-down → Support & Diagnostics) — the code is self-documenting against this ADR.
+- No change to any other workspace, to `workspaces.ts`'s seven-workspace list, to the eslint
+  architecture-boundary `WORKSPACES`/`PERMITTED_WORKSPACE_EDGES` configuration, or to registry
+  admission state (`GET /api/v1/registry/status`: 0 approved, 1 shadow — unaffected, as §13 requires).
+
+This note ratifies what was already built; it does not authorize any new implementation step, and
+§13's Non-Goals remain in force unchanged.
+
+---
+
+**Status: APPROVED — 2026-08-20, by Owner.**
 
 # End of ADR
 

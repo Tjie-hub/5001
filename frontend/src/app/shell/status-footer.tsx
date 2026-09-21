@@ -7,12 +7,18 @@
  * Frozen contents: Environment · Snapshot Version · Connection Status ·
  * Time Zone · Version.
  *
- * All values are static placeholders. Environment, snapshot version and
- * connection status are backend-owned (blocker U-2) and the connectivity model
- * belongs to ADR-003 §13, which is Workstream E's. Time zone is the one value
- * that is genuinely known here: the whole system is WIB by definition.
+ * D4 slice 1 (2026-09-02) — blocker U-2's footer values are now
+ * backend-owned in fact, not just in intent: GET /api/v1/runtime
+ * (engine.platform_info.get_runtime_status) supplies Environment (derived
+ * from utils.release's source distinction), the latest production
+ * Snapshot (watchlist_snapshot), Connection (engine.health's overall
+ * component state — the fetch itself is the connectivity signal), and
+ * Version. Values render as '—' while loading; the footer never fabricates
+ * a fallback. Time zone is the one value genuinely known here: the whole
+ * system is WIB by definition.
  */
 import { cx } from '@utils/cx'
+import { useRuntimeStatusQuery } from '@domains/ticker/repository/queries'
 import styles from './status-footer.module.css'
 
 interface FooterItem {
@@ -20,15 +26,23 @@ interface FooterItem {
   readonly value: string
 }
 
-const ITEMS: readonly FooterItem[] = [
-  { label: 'Environment', value: '—' },
-  { label: 'Snapshot', value: '—' },
-  { label: 'Connection', value: '—' },
-  { label: 'Time zone', value: 'WIB (UTC+7)' },
-  { label: 'Version', value: '0.0.0' },
-]
-
 export function StatusFooter() {
+  const query = useRuntimeStatusQuery()
+  const status = query.data ?? null
+
+  const snapshotLabel = status?.snapshot
+    ? `${status.snapshot.date} · ${status.snapshot.strategy}`
+    : '—'
+  const connectionLabel = status?.overall ?? '—'
+
+  const ITEMS: readonly FooterItem[] = [
+    { label: 'Environment', value: status?.environment ?? '—' },
+    { label: 'Snapshot', value: snapshotLabel },
+    { label: 'Connection', value: connectionLabel },
+    { label: 'Time zone', value: 'WIB (UTC+7)' },
+    { label: 'Version', value: status?.version ?? '—' },
+  ]
+
   return (
     /*
      * tabIndex={0} because the footer scrolls horizontally on narrow viewports.

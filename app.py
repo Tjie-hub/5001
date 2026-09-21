@@ -3,7 +3,7 @@ import logging
 import sqlite3
 import time
 import uuid
-from flask import Flask, render_template, jsonify, request, g
+from flask import Flask, render_template, jsonify, request, g, send_from_directory, abort
 from scheduler import start_scheduler
 from routes_backtest_multi import backtest_multi_bp
 from screener.routes import screener_bp
@@ -14,6 +14,7 @@ from stockbit_broker_period import init_db as init_broker_period_summary_table
 from stockbit_corporate_actions import init_db as init_corporate_action_events_table
 from stockbit_ownership import init_db as init_ownership_composition_table
 from data.db import init_agent_firm_tables
+from data.investments import init_investment_tables
 from paper_trade import init_paper_table
 from data.db import connect as db_connect
 from routes.telegram import telegram_bp, telegram_poller_loop
@@ -43,7 +44,9 @@ app.register_blueprint(chart_bp)
 app.register_blueprint(api_v1_bp)
 
 # Security hardening: auth endpoints + authorization middleware. AUTH_MODE=off
-# (the default) keeps behavior identical to the pre-hardening app.
+# (the default) keeps behavior identical to the pre-hardening app for
+# VIEWER/OPERATOR routes; ADMIN-classified routes are gated unconditionally
+# regardless of AUTH_MODE (2026-08-19 stop-gap -- see security/middleware.py).
 from security.routes import auth_bp
 from security.middleware import init_security
 app.register_blueprint(auth_bp)
@@ -231,6 +234,39 @@ def prometheus_metrics():
     return body, 200, {'Content-Type': 'text/plain; charset=utf-8; version=0.0.4'}
 
 
+# Stop-gap SPA serving for frontend/ (Phase 9 React app) -- frontend/README.md
+# lists production deployment strategy as U-8/ADR-005, still undecided. This
+# is deliberately minimal: it serves `npm run build`'s frontend/dist output
+# for any GET path that isn't already an explicit Flask route or under /api,
+# so React Router routes that previously 404'd outright (e.g.
+# /internal/operations, /decision, /watchlist, /market, /search, /settings,
+# /ticker/<symbol>) resolve. It does NOT touch the pre-existing Flask-template
+# pages above (/, /portfolio, etc.) -- Werkzeug matches static rules before
+# this path-converter catch-all, and disposing of the legacy UI is ADR-006/
+# U-9's decision, not this route's.
+FRONTEND_DIST_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frontend', 'dist')
+
+
+@app.route('/assets/<path:filename>')
+def frontend_assets(filename):
+    return send_from_directory(os.path.join(FRONTEND_DIST_DIR, 'assets'), filename)
+
+
+@app.route('/favicon.svg')
+def frontend_favicon():
+    return send_from_directory(FRONTEND_DIST_DIR, 'favicon.svg')
+
+
+@app.route('/<path:path>')
+def frontend_spa_catch_all(path):
+    if path.startswith('api/'):
+        abort(404)
+    index_path = os.path.join(FRONTEND_DIST_DIR, 'index.html')
+    if not os.path.isfile(index_path):
+        abort(404)
+    return send_from_directory(FRONTEND_DIST_DIR, 'index.html')
+
+
 def init_runtime():
     """One-time process initialization: idempotent table migrations, the
     APScheduler, and the Telegram poller thread. Called from __main__ (dev,
@@ -247,6 +283,7 @@ def init_runtime():
     init_ownership_composition_table()
     init_agent_firm_tables()
     init_paper_table()
+    init_investment_tables()
     scheduler = start_scheduler()
     poller_thread = threading.Thread(target=telegram_poller_loop, daemon=True)
     poller_thread.start()
