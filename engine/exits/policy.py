@@ -73,7 +73,26 @@ class ExitPolicyRegistry:
             "momentum":         ExitPolicy(sl_mult=1.2, tp_mult=2.4, min_rr=2.0, trail_enable=True),
             "vwap_reversion":   ExitPolicy(sl_mult=0.8, tp_mult=1.6, min_rr=2.0),
             "conservative":     ExitPolicy(sl_mult=0.7, tp_mult=1.4, min_rr=2.0),
-            "Liquidity Sweep":  ExitPolicy(sl_mult=1.0, tp_mult=2.5, min_rr=2.5),
+            # hold_days=10 added 2026-09-03 (audit P-3). Without it this policy
+            # had NO bound at all -- no trail, no time stop -- so a shadow
+            # position that hit neither SL nor TP ran forever: JSMR sat OPEN for
+            # 43 hold-days while every `distribution` position closed within 10.
+            # An unbounded cohort has no measurable horizon and its open set
+            # accumulates survivors, which biases any forward-test statistic.
+            #
+            # RECORDED DIVERGENCE: strategy_liquidity_sweep_flow's backtest calls
+            # run_strategy(atr_sl_mult=1.0, atr_tp_mult=2.5, min_rr=2.5) and
+            # run_strategy never sets hold_days, so the BACKTEST is also
+            # unbounded (it exits on SL/TP or on the last bar of the frame).
+            # The shadow cohort therefore now measures a time-capped VARIANT of
+            # the researched rule. That is deliberate and is the lesser evil --
+            # an unbounded shadow measures nothing at all -- but it is exactly
+            # the class of live/research mismatch engine/rule_identity.py exists
+            # to catch, so it is written down here rather than left implicit.
+            # Closing it properly means adding the same cap to the backtest and
+            # re-running the study; that is an owner decision, not done here.
+            "Liquidity Sweep":  ExitPolicy(sl_mult=1.0, tp_mult=2.5, min_rr=2.5,
+                                           hold_days=10),
             # 3xATR high-anchored trail + MA20-break; no TP, no time cap.
             "Trend Following Breakout": ExitPolicy(trail_enable=True, trail_atr_mult=3.0,
                                                    ma_break_period=20),

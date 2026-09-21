@@ -27,7 +27,9 @@ PRODUCTION_FILES = ["monitor.py", "paper_trade.py", "app.py",
 # Phase C gate_decisions / gate_evidence and Phase D regime profiles are research
 # products too — only research/ writes them; production may read (dashboards) but
 # not write. Phase E knowledge base extends this.
-RESEARCH_TABLES = ("wf_scores", "wf_edge", "backtest_cache",
+RESEARCH_TABLES = ("wf_scores", "wf_edge", "wf_edge_rule", "wf_rule_study",
+                   "wf_parity_checkpoint",
+                   "backtest_cache",
                    "gate_decisions", "gate_evidence",
                    "regime_profiles", "regime_profile_cells",
                    "hypotheses", "hypothesis_links", "failure_registry")
