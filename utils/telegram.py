@@ -12,11 +12,50 @@ _MIN_INTERVAL = 1.0  # seconds between sends
 _last_sent: float = 0.0
 _MAX_RETRIES = 2
 
+# ── Temporary report-noise mute (audit window, 2026-09-16) ─────────────────
+# Scheduled REPORT sends are tagged with an explicit category= token; listing
+# that token in logs/TELEGRAM_MUTE (one per line, '#' comments) silences them
+# without touching any job logic. Alert-path sends use the default
+# category="alert", which is_muted() refuses to silence — health/heartbeat/
+# error, data-coverage and execution/risk alerts are structurally immune.
+# The file is re-read on mtime change (no restart needed once loaded); delete
+# it to restore every message. Temporary by design — remove after the audit.
+_MUTE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                          "logs", "TELEGRAM_MUTE")
+_mute_cache = None  # (st_mtime, frozenset(tokens)) | None
 
-def send_telegram(msg: str) -> None:
+
+def is_muted(category: str) -> bool:
+    """True when `category` is listed in logs/TELEGRAM_MUTE (mtime-cached).
+
+    The default 'alert' category is never mutable — see the module comment."""
+    global _mute_cache
+    if not category or category == "alert":
+        return False
+    try:
+        mtime = os.stat(_MUTE_FILE).st_mtime
+    except OSError:
+        _mute_cache = None
+        return False
+    if _mute_cache is None or _mute_cache[0] != mtime:
+        try:
+            with open(_MUTE_FILE) as fh:
+                toks = frozenset(ln.strip().lower() for ln in fh
+                                 if ln.strip() and not ln.lstrip().startswith("#"))
+        except OSError:
+            toks = frozenset()
+        _mute_cache = (mtime, toks)
+    return category.lower() in _mute_cache[1]
+
+
+def send_telegram(msg: str, category: str = "alert") -> None:
     token = os.environ.get("TELEGRAM_TOKEN", "")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
     if not token or not chat_id or "ISI_" in token:
+        return
+    if is_muted(category):
+        logger.info("[telegram] muted (category=%s): %.80s",
+                    category, str(msg).replace("\n", " "))
         return
 
     # RC1 fix R-4: every outbound alert passes through the same secret-redaction

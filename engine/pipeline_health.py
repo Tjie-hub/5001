@@ -68,3 +68,43 @@ def ohlcv_coverage(count: int, universe: int, floor_pct: float = 0.85) -> dict:
         severity = "ok"
     return {"count": count, "universe": universe, "pct": pct,
             "severity": severity, "healthy": severity == "ok"}
+
+
+# ── Bootstrap guards (bootstrap readiness audit 2026-09-16, items C1/C2) ─────
+
+EOD_FINAL_WIB = (16, 15)   # 16:15 EOD screener is the only same-day final writer
+
+
+def same_day_final_bars(count: int, hour: int, minute: int) -> dict:
+    """C1: before the 16:15 WIB EOD authority, the current WIB day must have
+    ZERO is_final=1 ohlcv bars — a same-day final bar means the gap-filler
+    wrote unsettled data as settled (the 2026-09-15 pre-open defect: 585 rows
+    dated that day, inserted before WIB open). After 16:15 the EOD scraper
+    legitimately writes final bars and the count is not a violation.
+
+    Returns {count, before_eod, violation}. Pure alert decision; the caller
+    owns the DB read and the alert.
+    """
+    before_eod = (hour, minute) < EOD_FINAL_WIB
+    return {"count": count, "before_eod": before_eod,
+            "violation": before_eod and count > 0}
+
+
+def prior_session_flow_gap(prior_session, n_tickers) -> dict:
+    """C2: zero-coverage detection for the previous expected trading session.
+
+    prior_session = latest trading_calendar date strictly before today (the
+    calendar row is written by the 16:15 EOD authority, so it proves the
+    session completed); n_tickers = distinct tickers in stockbit_flow for it.
+    Alerts only when a completed session has ZERO tickers — the 2026-08-25
+    gap class, which the same-day monitor (check_flow_coverage) misses when
+    the outage day's own runs never fire. Partial coverage (small n) is
+    reported but never alerts here; same-day thin coverage remains
+    check_flow_coverage's baseline-median job.
+    """
+    evaluable = prior_session is not None
+    n = n_tickers if n_tickers is not None else 0
+    covered = evaluable and n > 0
+    return {"session": prior_session, "n_tickers": n,
+            "evaluable": evaluable, "covered": covered,
+            "alert": evaluable and not covered}

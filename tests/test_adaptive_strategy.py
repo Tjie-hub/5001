@@ -6,6 +6,7 @@ to an empty set so these tests isolate the SELECTOR mechanism (regime map ∩
 positive-edge wf_edge); the default disabled roster is covered in
 tests/test_edge_selector.py.
 """
+import datetime as _dt
 import sqlite3
 import pytest
 import pandas as pd
@@ -47,6 +48,11 @@ def wf_db(tmp_path, monkeypatch):
     monkeypatch.setattr(sc, "_event_guard_active", lambda: (False, 0.5))
     monkeypatch.setattr(sc, "_macro_panic_state", lambda: False)
     monkeypatch.setattr(sc, "_get_disabled_strategies", lambda: set())
+    # Rule parity (audit L-1) is a separate concern with its own suite
+    # (tests/test_admission.py); declare parity so this suite keeps testing
+    # regime routing + wf_edge selection.
+    import engine.rule_identity as _ri
+    monkeypatch.setattr(_ri, "live_gates", lambda strategy: ())
     conn = sqlite3.connect(db)
     conn.execute("""
         CREATE TABLE wf_edge (
@@ -65,7 +71,8 @@ def _insert_edge(db, ticker, strategy, expectancy_pct):
     conn = sqlite3.connect(db)
     conn.execute(
         "INSERT OR REPLACE INTO wf_edge VALUES (?,?,?,?,?,?,?,?,?,?)",
-        (ticker, strategy, expectancy_pct, 0.0, 55.0, 40.0, 0.4, 60, 15, "2026-07-04"),
+        (ticker, strategy, expectancy_pct, 0.0, 55.0, 40.0, 0.4, 60, 15,
+         _dt.date.today().isoformat()),
     )
     conn.commit()
     conn.close()

@@ -80,7 +80,13 @@ def _parse_bars(data):
     net_vals = data.get("net_values", [])
     prices = data.get("prices", [])
 
-    n = min(len(buys), len(sells), len(prices))
+    # Bounded on buy/sell only: they are the pair that must stay index-aligned
+    # (this loop reads buys[i]/sells[i] together for lot/freq/time). net_vals
+    # and prices are already per-index bounds-checked below and fall back to
+    # 0 when short -- a live response can carry a full buy/sell/net_values
+    # session with `prices` empty (observed for RAJA/2026-04-15: 335 buy/sell
+    # entries, 0 prices), and that must not zero out every bar.
+    n = min(len(buys), len(sells))
     for i in range(n):
         bl = int(buys[i]["lot"]["raw"]) if buys[i].get("lot") and buys[i]["lot"].get("raw") else 0
         sl = int(sells[i]["lot"]["raw"]) if sells[i].get("lot") and sells[i]["lot"].get("raw") else 0

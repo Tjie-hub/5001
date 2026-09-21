@@ -254,7 +254,7 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
                 for r in top:
                     d = "▲" if r["direction"] == "long" else "▼"
                     lines.append(f"{d} <b>{r['ticker']}</b> conv {r['conviction']:.0f} @ {r['close']:,}")
-                send_telegram("\n".join(lines))
+                send_telegram("\n".join(lines), category="reversal_watchlist")
             except Exception:
                 pass
     except Exception as _re:

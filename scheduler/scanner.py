@@ -579,7 +579,7 @@ def daily_signal_scan():
     else:
         msg = f"📊 <b>Momentum Signal — {now}</b>\n\nTidak ada sinyal Momentum hari ini."
 
-    send_telegram(msg)
+    send_telegram(msg, category="daily_signal_report")
     logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Scan selesai. {len(signals)} signals ditemukan.")
 
     # ── AUTO-OPEN PAPER TRADE ──
@@ -679,36 +679,47 @@ def daily_signal_scan():
 # a Registry-governed one -- no new column or label was needed for this.
 
 
-def _edge_selectable(conn, ticker: str, candidates) -> list:
-    """Strategies with a live edge for `ticker`.
+def _edge_selectable(conn, ticker: str, candidates, *, record=None) -> list:
+    """Strategies admitted to trade `ticker` right now.
 
-    Registry-governed strategies (spec §6, M1 inversion): eligibility comes from
-    the FROZEN universe artifact in registry/ — production no longer reads
-    research's wf_edge for them. Ungoverned strategies keep the legacy live
-    wf_edge query (positive pooled OOS expectancy, Phase 2C / audit C-6) —
-    but that legacy exception applies ONLY when an explicit candidate list is
-    given (D-031 Option C, see the module-level comment above). Governed
-    results first, then ungoverned by expectancy DESC.
+    Every decision is delegated to engine.admission.evaluate(), which is the
+    single ordered authority (disabled -> registry -> rule parity -> OOS
+    evidence -> staleness) and returns a reason for every outcome. `record`, when
+    given, collects the AdmissionVerdict for each candidate so the caller can
+    report WHY a scan admitted nothing -- the gap that let the buy side sit
+    silently dead from 2026-07-01 (audit S-1).
 
-    `candidates=None` ("scan every strategy in wf_edge") is Registry-only per
-    D-031 Decision 1: a strategy found this way must independently clear
-    registry_governance() (APPROVED, ticker in its frozen universe) before
-    it is selectable. SHADOW and unregistered strategies are excluded here —
-    this is a fail-closed fix, not a policy choice: the prior behavior let a
-    SHADOW-demoted strategy (e.g. one an owner explicitly reviewed and
-    excluded) be re-selected through this path without ever consulting the
-    Registry, silently defeating the exclusion the explicit-candidates
-    branch below has always enforced correctly.
+    Semantics preserved from the pre-audit implementation:
+      * Registry-governed strategies are admitted on the frozen universe artifact
+        (spec 6, M1 inversion); production does not consult research's wf_edge
+        for them.
+      * SHADOW is excluded outright and never falls back to the legacy path
+        (T7 invariant).
+      * `candidates=None` ("scan every strategy in wf_edge") is Registry-only per
+        D-031 Decision 1 -- an UNREGISTERED strategy found this way is NOT
+        admissible.
+      * With an explicit candidate list, a genuinely UNREGISTERED strategy may
+        still qualify on live wf_edge evidence (D-031 Option C), ordered by
+        expectancy DESC after the governed results.
+
+    Added by the 2026-09-02 audit, both strictly tightening:
+      * rule parity (L-1) -- the live rule must be the rule research measured.
+      * staleness (S-2)   -- wf_edge older than WF_EDGE_MAX_AGE_DAYS is refused.
     """
+    from engine import admission
+
     if candidates is not None and not candidates:
         return []
-    from engine.registry_loader import registry_governance
+    disabled = _get_disabled_strategies()
+
+    def _decide(strategy, require_registry):
+        v = admission.evaluate(conn, ticker, strategy, disabled=disabled,
+                               require_registry=require_registry)
+        if record is not None:
+            record.append(v)
+        return v
 
     if candidates is None:
-        # D-031 Decision 1: no legacy exception on this path -- every
-        # strategy found via wf_edge must independently clear registry
-        # admission (APPROVED, ticker in its frozen universe) before
-        # selection. SHADOW and unregistered are excluded, not grandfathered.
         try:
             rows = conn.execute(
                 "SELECT strategy FROM wf_edge "
@@ -720,38 +731,42 @@ def _edge_selectable(conn, ticker: str, candidates) -> list:
             rows = []
         result = []
         for (strategy,) in rows:
-            gov = registry_governance(strategy)
-            if isinstance(gov, set) and ticker in gov and strategy not in result:
+            if strategy in result:
+                continue
+            if _decide(strategy, True).admitted:
                 result.append(strategy)
         return result
 
     governed, ungoverned = [], []
-    for s in candidates:
-        gov = registry_governance(s)
-        if gov is None:
-            ungoverned.append(s)      # no registry entry at all -> D-031 Option C exception
-        elif gov != 'SHADOW':
-            if ticker in gov:
-                governed.append(s)
-        # else: SHADOW -- governed but not APPROVED; excluded outright,
-        # never falls back to the ungoverned legacy path (T7.P1.WS4.01)
-    result = list(governed)
+    for strategy in candidates:
+        v = _decide(strategy, False)
+        if not v.admitted:
+            continue
+        if v.registry_state == "APPROVED":
+            governed.append(strategy)
+        else:
+            ungoverned.append(strategy)
+
     if ungoverned:
-        sql = ("SELECT strategy FROM wf_edge "
-               "WHERE ticker = ? AND expectancy_pct > 0 "
-               "AND strategy IN (%s) ORDER BY expectancy_pct DESC"
-               % ",".join("?" * len(ungoverned)))
-        params = [ticker] + list(ungoverned)
+        # preserve expectancy-DESC ordering among the ungoverned survivors
         try:
-            for r in conn.execute(sql, params).fetchall():
-                if r[0] not in result:
-                    result.append(r[0])
+            order = {r[0]: i for i, r in enumerate(conn.execute(
+                "SELECT strategy FROM wf_edge WHERE ticker = ? "
+                "AND expectancy_pct > 0 ORDER BY expectancy_pct DESC",
+                (ticker,)).fetchall())}
         except Exception:
-            pass
+            order = {}
+        ungoverned.sort(key=lambda st: order.get(st, 10_000))
+
+    result = list(governed)
+    for st in ungoverned:
+        if st not in result:
+            result.append(st)
     return result
 
 
-def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
+def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0,
+                               record: list = None):
     """
     Strategies with a proven live edge for `ticker` — positive pooled OOS
     expectancy in wf_edge (Phase 2C, item 2.5). No fallback: a ticker with no
@@ -763,9 +778,11 @@ def get_ticker_best_strategies(ticker: str, min_consistency: float = 50.0):
     try:
         conn = db_connect(DB_PATH)
         try:
-            selectable = _edge_selectable(conn, ticker, None)
+            selectable = _edge_selectable(conn, ticker, None, record=record)
         finally:
             conn.close()
+        # admission.evaluate() already applies disabled_strategies; this second
+        # filter is a belt-and-braces no-op kept so the intent stays visible.
         disabled = _get_disabled_strategies()
         return [s for s in selectable if s not in disabled]
     except Exception as e:
@@ -890,7 +907,8 @@ def _event_guard_active():
 
 
 def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
-                                min_consistency: float = 50.0) -> list:
+                                min_consistency: float = 50.0,
+                                record: list = None) -> list:
     """
     Select strategies for ticker based on current regime and WF consistency.
 
@@ -949,7 +967,8 @@ def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
             try:
                 # Phase 2C: gate the regime-map candidates on positive pooled
                 # wf_edge expectancy, not per-ticker consistency (audit C-6).
-                selected = _edge_selectable(conn, ticker, wf_candidates)
+                selected = _edge_selectable(conn, ticker, wf_candidates,
+                                            record=record)
             finally:
                 conn.close()
         except Exception:
@@ -960,7 +979,8 @@ def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
     # or losing admission would silently widen selection to the unrestricted
     # wf_scores-consistency fallback (off the regime map entirely).
     if not selected and not counter_trend_candidates:
-        selected = get_ticker_best_strategies(ticker, min_consistency)
+        selected = get_ticker_best_strategies(ticker, min_consistency,
+                                              record=record)
 
     result = selected + [c for c in counter_trend if c not in selected]
 
@@ -979,6 +999,48 @@ def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,
         result = [s for s in result if s != 'Panic Rebound']
 
     return result
+
+
+_ADMISSION_ALERT_JOB = "admission_deadlock"
+
+
+def _alert_admission_deadlock(counts, scanned, date_str, time_str):
+    """One Telegram alert per day when zero strategies are admissible.
+
+    A trading system that cannot produce a BUY signal is a a state the operator
+    must be told about explicitly. It is NOT necessarily a bug -- if no strategy
+    passes OOS validation, zero signals is the correct and honest output -- but
+    it must never again be indistinguishable from "the market offered nothing".
+
+    Deduped through the same _job_sentinel table the daily reports use, so a
+    restart or an hourly re-scan cannot spam the channel.
+    """
+    from engine import admission as _adm
+    conn = db_connect(DB_PATH)
+    try:
+        conn.execute("CREATE TABLE IF NOT EXISTS _job_sentinel "
+                     "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))")
+        try:
+            conn.execute("INSERT INTO _job_sentinel VALUES (?,?)",
+                         (_ADMISSION_ALERT_JOB, date_str))
+            conn.commit()
+        except sqlite3.IntegrityError:
+            return          # already alerted today
+    finally:
+        conn.close()
+
+    lines = "\n".join(f"  {stage}: {n}"
+                       for stage, n in sorted(counts.items(), key=lambda kv: -kv[1]))
+    send_telegram(
+        f"\u26d4 <b>No strategy is admissible</b> ({time_str})\n\n"
+        f"Scanned {scanned} tickers; <b>0</b> (ticker, strategy) pairs cleared "
+        f"admission, so this session can produce no BUY signal.\n\n"
+        f"<b>Blocking stage counts</b>\n{lines}\n\n"
+        f"This is reported, not worked around. If no strategy passes OOS "
+        f"validation then zero signals is the correct output \u2014 but the "
+        f"engine must never look alive while its buy side is closed.\n"
+        f"Diagnose: <code>python -m scripts.admission_report</code>"
+    )
 
 
 def _safe_regime(df: pd.DataFrame) -> str:
@@ -1356,8 +1418,23 @@ def scheduled_multi_strategy_scan():
     except Exception:
         pass
 
+    # Same lifecycle for admission's "has this rule been researched?" cache. The
+    # web process is long-lived (gunicorn, workers=1), so without this a scan
+    # that ran before `research.cli wf-parity` completed would keep answering
+    # "no study exists" until the next restart -- new evidence would silently
+    # fail to take effect.
+    try:
+        from engine.admission import reset_evidence_cache as _reset_adm_cache
+        _reset_adm_cache()
+    except Exception:
+        pass
+
     # Step 1: Adaptive strategy selection per ticker
     intersection_results = []
+    # AUDIT S-1: collect every admission verdict so a scan that admits nothing
+    # can say WHY. Before this, the buy side sat dead from 2026-07-01 with no
+    # log line, no alert and no diagnostic anywhere.
+    admission_record = []
 
     # Value-base liquidity pre-filter connection — opened once, reused per ticker.
     # Avg daily traded value (close*volume) must be >= Rp 5B to pass.
@@ -1392,7 +1469,8 @@ def scheduled_multi_strategy_scan():
                 continue
 
             # Get best strategies for this ticker — regime-aware selection
-            best_strategies = adaptive_strategy_selector(ticker, df, min_wf_consistency)
+            best_strategies = adaptive_strategy_selector(
+                ticker, df, min_wf_consistency, record=admission_record)
 
             # Check signals for best strategies
             passing_strategies = []
@@ -1427,6 +1505,20 @@ def scheduled_multi_strategy_scan():
             continue
     _liq_conn.close()
     logger.info(f"[{time_str}] Adaptive strategy signals: {len(intersection_results)} tickers")
+
+    # ── Admission health (audit S-1) ─────────────────────────────────────────
+    # Report the composite admission state every scan, and alert once a day when
+    # NOTHING is admissible -- the failure mode that hid a two-month dead buy
+    # side. Fail-soft: a reporting error must never affect the scan.
+    try:
+        from engine import admission as _adm
+        _counts = _adm.summarise(admission_record)
+        logger.info(f"[{time_str}] {_adm.format_diagnostic(_counts, scanned=len(tickers))}")
+        _n_admitted = _counts.get(_adm.STAGE_ADMITTED, 0)
+        if _n_admitted == 0 and admission_record:
+            _alert_admission_deadlock(_counts, len(tickers), date_str, time_str)
+    except Exception as _adm_err:
+        logging.warning(f"[scan] admission diagnostic error: {_adm_err}")
 
     if len(intersection_results) > 0:
         result_tickers = [r['ticker'] for r in intersection_results]
@@ -1594,14 +1686,36 @@ def scheduled_multi_strategy_scan():
         for r in flow_confirmed:
             ticker = r['ticker']
             try:
-                # Get latest price from signal details
+                # AUDIT L-2 (2026-09-02): resolve the fill through the single
+                # entry-convention authority instead of reading details['price']
+                # directly. That read let NR7 open a trade at the session OPEN
+                # from a 14:35 scan -- a price already in the past, and
+                # systematically favourable because the NR7 trigger IS "the open
+                # gapped up". Every walk-forward strategy fills at the NEXT bar's
+                # open; live must do the same, which means a live scan STAGES a
+                # signal and never fills it in-session.
+                from engine import entry_convention as _ec
                 signal_details = r.get('signal_details', {})
                 first_strategy = r['strategies'][0]
-                entry_price = signal_details.get(first_strategy, {}).get('price')
+                _det = signal_details.get(first_strategy, {}) or {}
+                _res = _ec.executable_entry(_det, ohlcv_map.get(ticker))
+                r['entry_rule'] = _res.entry_rule
+                r['decision_price'] = _res.decision.price
+                r['decision_price_basis'] = _res.decision.basis
+                r['decision_bar_date'] = _res.decision.bar_date
 
-                if not entry_price:
-                    logger.info(f"[{time_str}] {ticker}: No price found, skipping")
+                if not _res.is_fill:
+                    logger.info(
+                        f"[{time_str}] {ticker}/{first_strategy}: {_res.action} - "
+                        f"{_res.reason} (decision px={_res.decision.price} "
+                        f"basis={_res.decision.basis})")
+                    auto_trade_results.append({
+                        'ticker': ticker, 'success': False,
+                        'reason': f'{_res.action}: {_res.reason}',
+                    })
                     continue
+
+                entry_price = _res.fill_price
 
                 # Check trend filter — counter-trend strategies (Crash
                 # Recovery, Panic Rebound) buy INTO downtrends by design.
@@ -1709,7 +1823,7 @@ def scheduled_multi_strategy_scan():
                 flow = r.get('flow', {})
                 msg += f"  • {r['ticker']}: Flow {flow['score']:+d}\n"
 
-        send_telegram(msg)
+        send_telegram(msg, category="scan_summary")
     else:
         logger.info(f"[{time_str}] No flow-confirmed signals (strategy pass: {len(intersection_results)}) — silent.")
     logger.info(f"[{time_str}] Multi-strategy scan complete.\n")

@@ -190,3 +190,67 @@ def test_probe_targeting_the_frozen_fixture_is_refused(sandbox, monkeypatch):
     assert B.main(["--date-from", DATE, "--date-to", "2025-04-15",
                    "--probe"]) == B.EXIT_FROZEN_FIXTURE
     assert sandbox["fetch"] == 0
+
+
+# --- _write persists bars even when the vendor's `prices` array is empty ----
+# (RAJA/2026-04-15: live response had 335 real buy/sell/net_values entries
+# and 0 prices; the real _write path -- not the monkeypatched fake used by
+# every test above -- must still land rows in stockbit_flow_bars.)
+
+
+def _flow_bars_schema(conn):
+    conn.execute("""
+        CREATE TABLE stockbit_flow (
+            ticker TEXT NOT NULL, trade_date TEXT NOT NULL,
+            buy_lot INTEGER, sell_lot INTEGER, net_lot INTEGER,
+            buy_freq INTEGER, sell_freq INTEGER, net_value INTEGER,
+            last_price INTEGER, updated_at TEXT NOT NULL,
+            composite_score INTEGER, verdict TEXT, smart_money TEXT,
+            PRIMARY KEY (ticker, trade_date)
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE stockbit_flow_bars (
+            ticker TEXT NOT NULL, trade_date TEXT NOT NULL, bar_time TEXT NOT NULL,
+            buy_lot INTEGER, sell_lot INTEGER, buy_freq INTEGER, sell_freq INTEGER,
+            net_value INTEGER, price INTEGER, delta INTEGER,
+            PRIMARY KEY (ticker, trade_date, bar_time)
+        )
+    """)
+
+
+def _entry(lot, freq, value, t):
+    return {"frequency": {"raw": str(freq)}, "lot": {"raw": str(lot)},
+            "time": t, "value": {"raw": str(value)}, "date": ""}
+
+
+def test_write_persists_bars_when_vendor_prices_array_is_empty():
+    conn = sqlite3.connect(":memory:")
+    _flow_bars_schema(conn)
+    raw_data = {
+        "buy": [_entry(31362, 822, 15829312500, "09:00"),
+                _entry(211993, 7860, 104826627500, "16:14")],
+        "sell": [_entry(25228, 777, 12647694500, "09:00"),
+                 _entry(346553, 15284, 169937805000, "16:14")],
+        "net_values": [_entry(0, 0, 3181618000, "09:00"),
+                       _entry(0, 0, 40290000, "16:14")],
+        "prices": [],
+    }
+    flow = {"ticker": "RAJA", "trade_date": "2026-04-15",
+            "buy_lot": 54086722, "sell_lot": 74705862, "net_lot": -20619140,
+            "buy_freq": 1841736, "sell_freq": 3110042, "net_value": -65111177500,
+            "last_price": None, "_raw_data": raw_data}
+
+    B._write(conn, flow)
+
+    bars = conn.execute(
+        "SELECT bar_time, buy_lot, sell_lot, price FROM stockbit_flow_bars "
+        "WHERE ticker='RAJA' AND trade_date='2026-04-15' ORDER BY bar_time"
+    ).fetchall()
+    assert bars == [("09:00", 31362, 25228, 0), ("16:14", 211993, 346553, 0)]
+
+    summary = conn.execute(
+        "SELECT buy_lot, sell_lot FROM stockbit_flow "
+        "WHERE ticker='RAJA' AND trade_date='2026-04-15'"
+    ).fetchone()
+    assert summary == (54086722, 74705862)

@@ -2,6 +2,9 @@
 - yfinance is RAW (auto_adjust=False) — one price basis with the scraper.
 - yfinance NEVER overwrites an existing bar (scraper is the EOD authority);
   it inserts missing (ticker,date) rows as is_final=1 and repairs NULL-close rows.
+- C1 finality guard (bootstrap audit 2026-09-16): rows dated the CURRENT WIB
+  day are provisional (is_final=0) from this path — only the 16:15 EOD
+  scraper may write a settled same-day bar.
 - dividends/splits land in corporate_actions.
 """
 import sqlite3
@@ -69,6 +72,78 @@ def test_save_df_repairs_null_close_rows(db):
     conn = sqlite3.connect(db)
     assert conn.execute("SELECT close FROM ohlcv WHERE date='2026-07-01'").fetchone()[0] == 123.0
     conn.close()
+
+
+def test_save_df_prior_day_backfill_is_final(db, monkeypatch):
+    """Historical/new prior-day insertion keeps existing semantics: is_final=1."""
+    import data.fetcher as f
+    from data.fetcher import _save_df
+    monkeypatch.setattr(f, "_wib_today", lambda: "2026-07-03")
+    _save_df("TST", _yf_frame(["2026-07-01", "2026-07-02"], [100.0, 200.0]))
+    conn = sqlite3.connect(db)
+    rows = dict(conn.execute("SELECT date, is_final FROM ohlcv WHERE ticker='TST'").fetchall())
+    conn.close()
+    assert rows == {"2026-07-01": 1, "2026-07-02": 1}
+
+
+def test_save_df_same_wib_day_cannot_be_final(db, monkeypatch):
+    """C1 regression: the 2026-09-15 pre-open defect (585 same-day is_final=1
+    rows from the morning fetch) must be impossible — same-WIB-day bars from
+    the yfinance path are provisional (is_final=0)."""
+    import data.fetcher as f
+    from data.fetcher import _save_df
+    monkeypatch.setattr(f, "_wib_today", lambda: "2026-07-02")
+    _save_df("TST", _yf_frame(["2026-07-01", "2026-07-02"], [100.0, 200.0]))
+    conn = sqlite3.connect(db)
+    prior = conn.execute("SELECT is_final FROM ohlcv WHERE date='2026-07-01'").fetchone()[0]
+    same_day = conn.execute("SELECT is_final FROM ohlcv WHERE date='2026-07-02'").fetchone()[0]
+    conn.close()
+    assert prior == 1           # settled history unchanged
+    assert same_day == 0        # today: provisional only
+
+
+def test_save_df_same_day_null_close_repair_stays_provisional(db, monkeypatch):
+    """The NULL-close repair branch honours the guard too: a same-day
+    placeholder repaired by the morning fetch must not become final."""
+    import data.fetcher as f
+    from data.fetcher import _save_df
+    monkeypatch.setattr(f, "_wib_today", lambda: "2026-07-02")
+    conn = sqlite3.connect(db)
+    conn.execute("INSERT INTO ohlcv (ticker,date,open,high,low,close,volume)"
+                 " VALUES ('TST','2026-07-02',NULL,NULL,NULL,NULL,NULL)")
+    conn.commit()
+    conn.close()
+    _save_df("TST", _yf_frame(["2026-07-02"], [150.0]))
+    conn = sqlite3.connect(db)
+    row = conn.execute("SELECT close, is_final FROM ohlcv WHERE date='2026-07-02'").fetchone()
+    conn.close()
+    assert row == (150.0, 0)
+
+
+def test_eod_scraper_still_writes_final_same_day(tmp_path, monkeypatch):
+    """The 16:15 EOD authority (screener/idx_scraper.save_ohlcv_to_db) is the
+    writer that MAY stamp is_final=1 on the current WIB day — the guard must
+    not have taken that away."""
+    import sqlite3 as sq3
+    import screener.idx_scraper as ix
+    db = str(tmp_path / "scraper_eod.db")
+    monkeypatch.setattr(ix, "_DB_PATH", db)
+    conn = sq3.connect(db)
+    conn.execute("CREATE TABLE ohlcv (ticker TEXT, date TEXT, open REAL, high REAL,"
+                 " low REAL, close REAL, volume REAL, is_final INTEGER,"
+                 " UNIQUE(ticker, date))")
+    conn.commit()
+    conn.close()
+
+    n = ix.save_ohlcv_to_db(
+        {"TST": {"open": 100, "high": 110, "low": 95, "close": 105, "volume": 5000}},
+        "2026-07-02", is_final=True)
+
+    conn = sq3.connect(db)
+    row = conn.execute("SELECT close, is_final FROM ohlcv WHERE ticker='TST'").fetchone()
+    conn.close()
+    assert n == 1
+    assert row == (105.0, 1)
 
 
 def test_save_actions_records_dividends_and_splits(db):

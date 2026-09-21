@@ -104,8 +104,16 @@ def drill_env(tmp_path, monkeypatch):
                   requires=dict(data_schema=1, exit_kernel=1, regime_model=1,
                                 engine_version=1), changelog="drill")]
     (reg / "edge_registry.yaml").write_text(yaml.safe_dump(entry))
+    # rule_id declaration (audit 2026-09-02, finding L-1): production applies a
+    # weekly MTF trend gate that research's STRATEGY_FUNCS backtest does not, so
+    # engine.admission refuses NR7 unless the manifest states that the recorded
+    # evidence was produced under the SAME gate set the live path executes.
+    # Declaring it here is the documented remedy and is what makes this drill a
+    # true end-to-end test of the admitted path.
+    from engine.rule_identity import live_rule_id as _live_rule_id
     (reg / "m.yaml").write_text(yaml.safe_dump(
-        {"evidence": {"gate_decision": {"final_state": "PROMOTE_TO_FORWARD_TEST"},
+        {"rule_id": _live_rule_id("NR7 Breakout"),
+         "evidence": {"gate_decision": {"final_state": "PROMOTE_TO_FORWARD_TEST"},
                       "forward": {"verdict": "GO", "n": 17, "exp_pct": 0.63}}}))
     monkeypatch.setattr(rl, "REGISTRY_PATH", str(reg / "edge_registry.yaml"))
     rl._reset_cache()
@@ -114,8 +122,9 @@ def drill_env(tmp_path, monkeypatch):
 
 
 def test_e2e_signal_to_paper_trade(drill_env, monkeypatch):
-    """The seven-gate gauntlet, every function production: selector → checker →
-    firm gate (inactive) → check_trend → open_trade ⇒ a paper_trades row."""
+    """The gauntlet, every function production: selector (registry + regime +
+    rule parity) → checker → firm gate (inactive) → check_trend → open_trade
+    ⇒ a paper_trades row."""
     import paper_trade as pt
     from scheduler.scanner import adaptive_strategy_selector, run_agent_firm_gate
     from engine.strategies import check_current_entry_signal
@@ -195,3 +204,35 @@ def test_e2e_monitor_closes_with_net_pnl(drill_env, monkeypatch):
     gross_pct = (float(res["exit_price"]) - entry_price) / entry_price * 100
     assert closed["pnl_pct"] < gross_pct            # net < gross, always
     assert closed["pnl_pct"] == pytest.approx(gross_pct - 0.60, abs=0.25)
+
+
+def test_e2e_rule_mismatch_blocks_admission(drill_env, monkeypatch):
+    """AUDIT L-1, end to end: strip the manifest's rule_id declaration and the
+    same APPROVED, in-universe, positive-edge strategy becomes inadmissible,
+    because production would be executing a rule research never measured.
+
+    This is the forcing function: a production-only filter can no longer
+    silently invalidate an OOS claim — it fails admission instead."""
+    import yaml as _yaml
+    import os as _os
+    import engine.registry_loader as rl
+    from scheduler.scanner import adaptive_strategy_selector
+    from engine import admission
+
+    reg_dir = _os.path.dirname(rl.REGISTRY_PATH)
+    _yaml.safe_dump(
+        {"evidence": {"gate_decision": {"final_state": "PROMOTE_TO_FORWARD_TEST"},
+                      "forward": {"verdict": "GO", "n": 17, "exp_pct": 0.63}}},
+        open(_os.path.join(reg_dir, "m.yaml"), "w"))
+    rl._reset_cache()
+
+    assert adaptive_strategy_selector("DRILL", drill_env["df"]) == []
+
+    conn = sqlite3.connect(drill_env["db"])
+    try:
+        v = admission.evaluate(conn, "DRILL", "NR7 Breakout", disabled=set())
+    finally:
+        conn.close()
+    assert not v.admitted
+    assert v.stage == admission.STAGE_RULE_PARITY
+    assert v.registry_state == "APPROVED"     # everything else passed

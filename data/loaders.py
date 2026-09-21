@@ -102,3 +102,16 @@ def _load_ohlcv_bulk(final_only: bool = False, adjusted: bool = None) -> dict:
         if ticker in out:
             out[ticker] = adjust_ohlcv(out[ticker], splits)
     return out
+
+
+def load_ohlcv_raw(conn, ticker: str, final_only: bool = True) -> pd.DataFrame:
+    """Signal-basis loader for Phase 8 historical systems: as-stored bars with
+    NO adjustment applied at load (Phase 9 §5).
+
+    Basis honesty: the corpus is pre-adjusted at the source for splits known at
+    rebuild time, so `stored_raw` is exact raw only where the corpus itself was
+    raw (Phase 9 C-2 retraction). Never use the adjusted research path as a
+    substitute for signal geometry; adjusted data is for PnL accounting only
+    (engine/historical/data.py).
+    """
+    return load_ohlcv_df(conn, ticker, final_only=final_only, adjusted=False)

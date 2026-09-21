@@ -90,6 +90,20 @@ def run_flow_fetch():
         ).fetchone()[0]
         conn.close()
         logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Flow fetch selesai. {count} tickers tersimpan.")
+        # Bootstrap C1: before 16:15 WIB the current day must have no settled
+        # (is_final=1) ohlcv bars — same-day finality belongs to the 16:15 EOD
+        # authority only (2026-09-15 pre-open defect: 585 such rows). Alert-only.
+        fin = check_same_day_finality(DB_PATH, dt.now(WIB))
+        if fin["violation"]:
+            logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] PIT finality violation: "
+                           f"{fin['count']} is_final=1 bars for {fin['date']} before 16:15 WIB")
+            send_telegram(
+                f"🚨 <b>PIT Finality Violation</b>\n\n"
+                f"<code>ohlcv</code> has <b>{fin['count']}</b> is_final=1 bars dated "
+                f"{fin['date']} before 16:15 WIB.\n"
+                f"Same-day bars are provisional until the EOD scraper runs — "
+                f"likely the yfinance gap-filler wrote unsettled data as settled."
+            )
         if is_first_session and count == 0:
             send_telegram(
                 f"⚠️ <b>Flow Fetch WARNING</b>\n\n"
@@ -161,6 +175,51 @@ def check_flow_coverage(db_path: str, trade_date: str, lookback: int = 10,
             "severity": severity, "healthy": severity == "ok", "reason": reason}
 
 
+def check_same_day_finality(db_path: str, now_wib: datetime) -> dict:
+    """Bootstrap C1 (readiness audit 2026-09-16): count is_final=1 ohlcv bars
+    dated the current WIB day and decide whether that violates finality (it
+    does any time before the 16:15 EOD authority — the 2026-09-15 pre-open
+    defect wrote 585 such rows). Alert-only; reads, never writes."""
+    from engine.pipeline_health import same_day_final_bars
+    wib_today = now_wib.strftime("%Y-%m-%d")
+    conn = db_connect(db_path)
+    try:
+        count = conn.execute(
+            "SELECT COUNT(*) FROM ohlcv WHERE date=? AND is_final=1",
+            (wib_today,)).fetchone()[0]
+    finally:
+        conn.close()
+    s = same_day_final_bars(count, now_wib.hour, now_wib.minute)
+    return {"date": wib_today, **s}
+
+
+def check_prior_session_flow_coverage(db_path: str, today_str: str) -> dict:
+    """Bootstrap C2 (readiness audit 2026-09-16): prior expected trading
+    session (latest trading_calendar date strictly before today) with ZERO
+    stockbit_flow tickers — the 2026-08-25 gap class, which the same-day
+    monitor above cannot catch when the outage day's own runs never fire.
+    Alert-only; never backfills, never mutates stockbit_flow."""
+    from engine.pipeline_health import prior_session_flow_gap
+    conn = db_connect(db_path)
+    try:
+        prev = conn.execute(
+            "SELECT MAX(date) FROM trading_calendar WHERE date < ?",
+            (today_str,)).fetchone()[0]
+        n = None
+        if prev:
+            n = conn.execute(
+                "SELECT COUNT(DISTINCT ticker) FROM stockbit_flow WHERE trade_date=?",
+                (prev,)).fetchone()[0]
+    except sqlite3.OperationalError:
+        # trading_calendar/stockbit_flow absent (pre-migration or fixture DB):
+        # nothing evaluable here — schema-level alarms belong to the ohlcv
+        # coverage monitor.
+        return prior_session_flow_gap(None, None)
+    finally:
+        conn.close()
+    return prior_session_flow_gap(prev, n)
+
+
 def run_broker_flow_fetch():
     """Fetch broker flow data setelah 20:00 WIB saat Stockbit publish summary harian."""
     if _holiday_skip("run_broker_flow_fetch"):
@@ -209,6 +268,23 @@ def run_broker_flow_fetch():
                 f"{cov['reason']}\n\n"
                 f"Backfill hanya mungkin selagi sesi masih live — cek token & "
                 f"re-run <code>run_broker_flow_fetch</code> hari ini."
+            )
+
+        # Bootstrap C2: a PRIOR completed session with zero flow tickers is the
+        # 2026-08-25 gap class — the same-day monitor above cannot fire when the
+        # outage day's own runs never ran. Alert-only; never backfills, never
+        # mutates stockbit_flow.
+        gap = check_prior_session_flow_coverage(DB_PATH, today_str)
+        if gap["alert"]:
+            logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] stockbit_flow gap: "
+                           f"session {gap['session']} has 0 tickers")
+            send_telegram(
+                f"🔴 <b>Flow Coverage GAP — {gap['session']}</b>\n\n"
+                f"Previous completed session <b>{gap['session']}</b> has <b>0</b> "
+                f"tickers in <code>stockbit_flow</code>.\n"
+                f"The session cannot be re-fetched historically — record the gap "
+                f"for research exclusion "
+                f"(see docs/research_programs/P-M/DATA_GAP_AUDIT_2026-09-14.md)."
             )
     except Exception as e:
         logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow fetch error: {e}")
@@ -822,7 +898,7 @@ def run_market_health_report():
             logging.warning(f"[market_health_report] news digest skipped: {_ne}")
 
         msg = ext_block + health + news_block
-        send_telegram(msg)
+        send_telegram(msg, category="market_health_report")
         logger.info(f"[{now.strftime('%H:%M')}] Premarket briefing sent (tier={risk['tier']})")
     except Exception as e:
         logging.error(f"[market_health_report] {e}")
@@ -1356,7 +1432,7 @@ def run_premarket_firm_scan():
                 f"({len(base_rows)} candidates) \u2192 {len(survivors)} after "
                 f"revision. Discovery adds: "
                 f"{'on' if _allow_adds else 'off'}.</i>")
-        send_telegram(msg)
+        send_telegram(msg, category="premarket_summary")
     except Exception as e:
         logger.warning(f"[premarket firm] Telegram error: {e}")
 
@@ -1470,7 +1546,8 @@ def run_eod_trade_plan():
         with db_connect(DB_PATH) as _wl_conn:
             wl_diff = wr.diff_snapshot(_wl_conn, date_str, cands)
             wr.record_snapshot(_wl_conn, date_str, cands, regime=regime[0])
-        send_telegram(wr.build_message(date_str, wl_diff, len(cands), reasons=reasons))
+        send_telegram(wr.build_message(date_str, wl_diff, len(cands), reasons=reasons),
+                      category="watchlist_update")
     except Exception as e:
         logging.warning(f"[eod_trade_plan] watchlist update report error (fail-soft): {e}")
 
@@ -1506,7 +1583,8 @@ def run_eod_trade_plan():
 
         send_telegram(tp.build_message([], regime, now.strftime('%d/%m'), degraded=False,
                                        vpin_summary=vpin_summary, diff=diff,
-                                       watchlist_size=len(cands)) + pw_section)
+                                       watchlist_size=len(cands)) + pw_section,
+                      category="eod_trade_plan")
         logger.info(f"[{now_str}] EOD trade plan: all candidates vetoed by edge pre-screen — empty plan sent")
         return
 
@@ -1637,7 +1715,8 @@ def run_eod_trade_plan():
         send_telegram(tp.build_message(ranked, regime, now.strftime('%d/%m'),
                                        degraded=degraded, vpin_summary=vpin_summary,
                                        provider_line=p_line, diff=diff,
-                                       watchlist_size=len(cands)) + pw_section)
+                                       watchlist_size=len(cands)) + pw_section,
+                      category="eod_trade_plan")
     except Exception as e:
         logger.warning(f"[eod_trade_plan] Telegram error: {e}")
 
@@ -1867,7 +1946,8 @@ def run_forward_test_cycle(db_path=None, run_date=None):
         # errors must not mask a successful cycle, so this is its own try/except.
         try:
             from forward_testing.reporting import build_forward_test_report
-            send_telegram(build_forward_test_report(db, rd, repo=repo))
+            send_telegram(build_forward_test_report(db, rd, repo=repo),
+                          category="forward_test_report")
         except Exception as e:
             logger.warning(f"[forward_test] Telegram report error: {e}")
     except Exception as e:

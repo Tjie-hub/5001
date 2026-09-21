@@ -94,11 +94,17 @@ def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
 
-def send_telegram(msg):
+def send_telegram(msg, category="alert"):
     token = os.environ.get("TELEGRAM_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
         log("Telegram not configured")
+        return
+    # Same temporary report-noise mute as utils.telegram.send_telegram (this
+    # module keeps its own sender for cron use); 'alert' can never be muted.
+    from utils.telegram import is_muted
+    if is_muted(category):
+        log(f"[telegram] muted (category={category})")
         return
     msg = redact_secrets(msg)  # RC1-C2 — same shared rule as utils.telegram.send_telegram
     try:
@@ -638,6 +644,16 @@ def init_flow_db():
     return conn
 
 
+class RateLimitExceeded(Exception):
+    """Raised when marketdetectors/{ticker} stays 429 through every retry.
+
+    Distinct from a plain HTTP failure (which returns None) so a caller that
+    needs to log/report rate-limit exhaustion separately from a genuine
+    API/HTTP error (per the IDX80 broker-flow backfill's reliability
+    reporting) doesn't have to guess which one produced a None result.
+    """
+
+
 def fetch_broker_flow(token, ticker, date=None):
     """Fetch broker net buy/sell summary from marketdetectors endpoint.
 
@@ -646,6 +662,12 @@ def fetch_broker_flow(token, ticker, date=None):
     `from` and `to` are supplied together — either one alone is silently
     ignored and the server returns today's data instead (verified live,
     2026-08-04; see docs/audit/BROKER_FLOW_BACKFILL_REPORT.md).
+
+    On a 429 this backs off and retries (same ladder as fetch_flow(): honor
+    Retry-After when the vendor sends one, else 20*(attempt+1)s), up to 4
+    attempts total. Raises RateLimitExceeded if every attempt is 429 — the
+    caller decides how to log/count that distinctly from a plain HTTP failure
+    (which still returns None, unchanged).
     """
     params = {
         "transaction_type": "TRANSACTION_TYPE_NET",
@@ -656,19 +678,29 @@ def fetch_broker_flow(token, ticker, date=None):
     if date:
         params["from"] = date
         params["to"] = date
-    r = requests.get(
-        f"{STOCKBIT_BASE}/marketdetectors/{ticker}",
-        params=params,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
-            "Origin": "https://stockbit.com",
-            "Referer": "https://stockbit.com/",
-        },
-        timeout=15,
-    )
-    if r.status_code != 200:
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+        "Origin": "https://stockbit.com",
+        "Referer": "https://stockbit.com/",
+    }
+    r = None
+    for attempt in range(4):
+        r = requests.get(
+            f"{STOCKBIT_BASE}/marketdetectors/{ticker}",
+            params=params, headers=headers, timeout=15,
+        )
+        if r.status_code == 200:
+            break
+        if r.status_code == 429:
+            wait = int(r.headers.get("Retry-After", 0)) or 20 * (attempt + 1)
+            time.sleep(wait)
+            continue
         return None
+    if r is None or r.status_code != 200:
+        raise RateLimitExceeded(
+            f"marketdetectors/{ticker} stayed 429 through all retries"
+        )
     d = r.json().get("data", {})
     bs = d.get("broker_summary", {})
     bd = d.get("bandar_detector", {})
@@ -842,7 +874,8 @@ def run_flow(token, tickers, date=None):
         send_telegram(
             f"✅ <b>Flow & Broker Fetch DONE</b>\n"
             f"Sukses: {success}/{len(tickers)} tickers\n"
-            f"Waktu: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            f"Waktu: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            category="flow_fetch_done",
         )
     else:
         send_telegram(
