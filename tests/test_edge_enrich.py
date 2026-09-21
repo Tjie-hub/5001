@@ -46,8 +46,6 @@ class TestEnrichCandidate:
         return conn
 
     def test_joins_flow_and_wf_edge(self):
-        # L-3 (audit 2026-09-02): wf_edge lookup is keyed on (ticker, strategy),
-        # no cross-strategy "best" fallback — strategy must be named explicitly.
         conn = self._db()
         conn.execute("INSERT INTO stockbit_flow VALUES ('INCO','2026-06-22',-5,'DISTRIBUTING')")
         save_wf_edge(conn, 'INCO', [{
@@ -58,7 +56,7 @@ class TestEnrichCandidate:
         c = enrich_candidate(conn, 'INCO', '2026-06-22',
                              closes=[200 - i for i in range(60)],  # downtrend
                              regime='SIDEWAYS', sources=['BEAR_DIP'],
-                             strategy='conservative')
+                             strategy='conservative')  # L-3: stats are per-strategy
         assert c['flow_score'] == -5
         assert c['flow_direction'] == 'BEARISH'
         assert c['tech_direction'] == 'BEARISH'

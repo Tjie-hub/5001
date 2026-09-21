@@ -130,18 +130,19 @@ for t, series in by_t.items():
         adv = np.median(tval[max(0, i - 60):i])
         if adv >= LIQ:
             elig.append((days[i], i, float(pk[i]), float(adv)))
-    bymonth = defaultdict(list)
+    bymonth = defaultdict(dict)
     for d, i, pkv, adv in elig:
-        bymonth[d[:7]].append((pkv, t, d, adv))
-    for mo, lst in bymonth.items():
-        if len(lst) < 5:
+        bymonth[d[:7]].setdefault(t, (float(pkv), float(adv)))
+    # live FWD-PM-VOLEX-001 rule: universe = top 200 by trailing-60 median
+    # traded value; EXCLUDED = top decile (20) of Parkinson among those 200
+    for mo, members in bymonth.items():
+        if len(members) < 100:
             continue
-        lst.sort(reverse=True)
-        top200 = lst[:200]
-        cut = top200[min(len(top200), 20) - 1][0]   # top decile of 200 = 20 names
-        for pkv, t_, d_, _ in top200:
-            if pkv >= cut:
-                park_excl[t_].add(mo)
+        by_adv = sorted(members.items(), key=lambda kv: -kv[1][1])[:200]
+        by_pk = sorted(by_adv, key=lambda kv: -kv[1][0])[:20]
+        for t_, (pkv, _adv) in by_pk:
+            park_excl[t_].add(mo)
+            park_months.add(mo)
 
 # ================= 4a / 4b / 4c =================
 dt_arr = np.array([x[0] for x in recs])

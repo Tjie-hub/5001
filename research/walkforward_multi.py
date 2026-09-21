@@ -250,16 +250,30 @@ def run_all_strategies(df: pd.DataFrame, capital: float = 50_000_000, filters: l
     return results
 
 
-def run_walk_forward(df: pd.DataFrame, capital: float = 50_000_000, filters: list = None) -> dict:
+def run_walk_forward(df: pd.DataFrame, capital: float = 50_000_000,
+                     filters: list = None, warmup_bars: int = None,
+                     strategies: dict = None) -> dict:
     """
     Walk-forward: train 12 bulan, test 3 bulan, rolling.
     Returns summary per strategy + per window.
+
+    warmup_bars: override the indicator warm-up tail prepended to each test
+        slice. Defaults to the price-indicator warm-up (60). The rule-parity run
+        (research/jobs.py::refresh_wf_edge_rule) passes 160 because the weekly
+        MTF gate needs ~25 weeks of weekly history before it stops soft-passing
+        (engine/filters_mtf.WARMUP_BARS). A longer tail is prior data only —
+        trades are still filtered to entry_date >= test_start, so the OOS
+        boundary is unchanged.
+    strategies: restrict the roster (default: all of STRATEGY_FUNCS). The parity
+        run skips the three strategies the live path exempts from the weekly gate
+        (_WEEKLY_GATE_BYPASS), whose existing wf_edge rows are already rule-valid.
     """
     windows = walk_forward_split(df, train_months=12, test_months=3)
     if not windows:
         return {'error': 'Data tidak cukup untuk walk-forward (butuh minimal 15 bulan)'}
 
-    wf_results = {name: [] for name in STRATEGY_FUNCS}
+    funcs = strategies if strategies is not None else STRATEGY_FUNCS
+    wf_results = {name: [] for name in funcs}
 
     # Warmup tail prepended to each test_df so indicator-heavy strategies
     # (TFB needs 60-bar ATR median, Swing Trend needs 50-bar MA) can compute
@@ -267,7 +281,8 @@ def run_walk_forward(df: pd.DataFrame, capital: float = 50_000_000, filters: lis
     # Trades opened during the warmup portion are filtered out post-hoc.
     # Derived from the heaviest-warmup indicators across all strategies:
     # calc_vwap(window=60) dominates; calc_adx(28), calc_ma_slope(25), calc_atr(14) follow.
-    WARMUP_BARS = get_warmup([calc_vwap, calc_adx, calc_ma_slope, calc_atr])  # → 60
+    WARMUP_BARS = (warmup_bars if warmup_bars is not None
+                   else get_warmup([calc_vwap, calc_adx, calc_ma_slope, calc_atr]))  # → 60
 
     for w in windows:
         test_df = w['test']
@@ -277,7 +292,7 @@ def run_walk_forward(df: pd.DataFrame, capital: float = 50_000_000, filters: lis
         warmup_tail = train_df.tail(WARMUP_BARS) if len(train_df) >= WARMUP_BARS else train_df
         extended_df = pd.concat([warmup_tail, test_df], ignore_index=True)
 
-        for name, func in STRATEGY_FUNCS.items():
+        for name, func in funcs.items():
             if func.__name__ == "strategy_vwma_breakout_pullback":
                 raw = func(extended_df, capital=capital)   # takes no filters kwarg
             else:

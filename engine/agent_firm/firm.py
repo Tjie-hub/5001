@@ -92,6 +92,26 @@ def _capped_decisions(candidates: list[SignalCandidate]) -> list[AgentDecision]:
 async def _run_analysts(state: AgentState) -> dict:
     client = state["client"]
     candidate = state["candidate"]
+    # 2026-09-16 cost fix: evaluate_staged_async()'s Stage 1 already ran technical+regime for
+    # every candidate to decide the both-bearish auto-veto. For a survivor, that result is
+    # the exact same call this node would otherwise make (same candidate, same prompt) --
+    # _run_stage2() pre-populates these two state keys with Stage 1's own AgentResult objects
+    # so they are reused verbatim, not recomputed. Only flow+news are new work here.
+    # evaluate_async()'s own initial states never populate these (always None), so the plain
+    # evaluate()/evaluate_staged() path (exit-veto, tests) is unaffected and still runs all 4.
+    pre_technical = state.get("technical_result")
+    pre_regime = state.get("regime_result")
+    if pre_technical is not None and pre_regime is not None:
+        f, n = await asyncio.gather(
+            flow.run(candidate, client),
+            news.run(candidate, client),
+        )
+        return {
+            "technical_result": pre_technical,
+            "flow_result": f,
+            "regime_result": pre_regime,
+            "news_result": n,
+        }
     t, f, r, n = await asyncio.gather(
         technical.run(candidate, client),
         flow.run(candidate, client),
@@ -330,6 +350,7 @@ async def evaluate_staged_async(
 
     vetoed: list[AgentDecision] = []
     stage2_candidates: list[SignalCandidate] = []
+    stage2_stage1_pairs: list[tuple[AgentResult, AgentResult]] = []
 
     for candidate, (tech_r, reg_r) in zip(candidates, stage1_pairs):
         if _is_both_bearish(tech_r, reg_r):
@@ -355,9 +376,49 @@ async def evaluate_staged_async(
             _persist(decision)
         else:
             stage2_candidates.append(candidate)
+            stage2_stage1_pairs.append((tech_r, reg_r))
 
-    stage2_decisions = await evaluate_async(stage2_candidates, client) if stage2_candidates else []
+    stage2_decisions = (
+        await _run_stage2(stage2_candidates, client, stage2_stage1_pairs)
+        if stage2_candidates else []
+    )
     return vetoed + stage2_decisions
+
+
+async def _run_stage2(
+    candidates: list[SignalCandidate],
+    client: FirmLLMProvider,
+    stage1_pairs: list[tuple[AgentResult, AgentResult]],
+) -> list[AgentDecision]:
+    """Stage 2 for Stage-1 survivors, reusing each candidate's Stage-1 (technical, regime)
+    AgentResult pair instead of recomputing them (2026-09-16 cost fix) -- see _run_analysts()'s
+    reuse check. `stage1_pairs` must be positionally aligned with `candidates`.
+
+    Deliberately NOT routed through the public evaluate_async() -- ADR-AF-004 freezes
+    evaluate_async()'s parameter list at (candidates, client); adding a stage1_pairs parameter
+    there would be a MAJOR version event. This private helper mirrors evaluate_async()'s own
+    graph-invocation shape exactly, so evaluate_async()/evaluate() themselves (exit-veto, tests,
+    any caller without a Stage 1) are completely untouched and still recompute all 4 analysts.
+    """
+    initial_states = [
+        AgentState(
+            candidate=c,
+            db_path="",
+            context={},
+            client=client,
+            technical_result=tech_r,
+            flow_result=None,
+            regime_result=reg_r,
+            news_result=None,
+            bull_result=None,
+            bear_result=None,
+            risk_result=None,
+            decision=None,
+        )
+        for c, (tech_r, reg_r) in zip(candidates, stage1_pairs)
+    ]
+    results = await asyncio.gather(*[_GRAPH.ainvoke(s) for s in initial_states])
+    return [r["decision"] for r in results]
 
 
 def evaluate_staged(

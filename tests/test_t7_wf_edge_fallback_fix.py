@@ -26,6 +26,7 @@ tests/test_t7_fail_closed_admission.py, proving the fix at the actual
 admission boundary. No production/mutable data touched: every fixture is
 tmp_path-scoped.
 """
+import datetime as _dt
 import sqlite3
 
 import numpy as np
@@ -49,6 +50,15 @@ def _fresh_cache():
 
 
 def _point_at(monkeypatch, path):
+    # Audit L-1's rule-parity gate is orthogonal to the D-031 admission
+    # semantics this file pins; declare parity so those semantics stay under
+    # test. tests/test_admission.py covers the parity gate itself.
+    import engine.rule_identity as _ri
+    monkeypatch.setattr(_ri, "live_gates", lambda strategy: ())
+    # Admission now owns the disabled_strategies check (single ordered
+    # authority); neutralise it for the same reason.
+    import scheduler.scanner as _sc
+    monkeypatch.setattr(_sc, "_get_disabled_strategies", lambda: set())
     monkeypatch.setattr(rl, "REGISTRY_PATH", path)
     rl._reset_cache()
 
@@ -109,7 +119,8 @@ def _insert_edge(db, ticker, strategy, expectancy_pct):
     conn = sqlite3.connect(db)
     conn.execute(
         "INSERT OR REPLACE INTO wf_edge VALUES (?,?,?,?,?,?,?,?,?,?)",
-        (ticker, strategy, expectancy_pct, 0.0, 55.0, 40.0, 0.4, 60, 15, "2026-08-20"),
+        (ticker, strategy, expectancy_pct, 0.0, 55.0, 40.0, 0.4, 60, 15,
+         _dt.date.today().isoformat()),
     )
     conn.commit()
     conn.close()

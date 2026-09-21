@@ -34,6 +34,37 @@ does, NR7_BULL's approval evidence (registry/manifests/NR7_BULL_v1.yaml,
 grandfathered via engine.registry_loader._LIFECYCLE_DEBT) may no longer
 describe the live execution model, which is exactly the situation T7
 invariant #7 exists to catch.
+
+--------------------------------------------------------------------------
+AMENDED 2026-09-02 — the "ALIGNED" finding above was WRONG, and this is the
+situation the file was written to catch.
+
+The original reasoning was that live and research agree because both price the
+entry at the same number: `df.iloc[-1]['open']`, "fixed from market open
+regardless of whether that bar itself is still forming". Stability of the VALUE
+was mistaken for equivalence of the EXECUTION MODEL. They are not the same
+thing. Research decides at the open and fills at that open. Live decides at
+10:05 / 11:05 / 14:35 and would have filled at a print hours in the past —
+unattainable, and systematically favourable, because NR7's trigger condition
+IS "the open gapped above the setup bar's high", so only the entries that had
+already moved the right way were ever taken.
+
+Two production changes follow (see docs/audit/SIGNAL_PROVENANCE_AUDIT_2026-09-02.md,
+findings L-1 and L-2), and BOTH change this function's source, hence the new
+pin below:
+
+  * `check_nr7_signal` now declares `details['price_basis'] = session_open` and
+    `details['entry_rule'] = NEXT_SESSION_OPEN`. The trigger comparison is
+    unchanged — the gap-up test is still the correct rule; only the honesty
+    about what that price IS has been added.
+  * `engine/entry_convention.py` refuses to fill any price on a retrospective
+    basis. A live scan now STAGES a signal for the next session's open, which
+    is the convention every walk-forward strategy function already fills on.
+
+The prior finding is preserved above verbatim rather than corrected in place:
+it is the record of what was believed when NR7_BULL's evidence was assessed.
+NR7_BULL is SHADOW as of 2026-08-19 (D-029) and authorises no capital, so no
+live position was ever opened under the mistaken model.
 """
 import hashlib
 import inspect
@@ -69,7 +100,7 @@ def test_nr7_backtest_source_matches_pinned_manifest_config_hash():
 # the research-side backtest function is covered by the manifest's
 # config_hash) -- pinned here as a plain constant, the same pattern this
 # codebase already uses for shrink-only debt allowlists.
-_NR7_LIVE_CHECKER_HASH = "f4cbc983deee1cf27450466470eeea09c47d7015e8a76ccc0aa8e070be2084ea"
+_NR7_LIVE_CHECKER_HASH = "3efae1a0615b4ce56ef550f65c4a1c343ed54813f2354eda1b8418ad75c42861"
 
 
 def test_nr7_live_checker_source_is_pinned():

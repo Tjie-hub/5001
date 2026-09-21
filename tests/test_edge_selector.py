@@ -1,9 +1,13 @@
 """Phase 2C — live selection gates on pooled wf_edge expectancy, not
 per-ticker wf_scores consistency (audit C-6, reframed by the 2026-07-04
 re-baseline that showed the consistency gate selects money-losers)."""
+import datetime as _dt
 import sqlite3
 
 import pytest
+
+# wf_edge staleness is now an admission gate (audit S-2); fixtures must be fresh.
+FRESH = _dt.date.today().isoformat()
 
 
 @pytest.fixture()
@@ -13,6 +17,16 @@ def edge_db(tmp_path, monkeypatch):
     # This suite tests the LEGACY (ungoverned) wf_edge path; isolate it from
     # the real Edge Registry so M1 governance doesn't apply here.
     monkeypatch.setattr(rl, "registry_governance", lambda s: None)
+    # This suite predates the 2026-09-02 audit's rule-parity gate (L-1) and is
+    # about the wf_edge/D-031 layer only. Declare parity so the layer under test
+    # is the one being exercised; the parity gate has its own tests in
+    # tests/test_admission.py.
+    import engine.rule_identity as ri
+    monkeypatch.setattr(ri, "live_gates", lambda strategy: ())
+    # Admission now applies disabled_strategies itself (it is the single ordered
+    # authority) rather than leaving it to the caller. Neutralise it here so this
+    # suite still tests the wf_edge layer; tests/test_admission.py covers the gate.
+    monkeypatch.setattr(scanner, "_get_disabled_strategies", lambda: set())
     db = str(tmp_path / "e.db")
     monkeypatch.setattr(scanner, "DB_PATH", db)
     conn = sqlite3.connect(db)
@@ -21,10 +35,10 @@ def edge_db(tmp_path, monkeypatch):
         win_rate REAL, consistency_pct REAL, sharpe REAL, n_trades INTEGER,
         windows_tested INTEGER, last_computed TEXT, PRIMARY KEY(ticker,strategy))""")
     rows = [
-        ("BBCA", "NR7 Breakout",  1.70, 0, 56.0, 40.0, 0.5, 1061, 15, "x"),
-        ("BBCA", "momentum",     -0.69, 0, 30.0, 20.0, -0.3, 500, 15, "x"),
-        ("BBCA", "vwap_reversion",-0.86, 0, 29.0, 30.0, -0.4, 800, 15, "x"),
-        ("BBCA", "Volume Profile POC", 0.9, 0, 51.0, 12.0, 0.2, 40, 15, "x"),
+        ("BBCA", "NR7 Breakout",  1.70, 0, 56.0, 40.0, 0.5, 1061, 15, FRESH),
+        ("BBCA", "momentum",     -0.69, 0, 30.0, 20.0, -0.3, 500, 15, FRESH),
+        ("BBCA", "vwap_reversion",-0.86, 0, 29.0, 30.0, -0.4, 800, 15, FRESH),
+        ("BBCA", "Volume Profile POC", 0.9, 0, 51.0, 12.0, 0.2, 40, 15, FRESH),
     ]
     conn.executemany("INSERT INTO wf_edge VALUES (?,?,?,?,?,?,?,?,?,?)", rows)
     conn.commit()
@@ -126,12 +140,12 @@ def test_adaptive_selector_uses_edge(edge_db, monkeypatch):
     monkeypatch.setattr(scanner, "_event_guard_active", lambda: (False, 1.0))
     conn = sqlite3.connect(edge_db)
     conn.execute("INSERT INTO wf_edge VALUES ('BBCA','Trend Following Breakout',"
-                 "1.2,0,55,40,0.4,60,15,'x')")
+                 "1.2,0,55,40,0.4,60,15,?)", (FRESH,))
     # Swing Trend has positive edge but is NOT in the BULL regime map — it must
     # be excluded, proving the PRIMARY regime-filtered block (not the unfiltered
     # fallback) drove selection.
     conn.execute("INSERT INTO wf_edge VALUES ('BBCA','Swing Trend',"
-                 "2.0,0,60,45,0.6,80,15,'x')")
+                 "2.0,0,60,45,0.6,80,15,?)", (FRESH,))
     conn.commit()
     conn.close()
     from scheduler.scanner import adaptive_strategy_selector
@@ -176,7 +190,17 @@ def test_momentum_scan_skips_without_registry_admission(monkeypatch):
     monkeypatch.setattr(cal, "is_trading_day", lambda: (True, "trading day"))
     monkeypatch.setattr(cal, "is_blackout_day", lambda: (False, ""))
     monkeypatch.setattr(scanner, "_get_disabled_strategies", lambda: set())   # NOT disabled
-    monkeypatch.setattr(rl, "registry_governance", lambda s: None)           # no admission
+    monkeypatch.setattr(rl, "registry_governance", lambda s: None)
+    # This suite predates the 2026-09-02 audit's rule-parity gate (L-1) and is
+    # about the wf_edge/D-031 layer only. Declare parity so the layer under test
+    # is the one being exercised; the parity gate has its own tests in
+    # tests/test_admission.py.
+    import engine.rule_identity as ri
+    monkeypatch.setattr(ri, "live_gates", lambda strategy: ())
+    # Admission now applies disabled_strategies itself (it is the single ordered
+    # authority) rather than leaving it to the caller. Neutralise it here so this
+    # suite still tests the wf_edge layer; tests/test_admission.py covers the gate.
+    monkeypatch.setattr(scanner, "_get_disabled_strategies", lambda: set())           # no admission
 
     def _must_not_reach(*a, **k):
         raise AssertionError("scan proceeded past the registry admission gate")

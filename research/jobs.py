@@ -264,3 +264,257 @@ def run_backtest_roller():
     except Exception as e:
         logging.error(f"[backtest_roller] {e}")
         print(f"[{now_str}] Backtest roller error: {e}")
+
+
+_WF_PARITY_LOCK_JOB = "refresh_wf_edge_rule"
+
+# Bounded-write tuning for the long parity study (audit P-1).
+_PARITY_WRITE_ATTEMPTS = 6      # ~1+2+4+8+16 = 31 s of backoff on top of busy_timeout
+_PARITY_WRITE_BACKOFF_S = 1.0
+
+
+def _is_lock_error(exc) -> bool:
+    return isinstance(exc, sqlite3.OperationalError) and (
+        "locked" in str(exc).lower() or "busy" in str(exc).lower())
+
+
+def _commit_with_retry(conn, write_fn, *, what: str,
+                       attempts: int = _PARITY_WRITE_ATTEMPTS):
+    """Run `write_fn(conn)` and commit as ONE transaction, retrying on lock.
+
+    Atomicity is per call: on any failure the transaction is rolled back, so a
+    ticker is either fully persisted (rows + checkpoint) or not at all. It is
+    never half-written, and never marked complete without its rows.
+
+    Raises the last error if every attempt is exhausted -- the caller decides
+    whether to abandon the ticker or the run.
+    """
+    import time as _time
+    delay = _PARITY_WRITE_BACKOFF_S
+    last = None
+    for attempt in range(1, attempts + 1):
+        try:
+            write_fn(conn)
+            conn.commit()
+            return True
+        except Exception as e:            # noqa: BLE001 - re-raised below
+            last = e
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            if not _is_lock_error(e) or attempt == attempts:
+                raise
+            print(f"[WF-PARITY] {what}: database locked "
+                  f"(attempt {attempt}/{attempts}), retrying in {delay:.0f}s",
+                  flush=True)
+            _time.sleep(delay)
+            delay *= 2
+    raise last
+
+
+def refresh_wf_edge_rule(tickers=None, progress_every=25,
+                         only_strategies=None, lock_job=None,
+                         restart=False, checkpoint_every=1):
+    """Walk-forward under the rule PRODUCTION ACTUALLY EXECUTES (finding L-1).
+
+    `refresh_wf_scores` runs STRATEGY_FUNCS bare. The live scanner runs the same
+    functions and then applies a weekly multi-timeframe trend gate to every
+    strategy outside `_WEEKLY_GATE_BYPASS`. So wf_edge is evidence about a rule
+    the engine does not execute, and engine/admission.py refuses to admit any
+    strategy on it.
+
+    This job closes that by MEASURING the production variant rather than by
+    removing the gate: it re-runs the identical walk-forward with
+    engine.filters_mtf.WEEKLY_MTF_FILTER applied at every candidate entry bar
+    (bar-for-bar equivalent to the live gate — proven in
+    tests/test_filters_mtf.py) and writes the result to `wf_edge_rule`, keyed by
+    the rule_id the evidence belongs to.
+
+    Deliberately NOT touched: `wf_scores` and `wf_edge`. They are the frozen
+    record of the bare-rule study and remain the valid evidence for the three
+    bypass strategies, whose live rule already equals the researched one.
+
+    Warm-up is raised to engine.filters_mtf.WARMUP_BARS (160) because the weekly
+    gate soft-passes until it has ~25 weeks of weekly history; a 60-bar tail
+    would silently measure "gate mostly off". The extra tail is prior data only —
+    trades are still filtered to entry_date >= test_start, so the OOS boundary is
+    identical to the bare run.
+    """
+    from research.walkforward_multi import run_walk_forward
+    from research.tracking import track_run
+    from engine.wf_edge import (aggregate_wf_windows, save_wf_edge_rule,
+                                ensure_wf_edge_rule_table, save_wf_rule_study,
+                                ensure_wf_parity_checkpoint_table,
+                                completed_parity_tickers, save_parity_checkpoint)
+    from data.db import LONG_WRITE_BUSY_TIMEOUT_MS
+    import hashlib as _hashlib
+    import json as _json
+    from engine.strategies import STRATEGY_FUNCS, _WEEKLY_GATE_BYPASS
+    from engine.filters_mtf import WEEKLY_MTF_FILTER, WARMUP_BARS, clear_mask_cache
+    from engine.rule_identity import live_rule_id, live_gates
+    from datetime import datetime as dt
+
+    # Only the gated strategies need re-measuring; the bypass three already have
+    # rule-valid evidence in wf_edge.
+    roster = {k: v for k, v in STRATEGY_FUNCS.items() if k not in _WEEKLY_GATE_BYPASS}
+    if only_strategies:
+        want = set(only_strategies)
+        roster = {k: v for k, v in roster.items() if k in want}
+        missing = want - set(roster)
+        if missing:
+            raise ValueError(f"not gated strategies (or unknown): {sorted(missing)}")
+    rule_ids = {k: live_rule_id(k) for k in roster}
+    gates = sorted({g for k in roster for g in live_gates(k)})
+
+    job = lock_job or _WF_PARITY_LOCK_JOB
+    if not _wf_lock_acquire(DB_PATH, job):
+        print(f"[WF-PARITY] another run is in progress ({job}) — skipped")
+        return
+    try:
+      with track_run("wf-parity", params={"final_only": True, "adjusted": True,
+                                          "gates": gates,
+                                          "warmup_bars": WARMUP_BARS,
+                                          "strategies": sorted(roster)}) as run:
+        ohlcv_map = _load_ohlcv_bulk(final_only=True)
+        all_tickers = sorted(ohlcv_map.keys())
+        if tickers:
+            wanted = {t.strip().upper() for t in tickers}
+            all_tickers = [t for t in all_tickers if t in wanted]
+        now_str = dt.now().strftime("%Y-%m-%d %H:%M")
+
+        # Identity of THIS study configuration. Resuming is only safe against an
+        # identical configuration; a different roster, rule set or warm-up must
+        # recompute rather than silently mix two studies' results.
+        config_hash = _hashlib.sha256(_json.dumps(
+            {"rule_ids": dict(sorted(rule_ids.items())),
+             "gates": gates, "warmup_bars": WARMUP_BARS},
+            sort_keys=True).encode()).hexdigest()[:16]
+
+        # One long-lived connection for the whole run, with a much larger
+        # busy_timeout than the interactive default (audit P-1).
+        conn = db_connect(DB_PATH, busy_timeout_ms=LONG_WRITE_BUSY_TIMEOUT_MS)
+        try:
+            ensure_wf_edge_rule_table(conn)
+            ensure_wf_parity_checkpoint_table(conn)
+            conn.commit()
+            done = set() if restart else completed_parity_tickers(conn, config_hash)
+            pending = [t for t in all_tickers if t not in done]
+
+            print(f"[WF-PARITY] {len(all_tickers)} tickers x {len(roster)} "
+                  f"strategies, gates={gates}, warmup={WARMUP_BARS}, "
+                  f"config={config_hash}")
+            if done:
+                print(f"[WF-PARITY] resuming: {len(done)} ticker(s) already "
+                      f"persisted under this configuration, {len(pending)} to go",
+                      flush=True)
+
+            state = {"updated": 0, "errors": 0, "written": 0, "abandoned": []}
+            batch = []                      # (ticker, aggregated_rows)
+
+            def _flush(rows_batch):
+                # Persist a batch: its wf_edge_rule rows AND its checkpoints in
+                # ONE transaction, so a crash can never mark a ticker done whose
+                # rows were not written.
+                if not rows_batch:
+                    return
+
+                def _write(c):
+                    n_written = 0
+                    for tk, agg_rows in rows_batch:
+                        n_written += save_wf_edge_rule(c, tk, rule_ids, agg_rows,
+                                                       now_str, run.run_id)
+                        save_parity_checkpoint(c, config_hash, tk,
+                                               rows_written=len(agg_rows),
+                                               completed_at=now_str,
+                                               run_id=run.run_id)
+                    _write.n = n_written
+
+                _commit_with_retry(conn, _write,
+                                   what=f"batch of {len(rows_batch)}")
+                state["written"] += getattr(_write, "n", 0)
+
+            for n, ticker in enumerate(pending, 1):
+                try:
+                    df = ohlcv_map.get(ticker)
+                    if df is None or len(df) < 60:
+                        # Nothing to score, but record the decision so a resume
+                        # does not reconsider it every time.
+                        batch.append((ticker, []))
+                    else:
+                        clear_mask_cache()
+                        result = run_walk_forward(df, filters=[WEEKLY_MTF_FILTER],
+                                                  warmup_bars=WARMUP_BARS,
+                                                  strategies=roster)
+                        if "error" in result:
+                            batch.append((ticker, []))
+                        else:
+                            batch.append((ticker, aggregate_wf_windows(
+                                result.get("ranked", []))))
+                            state["updated"] += 1
+                except Exception as e:
+                    state["errors"] += 1
+                    print(f"[WF-PARITY] {ticker} error: {e}")
+
+                if len(batch) >= max(1, int(checkpoint_every)):
+                    try:
+                        _flush(batch)
+                    except Exception as we:
+                        # This batch is lost, but every PREVIOUS batch is durably
+                        # committed and the run continues. Losing 229 minutes of
+                        # work to one lock is the failure mode being removed.
+                        state["abandoned"].extend(t for t, _ in batch)
+                        print(f"[WF-PARITY] batch write abandoned after retries: "
+                              f"{we}", flush=True)
+                    batch = []
+
+                if progress_every and n % progress_every == 0:
+                    print(f"[WF-PARITY] {n}/{len(pending)} pending "
+                          f"({state['updated']} scored, {state['errors']} errors, "
+                          f"{state['written']} rows)", flush=True)
+
+            try:
+                _flush(batch)
+            except Exception as we:
+                state["abandoned"].extend(t for t, _ in batch)
+                print(f"[WF-PARITY] final batch abandoned: {we}", flush=True)
+
+            # Study manifests reflect the FULL study under this configuration --
+            # counted from the persisted rows, so a resumed run reports totals
+            # across all of its parts rather than only this process's share.
+            scored_total = conn.execute(
+                "SELECT COUNT(*) FROM wf_parity_checkpoint WHERE config_hash=?",
+                (config_hash,)).fetchone()[0]
+
+            def _write_manifests(c):
+                for name, rid in rule_ids.items():
+                    n_rows = c.execute(
+                        "SELECT COUNT(*) FROM wf_edge_rule WHERE strategy=? "
+                        "AND rule_id=?", (name, rid)).fetchone()[0]
+                    save_wf_rule_study(c, name, rid, run_id=run.run_id,
+                                       tickers_scored=scored_total,
+                                       rows_written=n_rows,
+                                       warmup_bars=WARMUP_BARS, gates=gates,
+                                       last_computed=now_str)
+
+            _commit_with_retry(conn, _write_manifests, what="study manifests")
+
+            run.metrics.update({"tickers_total": len(all_tickers),
+                                "tickers_resumed": len(done),
+                                "tickers_scored": state["updated"],
+                                "tickers_persisted": scored_total,
+                                "rows_written": state["written"],
+                                "errors": state["errors"],
+                                "abandoned": state["abandoned"],
+                                "config_hash": config_hash,
+                                "rule_ids": rule_ids,
+                                "updated_at_stamp": now_str})
+            print(f"[WF-PARITY] wf_edge_rule updated: {state['written']} rows "
+                  f"this run ({state['updated']} scored, "
+                  f"{scored_total}/{len(all_tickers)} persisted overall, "
+                  f"{state['errors']} errors, "
+                  f"{len(state['abandoned'])} abandoned)")
+        finally:
+            conn.close()
+    finally:
+        _wf_lock_release(DB_PATH, job)

@@ -8,6 +8,7 @@ import numpy as np
 from dataclasses import dataclass
 from typing import Optional
 
+from engine import entry_convention as _EC
 from engine.indicators import (
     calc_atr,
     calc_delta,
@@ -970,8 +971,20 @@ def check_nr7_signal(df: pd.DataFrame) -> dict:
 
     has_signal = bool(is_nr7 and vol_ok and breakout and tp_ok and sl_ok)
 
+    # AUDIT L-2 (2026-09-02): `entry` is the session OPEN. It is the correct
+    # TRIGGER value -- the NR7 rule is "the open gapped above the setup bar's
+    # high" -- but it is NOT an executable fill for a scan running at 10:05 /
+    # 11:05 / 14:35, because that print is already in the past. Declaring the
+    # basis lets engine.entry_convention refuse to fill it; the executable price
+    # is the next session's open, which is what every walk-forward strategy
+    # function actually uses. `price` stays for backward compatibility with the
+    # ensure_entry_price contract, but callers MUST route it through
+    # engine.entry_convention.executable_entry() before opening anything.
     details = {
         'price':           entry,
+        'price_basis':     _EC.BASIS_SESSION_OPEN,
+        'entry_rule':      _EC.ENTRY_RULE_NEXT_OPEN,
+        'trigger_price':   entry,
         'sl':              round(sl),
         'tp':              round(tp),
         'nr7_range':       float(round(ranges.iloc[-2], 2)),
@@ -1209,10 +1222,14 @@ def check_orb_intraday_signal(ticker: str, opening_minutes: int = 30,
             WHERE ticker=? AND date < ?
             ORDER BY date DESC LIMIT ?
         """, (ticker, today, lookback_days)).fetchall()]
+        # Phase 9 fix (audit C-4): replay look-ahead. This query previously had
+        # NO time bound, so an as_of_time replay read the session's LAST tick —
+        # future information relative to the simulated clock. The clock bound
+        # is mandatory in both live and replay mode.
         latest_row = conn.execute("""
-            SELECT price FROM ticks WHERE ticker=? AND date=?
+            SELECT price FROM ticks WHERE ticker=? AND date=? AND time <= ?
             ORDER BY time DESC LIMIT 1
-        """, (ticker, today)).fetchone()
+        """, (ticker, today, now_time)).fetchone()
         conn.close()
     except Exception as e:
         return {'has_signal': False, 'reason': f'DB error: {e}', 'details': {}}

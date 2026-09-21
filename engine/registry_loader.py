@@ -157,6 +157,10 @@ def load_registry(path=None, engine_versions=None):
             except Exception:
                 manifest = {}
         # else: no manifest -> empty -> validate_evidence flags the missing receipt
+        # Attach the manifest so downstream admission can read its declared
+        # `rule_id:` (audit L-1) without re-opening the file. Read-only payload;
+        # nothing here changes loading or validation semantics.
+        e = dict(e, manifest_data=manifest)
         reasons = validate_evidence(e, manifest, _FORWARD_BAR)
         if reasons:
             key = (e['id'], e['version'])

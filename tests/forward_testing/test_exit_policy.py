@@ -9,7 +9,11 @@ def test_registry_returns_named_strategies_with_real_params():
     assert reg.get("momentum") == ExitPolicy(sl_mult=1.2, tp_mult=2.4, min_rr=2.0, trail_enable=True)
     assert reg.get("vwap_reversion") == ExitPolicy(sl_mult=0.8, tp_mult=1.6, min_rr=2.0)
     assert reg.get("conservative") == ExitPolicy(sl_mult=0.7, tp_mult=1.4, min_rr=2.0)
-    assert reg.get("Liquidity Sweep") == ExitPolicy(sl_mult=1.0, tp_mult=2.5, min_rr=2.5)
+    # hold_days=10 added 2026-09-03 (audit P-3): the policy previously had no
+    # trail and no time cap, so a shadow position between SL and TP never
+    # exited (JSMR ran 43 hold-days). Entry-side params are unchanged.
+    assert reg.get("Liquidity Sweep") == ExitPolicy(sl_mult=1.0, tp_mult=2.5,
+                                                    min_rr=2.5, hold_days=10)
 
 
 def test_registry_default_for_distribution_and_unknown():

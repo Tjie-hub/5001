@@ -1,5 +1,6 @@
 """_edge_selectable: registry-governed strategies use the frozen universe;
 ungoverned strategies keep the legacy live wf_edge query; parity guaranteed."""
+import datetime as _dt
 import sqlite3
 import pytest
 
@@ -7,15 +8,30 @@ import engine.registry_loader as rl
 from scheduler.scanner import _edge_selectable
 
 
+# Admission reads n_trades and last_computed as well (audit 2026-09-02: thin
+# samples and stale evidence are now gates), so the fixture carries the real
+# wf_edge shape rather than a three-column stub.
+_FRESH = _dt.date.today().isoformat()
+
+
 @pytest.fixture
-def wfdb(tmp_path):
+def wfdb(tmp_path, monkeypatch):
+    # Rule parity (audit L-1) has its own suite (tests/test_admission.py);
+    # declare parity here so this file keeps testing registry governance.
+    import engine.rule_identity as _ri
+    monkeypatch.setattr(_ri, "live_gates", lambda strategy: ())
+    import scheduler.scanner as _sc
+    monkeypatch.setattr(_sc, "_get_disabled_strategies", lambda: set())
     conn = sqlite3.connect(str(tmp_path / "wf.db"))
-    conn.execute("CREATE TABLE wf_edge (ticker TEXT, strategy TEXT, expectancy_pct REAL)")
-    conn.executemany("INSERT INTO wf_edge VALUES (?,?,?)", [
-        ("AAAA", "NR7 Breakout", 2.0),
-        ("BBBB", "NR7 Breakout", -1.0),          # negative → not selectable
-        ("CCCC", "NR7 Breakout", 3.0),           # POSITIVE but outside frozen set
-        ("AAAA", "momentum", 1.0),               # ungoverned strategy
+    conn.execute(
+        "CREATE TABLE wf_edge (ticker TEXT, strategy TEXT, expectancy_pct REAL,"
+        " expectancy_rp REAL, win_rate REAL, consistency_pct REAL, sharpe REAL,"
+        " n_trades INTEGER, windows_tested INTEGER, last_computed TEXT)")
+    conn.executemany("INSERT INTO wf_edge VALUES (?,?,?,0,55,40,0.4,60,15,?)", [
+        ("AAAA", "NR7 Breakout", 2.0, _FRESH),
+        ("BBBB", "NR7 Breakout", -1.0, _FRESH),  # negative → not selectable
+        ("CCCC", "NR7 Breakout", 3.0, _FRESH),   # POSITIVE but outside frozen set
+        ("AAAA", "momentum", 1.0, _FRESH),       # ungoverned strategy
     ])
     return conn
 
