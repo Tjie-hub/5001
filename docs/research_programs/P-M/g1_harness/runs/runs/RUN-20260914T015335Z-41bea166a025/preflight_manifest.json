@@ -1,0 +1,35 @@
+{
+ "artifact": "RUN_PREFLIGHT_MANIFEST",
+ "config": {
+  "path": "/home/tjiesar/10 Projects/idx-walkforward-5001/docs/research_programs/P-M/g1_harness/g1_config.json",
+  "sha256": "00a2e598516920d653daa59fdadd9cc1b41fce2b77a4d6bfb0bf449fe4a4af11"
+ },
+ "created_utc": "2026-09-14T01:53:35.952284+00:00",
+ "extra_digest_files": {},
+ "freeze_manifest": {
+  "path": "/home/tjiesar/10 Projects/idx-walkforward-5001/docs/research_programs/P-M/dataset_b/artifacts/DATASET_B_FREEZE_MANIFEST_v1.json",
+  "sha256": "95f2c998760ba6f2e687b091950315ce45370854226f419ef768f2b4bcc17af5",
+  "store_sha256_pin": "21661f033145ef90657f8d133ced62a3cd4ba85cdaa7ece2a4b19f4940b755a8"
+ },
+ "gates": {},
+ "git_state": {
+  "available": true,
+  "commit": "bf9f8ecd71e0e89341604771465f93b17e33f850",
+  "dirty": true,
+  "dirty_lines": 476
+ },
+ "label": "C7",
+ "preflight_digest": "41bea166a025db482eee6d7380abe5f102870ec513d7be49afaae99019f21ac8",
+ "registrations": {
+  "C7_REGISTRATION_v1_2026-09-11.md": "27c707efbcb7614bbc67772aa479c3e4f4edf622966dec706ad28afeb336e73d"
+ },
+ "run_id": "RUN-20260914T015335Z-41bea166a025",
+ "source_files": {
+  "/home/tjiesar/10 Projects/idx-walkforward-5001/docs/research_programs/P-M/dataset_b/foundation.py": "e427cc482fa1e00cfda830eb5a6d84eda3cc583dde0a81fc7c1d90c47b7eab29",
+  "/home/tjiesar/10 Projects/idx-walkforward-5001/docs/research_programs/P-M/g1_harness/g1_harness.py": "139663aac6552c4cc6f700c64a845abee970dc6f5714d1bcaf648ee0112133ff"
+ },
+ "store": {
+  "path": "/home/tjiesar/10 Projects/idx-walkforward-5001/docs/research_programs/P-M/dataset_b/store/DATASET_B_BROKER_FLOW_STORE_v1.sqlite",
+  "sha256": "21661f033145ef90657f8d133ced62a3cd4ba85cdaa7ece2a4b19f4940b755a8"
+ }
+}

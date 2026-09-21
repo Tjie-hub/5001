@@ -17,5 +17,5 @@
   "inference": "Daily spread series + Newey-West(k) t (BFI-001 inherited convention = date clustering). If the authoritative preregistration specifies a different (or additional) inference, THAT config replaces this file's defaults; this harness does not substitute methods on its own."
  },
  "freq_resolution": "withdrawn",
- "c7_registered": false
+ "c7_registered": true
 }

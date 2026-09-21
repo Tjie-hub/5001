@@ -1,0 +1,1088 @@
+{
+ "artifact": "FULL_HISTORICAL_EMPIRICAL_AUDIT_LEDGER",
+ "version": 1,
+ "date": "2026-09-11",
+ "authority": "point-in-time forensic audit record; not canonical; makes no governance decision",
+ "companion_report": "docs/research_programs/P-M/g1_harness/FULL_HISTORICAL_EMPIRICAL_AUDIT_2026-09-11.md",
+ "method": {
+  "mode": "read-only",
+  "reruns": 0,
+  "new_hypotheses_executed": 0,
+  "computed_by_auditor": "predictor-side state/identity diagnostics only",
+  "not_computed": [
+   "forward returns",
+   "theta",
+   "t-statistics",
+   "p-values",
+   "verdicts"
+  ]
+ },
+ "central_finding": {
+  "id": "NET-IDENTITY",
+  "statement": "Total buy value/lots identically equals total sell value/lots per stock per day (exchange identity). Any predictor of the form net/gross over ALL brokers is ~0 by construction: exactly 0 at full population (Dataset B), ~0.2% of gross under top-25 truncation (Dataset A).",
+  "measurements": [
+   {
+    "dataset": "Dataset B (broker_flow_b, full population)",
+    "ticker_days": 30624,
+    "abs_net_over_gross": {
+     "p50": 0.0,
+     "p90": 0.0,
+     "p99": 0.0,
+     "max": 0.0
+    },
+    "exactly_zero_pct": 100.0
+   },
+   {
+    "dataset": "Dataset A (production broker_flow, 2025-01-02..2026-08-27)",
+    "ticker_days": 97762,
+    "sum_lot_exactly_zero_pct": 68.1,
+    "abs_net_over_gross": {
+     "p50": 0.0,
+     "p90": 0.002084,
+     "p99": 0.01492,
+     "max": 0.333333
+    },
+    "share_below_1pct": 97.86
+   }
+  ],
+  "affected_registered_primaries": [
+   "HYP-PM-0003",
+   "BFI-001 PRIMARY_bfi_k5 (+4 F1 horizons, F3_lots)",
+   "G1 C2"
+  ],
+  "caught_once": "family map 2026-09-10 section 3 blocked family G on exactly this basis"
+ },
+ "tests": [
+  {
+   "id": "HYP-PM-0001",
+   "name": "inventory-imbalance mean reversion (M1.1/I5)",
+   "registered": "2026-07-17T07:15:03Z",
+   "registration_sha256": "540c2d52dd8751dbda2a6b39ea7935860e12078c666a81e2156ff199ee885199",
+   "executed": "2026-07-18T01:09:37Z",
+   "artifacts": [
+    "docs/research_programs/P-M/experiments/EXP-PM-0001/"
+   ],
+   "dataset": "stockbit_flow_bars (vendor aggregate)",
+   "period": [
+    "2025-07-07",
+    "2026-07-17"
+   ],
+   "sample": {
+    "rows": 12956970,
+    "analysis_rows": 12642224,
+    "formation_days": 233,
+    "tickers": 867
+   },
+   "primary_endpoint": "signed reversal k=15",
+   "result": {
+    "mean": -7.841462194218748e-06,
+    "t": -0.3517,
+    "net_pct": -0.6008
+   },
+   "family": "{I5,I6,I7,I12} member 1",
+   "registration": "REGISTERED",
+   "data": "OK",
+   "implementation": "OK",
+   "inference": "OK",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "VALID_NOT_CONFIRMED",
+   "repair": null,
+   "consumes_slot": true,
+   "supports_claim": "bounded: no k=15 reversal in this window",
+   "challenge": "in-sample only, 233 days; but point estimate ~0 with absent predicted sign, so informative"
+  },
+  {
+   "id": "HYP-PM-0003",
+   "name": "adverse-selection permanence (M2.1/I7)",
+   "registered": "2026-09-09T09:22:00Z",
+   "registration_sha256": "a2db92047e5e23f8c0bb8949797e7750706b6bfe33fa744509ef6a782f6f53f5",
+   "executed": "2026-09-09T09:44:17Z",
+   "registration_to_execution_minutes": 22,
+   "artifacts": [
+    "docs/research_programs/P-M/experiments/EXP-PM-0003/"
+   ],
+   "dataset": "Dataset A broker_flow (frozen 329b22e4)",
+   "period": [
+    "2025-01-02",
+    "2026-08-27"
+   ],
+   "sample": {
+    "rows": 1222713,
+    "tickers": 79,
+    "observations": 20604,
+    "nonzero": 20509
+   },
+   "primary_endpoint": "sign(SUM(lot)) * fwd_ret, k=7, bootstrap_ci",
+   "result": {
+    "point": 0.0005382304376723873,
+    "ci": [
+     -0.000656,
+     0.001768
+    ],
+    "net_pct": -0.5462
+   },
+   "family": "{I5,I6,I7,I12} member 2",
+   "registration": "REGISTERED",
+   "data": "FAIL",
+   "implementation": "OK",
+   "inference": "UNDERMINED",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "INVALID_DATA_FAILURE",
+   "recorded_as": "FAILED F2 (FAIL-PM-0003) - MIS-CODED",
+   "evidence": "predictor SUM(lot) is zero on 68.10% of ticker-days and <1% of gross on 97.86% [measured]; family map 2026-09-10 calls the quantity 'unmeasurable' on this table",
+   "secondary_defects": [
+    "RAJA split contamination of k=7 (no Dataset A quarantine)",
+    "power: realistic MDE ~54.6% annualized gross alpha at k=7 - could not have refuted"
+   ],
+   "repair": null,
+   "repair_reason": "signed market-wide net is unobservable on a top-25 table; identically zero on Dataset B; vendor net is a different instrument",
+   "consumes_slot": true,
+   "supports_claim": false
+  },
+  {
+   "id": "BFI-001-PRIMARY",
+   "name": "Broker Flow Imbalance baseline, BFI_broad=NV/GV k=5",
+   "registered": "2026-09-03 10:58:54 (research.db hypotheses: BROKER-001, PREREGISTERED)",
+   "registration_sha256": "91c0eb9a4a42630f5e74939f914a7a6da97c1aa90cdcafe6bc1ed66b187e2fdc",
+   "registration_hash_reverified_by_auditor": true,
+   "executed": "2026-09-03",
+   "artifacts": [
+    "/home/tjiesar/ZCodeProject/bfi001_broker_flow/"
+   ],
+   "dataset": "production broker_flow",
+   "period": [
+    "2025-01-02",
+    "2026-09-03"
+   ],
+   "sample": {
+    "rows": 2955547,
+    "formation_dates": 350,
+    "median_names_per_day": 74
+   },
+   "primary_endpoint": "BFI_broad = NV/GV, all brokers, k=5",
+   "result": {
+    "mean_bp_step": 1.3627,
+    "nw_t": 0.0473,
+    "p": 0.9623,
+    "holm_p": 1.0
+   },
+   "family": "14 prespecified cells, Holm alpha=0.05",
+   "registration": "REGISTERED",
+   "data": "FAIL",
+   "implementation": "OK",
+   "inference": "FAMILY_INFLATED",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "INVALID_DATA_FAILURE",
+   "evidence": "NV/GV over all brokers is the net identity; t=+0.047 is the signature of a zero-variation predictor; F3_lots (lot version) returned NaN",
+   "repair": null,
+   "consumes_slot": "not counted in any markdown registry",
+   "supports_claim": false,
+   "note": "registered in data/research.db::hypotheses only; absent from HYPOTHESIS_REGISTRY.md"
+  },
+  {
+   "id": "BFI-001-F1",
+   "name": "BFI_broad at k=1,2,10,20",
+   "classification": "INVALID_DATA_FAILURE",
+   "registration": "REGISTERED",
+   "data": "FAIL",
+   "implementation": "OK",
+   "inference": "n/a",
+   "provenance": "RECONSTRUCTABLE",
+   "results": [
+    {
+     "k": 1,
+     "t": -1.3359,
+     "p": 0.1816
+    },
+    {
+     "k": 2,
+     "t": -1.7337,
+     "p": 0.083,
+     "holm_p": 0.7468
+    },
+    {
+     "k": 10,
+     "t": 0.5013,
+     "p": 0.6162
+    },
+    {
+     "k": 20,
+     "t": 0.5641,
+     "p": 0.5727
+    }
+   ],
+   "evidence": "same degenerate predictor as the primary, four horizons",
+   "repair": null
+  },
+  {
+   "id": "BFI-001-F3_lots",
+   "name": "BFI_lots = NVL/GVL k=5",
+   "classification": "INVALID_DATA_FAILURE",
+   "registration": "REGISTERED",
+   "data": "FAIL",
+   "implementation": "NaN",
+   "inference": "n/a",
+   "provenance": "RECONSTRUCTABLE",
+   "result": {
+    "mean_bp_step": null,
+    "nw_t": null
+   },
+   "repair": null
+  },
+  {
+   "id": "BFI-001-LIVE-CELLS",
+   "name": "F2_asing/lokal/pemerintah, F3_n1, F4_binf/conc/breadth",
+   "classification": "VALID_NOT_CONFIRMED",
+   "registration": "REGISTERED",
+   "data": "OK",
+   "implementation": "OK",
+   "inference": "FAMILY_INFLATED_CONSERVATIVE",
+   "provenance": "RECONSTRUCTABLE",
+   "results": [
+    {
+     "cell": "F2_asing_k5",
+     "t": 0.3695,
+     "p": 0.7118,
+     "holm_p": 1.0
+    },
+    {
+     "cell": "F2_lokal_k5",
+     "t": 2.434,
+     "p": 0.0149,
+     "holm_p": 0.1643
+    },
+    {
+     "cell": "F2_pemerintah_k5",
+     "t": 0.69,
+     "p": 0.4901,
+     "holm_p": 1.0
+    },
+    {
+     "cell": "F3_n1_k5",
+     "t": -1.019,
+     "p": 0.3081,
+     "holm_p": 1.0
+    },
+    {
+     "cell": "F4_binf_k5",
+     "t": 0.086,
+     "p": 0.932,
+     "holm_p": 1.0
+    },
+    {
+     "cell": "F4_conc_k5",
+     "t": -2.648,
+     "p": 0.008,
+     "holm_p": 0.097
+    },
+    {
+     "cell": "F4_breadth_k5",
+     "t": 2.409,
+     "p": 0.016,
+     "holm_p": 0.1643
+    }
+   ],
+   "repair": "reporting fix only: restate Holm over the 8 non-degenerate cells",
+   "repair_changes_outcome": false,
+   "repair_arithmetic": "hand-computed from published p-values, no rerun: m=8 gives F4_conc 8*0.008=0.064, then F2_lokal max(0.064, 7*0.0149)=0.104; no cell reaches 0.05",
+   "challenge": "F4_conc t=-2.65 is carried forward as C6's prior WITHOUT disclosing Holm p=0.097; F4_breadth is the same surface as G1 C3, prior undisclosed",
+   "inference_anomaly": "R3 label permutation null centred at NW-t=+1.377 instead of 0 (observed 0.0857, perm_p 0.97) - unexplained; same estimator family used by G1 and proposed for C7"
+  },
+  {
+   "id": "G1-C1a",
+   "name": "frozen-species conditional composition contrast",
+   "registered": "2026-09-11 (replacement registration)",
+   "executed": "2026-09-11T02:31:18Z",
+   "artifacts": [
+    "docs/research_programs/P-M/g1_harness/G1_REAL_OUTPUT_RUN1_2026-09-11.json"
+   ],
+   "registration": "WITHDRAWN",
+   "data": "OK",
+   "implementation": "BREACH",
+   "inference": "n/a",
+   "provenance": "BROKEN",
+   "classification": "INVALID_IMPLEMENTATION_FAILURE",
+   "consumes_slot": false,
+   "supports_claim": false,
+   "evidence": "cell_c1a() called unconditionally at g1_harness.py:821 despite registration section 1 'never executes ... no numbers'; theta_t (152/148/142) and detail (190/185/179) preserved; theta recoverable from un-nulled theta_net_cost_floor",
+   "containment": "legs are a median of 1 name; 97% of bucket-cells have a singleton side; 148 of 375 dates",
+   "repair": null,
+   "repair_reason": "a breach cannot be undone, only quarantined"
+  },
+  {
+   "id": "G1-C1b",
+   "name": "rank-species robustness variant",
+   "registration": "WITHDRAWN",
+   "data": "n/a",
+   "implementation": "NEVER_BUILT",
+   "inference": "n/a",
+   "provenance": "BROKEN",
+   "classification": "WITHDRAWN",
+   "evidence": "run_g1 appends only C1a/C2/C3 (lines 821-823); zero C1b cells exist in code or output",
+   "note": "G1_FINAL_EXECUTION_REPORT section D claims 'all six C1a/C1b cells' - three exist",
+   "consumes_slot": false,
+   "supports_claim": false,
+   "repair": null
+  },
+  {
+   "id": "G1-C2",
+   "name": "conditional conduit disagreement",
+   "registered": "2026-09-11",
+   "executed": "2026-09-11T02:31:18Z",
+   "registration": "AMBIGUOUS",
+   "data": "FAIL",
+   "implementation": "FAIL",
+   "inference": "n/a",
+   "provenance": "BROKEN",
+   "classification": "INVALID_SPECIFICATION_FAILURE",
+   "result": {
+    "k": 5,
+    "theta_bp": 4.9,
+    "nw_t": 0.5482,
+    "p": 0.5835,
+    "holm_p": 1.0,
+    "n_days": 359
+   },
+   "defects": [
+    {
+     "id": "C2-1",
+     "type": "tautology",
+     "evidence": "net identical 0 on 100.00% of 30,624 Dataset B ticker-days [measured]; sign(for_net)!=sign(loc_net) holds on 30,624/30,624"
+    },
+    {
+     "id": "C2-2",
+     "type": "descriptive_gate != execution_gate",
+     "descriptive": "abs(net) > 0.15*gross (12_discovery_structures.py:122)",
+     "executed": "gross-participation >= 0.15 (g1_harness.py:478-480)",
+     "incidence_dataset_b": {
+      "executed_pct": 98.5,
+      "descriptive_pct": 46.5,
+      "descriptive_lokal_only_pct": 26.6
+     },
+     "dataset_a_reference_pct": 30.2
+    },
+    {
+     "id": "C2-3",
+     "type": "Dataset-A-derived prevalence applied to Dataset-B execution",
+     "evidence": "discovery_structures.json class_disagreement.share_of_days=0.30207, n_ticker_days=103389, generator reads production broker_flow"
+    }
+   ],
+   "repair": null,
+   "consumes_slot": "owner determination",
+   "supports_claim": false
+  },
+  {
+   "id": "G1-C3",
+   "name": "breadth surprise state contrast",
+   "registered": "2026-09-11",
+   "executed": "2026-09-11T02:31:18Z",
+   "registration": "AMENDED",
+   "data": "OK",
+   "implementation": "WINDOW_DEVIATION",
+   "inference": "OK",
+   "provenance": "BROKEN",
+   "classification": "VALID_NOT_CONFIRMED",
+   "result": {
+    "k": 5,
+    "theta_bp": 5.8,
+    "nw_t": 0.3229,
+    "p": 0.7468,
+    "holm_p": 1.0,
+    "n_days": 329,
+    "k3": {
+     "theta_bp": 16.0,
+     "t": 1.1127
+    },
+    "k10": {
+     "theta_bp": -7.3,
+     "t": -0.2607
+    },
+    "signs": "+/+/-"
+   },
+   "state_diagnostics": {
+    "broad_pct": 18.9,
+    "narrow_pct": 20.5,
+    "dates_both_legs": 356,
+    "broad_leg_min_med_max": [
+     2,
+     14,
+     35
+    ],
+    "narrow_leg_min_med_max": [
+     2,
+     16,
+     46
+    ],
+    "singleton_date_pct": 0
+   },
+   "deviations": [
+    "memo specifies 60-obs trailing median; implementation uses expanding median (min 30); BREADTH_SURPRISE_WINDOW=60 is dead code",
+    "memo falsification clause 'adds nothing after NF and ST controls' - NF half was executable and not run"
+   ],
+   "consumes_slot": true,
+   "supports_claim": "bounded: the breadth-surprise contrast AS REGISTERED showed no confirmable effect at k in {3,5,10} on Dataset B",
+   "does_not_support": "the breadth-surprise mechanism is refuted",
+   "cross_test": "BFI-001 F4_breadth_k5 tested the same surface 5 months earlier: t=+2.409, raw p=0.016, Holm p=0.164; prior undisclosed in the BFI-002 memo",
+   "repair": null
+  },
+  {
+   "id": "G1-OVERALL",
+   "classification": "PARTIAL_NOT_A_CLEAN_FAIL",
+   "reason": "one valid non-confirmation (C3), one invalid arm (C2), one executed in breach (C1a), one never implemented (C1b); a family-level FAIL asserts the family was tested"
+  },
+  {
+   "id": "LIT-001",
+   "name": "aggregate OFI next-day reversal",
+   "registration": "REGISTERED",
+   "artifacts": [
+    "/home/tjiesar/ZCodeProject/lit001_ofi_reversal/"
+   ],
+   "dataset": "stockbit_flow (vendor aggregate)",
+   "period": [
+    "2025-01-02",
+    "2026-08-28"
+   ],
+   "sample": {
+    "formation_days": 383,
+    "stock_days": 56735
+   },
+   "primary_endpoint": "long bottom-OFI decile / short top-OFI decile, Open(t+1) entry",
+   "result": {
+    "bp_per_day": -3.59,
+    "t": -0.51,
+    "nw_t": -0.54,
+    "gross_sharpe": -0.41,
+    "cumulative_pct": -16.0,
+    "break_even_cost_bp_per_side": -1.8
+   },
+   "data": "OK",
+   "implementation": "OK",
+   "inference": "OK",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "VALID_NOT_CONFIRMED",
+   "consumes_slot": true,
+   "repair": null,
+   "exemplary": "2-day cell +49.9 bp/step t=+2.74 was recorded as a LEAD (FUTURE EXPERIMENT - NOT TESTED), not a finding, with family-corrected p 0.04-0.10 disclosed",
+   "incidental_finding": "Fama-MacBeth CONTINUATION coefficient +0.00068/unit rank, t=+3.84, NW +3.60, survives every prespecified control individually - opposite sign to the hypothesis, therefore exploratory"
+  },
+  {
+   "id": "LIT-002",
+   "name": "OOS confirmation of the LIT-001 2-day reversal",
+   "registration": "REGISTERED",
+   "registration_sha256": "c2b03399f8a7ab8a6dcde389f2dfcefdd7352c1a46928f3b1f80aa524b699376",
+   "prereg_hash_verified": true,
+   "executed": "2026-08-30T07:26:00",
+   "artifacts": [
+    "/home/tjiesar/ZCodeProject/lit002_ofi_reversal_oos/"
+   ],
+   "frozen_spec": {
+    "oos_rule": "formation dates t > 2026-08-28",
+    "k": 2,
+    "n_req_steps": 201,
+    "nw_lag": 5,
+    "base_cost_bp_per_side": 15,
+    "top_n": 500,
+    "price_floor": 100.0
+   },
+   "result": {
+    "evaluable_oos_steps": 0,
+    "gate": 201,
+    "gate_pass": false,
+    "outcome_statistics_computed": false,
+    "verdict": "INCONCLUSIVE"
+   },
+   "data": "COVERAGE_ZERO",
+   "implementation": "OK",
+   "inference": "NOT_COMPUTED",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "UNRESOLVABLE_INSUFFICIENT_EVIDENCE",
+   "design_defect": "the frozen OOS boundary 2026-08-28 equals the dataset max date (flow_max_date and ohlcv_max_date both 2026-08-28) - the test was structurally impossible at freeze time",
+   "exemplary": "coverage gate fired and NO outcome statistic was computed for any date; series CSV contains headers only",
+   "repair": {
+    "possible": true,
+    "action": "re-execute the identical frozen specification once >=201 evaluable OOS steps exist (~mid-2027)",
+    "requires_new_registration": false,
+    "original_data_sufficient": "yes, plus elapsed time",
+    "result_would_be": "CONFIRMATORY",
+    "label": "REPRODUCTION"
+   }
+  },
+  {
+   "id": "H1",
+   "name": "foreign flow cross-sectional",
+   "registration": "UNREGISTERED",
+   "artifacts": [
+    "/home/tjiesar/ZCodeProject/h1_foreign_flow/"
+   ],
+   "sample": {
+    "dates": 369
+   },
+   "result": {
+    "z_flow5_A_t": -0.4648,
+    "z_flow5_Dfull_t": -0.4795,
+    "r2_delta_D_vs_BC": 0.0095,
+    "spread_5m1_t": -1.0881,
+    "ic_flow_t": -1.4558
+   },
+   "data": "OK",
+   "implementation": "OK",
+   "inference": "OK",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "UNREGISTERED_EXPLORATORY",
+   "consumes_slot": false,
+   "supports_claim": false,
+   "repair": null
+  },
+  {
+   "id": "H6",
+   "name": "extreme foreign-flow event reversal",
+   "registration": "UNREGISTERED_IN_CORPUS",
+   "artifacts": [
+    "/home/tjiesar/ZCodeProject/h6_foreign_flow/"
+   ],
+   "executed": "2026-08-29T14:27:38",
+   "primary_endpoint": "mean signed CAR10 from close T0+1, market-adjusted vs equal-weight U1, clustered by anchor date",
+   "result": {
+    "all": {
+     "n_events": 1514,
+     "n_dates": 350,
+     "mean": 0.00755991604525395,
+     "t_cluster": 2.7706,
+     "ci95": [
+      0.0022117,
+      0.0129081
+     ],
+     "hit_rate": 0.5244,
+     "n_buy": 553,
+     "mean_car_buy_leg": -0.0102247,
+     "n_sell": 961,
+     "mean_car_sell_leg": 0.0060265
+    },
+    "in_sample": {
+     "n_events": 1063,
+     "t_cluster": 2.1762
+    },
+    "holdout": {
+     "n_events": 451,
+     "t_cluster": 1.7127,
+     "ci95": [
+      -0.0012894,
+      0.0191528
+     ]
+    }
+   },
+   "data": "OK",
+   "implementation": "OK",
+   "inference": "CLUSTER_BY_DATE",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "UNREGISTERED_EXPLORATORY",
+   "consumes_slot": false,
+   "supports_claim": false,
+   "challenge": [
+    "holdout CI includes zero (t=1.71)",
+    "absent from every corpus registry; consumed no multiplicity slot",
+    "+0.756% gross over a 10-day hold against a 0.60% RT floor leaves ~+0.16%"
+   ],
+   "status": "the only surviving nominal positive with a non-degenerate predictor; candidate for FUTURE separate registration only"
+  },
+  {
+   "id": "HLIQ",
+   "name": "LQ45 liquidity shock event study",
+   "registration": "REGISTERED",
+   "registration_sha256": "a87b5721610aecf9e1ea22d8ad3ad918b6d31f7f1613eb08630b39c082e65bb4",
+   "dataset_sha256": "30d2c2874bc722092e8aea43982074b0bb16d302e448441d0c3755c210be4ae4",
+   "artifacts": [
+    "/home/tjiesar/ZCodeProject/hliq_liquidity_shock/"
+   ],
+   "result": {
+    "n": 80,
+    "mean": -0.0178506,
+    "t": -1.8466,
+    "p_one": 0.9562,
+    "ci95": [
+     -0.0387347,
+     0.0030334
+    ],
+    "clusters": 14,
+    "placebo_T-20_T-11": {
+     "t": -0.0602,
+     "p_one": 0.5235
+    }
+   },
+   "data": "OK",
+   "implementation": "OK",
+   "inference": "CAVEAT_G14",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "VALID_NOT_CONFIRMED",
+   "consumes_slot": true,
+   "repair": null,
+   "inference_defect": "cluster-robust SEs on G=14 clusters are materially biased; needs df=G-1 at minimum or wild-cluster bootstrap; direction is permissive so it does not rescue the null"
+  },
+  {
+   "id": "HYP-PA-0001",
+   "name": "auction dislocation reversal (I2/I3/I8)",
+   "registration": "REGISTERED",
+   "registration_sha256_prefix": "3692e69a",
+   "executed": "2026-08-19T07:09:22Z",
+   "artifacts": [
+    "docs/research_programs/P-A/experiments/EXP-PA-0001/"
+   ],
+   "spec": {
+    "k_reversal_td": 5,
+    "estimation_window_td": 230,
+    "estimation_gap_td": 20,
+    "market_index": "IHSG",
+    "mde_stat_raw": 0.0497,
+    "mde_stat_haircut": 0.0422
+   },
+   "sample": {
+    "raw_csv_rows": 210,
+    "distinct_events": 192,
+    "measured": 180,
+    "excluded": 12,
+    "add": 82,
+    "delete": 98
+   },
+   "result": {
+    "test1_pass": false,
+    "test2_pass": false,
+    "verdict": "REFUTED",
+    "proposed_f_mode": "F2"
+   },
+   "data": "OK",
+   "implementation": "OK",
+   "inference": "OK",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "VALID_NOT_CONFIRMED",
+   "consumes_slot": true,
+   "repair": null,
+   "good_practice": "resolved_spec_ambiguities documents six implementation choices explicitly; cr1_dof uses df=G-1 (the correction HLIQ omitted)"
+  },
+  {
+   "id": "S2-PM-0004",
+   "name": "I3 open-integrity census (G-1 gate)",
+   "registration": "REGISTERED",
+   "registration_sha256": "de2b728834464386199dcae41800bde1759dec96622a1ac925f37882b204031a",
+   "registration_hash_match": "EXACT",
+   "executed": "2026-08-25",
+   "artifacts": [
+    "docs/research_programs/P-M/S2-PM-0004_G1_RESULT.md"
+   ],
+   "primary_endpoint": "rule F2: open==prev_close rate, liquid stratum >= 50%",
+   "result": {
+    "observed_pct": 51.94,
+    "threshold_pct": 50.0,
+    "rule_fired": true,
+    "stop_rule_engaged": true
+   },
+   "data": "OK",
+   "implementation": "OK",
+   "inference": "n/a_census",
+   "provenance": "IMMUTABLE",
+   "classification": "VALID_CONFIRMED",
+   "consumes_slot": false,
+   "note": "a data-integrity census, not a return test; its design worked exactly as specified; third distinct meaning of 'G1' in the corpus",
+   "repair": null
+  },
+  {
+   "id": "NR7",
+   "name": "NR7 Breakout / Program P0 edge claim",
+   "registration": "GATEKEEPER_REGISTERED",
+   "artifacts": [
+    "data/research.db::gate_decisions",
+    "data/research.db::failure_registry id 9681dbdc",
+    "data/reports/nr7_falsification_2026-09-03.md",
+    "registry/edge_registry.yaml"
+   ],
+   "gatekeeper_decisions": [
+    {
+     "decided_at": "2026-07-12 04:18:49",
+     "state": "REJECT",
+     "failing_stage": "walk_forward"
+    },
+    {
+     "decided_at": "2026-07-12 05:04:20",
+     "state": "REJECT",
+     "failing_stage": "walk_forward"
+    },
+    {
+     "decided_at": "2026-07-12 05:25:39",
+     "state": "REJECT",
+     "failing_stage": "walk_forward"
+    },
+    {
+     "decided_at": "2026-07-12 07:13:41",
+     "state": "REJECT",
+     "failing_stage": "walk_forward"
+    },
+    {
+     "decided_at": "2026-07-14 13:51:55",
+     "state": "REJECT",
+     "failing_stage": "walk_forward"
+    },
+    {
+     "decided_at": "2026-09-03 12:37:41",
+     "state": "REJECT",
+     "failing_stage": "walk_forward"
+    }
+   ],
+   "promote_decisions_ever": 0,
+   "falsification": {
+    "date": "2026-09-03",
+    "persisted_wf_edge_pp": 1.6409,
+    "cells": 54,
+    "pooled_oos": {
+     "trades": 6183,
+     "tickers": 858,
+     "expectancy_pct_per_trade": -0.1787,
+     "bootstrap_ci95": [
+      -0.3727,
+      0.0163
+     ],
+     "win_rate_pct": 38.64
+    },
+    "cause": "selection artifact of the n>=20 aggregation floor",
+    "by_year": {
+     "2022": -1.2275,
+     "2023": -1.6982,
+     "2024": -0.2357,
+     "2025": 0.9467,
+     "2026": -0.8803
+    },
+    "liquidity": {
+     "low_tercile_pp": -0.7169,
+     "high_tercile_pp": -0.2452
+    },
+    "positive_cell_share_pct": 79.6,
+    "all_strategy_mean_pct": 23.1
+   },
+   "edge_registry_status": "v1 SUPERSEDED 2026-08-19 (D-029); v2 SHADOW - NOT retired despite falsification",
+   "data": "OK",
+   "implementation": "SELECTION_FLOOR",
+   "inference": "REJECT_x6",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "INVALID_IMPLEMENTATION_FAILURE",
+   "repair": null,
+   "contradiction": "CLAUDE.md and the governance corpus describe P0/NR7 as the delivered reference implementation proving the framework produces validated knowledge; the framework's own gatekeeper rejected it six times and its own failure registry falsified it"
+  },
+  {
+   "id": "LIQUIDITY_SWEEP",
+   "name": "Liquidity Sweep strategy",
+   "registration": "PRODUCTION_ERA",
+   "artifacts": [
+    "data/research.db::failure_registry id 4c2f5932",
+    "data/reports/ls_hold10_parity_2026-09-03.md"
+   ],
+   "result": {
+    "unbounded_baseline_pct_per_trade": -1.01,
+    "unbounded_trades": 33122,
+    "hold10_parity_pct_per_trade": -1.0,
+    "hold10_trades": 40539,
+    "positive_cell_share_before_pct": 21.4,
+    "after_pct": 19.0
+   },
+   "data": "OK",
+   "implementation": "OK",
+   "inference": "POOLED",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "VALID_NOT_CONFIRMED",
+   "repair": null,
+   "diagnosis": "per-ticker positive tail inside a negative cross-ticker mean = multiplicity artifact (same mechanism as NR7)"
+  },
+  {
+   "id": "DISTRIBUTION_SELL",
+   "name": "distribution / SELL detector path",
+   "registration": "PRODUCTION_ERA",
+   "artifacts": [
+    "data/research.db::failure_registry id 4e833d8b",
+    "walkforward.db::ft_shadow_trade"
+   ],
+   "result": {
+    "closed_trades": 2133,
+    "mean_pct_per_trade": -0.05,
+    "period": "2026-06..2026-09",
+    "negative_every_month": true
+   },
+   "data": "OK",
+   "implementation": "OK",
+   "inference": "FORWARD_K6",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "VALID_NOT_CONFIRMED",
+   "repair": null,
+   "note": "the largest genuinely forward (non-backtest) sample in the system; evidence class K6, the highest ceiling in the Evidence Model, and it refutes"
+  },
+  {
+   "id": "WF_EDGE_SCAN_9",
+   "name": "9-strategy wf_edge expectancy scan",
+   "registration": "UNREGISTERED",
+   "artifacts": [
+    "data/reports/nr7_falsification_2026-09-03.md"
+   ],
+   "result": {
+    "NR7 Breakout": 1.641,
+    "momentum": -0.6886,
+    "vwap_reversion": -0.8637,
+    "ORB": -0.9463,
+    "Liquidity Sweep": -0.984,
+    "vol_weighted": -1.0623,
+    "Volume Profile POC": -1.125,
+    "conservative": -1.1283,
+    "Inside Bar Breakout": -2.3095
+   },
+   "data": "OK",
+   "implementation": "SELECTION_FLOOR",
+   "inference": "NO_MULTIPLICITY_CONTROL",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "UNREGISTERED_EXPLORATORY",
+   "repair": null,
+   "note": "this scan is the multiplicity context for every NR7 cell-level claim"
+  },
+  {
+   "id": "TOWR",
+   "name": "TOWR breakout-pullback-continuation analogue deep dive",
+   "registration": "UNREGISTERED",
+   "artifacts": [
+    "docs/research_programs/P-M/ZCODE_TOWR_BREAKOUT_PULLBACK_DEEP_DIVE_2026-09-10.md"
+   ],
+   "result": {
+    "analogue_events": 1625,
+    "CONT": 677,
+    "FAIL": 948,
+    "same_agent_persistence": "tested NEGATIVE - identity overlap/flip features show zero discrimination",
+    "self_classification": "INTERESTING BUT UNPROVEN; no new family"
+   },
+   "data": "OK",
+   "implementation": "ANALOGUE",
+   "inference": "DESCRIPTIVE",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "UNREGISTERED_EXPLORATORY",
+   "repair": null,
+   "caution": "historical analogue evidence is K3-class observational at best and cannot support a predictive claim; its intensity profile is now cited as support for C7"
+  },
+  {
+   "id": "FAMILY_MAP_A_P",
+   "name": "16-family descriptive discovery map",
+   "registration": "UNREGISTERED",
+   "artifacts": [
+    "docs/research_programs/P-M/ZCODE_ALPHA_DISCOVERY_FAMILY_MAP_2026-09-10.md"
+   ],
+   "dataset": "Dataset A only",
+   "data": "DATASET_A_ONLY",
+   "implementation": "DESCRIPTIVE",
+   "inference": "NONE",
+   "provenance": "RECONSTRUCTABLE",
+   "classification": "UNREGISTERED_EXPLORATORY",
+   "portability_problem": "every prevalence figure (C2 30.2%, C7 18.11%, C8 5.2%, C3 23%, K 9.1%) was measured on top-25-truncated Dataset A; none re-measured on Dataset B",
+   "checked_so_far": {
+    "C2": {
+     "dataset_a_pct": 30.2,
+     "dataset_b_as_implemented_pct": 98.5
+    },
+    "C7": {
+     "dataset_a_pct": 18.11,
+     "dataset_b_pct": 12.29
+    }
+   },
+   "repair": "re-measure all prevalences on Dataset B before any candidate executes; descriptive, consumes no slot"
+  },
+  {
+   "id": "HYP-PM-0002",
+   "name": "stockbit_flow_bars instrument variant of M2.1",
+   "registration": "DRAFT",
+   "executed": false,
+   "classification": "NOT_EXECUTED",
+   "consumes_slot": false,
+   "note": "correctly recorded as DRAFT"
+  }
+ ],
+ "cross_test_consistency": [
+  {
+   "id": "J-1",
+   "finding": "net identity invalidates four registered primaries across three programs",
+   "downgrades_required": [
+    "FAIL-PM-0003: F2 -> data failure",
+    "BFI-001 primary: not confirmed -> invalid"
+   ]
+  },
+  {
+   "id": "J-2",
+   "finding": "two disjoint Failure Registries, zero overlap",
+   "markdown": [
+    "FAIL-PM-0001",
+    "FAIL-PM-0003",
+    "FAIL-PA-0001"
+   ],
+   "database": [
+    "Liquidity Sweep",
+    "distribution",
+    "NR7 Breakout"
+   ],
+   "impact": "the markdown registry's program-level inference ('all three F2, horizon/friction mismatch') is drawn from half the evidence"
+  },
+  {
+   "id": "J-3",
+   "finding": "two disjoint hypothesis registers; hypothesis_links is empty (0 rows) so no DB-level hypothesis-evidence trace exists despite Phase E recorded as delivered",
+   "markdown": [
+    "HYP-PM-0001",
+    "HYP-PM-0003",
+    "HYP-PA-0001"
+   ],
+   "database": [
+    "BROKER-001"
+   ]
+  },
+  {
+   "id": "J-4",
+   "finding": "Dataset A vs Dataset B portability unvalidated program-wide"
+  },
+  {
+   "id": "J-5",
+   "finding": "'G1' has four distinct meanings: institutional Gate 1; the BFI-002 experiment; S2-PM-0004's I3 preregistration gate; regime_config.yaml's per-hypothesis statistical floor (D-047)"
+  },
+  {
+   "id": "J-6",
+   "finding": "C-family (C1a..C8) was never mapped onto the declared I-family {I5,I6,I7,I12}; BFI-001 and G1 both ran against the P-M corpus outside the declared family"
+  },
+  {
+   "id": "J-7",
+   "finding": "same surface tested under different names",
+   "breadth": [
+    "BFI-001 F4_breadth_k5 t=+2.41 Holm 0.164",
+    "G1 C3 null"
+   ],
+   "concentration": [
+    "BFI-001 F4_conc_k5 t=-2.65 Holm 0.097 -> sole basis for C6"
+   ],
+   "foreign_flow": [
+    "H1",
+    "H6",
+    "BFI-001 F2_asing_k5",
+    "G1 C2 as executed"
+   ]
+  },
+  {
+   "id": "J-8",
+   "finding": "descriptive/analogue evidence treated as predictive: C7's ranking rests on volume clustering (a predictor property); TOWR analogue cited as support"
+  },
+  {
+   "id": "J-9",
+   "finding": "five independent deaths against the same 0.60% round-trip friction floor",
+   "instances": [
+    "HYP-PM-0001 -0.60%",
+    "HYP-PM-0003 -0.55%",
+    "BFI-001 -14.6bp/step at 10bp",
+    "G1 C2/C3 -44..-67bp",
+    "LIT-001 break-even cost -1.8bp/side"
+   ]
+  },
+  {
+   "id": "J-10",
+   "finding": "BFI-001 R3 permutation null centred at NW-t=+1.377 instead of 0; same estimator family used by G1 and proposed for C7; unexplained"
+  }
+ ],
+ "summary": {
+  "valid": [
+   "HYP-PM-0001",
+   "BFI-001 live cells",
+   "G1-C3",
+   "LIT-001",
+   "HLIQ",
+   "HYP-PA-0001",
+   "S2-PM-0004",
+   "LIQUIDITY_SWEEP",
+   "DISTRIBUTION_SELL",
+   "NR7 gatekeeper decisions"
+  ],
+  "all_valid_results_are": "null or refuting; none is a confirmation of an edge",
+  "invalid": [
+   "HYP-PM-0003",
+   "BFI-001-PRIMARY",
+   "BFI-001-F1",
+   "BFI-001-F3_lots",
+   "G1-C2",
+   "G1-C1a",
+   "NR7 edge claim"
+  ],
+  "exploratory": [
+   "H1",
+   "H6",
+   "TOWR",
+   "FAMILY_MAP_A_P",
+   "WF_EDGE_SCAN_9",
+   "LIT-001 2-day pocket",
+   "LIT-001 FM continuation coefficient",
+   "C6/C7/C8 descriptive evidence"
+  ],
+  "require_owner_decision": [
+   "HYP-PM-0003 reclassification (immutable registry)",
+   "BFI-001 primary reclassification + family slot",
+   "G1 verdict amendment",
+   "C1a redaction",
+   "NR7 Edge Registry status vs falsification",
+   "registry reconciliation J-2 and J-3",
+   "C-family to I-family mapping J-6"
+  ],
+  "can_be_reproduced": [
+   "LIT-002 (identical frozen spec, ~mid-2027, label REPRODUCTION, confirmatory, no new registration)"
+  ],
+  "must_never_be_rerun": [
+   "G1-C2",
+   "G1-C1a",
+   "G1-C1b",
+   "HYP-PM-0003",
+   "BFI-001 BFI_broad cells",
+   "G1-C3 (no-rescue rule)"
+  ],
+  "candidate_future_hypotheses": [
+   {
+    "id": "K7-1",
+    "name": "own-side conduit imbalance",
+    "implied_by": "the C2 defect",
+    "note": "a genuinely different estimand; must not be presented as C2 repaired"
+   },
+   {
+    "id": "K7-2",
+    "name": "vendor-aggregate signed net flow",
+    "implied_by": "HYP-PM-0003 defect + LIT-001 FM continuation t=+3.84",
+    "note": "strongest outcome-axis lead in the program; overlaps HYP-PM-0002's instrument - resolve before registering"
+   },
+   {
+    "id": "K7-3",
+    "name": "extreme foreign-flow event reversal (H6 formalisation)",
+    "implied_by": "H6 t=2.77 with failing holdout",
+    "note": "needs a genuine OOS window, a cost model and a multiplicity slot"
+   }
+  ],
+  "explicitly_not_admitted": [
+   "BFI-001 F4_conc",
+   "BFI-001 F4_breadth",
+   "LIT-001 2-day pocket (already correctly held as a lead)",
+   "any C1a-derived construct"
+  ]
+ },
+ "program_verdict": {
+  "trustworthy_evidence": "eight results, all negative or null, plus S2-PM-0004's correctly-fired integrity stop rule; the program's most trustworthy output is its methodology, not its findings",
+  "must_be_discarded": "every result resting on all-broker net/gross (HYP-PM-0003, BFI-001 primary + F1 + F3_lots, G1 C2), plus G1 C1a and NR7's +1.64pp wf_edge expectancy",
+  "hyp_pm_0003_genuinely_failed": false,
+  "hyp_pm_0003_correct_status": "INVALID - data failure; M2.1/I7 never tested",
+  "g1_genuinely_failed": "SPLIT - C3 valid non-confirmation (bounded); C2 invalid; C1a invalid and in breach; C1b never ran",
+  "surviving_positive_signal": null,
+  "surviving_leads_only": [
+   "LIT-001 FM continuation t=+3.84 (wrong sign for its own hypothesis)",
+   "H6 t=2.77 (holdout CI includes zero, unregistered)",
+   "BFI-001 F4_conc t=-2.65 (Holm p=0.097, failed its own correction)"
+  ],
+  "gatekeeper_promote_decisions_ever": 0,
+  "highest_value_next_empirical_test": "none yet - the highest-value action is not a test: re-measure every Dataset-A-derived prevalence on Dataset B before any candidate executes",
+  "test_ranking_when_one_runs": [
+   "vendor-aggregate signed net flow (K7-2)",
+   "C6/concentration with its prior restated as Holm p=0.097",
+   "C7 on an execution/liquidity outcome only"
+  ],
+  "primary_blocker": "the net-identity prohibition must be written into the Semantic Register as a hard rule (no candidate may use an all-broker net/gross quantity as signal, control, or state condition, on either dataset) and applied retroactively to HYP-PM-0003 and BFI-001; the defect recurred four times in nine days and nothing in the process currently stops a fifth",
+  "secondary_blockers": [
+   "multiplicity family determination (J-6) - blocks C7/C6/C8",
+   "G1 provenance repair - untracked directory, executed code destroyed by a concurrent writer"
+  ]
+ }
+}

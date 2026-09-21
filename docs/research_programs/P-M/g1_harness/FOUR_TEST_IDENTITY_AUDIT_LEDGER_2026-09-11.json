@@ -1,0 +1,100 @@
+{
+ "artifact": "FOUR_TEST_IDENTITY_AUDIT_LEDGER",
+ "version": "v1",
+ "date": "2026-09-11",
+ "report": "FOUR_TEST_IDENTITY_AND_REGISTRY_AUDIT_2026-09-11.md",
+ "measurements": {
+  "frozen_store_limit150": {
+   "cells": 30877,
+   "sum_buy_value_eq_sum_sell_value_exact_pct": 100.0,
+   "whole_table_buy_idr": 1585427502195600,
+   "whole_table_sell_abs_idr": 1585427502195600,
+   "abs_net_over_gross": {"p50": 0.0, "p90": 0.0, "p99": 0.0, "max": 0.0},
+   "per_day_sum_lot_zero_pct": 94.17,
+   "per_day_sum_lot_nonzero_days": 1798
+  },
+  "production_top25_datasetA_window": {
+   "cells": 97762,
+   "sum_value_net_exact_zero_pct": 69.9,
+   "near_zero_lt_0.1pct_pct": 86.13,
+   "abs_net_over_gross": {"p50": 0.0, "p90": 0.00201, "p99": 0.014588, "max": 0.060225},
+   "sum_lot_exact_zero_pct": 68.1,
+   "sum_lot_exact_zero_days": 66575,
+   "total_net_lots": -54821988,
+   "total_abs_lots": 201728436
+  },
+  "c2_investor_decomposition_frozen_store": {
+   "for_plus_loc_plus_pem_exact_zero_pct": 100.0,
+   "opposite_sign_pct": 77.79,
+   "same_sign_pct": 22.21,
+   "same_sign_equals_pem_dominant": true,
+   "exec_gross_participation_gate_incidence_cells": 22381,
+   "descriptive_net_share_gate_incidence_cells": 8210
+  }
+ },
+ "tests": [
+  {
+   "id": "HYP-PM-0001", "experiment": "EXP-PM-0001", "executed_utc": "2026-07-18T01:09:37Z",
+   "dataset": "stockbit_flow_bars (vendor aggressor-side)", "predictor_class": "OFI signed reversal",
+   "recorded": "FAILED F2 (primary k=15 t=-0.352)",
+   "identity_affected": false,
+   "classification": "VALID -> NOT CONFIRMED",
+   "sources": ["P-M/experiments/EXP-PM-0001/results.json"]
+  },
+  {
+   "id": "HYP-PM-0003", "experiment": "EXP-PM-0003", "executed_utc": "2026-09-09T09:44:17Z",
+   "dataset": "Dataset A (broker_flow top-25)", "predictor_class": "sign(SUM(lot)) continuation k=7",
+   "recorded": "FAILED F2",
+   "identity_affected": true,
+   "degeneracy_measurements": {"sum_lot_exact_zero_pct_of_ticker_days": 68.1, "abs_net_over_gross_lots_p90": 0.002},
+   "classification_proposed": "INVALID - DATA/SEMANTICS",
+   "sources": ["P-M/experiments/EXP-PM-0003/run_exp_pm_0003.py", "HYP-PM-0003_REGISTERED.md"]
+  },
+  {
+   "id": "BROKER-001/BFI-001", "experiment": "10_execute_bfi001 2026-09-03",
+   "dataset": "production broker_flow top-25", "predictor_class": "BFI_broad = NV/GV (all-broker) + structure cells",
+   "recorded": "primary not confirmed (t=+0.047, Holm 1.0); F4_conc t=-2.65 Holm 0.097; F4_breadth t=+2.41 Holm 0.164; F3_lots NaN",
+   "identity_affected": "PRIMARY + N1/N2/F3_lots yes (identity-attenuated/uncomputable); structure cells no",
+   "classification_proposed": "SPLIT: primary INVALID - DATA/SEMANTICS; structure secondaries VALID -> NOT CONFIRMED",
+   "sources": ["ZCodeProject/bfi001_broker_flow/90_results.json", "00_PREREGISTRATION_FROZEN.md sha 91c0eb9a"]
+  },
+  {
+   "id": "G1-RUN1-C2/HYP-PM-0004", "experiment": "G1 Run 1 2026-09-11",
+   "dataset": "Dataset B frozen", "predictor_class": "class-net disagreement state (algebraically coupled; exec gate = gross-participation >=15%)",
+   "recorded": "NOT CONFIRMED (Holm p=1.0); state/gate incidence 72.5% exec vs 26.6% descriptive",
+   "identity_affected": "coupled (for+loc=-pem), not identity-zero",
+   "classification_proposed": "INVALID - SPECIFICATION",
+   "sources": ["g1_real_output.json run manifest", "G1_FINAL_EXECUTION_REPORT_2026-09-11.md"]
+  },
+  {
+   "id": "G1-RUN1-C3/HYP-PM-0005", "experiment": "G1 Run 1 2026-09-11",
+   "dataset": "Dataset B frozen", "predictor_class": "breadth-surprise states (freq-free)",
+   "recorded": "NOT CONFIRMED (VALID, bounded)",
+   "identity_affected": false,
+   "classification_proposed": "VALID -> NOT CONFIRMED",
+   "sources": ["g1_real_output.json"]
+  },
+  {
+   "id": "C1a", "status": "WITHDRAWN_FREQ_DEPENDENT", "executed_in_breach": "theta computed in-memory then nulled (forensic audit finding, verified)",
+   "classification_proposed": "INVALID / non-reportable"
+  },
+  {
+   "id": "C1b", "status": "WITHDRAWN / never implemented",
+   "classification_proposed": "WITHDRAWN / never implemented"
+  },
+  {
+   "id": "NR7-P0", "experiment": "walk-forward x6 + falsification 2026-09-03",
+   "dataset": "OHLCV (no broker flow)", "predictor_class": "range-contraction breakout + BULL x LOW_LIQ overlay",
+   "recorded": "FALSIFIED / SHADOW (D-029); pooled -0.18%/trade n=6,183; +1.64pp/54-cell selection artifact",
+   "identity_affected": false,
+   "classification_proposed": "VALID -> NOT CONFIRMED (falsified on its own evidence); identity N/A",
+   "sources": ["data/reports/nr7_falsification_2026-09-03.md", "data/research.db gate_decisions x6 REJECT"]
+  }
+ ],
+ "registries": {
+  "docs_failure_registry_rows_after_G1": ["FAIL-PM-0001", "FAIL-PM-0003", "FAIL-PA-0001", "FAIL-PM-0004-G1", "FAIL-PM-0005-G1"],
+  "research_db_failure_registry_rows": ["liquidity-sweep", "distribution:shadow-negative", "nr7-breakout:strategy-level-falsified"],
+  "research_db_hypotheses_rows": ["BROKER-001 (PREREGISTERED - never status-updated post-execution: ledger gap)"],
+  "hypothesis_links_rows": 0
+ }
+}

@@ -1,0 +1,46 @@
+{
+ "A_frozen_store_limit150": {
+  "abs_net_over_gross_max": 0.0,
+  "abs_net_over_gross_p50": 0.0,
+  "abs_net_over_gross_p90": 0.0,
+  "abs_net_over_gross_p99": 0.0,
+  "cells": 30877,
+  "exact_zero_net": 30877,
+  "exact_zero_pct": 100.0,
+  "near_zero_lt_0.1pct": 30877,
+  "near_zero_pct": 100.0,
+  "signed_lot_exact_zero_pct": 0.0
+ },
+ "A_frozen_store_total_net_value_whole_table": 3170855004391200,
+ "B_prod_0.01_to_0.2": 2030,
+ "B_prod_ge_0.2": 0,
+ "B_prod_lt_0.01": 95732,
+ "B_prod_sum_lot_days": 97762,
+ "B_prod_sum_lot_exact_zero_days": 66575,
+ "B_prod_sum_lot_exact_zero_pct": 68.1,
+ "B_prod_top25_datasetA_window": {
+  "abs_net_over_gross_max": 0.060225,
+  "abs_net_over_gross_p50": 0.0,
+  "abs_net_over_gross_p90": 0.00201,
+  "abs_net_over_gross_p99": 0.014588,
+  "cells": 97762,
+  "exact_zero_net": 68335,
+  "exact_zero_pct": 69.9,
+  "near_zero_lt_0.1pct": 84205,
+  "near_zero_pct": 86.13,
+  "signed_lot_exact_zero_pct": 0.0
+ },
+ "B_prod_total_lot_net_vs_abs_note": "total_net=-54821988, total_abs=201728436",
+ "C_descriptive_net_share_gate_cells": 8210,
+ "C_exec_gate_gross_participation_cells": 22381,
+ "C_investor_decomposition_frozen_store": {
+  "cells": 30877,
+  "cells_both_class_nets_nonzero": 30877,
+  "exact_identity_pct": 100.0,
+  "for_plus_loc_plus_pem_exact_zero_cells": 30877,
+  "opposite_sign_cells": 24019,
+  "opposite_sign_pct": 77.79,
+  "pem_dominant_cells": 6858,
+  "same_sign_cells": 6858
+ }
+}
