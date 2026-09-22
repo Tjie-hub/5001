@@ -1,3 +1,33 @@
 {
-    "python.defaultInterpreterPath": "python3"
+    "python.defaultInterpreterPath": "python3",
+    "python-envs.pythonProjects": [
+        {
+            "path": ".",
+            "envManager": "ms-python.python:venv",
+            "packageManager": "ms-python.python:pip"
+        }
+    ],
+    "files.watcherExclude": {
+        "**/venv/**": true,
+        "**/.venv/**": true,
+        "**/__pycache__/**": true,
+        "**/.playwright_state/**": true,
+        "**/logs/**": true,
+        "**/data/*.db*": true,
+        "**/scratchpad/*.db*": true
+    },
+    "search.exclude": {
+        "**/venv/**": true,
+        "**/.venv/**": true,
+        "**/__pycache__/**": true,
+        "**/.playwright_state/**": true,
+        "**/logs/**": true,
+        "**/data/*.db*": true,
+        "**/scratchpad/*.db*": true
+    },
+    "python.analysis.exclude": [
+        "**/venv/**",
+        "**/.venv/**",
+        "**/.playwright_state/**"
+    ]
 }

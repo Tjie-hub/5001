@@ -1,0 +1,127 @@
+.env
+.env.local
+.stockbit_token
+.stockbit_token.lock
+.playwright_state/
+logs/
+*.log
+__pycache__/
+*.pyc
+.DS_Store
+venv/
+.venv/
+app.log
+# Abaikan folder virtual environment Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Abaikan file sistem Obsidian yang tidak perlu
+.obsidian/workspace.json
+.obsidian/graph.json
+.obsidian/
+
+# Database files (regenerable from data pipeline; too large for git)
+*.db
+*.db.bak*
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Generated outputs (smoketest screenshots, backtest reports, etc.)
+out/
+
+# Local backup files
+*.bak
+*.bak-shm
+*.bak-wal
+*.bak2
+*.backup*
+
+# Runtime cache and debug artifacts
+.*_response_cache.json
+.*_cf_cookies.json
+debug_*.html
+debug_*.png
+venv_test/
+
+# Static assets (committed separately)
+# static/
+
+# Tool-generated directories
+.stitch/
+.superpowers/
+
+# Claude Code local state (per-developer)
+.claude/settings.json
+.claude/settings.local.json
+.claude/worktrees/
+
+# claude-mem persistent memory (per-developer)
+memory/
+
+# git worktrees (superpowers:using-git-worktrees)
+.worktrees/
+data/reports/
+
+# Windows test venv (idx-windows-test-venv memory) -- 11k+ files, never committed
+.winvenv/
+
+# MCP/tool session state (regenerated automatically)
+.playwright-mcp/
+.deepseek/
+
+# Syncthing folder markers
+.stfolder/
+
+# Session scratch working files
+scratchpad/
+
+# DSH audit 2026-08-29: archived historical documentation (kept on disk, not tracked)
+docs/archive/
+
+# DSH audit 2026-08-29: root disposable artifacts
+TOWR.md
+TOWR_chart.png
+WhatsApp_TOWR.jpeg
+
+# DSH audit 2026-08-29: speculative PLAN notes
+PLAN/crypto-*.md
+PLAN/wildcat-*.md
+
+# Mimosa session telemetry (hook state, run history, per-session reports).
+# Machine-local tooling output, not research artefacts; 11 of these were committed
+# by a directory-level `git add` on 2026-09-17 and excised before push.
+.mimosa/
+
+# ===== ↑ 以上同步自 .gitignore（「从 .gitignore 同步」只重写以上部分）=====
+.git/
+.hg/
+.svn/
+node_modules/
+bower_components/
+jspm_packages/
+site-packages/
+coverage/
+htmlcov/
+lcov-report/
+cmakefiles/
+cmake-build-*/
+bazel-*/
+pods/
+deriveddata/
+storybook-static/
+playwright-report/
+test-results/
+allure-results/
+allure-report/
+cdk.out/
+*.egg-info/
+*.dist-info/
+eggs/
+pip-wheel-metadata/
+wheels/
+# ----- ↑ 以上为 ZCode 默认排除规则（自定义规则请写在本行下方，不会被同步/恢复改动）-----
+# 自定义规则写在下方（本行提示可删除）
