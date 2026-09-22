@@ -41,6 +41,7 @@ out/
 *.bak-wal
 *.bak2
 *.backup*
+backups/
 
 # Runtime cache and debug artifacts
 .*_response_cache.json
