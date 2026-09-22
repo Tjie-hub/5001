@@ -97,6 +97,21 @@ def jwt_expiry(token):
         return -1
 
 
+def _is_jwt_shaped(token):
+    """Return True iff `token` has the 3-dot-separated-segment shape of a JWT.
+
+    Guards against capturing Stockbit's own transient `Authorization: Bearer
+    undefined` requests (fired before its SPA's auth state hydrates,
+    especially right after a cleared session) as if they were a real token —
+    incident 2026-09-22: that literal string passed straight through to
+    verify_token() (HTTP-status-only check) and got written to
+    .stockbit_token, breaking every downstream consumer."""
+    if not token:
+        return False
+    parts = token.split(".")
+    return len(parts) == 3 and all(parts)
+
+
 def _jwt_iat(token):
     """Return issued-at unix timestamp, or 0 if unreadable."""
     try:
@@ -376,7 +391,9 @@ def _capture_from_page(page, navigate=True):
         url = request.url
         auth = request.headers.get("authorization", "")
         if auth.startswith("Bearer ") and "exodus.stockbit.com" in url:
-            captured_token = auth[7:]
+            value = auth[7:]
+            if _is_jwt_shaped(value):
+                captured_token = value
 
     page.on("request", on_request)
 
@@ -444,7 +461,9 @@ def credential_login():
                 nonlocal captured_token
                 auth = request.headers.get("authorization", "")
                 if auth.startswith("Bearer ") and "exodus.stockbit.com" in request.url:
-                    captured_token = auth[7:]
+                    value = auth[7:]
+                    if _is_jwt_shaped(value):
+                        captured_token = value
 
             page.on("request", on_request)
 

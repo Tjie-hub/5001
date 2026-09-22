@@ -339,6 +339,82 @@ def test_concurrent_invocation_finds_lock_held_and_exits_cleanly(token_file, loc
     assert calls == []
 
 
+# ── JWT-shape validation at capture time (incident 2026-09-22) ──
+#
+# Root cause: `_capture_from_page`'s `on_request` listener accepted the FIRST
+# `Authorization: Bearer <value>` header seen on any exodus.stockbit.com
+# request, with no check that <value> is actually JWT-shaped. Stockbit's SPA
+# fires an early request with the literal header `Authorization: Bearer
+# undefined` before its client-side auth state hydrates -- guaranteed right
+# after credential_login()'s `localStorage.clear()` -- so the listener locked
+# onto "undefined" and the wait loop exited immediately instead of waiting for
+# the real token moments later. verify_token() only checks HTTP status (not
+# token shape), so "undefined" (9 bytes) was written straight to
+# .stockbit_token, and every downstream consumer sent `Bearer undefined`.
+
+class _FakeRequest:
+    def __init__(self, url, auth_header):
+        self.url = url
+        self._headers = {"authorization": auth_header} if auth_header else {}
+
+    @property
+    def headers(self):
+        return self._headers
+
+
+class _FakePage:
+    def __init__(self):
+        self._handlers = {}
+
+    def on(self, event, cb):
+        self._handlers[event] = cb
+
+    def remove_listener(self, event, cb):
+        self._handlers.pop(event, None)
+
+    def goto(self, *a, **k):
+        pass
+
+    def evaluate(self, *a, **k):
+        pass
+
+    def fire(self, request):
+        self._handlers["request"](request)
+
+
+class TestJwtShapeGuardAtCapture:
+    def test_is_jwt_shaped_rejects_the_undefined_literal(self):
+        assert at._is_jwt_shaped("undefined") is False
+
+    def test_is_jwt_shaped_rejects_empty_and_malformed(self):
+        assert at._is_jwt_shaped("") is False
+        assert at._is_jwt_shaped("only.two") is False
+        assert at._is_jwt_shaped("a..c") is False
+
+    def test_is_jwt_shaped_accepts_a_real_looking_jwt(self):
+        assert at._is_jwt_shaped(_make_jwt()) is True
+
+    def test_capture_ignores_bearer_undefined_and_waits_for_real_token(self, monkeypatch):
+        page = _FakePage()
+        real_jwt = _make_jwt()
+        events = iter([
+            _FakeRequest("https://exodus.stockbit.com/keystats/BBCA", "Bearer undefined"),
+            _FakeRequest("https://exodus.stockbit.com/keystats/BBCA", f"Bearer {real_jwt}"),
+        ])
+
+        def fake_sleep(_seconds):
+            try:
+                page.fire(next(events))
+            except StopIteration:
+                pass
+
+        monkeypatch.setattr(at.time, "sleep", fake_sleep)
+
+        result = at._capture_from_page(page, navigate=False)
+
+        assert result == real_jwt
+
+
 class TestSendTelegramRedaction:
     """RC1-C2 regression tests: auto_token.send_telegram now redacts secrets
     via the shared utils.logging_config.redact_secrets() — same rule already
