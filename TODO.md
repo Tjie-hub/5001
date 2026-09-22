@@ -1,8 +1,308 @@
 # IDX Walkforward — TODO
 
-_Last updated: 2026-06-05 (Sprint 17 fully shipped; IHSG crash -2%+ today → Sprint 18 critical)_
+_Last updated: 2026-09-22 — closed P0-1 (security work was committed `817f732` on 2026-08-20),
+verified 2/3 of P0-3's collection errors are now clean, and closed P0-6 (Stockbit auto-token
+corruption incident + fix). Base plan is still the 2026-08-19 full-stack machine audit below; all
+Sprint 8–19 work is shipped and archived further down._
+
+**Execution-environment rule (2026-08-19):** all compute-heavy work runs on the **WSL Ubuntu box on
+the Windows PC (`tjiejet`)**, not the XPS-13 (`tjiesar`) — that box OOMs and drops the session under
+load. The XPS-13 is production-only: it runs the live service and holds the live DB.
+
+**Critical environment fact:** `.stignore` excludes `*.db` — **databases do NOT sync between the two
+machines.** Code syncs; data does not. So:
+- `D:\IDX\data\walkforward.db` (3.3 GB, repaired 2026-08-15) is a **local copy**, ~4 days stale on
+  OHLCV. Fine for research verdicts on a 5-year corpus; not the production DB.
+- Any DB migration must be run **twice** — once locally (WSL), once on production (XPS-13).
+- Code edits made in WSL propagate to production via Syncthing. **Deploy is still a deliberate act**
+  (`scripts/release.sh` + `systemctl --user restart`).
+
+Reference: `Audit/` corpus + `docs/RESEARCH_MASTER_PLAN.md` v3. Full audit findings and evidence
+trail: the 2026-08-19 machine audit (workflow map, joint failures, test-cache analysis).
 
 ---
+
+# 🔥 ACTIVE — Post-Audit Execution Plan (2026-08-19)
+
+**Sequencing is load-bearing.** P1 must complete before any gatekeeper run, or the append-only
+evidence ledger forks silently. P3 must complete before any forward-test number is meaningful.
+
+---
+
+## 🔴 P0 — Preserve & Establish Ground Truth
+
+_Hours, not days. No research judgement required. Do this first._
+
+- [x] **P0-1. Commit the uncommitted security work** — DONE. `security/middleware.py` +
+      `security/route_policy.py` committed `817f732` (2026-08-20, "fix(security): gate ADMIN routes
+      unconditionally; escalate 10 side-effect routes"). Verified 2026-09-22.
+
+- [ ] **P0-2. Run the real test suite and record it** — the on-disk cache
+      (`.pytest_cache/v/cache/lastfailed`, 72 entries) is *cumulative across partial runs*, not a
+      current failure count, and is likely polluted by Windows-side runs where POSIX-only tests
+      (chmod, symlinks, /tmp) fail environmentally. There is currently **no trustworthy number**.
+      _Where:_ WSL (Python 3.12 venv, matching CI) · _Cmd:_
+      `python -m pytest -q 2>&1 | tee logs/pytest_full_20260819.log` ·
+      _Accept:_ a real pass/fail/error tally committed to the log · _Est:_ ~6 min runtime.
+
+- [ ] **P0-3. Resolve the 3 collection errors** — re-verified 2026-09-22: `tests/test_auto_token.py`
+      and `tests/test_stockbit_fetcher_ensure_valid_token.py` now **collect clean** (42 tests,
+      confirmed while fixing the 2026-09-22 auto-token incident below). `tests/agent_firm/test_client.py`
+      **no longer exists on disk** — needs a fresh check for what replaced it (renamed under
+      `tests/agent_firm/` during a reorg, or genuinely dropped) before this item can close.
+      _Where:_ WSL · _Depends:_ P0-2 · _Accept:_ confirm `test_client.py`'s fate, then close.
+
+- [ ] **P0-4. Track or delete the 5 untracked test files** — 283 test files on disk, **278 tracked**.
+      CI checks out only tracked files, so these have **never run in CI**:
+      `tests/test_news_filter.py` (2 of the cached failures), `tests/test_filter_exploration.py`,
+      `tests/agent_firm/providers/test_quota_{hydration_edge_cases,scenarios,state_persistence}.py`.
+      They currently do the worst of both: run locally, pollute the failure cache, prove nothing in
+      CI. Decide per-file: real coverage → commit; scratch → delete.
+      _Where:_ WSL · _Depends:_ P0-2 · _Accept:_ `git ls-files 'tests/**test_*.py' | wc -l` equals
+      the on-disk count.
+
+- [x] **P0-6. Stockbit auto-token corruption incident (2026-09-22)** — DONE, commit `04e4fdd`.
+      `.stockbit_token` held the literal 9-byte string `undefined` (not a JWT) since 2026-09-21
+      17:05, so every downstream job sending `Bearer $(cat .stockbit_token)` got 401s. Root cause:
+      `_capture_from_page()`'s `on_request` listener accepted the *first* `Authorization: Bearer
+      <value>` header seen on any `exodus.stockbit.com` request with no shape check — Stockbit's SPA
+      fires an early request literally reading `Bearer undefined` before its client-side auth state
+      hydrates (guaranteed right after `credential_login()`'s `localStorage.clear()`), and
+      `verify_token()` only checks HTTP status, not token shape, so it wrote straight through. Fixed
+      with `_is_jwt_shaped()` gating both capture points; 4 new regression tests in
+      `tests/test_auto_token.py::TestJwtShapeGuardAtCapture` pin the exact scenario. Live token
+      re-established via `auto_token.py --login` (valid 2026-09-22 09:13, 24h TTL). Also:
+      `backups/` (8.5GB untracked migration DB snapshot) added to `.gitignore` (`2154f15`) — it
+      wasn't covered by the existing `*.backup*` rule and a stray `git add -A` would have tried to
+      commit a 9GB file.
+
+- [ ] **P0-5. Triage the 64-file untracked pile** — long-standing open thread, now enumerated:
+      `docs/audit/STOCKBIT_FLOW_*` (11 files), 10 `docs/superpowers/plans/*.md`,
+      `Audit/R5_TIER1_DB_SPLIT_CLOSURE_REPORT.md`, `docs/data/`, `docs/infra/`, `images/`,
+      `scripts/probe_*.py`. Commit what is real work-product; `.gitignore` the rest.
+      _Where:_ WSL · _Accept:_ `git status --porcelain | grep -c '^??'` → 0.
+
+---
+
+## 🔴 P1 — Activate the Research Fence (blocks all research work)
+
+_`data/research.db` **does not exist**. The R-5 physical fence is committed code (`5e9b9b4`) with a
+cutover runbook (`9bb2fd7`) that was never `--apply`-ed. All 8 Tier-1 tables still live in
+`walkforward.db`._
+
+> ⚠️ **Do not run the gatekeeper before this completes.** `connect_research()` *creates*
+> `research.db` on first call and `ensure_gate_tables()` creates empty tables in it — so the next
+> gate run writes its decision to a fresh empty DB while every historical `gate_decisions` row stays
+> in `walkforward.db`. The append-only ledger forks in two, silently, with no error.
+
+- [ ] **P1-1. Cutover — LOCAL (WSL)** — `python scripts/migrate_r5_tier1.py` (dry-run default) →
+      review output → `--apply`. Migrates: `research_runs`, `gate_decisions`, `gate_evidence`,
+      `regime_profiles`, `regime_profile_cells`, `hypotheses`, `hypothesis_links`,
+      `failure_registry`.
+      _Where:_ WSL · _Accept:_ `data/research.db` exists; row counts match pre-migration.
+
+- [ ] **P1-2. Verify no orphans (LOCAL)** — confirm every Tier-1 table landed intact and nothing
+      remains stranded in `walkforward.db`. Back up first (`scripts/db_backup.py`).
+      _Where:_ WSL · _Depends:_ P1-1 · _Accept:_ per-table row-count diff = 0.
+
+- [ ] **P1-3. Cutover — PRODUCTION (XPS-13)** — same script, on the live DB. **Separate action
+      because DBs do not sync.** Low memory cost (8 metadata tables, not the 3.3 GB OHLCV/ticks), so
+      OOM risk is low — but stop the service first.
+      _Where:_ XPS-13 · _Depends:_ P1-2 (prove it locally first) · _Accept:_ service restarts clean,
+      `/health` green.
+
+- [ ] **P1-4. Verify production + confirm `RESEARCH_DB_PATH`** — check `.env` / systemd unit so both
+      hosts resolve the same intended path.
+      _Where:_ XPS-13 · _Depends:_ P1-3.
+
+- [ ] **P1-5. Define a safe refresh path for the WSL research corpus** — data is excluded from sync
+      **deliberately**: Syncthing writing a live WAL-mode SQLite file while the app holds it open
+      produces `database is locked`, failed writes, and ultimately the 2026-07-29 corruption. That
+      exclusion is correct and must stay. But it leaves the WSL research copy with **no defined way
+      to be refreshed**, so it silently rots as research keeps running against an ageing corpus.
+      **Never fix this by raw-copying the live DB** — a file copy of an open WAL database is the same
+      failure class as syncing it (torn read, no checkpoint, inconsistent).
+      **Use the existing, correct tool:** `scripts/db_backup.py` already takes the snapshot via the
+      sqlite3 **online-backup API** (`src.backup(dst, pages=4096)`) — WAL-safe and consistent even
+      while the app is writing — then runs `PRAGMA integrity_check` + per-table row counts, and only
+      then compresses to `.zst`. It already runs nightly on production via systemd --user timers
+      (`b70a17b`).
+      _Proposed:_ add a **second Syncthing folder for `~/backups/idx-walkforward-5001/` only**. Those
+      are compressed, verified, inert archives that no process ever holds open — they sync with zero
+      lock risk, unlike the live DB. WSL then decompresses the newest snapshot on demand to refresh
+      its research corpus. Alternative if a second sync folder is unwanted: scp the newest `.zst`
+      over Twingate as a manual step before each research batch.
+      _Where:_ both · _Accept:_ a documented one-command refresh, and a note in `docs/OPERATIONS.md`
+      stating why the live DB is never copied directly.
+
+---
+
+## 🟠 P2 — Resolve the NR7 Grandfather (needs P1)
+
+_`registry/edge_registry.yaml` has `NR7_BULL` v1 **APPROVED**. `engine/registry_loader.py:40-47`
+carries an explicit debt entry stating the conflict: "APPROVED 2026-07-04 under the pre-Phase-C
+generalization bar; Phase C gate=REJECT and shadow N=0. Governs on legacy grounds" — deadline
+**2027-01-08**. This is a documented, deliberate risk acceptance, **not** a bookkeeping error. The
+problem is that the evidence it rests on has since eroded (see P4) and nobody has revisited it._
+
+- [ ] **P2-1. Re-run the gatekeeper on NR7 against current data** —
+      `python -m research.gatekeeper.cli evaluate --strategy "NR7 Breakout" --report out/nr7_gate_20260819.md`
+      Gets a *current* decision instead of July's. Memory-heavy (186 tickers × 5y OHLCV → pandas).
+      _Where:_ **WSL only** · _Depends:_ P1-2 · _Accept:_ a new `gate_decisions` row in
+      `research.db` + the report file.
+
+- [ ] **P2-2. Query the live forward test** — the manifest still reads
+      `shadow: {trades: 0, verdict: pending}` from 2026-07-04, six weeks ago. Has shadow N moved off
+      zero? Run `research/studies/phase5_tracker.py` against **production** data.
+      _Where:_ XPS-13 (production data) · _Accept:_ a real N and expectancy, or a confirmed zero.
+
+- [ ] **P2-3. 🔑 OWNER DECISION — revoke or re-affirm** — with P2-1/P2-2 in hand:
+      **(a)** revoke to `SHADOW` (stops live selection immediately, keeps collecting forward data), or
+      **(b)** re-affirm APPROVED in writing, explicitly acknowledging the P4 erosion.
+      Drifting to the 2027-01-08 deadline by default is the one option that is not a decision.
+      _Depends:_ P2-1, P2-2 · _Accept:_ a dated entry in the registry changelog + manifest.
+
+- [ ] **P2-4. Make runtime evidence-validation enforcing, not advisory** —
+      `registry_loader.py:147`'s `entries.append(e)` sits **outside** the `if reasons:` block, so an
+      entry failing `validate_evidence()` is still loaded and still governs. R-10 is enforced in CI,
+      not at runtime. Gate loading on the receipt (keep `_LIFECYCLE_DEBT` as the explicit,
+      shrink-only exception).
+      _Where:_ WSL · _Depends:_ P2-3 (don't change enforcement while the NR7 status is unresolved).
+
+---
+
+## 🔴 P3 — Fix the Live/Backtest Execution-Model Mismatch
+
+_**The correctness bug.** Backtest and research use `is_final=1` completed bars with a 1-bar delay
+(`engine/strategies.py:203-256`, Donchian `.shift(1)` at `:2065`, trailing stop lagged in
+`engine/exits/evaluator.py:46-56` — all verified genuinely clean of look-ahead). Live scans read
+`is_final=0` **still-forming** bars (`data/loaders.py:68-93` says so in its own docstring;
+`scheduler/__init__.py:258-262`, 5×/day), and `scheduler/scanner.py:1673` → `paper_trade.py:439`
+inserts that price with **no re-fetch and no delay**._
+
+> **Consequence:** paper-trading P&L is not evidence for the backtested edge — it is evidence for a
+> different, never-validated execution model. This also means P2-2's forward-test number is
+> measuring the wrong system.
+
+- [ ] **P3-1. Decide the approach** — **(a)** delay live fills to next-bar-open to match what was
+      validated (cheaper; preserves the entire existing evidence base), or **(b)** re-validate every
+      strategy against a partial-bar execution model (expensive; invalidates prior WF results).
+      Recommendation: **(a)**.
+
+- [ ] **P3-2. Implement** — align the live path with the chosen model; add a regression test that
+      pins live entry-price semantics to the backtest's.
+      _Where:_ WSL · _Depends:_ P3-1.
+
+- [ ] **P3-3. Reset the forward-test clock** — any forward-test evidence collected under the old
+      mismatched model is not evidence for the new one. Restart the shadow/forward window from the
+      deploy date.
+      _Depends:_ P3-2.
+
+---
+
+## 🟠 P4 — Make the Evidence Honest
+
+_Each item independently undermines the 2026-07-04 approval that P2's grandfather rests on._
+
+- [ ] **P4-1. `liquid_universe()` point-in-time fix** —
+      `research/studies/nr7_generalization_study.py:77-90` filters the whole 5-year study by
+      **today's** ADV, not per-trade-date. A ticker illiquid today is excluded from its entire
+      history. Survivorship-style contamination **in the flagship strategy's own evidence base**.
+      _Where:_ WSL · _Accept:_ ADV computed as-of each trade's entry date; study re-run.
+
+- [ ] **P4-2. Model ARB/ARA fillability in backtest + walk-forward** — price-limit bands exist only
+      in the live path (`paper_trade.py:211-228`, single call site `:372`), never in backtest/WF. So
+      every historical expectancy — including NR7's +1.64%/trade — assumes every computed SL/TP was
+      always fillable. Structurally inflates the breakout/momentum family (NR7, ORB, Inside Bar,
+      TFB), which trades exactly the volatility spikes most likely to hit a limit freeze.
+      _Where:_ WSL · _Note:_ likely the single largest correction to OOS expectancy.
+
+- [ ] **P4-3. Wire V3-1 (family scoping + effective-N) into `gate_config`** — DSR's trial count
+      (`research/gatekeeper/stages.py:87` ← `candidate.py:169-180`) counts **regime cells (3–6)**,
+      not the ~14 strategies × hundreds of tickers × optimizer grids actually searched. Undercounted
+      by 2–3 orders of magnitude. **This is already designed** in `RESEARCH_MASTER_PLAN.md` §3.1
+      (scope by `(dataset epoch, feature_space_hash)`, Kish-style `N_eff`) and has sat unwired for
+      over a month. Per §3.1(c) it is a major config version bump, non-retroactive.
+      _Where:_ WSL · _Depends:_ P1 (config change → new decision lineage).
+
+- [ ] **P4-4. Gate the ML regime classifier on its own honesty check** — `scanner.py:476-478` trains
+      a fresh model per ticker per day and calls `.predict()` **without ever checking**
+      `holdout_accuracy` / `beats_baseline`. The model can fail to beat a majority-class baseline and
+      still gate live signals; the module's own honesty metric is orphaned data.
+      _Where:_ WSL.
+
+- [ ] **P4-5. Remove the unreachable `UNCERTAIN` branch** — `scanner.py:492` filters on a regime value
+      `detect_regime()` can no longer return since the 3-class refactor folded it into `SIDEWAYS`
+      (`regime_filter.py:106`). Dead branch contradicting its own comment. Also: delete the dead
+      `strategy_regime_adaptive` body (`regime_filter.py:304`, removed from dispatch for whole-window
+      look-ahead, audit ref C-7; only a defunct migration script references it).
+
+- [ ] **P4-6. Liquidity-scaled slippage** — `engine/exits/costs.py:9-11,28-31` applies a **flat
+      0.10%** per leg with no volume/participation scaling, on a roster the repo's own docs describe
+      as mostly illiquid. Commission (0.15%/0.25%) and lot size (100, correctly enforced in both
+      paths) are fine.
+
+- [ ] **P4-7. Reconcile the live scan universe against the research corpus** —
+      `data/fetcher.py:10-36` is a **static, hardcoded current-membership** IDX30/LQ45/IDX80 snapshot
+      ("preserved for backward compat"), not reconstructed per historical date, and **not the ticker
+      set the strategies were backtested against**. Also: only 14/959 tickers are flagged inactive in
+      `idx_tickers` — implausibly low for 5 years of IDX history, and `data/ticker_discovery.py` can
+      only discover tickers yfinance still serves, so pre-discovery delistings are an unverifiable
+      blind spot.
+
+- [ ] **P4-8. Fix the "AI-powered market regime detection" docstring** — overstates what is live.
+      Reality: rule-based ADX/MA-slope (`detect_regime()`) drives every live call site, with an
+      under-gated ML overlay. Claims-vs-code contradiction.
+
+- [ ] **P4-9. Score the never-tested strategies before they can fire** — strategies with no
+      walk-forward evidence should not reach live dispatch. Note `_COUNTER_TREND_BOOK`
+      (`scanner.py:732`: Crash Recovery, Panic Rebound) **deliberately bypasses the wf consistency
+      gate** — that exemption needs an explicit re-decision, not silent inheritance.
+
+---
+
+## 🟢 P5 — Generate New Evidence
+
+- [ ] **P5-1. Write `run_exp_pa_0001.py`** — the confirmatory script for **HYP-PA-0001** (index
+      reconstitution / closing-auction dislocation), REGISTERED 2026-07-19 and never executed. Fully
+      specified in `docs/research_programs/P-A/HYP-PA-0001_HARNESS_SPEC.md`; data curated
+      (`WP-D/reconstitution_events.csv`, 210 sourced ticker-events, 105 ADD / 105 DELETE, 13 review
+      clusters, 2022-08→2026-05). Estimator: event-study CAR vs IHSG, 230-td estimation window
+      ending ~20 td before announcement, reversal window t+1..t+5, cluster-robust (CR1) SEs by review
+      date, α=0.05. Test 2: DELETE-only net-of-cost (N=105) using the **imported** 0.60% round-trip
+      constant from `engine/exits/costs.py` — not re-derived. Dedup key `(ticker, effective_date,
+      event_type)`. Follow `run_exp_pm_0001.py`'s packaging discipline (read-only DB, JSON results +
+      execution log, frozen MANIFEST) — **not** its estimator.
+      _Where:_ **WSL only** (memory-heavy) · _Depends:_ P1-2.
+
+- [ ] **P5-2. Execute under custody + close out** — run once, apply the frozen decision rule
+      verbatim, produce `results.json`, `execution.log`, `EVIDENCE_PACKAGE.md`, and either an
+      Accepted-Knowledge or Failure-Library entry. **No re-runs, no k-tuning** (X1/R15).
+      _Depends:_ P5-1.
+
+- [ ] **P5-3. Update `HYPOTHESIS_REGISTRY.md` + `FAILURE_REGISTRY.md`** with the outcome.
+
+---
+
+## 🧊 Standing Rule
+
+**No new governance documents until P4 lands.** Three overlapping governance tracks already exist —
+`docs/research_os/` (L1–L8 institutional architecture, 22 files), `docs/RESEARCH_MASTER_PLAN.md` v3
+(phases A–H), and `docs/research_programs/` (P-M / P-A) — reconciled by a fourth document. The
+binding constraint on this system is **execution, not specification**.
+
+**The pattern the audit found:** five separate completed designs that were never activated — the DB
+fence built but not cut over, V3-1 designed but not wired, HYP-PA-0001 specified but not run, the
+security fix deployed but not committed, the NR7 grandfather time-boxed but not revisited. Not a
+competence problem; a finishing problem.
+
+---
+---
+
+# 📦 ARCHIVE — Shipped Sprints (2026-05 → 2026-06)
+
+_All items below are complete. Retained for provenance; superseded as an active work list by the
+plan above and by the `Audit/` corpus._
 
 ## ✅ Sprint 11 — Agent-Firm Mode Toggle (SHIPPED 2026-05-27)
 
@@ -157,7 +457,9 @@ _Source: BRPT.md live analysis — BRPT crash -35% May 2026 exposed critical gap
 
 ---
 
-# 🔲 OUTSTANDING — Sorted by Critical Priority
+## ✅ (Archived) June 2026 "Outstanding" list — all items shipped
+
+_Superseded by the ACTIVE plan at the top of this file. Every checkbox below is `[x]`; retained for provenance only._
 
 ---
 
