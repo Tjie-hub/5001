@@ -85,6 +85,16 @@ REF_SPAN = 6
 # implying more than that per intervening session versus the last settled close is not a price,
 # it is a source disagreement (typically a split the two sources date differently) -- refuse it.
 MAX_SESSION_MOVE = 0.35
+# ohlcv tickers whose yfinance symbol is not "<ticker>.JK". IHSG is stored under its own name
+# by data/fetcher.py from ^JKSE; "IHSG.JK" is a 404, which left 2026-09-16..22 stranded.
+YF_SYMBOL = {"IHSG": "^JKSE"}
+# Indices never split, so the empirical basis factor is pure source noise for them (IHSG measured
+# 1.0008-1.0016 on 2026-09-16..22: the stored rows are yfinance's own pre-close 16:00 snapshots).
+NO_REBASE = {"IHSG"}
+
+
+def yf_symbol(ticker: str) -> str:
+    return YF_SYMBOL.get(ticker, ticker + ".JK")
 
 
 def wib_today() -> str:
@@ -117,7 +127,8 @@ def fetch_window(tickers: list[str], date: str) -> dict[str, dict[str, dict]]:
     d0 = datetime.strptime(date, "%Y-%m-%d")
     start = (d0 - timedelta(days=REF_SPAN * 2)).strftime("%Y-%m-%d")
     end = (d0 + timedelta(days=REF_SPAN * 2)).strftime("%Y-%m-%d")
-    symbols = [t + ".JK" for t in tickers]
+    ticker_of = {yf_symbol(t): t for t in tickers}
+    symbols = list(ticker_of)
     out: dict[str, dict[str, dict]] = {}
     CHUNK = 200
     for i in range(0, len(symbols), CHUNK):
@@ -131,7 +142,7 @@ def fetch_window(tickers: list[str], date: str) -> dict[str, dict[str, dict]]:
         if df is None or df.empty:
             continue
         for sym in part:
-            tk = sym[:-3]
+            tk = ticker_of[sym]
             try:
                 # yfinance returns MultiIndex columns with group_by="ticker"
                 # even for a single symbol, so keying on len(part) is not safe
@@ -259,7 +270,7 @@ def main() -> int:
             if not tgt:
                 reasons["no settled bar for the session"] += 1
                 continue
-            f, info = basis_factor(conn, t, date, bars)
+            f, info = (1.0, "index") if t in NO_REBASE else basis_factor(conn, t, date, bars)
             if f is None:
                 reasons[info] += 1
                 continue

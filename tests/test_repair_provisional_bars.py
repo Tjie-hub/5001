@@ -68,3 +68,29 @@ def test_plausible_move_scales_with_gap_length(tmp_path):
     conn = _db_multi(tmp_path, rows)
     assert rpb.plausible_move(conn, "X", "2026-09-22", 240.0)
     assert not rpb.plausible_move(conn, "X", "2026-09-22", 260.0)
+
+
+def test_ihsg_is_fetched_as_jkse_and_mapped_back(monkeypatch):
+    # "IHSG.JK" is a 404 on yfinance; 2026-09-16..22 IHSG stayed provisional because of it
+    assert rpb.yf_symbol("IHSG") == "^JKSE" and rpb.yf_symbol("BBCA") == "BBCA.JK"
+    import sys
+    import types
+    import pandas as pd
+    seen = {}
+    idx = pd.to_datetime(["2026-09-22"])
+    cols = pd.MultiIndex.from_product([["^JKSE", "BBCA.JK"], ["Open", "High", "Low", "Close", "Volume"]])
+    df = pd.DataFrame([[1, 2, 0.5, 1.5, 0, 9, 9, 9, 9, 100]], index=idx, columns=cols)
+
+    def download(symbols, **kw):
+        seen["symbols"] = list(symbols)
+        return df
+    monkeypatch.setitem(sys.modules, "yfinance", types.SimpleNamespace(download=download))
+    out = rpb.fetch_window(["IHSG", "BBCA"], "2026-09-22")
+    assert seen["symbols"] == ["^JKSE", "BBCA.JK"]
+    assert out["IHSG"]["2026-09-22"]["close"] == 1.5 and out["BBCA"]["2026-09-22"]["close"] == 9
+
+
+def test_ihsg_is_never_rebased():
+    assert "IHSG" in rpb.NO_REBASE
+    src = Path(ROOT / "scripts" / "repair_provisional_bars.py").read_text()
+    assert '(1.0, "index") if t in NO_REBASE else basis_factor(' in src
