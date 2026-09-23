@@ -1,0 +1,80 @@
+{
+ "A_as_coded|drop": {
+  "phase_median_mean": 0.37893319558258454,
+  "phase_median_t": 3.568424852230468,
+  "phase_median_p_pos": 0.7272727272727273,
+  "periods_per_phase": 45,
+  "names_missing_at_exit_total": 5,
+  "calendar_month": {
+   "n": 47,
+   "mean": 0.3566639237443106,
+   "t": 3.2854882981885334,
+   "p_pos": 0.6808510638297872
+  }
+ },
+ "A_as_coded|last": {
+  "phase_median_mean": 0.38013934999239113,
+  "phase_median_t": 3.568424852230468,
+  "phase_median_p_pos": 0.7272727272727273,
+  "periods_per_phase": 45,
+  "names_missing_at_exit_total": 5,
+  "calendar_month": {
+   "n": 47,
+   "mean": 0.3566639237443106,
+   "t": 3.2854882981885334,
+   "p_pos": 0.6808510638297872
+  }
+ },
+ "B_ex_ante|drop": {
+  "phase_median_mean": 0.3706066576933661,
+  "phase_median_t": 3.1871439391482195,
+  "phase_median_p_pos": 0.6956521739130435,
+  "periods_per_phase": 46,
+  "names_missing_at_exit_total": 5,
+  "calendar_month": {
+   "n": 48,
+   "mean": 0.2981958706763863,
+   "t": 2.587326731741338,
+   "p_pos": 0.6666666666666666
+  }
+ },
+ "B_ex_ante|last": {
+  "phase_median_mean": 0.3706066576933661,
+  "phase_median_t": 3.187382240461061,
+  "phase_median_p_pos": 0.6956521739130435,
+  "periods_per_phase": 46,
+  "names_missing_at_exit_total": 5,
+  "calendar_month": {
+   "n": 48,
+   "mean": 0.2981958706763863,
+   "t": 2.587326731741338,
+   "p_pos": 0.6666666666666666
+  }
+ },
+ "C_no_mask|drop": {
+  "phase_median_mean": 0.37369421859403174,
+  "phase_median_t": 3.1973785790454756,
+  "phase_median_p_pos": 0.6808510638297872,
+  "periods_per_phase": 47,
+  "names_missing_at_exit_total": 5,
+  "calendar_month": {
+   "n": 49,
+   "mean": 0.3061457892833091,
+   "t": 2.6524574586392147,
+   "p_pos": 0.673469387755102
+  }
+ },
+ "C_no_mask|last": {
+  "phase_median_mean": 0.3748015600763728,
+  "phase_median_t": 3.1973785790454756,
+  "phase_median_p_pos": 0.6808510638297872,
+  "periods_per_phase": 47,
+  "names_missing_at_exit_total": 5,
+  "calendar_month": {
+   "n": 49,
+   "mean": 0.3061457892833091,
+   "t": 2.6524574586392147,
+   "p_pos": 0.673469387755102
+  }
+ }
+}
