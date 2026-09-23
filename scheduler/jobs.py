@@ -482,6 +482,67 @@ def run_ownership_fetch():
                    f"{total} baris tersimpan untuk {len(tickers)} tickers.")
 
 
+def run_insider_fetch():
+    """Daily insider BUY/SELL transaction event log (director/commissioner/
+    major-holder share movements) — see stockbit_insider.py's module
+    docstring for the endpoint investigation and 2026-09-22 field-name
+    verification against a live BBCA response. Genuinely new dataset:
+    nothing else in this pipeline captures individual insider transactions
+    (stockbit_ownership.py's composition table is a monthly aggregate
+    snapshot, not per-transaction).
+
+    Cadence: daily, same reasoning as run_corporate_actions_fetch() —
+    insider transactions are discrete, sporadically-disclosed events (an
+    insider's BUY is only useful caught close to when Stockbit publishes
+    it), not a slow-moving rolling aggregate. Unlike corporate actions,
+    this endpoint IS paginated (BBCA: 2 pages, 85 rows total) but each
+    ticker's page count is small and bounded (MAX_PAGES=40 as a safety
+    valve — see stockbit_insider.py), so a daily full-universe pass is
+    still cheap.
+
+    Reuses the exact token-acquisition and ticker-universe calls the other
+    collectors already use. One ticker failing is logged and skipped —
+    every other ticker is still attempted, and this job never raises.
+    """
+    if _holiday_skip("run_insider_fetch"):
+        return
+    from datetime import datetime as dt
+    from stockbit_fetcher import extract_token_from_chrome, verify_token, get_tickers
+    from stockbit_insider import run_and_persist_insider
+    now_str = dt.now(WIB).strftime('%H:%M')
+    logger.info(f"[{now_str}] Insider transactions fetch dimulai...")
+
+    token = extract_token_from_chrome()
+    if not token or not verify_token(token):
+        send_telegram("🔴 <b>Insider Transactions Fetch GAGAL</b>\n"
+                      "Token Stockbit expired atau tidak ditemukan.")
+        return
+
+    tickers = get_tickers("ALL")
+    total = 0
+    failures = []
+    for ticker in tickers:
+        try:
+            summary = run_and_persist_insider(ticker, token, db_path=DB_PATH)
+            total += summary["count"]
+        except Exception as e:
+            logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] Insider transactions "
+                          f"'{ticker}' error: {e}")
+            failures.append((ticker, str(e)))
+
+    if failures:
+        detail = "\n".join(f"  {t}: {err[:150]}" for t, err in failures[:10])
+        more = f"\n  ... +{len(failures) - 10} more" if len(failures) > 10 else ""
+        send_telegram(
+            f"🔴 <b>Insider Transactions Fetch GAGAL (sebagian)</b>\n\n"
+            f"{len(failures)}/{len(tickers)} ticker gagal:\n{detail}{more}\n\n"
+            f"{total} transaksi tersimpan dari ticker yang berhasil."
+        )
+    else:
+        logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Insider transactions fetch selesai. "
+                   f"{total} transaksi tersimpan untuk {len(tickers)} tickers.")
+
+
 def run_stockbit_screener_fetch():
     """Fetch Stockbit guru-template screener snapshots and persist them.
 

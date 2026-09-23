@@ -13,6 +13,7 @@ from screener.stockbit_screener import init_db as init_stockbit_screener_table
 from stockbit_broker_period import init_db as init_broker_period_summary_table
 from stockbit_corporate_actions import init_db as init_corporate_action_events_table
 from stockbit_ownership import init_db as init_ownership_composition_table
+from stockbit_insider import init_db as init_insider_transactions_table
 from data.db import init_agent_firm_tables
 from data.investments import init_investment_tables
 from paper_trade import init_paper_table
@@ -281,6 +282,7 @@ def init_runtime():
     init_broker_period_summary_table()
     init_corporate_action_events_table()
     init_ownership_composition_table()
+    init_insider_transactions_table()
     init_agent_firm_tables()
     init_paper_table()
     init_investment_tables()

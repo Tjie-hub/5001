@@ -61,6 +61,7 @@ from scheduler.jobs import (  # noqa: F401
     run_broker_flow_fetch,
     run_broker_period_summary_fetch,
     run_corporate_actions_fetch,
+    run_insider_fetch,
     run_ownership_fetch,
     run_stockbit_screener_fetch,
     run_ohlcv_reconciliation,
@@ -308,6 +309,16 @@ def start_scheduler():
     _add_job(scheduler, run_corporate_actions_fetch, CronTrigger(
         day_of_week="mon-fri", hour=20, minute=20, timezone=WIB),
         id="corporate_actions_fetch", name="Corporate Actions Fetch 20:20")
+
+    # Insider transactions (director/commissioner/major-holder BUY/SELL) —
+    # daily, 20:25 WIB, after corporate actions (20:20). Same discrete-event
+    # reasoning as corporate_actions_fetch above: insider disclosures are
+    # sporadic and only useful caught close to when Stockbit publishes them,
+    # not a slow-moving rolling aggregate — see run_insider_fetch()'s own
+    # docstring.
+    _add_job(scheduler, run_insider_fetch, CronTrigger(
+        day_of_week="mon-fri", hour=20, minute=25, timezone=WIB),
+        id="insider_fetch", name="Insider Transactions Fetch 20:25")
 
     # Ownership composition (named major holders + investor-type buckets) —
     # monthly, day 5 at 09:00 WIB. Monthly, not daily/weekly: live-testing
