@@ -81,6 +81,10 @@ MATERIAL_CLOSE_DELTA = 0.005
 FACTOR_AGREEMENT = 0.01
 # How many sessions either side of the gap to search for a reference bar.
 REF_SPAN = 6
+# IDX auto-rejection bands cap a one-session move at 35% (the widest band). A repaired close
+# implying more than that per intervening session versus the last settled close is not a price,
+# it is a source disagreement (typically a split the two sources date differently) -- refuse it.
+MAX_SESSION_MOVE = 0.35
 
 
 def wib_today() -> str:
@@ -168,11 +172,14 @@ def basis_factor(conn, ticker: str, date: str, bars: dict[str, dict]):
          (datetime.strptime(date, "%Y-%m-%d") - timedelta(days=REF_SPAN * 2)).strftime("%Y-%m-%d"),
          (datetime.strptime(date, "%Y-%m-%d") + timedelta(days=REF_SPAN * 2)).strftime("%Y-%m-%d"),
          date)).fetchall()
-    factors = []
+    factors, all_factors = [], []          # all_factors stays aligned with refs
     for rd, rc in refs:
         yb = bars.get(rd)
         if yb and yb["close"] > 0:
             factors.append(float(rc) / yb["close"])
+            all_factors.append(factors[-1])
+        else:
+            all_factors.append(None)
     if not factors:
         return None, "no reference session"
     if len(factors) == 1:
@@ -183,7 +190,39 @@ def basis_factor(conn, ticker: str, date: str, bars: dict[str, dict]):
     close_enough = [f for f in factors if abs(f / mid - 1) <= FACTOR_AGREEMENT]
     if len(close_enough) < 2:
         return None, f"reference factors disagree ({min(factors):.4f}..{max(factors):.4f})"
-    return sum(close_enough) / len(close_enough), len(close_enough)
+    f = sum(close_enough) / len(close_enough)
+    # A rebase (f != 1) is only trustworthy when a reference lies AFTER the target session.
+    # When every settled reference precedes it -- the normal case for a multi-day stranded gap,
+    # whose later sessions are provisional too -- a split falling between the references and the
+    # target is invisible: the pre-split factor gets applied to a post-split bar. Found
+    # 2026-09-23 on FORU (~20:1 split ex 2026-09-22 inside a 09-18..09-22 gap): the dry run would
+    # have written 3,433 over a raw 176. With f ~= 1 the one-sided case stays safe, because a
+    # split after the references would itself have moved their factor away from 1.
+    if abs(f - 1.0) > FACTOR_AGREEMENT and not any(
+            rd > date for (rd, rc), fx in zip(refs, all_factors)
+            if fx is not None and abs(fx / mid - 1) <= FACTOR_AGREEMENT):
+        return None, "rebase needed but no reference after the session (split may fall in the gap)"
+    return f, len(close_enough)
+
+
+def plausible_move(conn, ticker: str, date: str, new_close: float) -> bool:
+    """False if new_close is further from the last settled close than IDX price bands allow.
+
+    Added 2026-09-23: FORU's yfinance bar for 2026-09-18 read 154.3 against a settled 3,540 on
+    09-17 and a scraper 3,010 the same day -- yfinance dates a ~20:1 split four sessions before
+    the IDX tape does. A -96% session is impossible under the 35% auto-rejection band, so the
+    bar is left provisional rather than written. Allows (1+35%)^k over k sessions of gap.
+    """
+    prev = conn.execute(
+        "SELECT date, close FROM ohlcv WHERE ticker=? AND is_final=1 AND date<? AND close>0 "
+        "ORDER BY date DESC LIMIT 1", (ticker, date)).fetchone()
+    if not prev:
+        return True
+    k = conn.execute("SELECT COUNT(DISTINCT date) FROM ohlcv WHERE date>? AND date<=?",
+                     (prev[0], date)).fetchone()[0] or 1
+    bound = (1 + MAX_SESSION_MOVE) ** k
+    ratio = new_close / float(prev[1])
+    return 1 / bound <= ratio <= bound
 
 
 def main() -> int:
@@ -229,6 +268,9 @@ def main() -> int:
             old = conn.execute("SELECT close FROM ohlcv WHERE ticker=? AND date=?",
                                (t, date)).fetchone()
             new_close = tgt["close"] * f
+            if not plausible_move(conn, t, date, new_close):
+                reasons["implausible move vs last settled close (> IDX 35% band/session)"] += 1
+                continue
             if old and old[0]:
                 d = abs(new_close / float(old[0]) - 1)
                 if d >= MATERIAL_CLOSE_DELTA:
