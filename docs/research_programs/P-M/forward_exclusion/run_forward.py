@@ -157,13 +157,33 @@ def generate(panel, as_of: str) -> dict:
     return rec
 
 
+STUCK_AFTER = 10   # DEV-002: complete sessions past an incomplete d0/d1 before flagging for the Owner
+
+
 def score(panel, rec: dict) -> dict | None:
-    """Realised incremental return, entry close(t+1), horizon 21 sessions. None until matured."""
-    cl, dates = panel["close"], panel["dates"]
+    """Realised incremental return, entry close(t+1), horizon 21 sessions. None until matured.
+
+    DEV-002 (2026-09-23): an outcome is scored only when BOTH the entry session d0 and the exit
+    session d1 pass the same completeness guard that protects formation dates. Before this, an
+    exit on a partial fetch (e.g. a session stranded at is_final=0) had every missing name
+    silently dropped by basket()'s dropna(), and the degraded outcome was frozen into the ledger,
+    never re-scored. d0/d1 are still counted on the raw session list, so the horizon definition
+    is unchanged; the scorer simply waits for the data to finalise.
+    """
+    cl, dates, comp = panel["close"], panel["dates"], panel["complete"]
     i = dates.index(rec["formation_date"])
     if i + 1 + HORIZON >= len(dates):
         return None
     d0, d1 = dates[i + 1], dates[i + 1 + HORIZON]
+    bad = [d for d in (d0, d1) if not bool(comp.get(d, False))]
+    if bad:
+        later = sum(1 for d in dates[i + 2 + HORIZON:] if bool(comp.get(d, False)))
+        tag = "[stuck]" if later >= STUCK_AFTER else "[wait]"
+        print(f"{tag} {rec['formation_date']}: session(s) {', '.join(bad)} incomplete "
+              f"({', '.join(str(int(panel['counts'][d])) for d in bad)} priced tickers) -- not scored"
+              + ("; Owner decision required (DEV-002)" if tag == "[stuck]"
+                 else "; run scripts/repair_provisional_bars.py --apply if stranded"))
+        return None
     def basket(names):
         a, b = cl.loc[d0, names], cl.loc[d1, names]
         r = (b / a - 1).replace([np.inf, -np.inf], np.nan).dropna()

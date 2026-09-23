@@ -57,3 +57,38 @@ before — but the guard, not the schedule, remains the control.
 
 **Superseded record.** The pre-repair ledger is preserved verbatim at
 `superseded/ledger_2026-09-16_pre_repair.json`.
+
+---
+
+## DEV-002 · 2026-09-23 · scorer waits for complete entry and exit sessions
+
+**What changed.** `score()` in `run_forward.py` now returns no outcome (the formation stays pending)
+unless BOTH the entry session d0 = close(t+1) and the exit session d1 = d0 + 21 sessions pass the
+protocol's existing session-completeness guard (priced-ticker count >= 95% of the trailing-20-session
+median). While either fails, the run prints `[wait]`; once at least 10 later complete sessions exist
+and it still fails, it prints `[stuck] ... Owner decision required`. No automatic fallback date is
+ever chosen. Patch: `DEV-002_score_completeness.patch`.
+
+**Why.** The guard protected formation dates only. `score()` indexed the raw session list, and its
+`basket()` applies `dropna()`, so an exit on a partial fetch silently removed every name without a
+final close that day from both books. Outcomes are never re-scored, so the degraded result would
+have been frozen into this append-only ledger. The hazard is live, not theoretical: on 2026-09-23 the
+provisional-bars check reported 2026-09-16 (868 final / 46 provisional), 2026-09-18 (110 / 806) and
+2026-09-21 (91 / 823) stranded, and 2026-07-09 and 2026-07-24 thin (~15% of norm). The suspension
+audit found 794 names missing at exit across its backtest arms on the raw calendar, and 5 with
+partial sessions excluded.
+
+**Was any outcome visible?** No. The ledger holds one formation (2026-09-15), `outcome: null`; the
+earliest possible maturity is d1 ≈ 2026-10-15. The change was designed from a code reading and a
+backtest audit, blind to any forward result.
+
+**What did NOT change.** Universe, estimator, exclusion fraction, entry convention (close(t+1)),
+horizon (21 sessions, still counted on the raw session list, so d0/d1 are the same dates as
+before), benchmark, endpoint, decision rule, formation cadence and formation guard. Names missing on
+an otherwise COMPLETE exit session (genuine suspensions) are still dropped exactly as before. That
+behaviour is out of scope here; the audit measured it at 5 names over ~47 periods.
+
+**Residual risk, stated.** A session that never finalises blocks scoring of any formation that
+enters or exits on it. That is deliberate: a missing outcome is recoverable, a wrong one in an
+append-only ledger is not. `[stuck]` hands the case to the Owner. The standing remedy for a stranded
+session is `scripts/repair_provisional_bars.py --apply`.
