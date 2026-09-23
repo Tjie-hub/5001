@@ -1,6 +1,13 @@
-# FWD-PM-VOLEX-SN-001 — PROTOCOL (DRAFT v2, NOT REGISTERED)
+# FWD-PM-VOLEX-SN-001 — PROTOCOL (DRAFT v2 — REFUSED AT G1, 2026-09-23)
 
-**Status:** DRAFT v2. **Not registered. No family slot consumed. Not open.**
+**Status:** **REFUSED AT G1** (2026-09-23). The D-053 pre-declared re-measurement FAILED its gate:
+pre-2021 t 1.39 vs bar 2.87 (`REMEASUREMENT_RESULT_2026-09-23.md`). Never registered, no family slot
+consumed, never opened. HYP-PM-0013 reserved-retired. Terminal: no re-cut is permitted. The title,
+this block and the struck-through status line are the only changes; every other line is unchanged from
+the v2 pinned in D-053 (sha256 `1bc868c73f1cbc4925eb06678202594ea80efa50821b9b908f9d9fc532eaa6c2`,
+commit `f6ebd8f`).
+
+~~**Status:** DRAFT v2. **Not registered. No family slot consumed. Not open.**~~
 **v2 approved:** D-053 (Owner, 2026-09-23, Option B of
 `OWNER_DECISION_PACKAGE_V1_FAMILY_2026-09-23.md`). Registration (D-054) is conditional on the
 pre-declared re-measurement in §7 clearing its bar.
