@@ -31,8 +31,8 @@ _DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'walkforward.db
 
 # ── Core tradebook fetch ──────────────────────────────────────────────────────
 
-def _fetch_tradebook_raw(ticker: str, token: str) -> dict | None:
-    """Fetch raw 1m tradebook data from Stockbit. Returns data dict or None."""
+def _fetch_tradebook_status(ticker: str, token: str) -> tuple[int | None, dict | None]:
+    """Fetch raw 1m tradebook data. Returns (HTTP status or None on a network error, data)."""
     try:
         r = requests.get(
             f"{STOCKBIT_BASE}/order-trade/trade-book/chart",
@@ -42,11 +42,16 @@ def _fetch_tradebook_raw(ticker: str, token: str) -> dict | None:
         )
         if r.status_code != 200:
             logger.info(f"[scraper] {ticker}: HTTP {r.status_code}")
-            return None
-        return r.json().get("data") or None
+            return r.status_code, None
+        return 200, r.json().get("data") or None
     except Exception as e:
         logger.error(f"[scraper] tradebook error {ticker}: {e}")
-        return None
+        return None, None
+
+
+def _fetch_tradebook_raw(ticker: str, token: str) -> dict | None:
+    """Fetch raw 1m tradebook data from Stockbit. Returns data dict or None."""
+    return _fetch_tradebook_status(ticker, token)[1]
 
 
 def _ticks_from_raw(ticker: str, data: dict, trade_date: str) -> list:
@@ -119,12 +124,15 @@ def fetch_all_stockbit(
     trade_date: str = None,
     delay: float = DELAY,
     progress_cb=None,
+    statuses: dict | None = None,
 ) -> tuple[dict, dict]:
     """
     Fetch tradebook for all tickers in one pass.
     Returns: (ohlcv_all, ticks_all)
       ohlcv_all: {ticker: {open, high, low, close, volume}}
       ticks_all: {ticker: [tick, ...]}
+    If `statuses` is a dict it is filled with {ticker: HTTP status or None}, so the EOD pass
+    can tell a mid-run token revocation (401/403) from tickers that simply did not trade.
     """
     if trade_date is None:
         trade_date = dt_date.today().isoformat()
@@ -135,7 +143,9 @@ def fetch_all_stockbit(
 
     for i, ticker in enumerate(tickers):
         logger.info(f"[scraper] {ticker} ({i+1}/{total})")
-        data = _fetch_tradebook_raw(ticker, token)
+        status, data = _fetch_tradebook_status(ticker, token)
+        if statuses is not None:
+            statuses[ticker] = status
         if data:
             ticks = _ticks_from_raw(ticker, data, trade_date)
         else:

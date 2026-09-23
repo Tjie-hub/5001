@@ -44,6 +44,73 @@ def _load_stockbit_token() -> str | None:
         return None
 
 
+# ── EOD token verification (2026-09-23) ──────────────────────────────────────
+# 2026-09-21/22: the token was revoked server-side mid-afternoon while its exp claim was still
+# valid; run_intraday() read the file raw and the 16:15 finalisation got HTTP 401 on all 958
+# tickers. The FINAL pass now verifies the token live before scraping. Only 401/403 justifies a
+# re-login: an unnecessary login may itself be what revokes the account's other sessions, so a
+# 5xx/timeout is retried with backoff instead.
+_AUTH_FAIL = (401, 403)
+VERIFY_BACKOFF_S = (5, 15, 45)
+
+
+def _token_status(token: str):
+    from stockbit_fetcher import token_status
+    return token_status(token)
+
+
+def _refresh_token() -> bool:
+    from stockbit_fetcher import refresh_token_subprocess
+    return refresh_token_subprocess()
+
+
+def _verify_with_backoff(token: str, sleep=time.sleep):
+    """Live status of `token`; transient failures (5xx/429/network) are retried with backoff."""
+    status = _token_status(token)
+    for wait in VERIFY_BACKOFF_S:
+        if status == 200 or status in _AUTH_FAIL:
+            break
+        logger.warning(f"[screener] token verify inconclusive ({status}) — retry in {wait}s")
+        sleep(wait)
+        status = _token_status(token)
+    return status
+
+
+def _refresh_and_reverify(reason: str) -> str | None:
+    """Re-login once (auto_token subprocess), re-read the token file, verify. Token or None."""
+    logger.warning(f"[screener] {reason} — refreshing Stockbit token")
+    _refresh_token()
+    token = _load_stockbit_token()
+    if token and _verify_with_backoff(token) == 200:
+        logger.info("[screener] token refreshed and verified")
+        return token
+    return None
+
+
+def _eod_verified_token() -> tuple[str | None, str]:
+    """Token for the FINAL pass, plus a note. None means no usable token (do not scrape)."""
+    token = _load_stockbit_token()
+    status = _verify_with_backoff(token) if token else 401
+    if status == 200:
+        return token, 'verified'
+    if status not in _AUTH_FAIL:
+        # still inconclusive after backoff: says nothing about the token, so no login; the
+        # scrape itself (and the mid-run 401 retry) is the next check
+        logger.warning(f"[screener] token verify inconclusive ({status}) — scraping without re-login")
+        return token, f'unverified ({status})'
+    what = 'missing' if not token else f'HTTP {status}'
+    new = _refresh_and_reverify(f"EOD token {what}")
+    return (new, f'refreshed after {what}') if new else (None, f'dead ({what}, refresh failed)')
+
+
+def _send(send_telegram, msg: str) -> None:
+    if send_telegram:
+        try:
+            send_telegram(msg)
+        except Exception as e:
+            logger.warning(f"[screener] telegram send failed: {e}")
+
+
 def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None,
                  final: bool = False) -> dict:
     t0 = time.time()
@@ -53,7 +120,21 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None,
     logger.info(f"[screener] INTRADAY RUN {trade_date}")
     ok, err = 0, 0
 
-    sb_token = _load_stockbit_token()
+    token_note = None
+    if final:
+        sb_token, token_note = _eod_verified_token()
+        if not sb_token:
+            logger.error(f"[screener] EOD finalisation aborted: Stockbit token {token_note}")
+            _send(send_telegram,
+                  f"🔴 <b>EOD finalisation ABORTED</b> ({trade_date})\n\n"
+                  f"Stockbit token {token_note}. Nothing was saved; bars for {trade_date} "
+                  f"stay provisional.\n"
+                  f"Fix: <code>python3 auto_token.py --login</code> — the 17:30 EOD retry "
+                  f"will then finalise the session.")
+            return {'ok': 0, 'err': 0, 'duration_s': round(time.time() - t0, 1),
+                    'type': 'intraday', 'error': 'token_invalid', 'filled': 0, 'total': 0}
+    else:
+        sb_token = _load_stockbit_token()
     if not sb_token:
         logger.error("[screener] Stockbit token not found — cannot run intraday")
         if send_telegram:
@@ -77,14 +158,38 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None,
         _task_state['progress'] = i
 
     logger.info(f"[screener] Fetching Stockbit tradebook for {total} tickers...")
+    statuses = {}
     ohlcv_all, all_trades = scraper.fetch_all_stockbit(
         tickers=tickers, token=sb_token, trade_date=trade_date,
-        progress_cb=_on_progress,
+        progress_cb=_on_progress, statuses=statuses,
     )
 
     filled = sum(1 for v in ohlcv_all.values() if v.get('close'))
     logger.info(f"[screener] OHLCV derived: {filled}/{total} tickers with data")
-    if filled == 0 and send_telegram:
+
+    # Mid-run revocation (FINAL pass only): a degraded scrape whose failures are mostly
+    # 401/403 gets exactly one refresh and a re-fetch of the auth-failed tickers only.
+    retried = 0
+    if final and total and filled / total < EOD_MIN_FILL_FRAC:
+        auth_failed = [t for t in tickers if statuses.get(t) in _AUTH_FAIL]
+        if auth_failed and 2 * len(auth_failed) >= total - filled:
+            new_token = _refresh_and_reverify(
+                f"EOD scrape degraded ({filled}/{total}), {len(auth_failed)} tickers got 401/403")
+            if new_token:
+                o2, t2 = scraper.fetch_all_stockbit(
+                    tickers=auth_failed, token=new_token, trade_date=trade_date)
+                for t in auth_failed:
+                    if o2.get(t, {}).get('close'):
+                        ohlcv_all[t] = o2[t]
+                        all_trades[t] = t2.get(t, [])
+                retried = len(auth_failed)
+                filled = sum(1 for v in ohlcv_all.values() if v.get('close'))
+                token_note = 'refreshed mid-run'
+                logger.info(f"[screener] EOD retry of {retried} tickers: now {filled}/{total}")
+            else:
+                logger.error("[screener] EOD mid-run token refresh failed — no retry")
+
+    if filled == 0 and send_telegram and not final:   # FINAL pass: run_eod's degraded alert
         try:
             send_telegram(
                 f"🔴 <b>Stockbit Scraper GAGAL</b>\n\n"
@@ -126,7 +231,7 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None,
     _task_state.update({'running': False, 'result': {'ok': ok, 'err': err, 'duration_s': duration}})
     logger.info(f"[screener] Intraday done: {ok} ok, {err} err, {duration}s")
     return {'ok': ok, 'err': err, 'duration_s': duration, 'type': 'intraday',
-            'filled': filled, 'total': total}
+            'filled': filled, 'total': total, 'retried': retried, 'token': token_note}
 
 
 # A healthy 16:15 run gets bars for ~775 of 958 tickers (~81%; the rest did not trade).
@@ -191,8 +296,10 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
 
     logger.info(f"[screener] EOD RUN {trade_date}")
 
-    intraday_result = run_intraday(trade_date, final=True)   # 16:15: bars become FINAL
-    _alert_if_eod_degraded(intraday_result, trade_date, send_telegram)
+    intraday_result = run_intraday(trade_date, final=True,   # 16:15: bars become FINAL
+                                   send_telegram=send_telegram)
+    if intraday_result.get('error') != 'token_invalid':      # that path already alerted
+        _alert_if_eod_degraded(intraday_result, trade_date, send_telegram)
 
     # VPIN calculation
     logger.info("[screener] Calculating VPIN...")

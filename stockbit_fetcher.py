@@ -199,6 +199,41 @@ def verify_token(token):
     return r.status_code == 200
 
 
+def token_status(token):
+    """One live call on verify_token()'s endpoint; the HTTP status, or None on a network error.
+
+    verify_token() collapses everything to a bool, but callers that may re-login must tell a
+    revoked token (401/403) apart from a transient 429/5xx/timeout: an unnecessary login may
+    itself revoke the account's other sessions (2026-09-21/22 incidents)."""
+    try:
+        r = requests.get(
+            f"{STOCKBIT_BASE}/keystats/BBCA",
+            headers={"Authorization": f"Bearer {token}", "User-Agent": "Mozilla/5.0",
+                     "Origin": "https://stockbit.com", "Referer": "https://stockbit.com/"},
+            timeout=10,
+        )
+        return r.status_code
+    except Exception:
+        return None
+
+
+def refresh_token_subprocess(timeout: int = 360) -> bool:
+    """Run auto_token.py (auto_refresh -> credential-login fallback) in a subprocess.
+
+    Same refresh chain as _auto_login_fallback(), but out of process: Playwright must never
+    run inside the gunicorn/scheduler process, and a hung browser is bounded by `timeout`.
+    auto_token verifies the current token live before skipping, and its file lock makes a
+    concurrent cron refresh safe. True on exit code 0 — callers must still re-verify."""
+    import subprocess
+    try:
+        r = subprocess.run([sys.executable, "auto_token.py"], cwd=_HERE,
+                           capture_output=True, text=True, timeout=timeout)
+        return r.returncode == 0
+    except Exception as e:
+        log(f"auto_token subprocess failed: {e}")
+        return False
+
+
 def _auto_login_fallback():
     """Try Playwright session-replay refresh, then credential login. Returns
     a verified, already-persisted token, or None if both stages fail."""

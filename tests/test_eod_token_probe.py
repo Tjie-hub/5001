@@ -1,4 +1,4 @@
-"""16:10 live Stockbit token probe + EOD degraded-finalisation alert (2026-09-23).
+"""16:05 live Stockbit token probe + EOD degraded-finalisation alert (2026-09-23).
 
 Incident: 2026-09-21 and 2026-09-22 the token was revoked server-side mid-afternoon while its
 exp claim still showed ~21h left. The expiry-only health check said "OK", and the 16:15 EOD run
@@ -72,13 +72,13 @@ def test_probe_refreshes_when_token_file_missing(tmp_path, monkeypatch):
     assert refresh.call_count == 1
 
 
-def test_probe_reexported_and_registered_at_1610():
+def test_probe_reexported_and_registered_at_1605():
     assert sched.run_token_live_probe is jobs.run_token_live_probe
     source = inspect.getsource(sched.start_scheduler)
     idx = source.index("run_token_live_probe")
     window = source[max(0, idx - 300):idx + 300]
     assert "add_job" in window and "CronTrigger" in window
-    assert "hour=16, minute=10" in window
+    assert "hour=16, minute=5," in window
     assert 'day_of_week="mon-fri"' in window
 
 

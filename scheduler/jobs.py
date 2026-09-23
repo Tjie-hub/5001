@@ -642,45 +642,22 @@ def run_token_health_check(token_file: str = None):
 
 
 def _stockbit_probe_status(token: str):
-    """One live Stockbit call; returns the HTTP status, or None on a network error.
+    """One live Stockbit call; the HTTP status, or None on a network error.
 
-    Same endpoint stockbit_fetcher.verify_token() uses, but the status is returned
-    rather than collapsed to a bool: the probe must tell a revoked token (401/403)
-    apart from a transient 429/5xx, and only the former justifies a re-login."""
-    import requests
-    try:
-        r = requests.get(
-            "https://exodus.stockbit.com/keystats/BBCA",
-            headers={"Authorization": f"Bearer {token}",
-                     "User-Agent": "Mozilla/5.0", "Origin": "https://stockbit.com",
-                     "Referer": "https://stockbit.com/"},
-            timeout=10)
-        return r.status_code
-    except Exception as e:
-        logger.warning(f"[token-probe] network error: {e}")
-        return None
+    The probe must tell a revoked token (401/403) apart from a transient 429/5xx, and only
+    the former justifies a re-login. Shared with the EOD finalisation pass."""
+    from stockbit_fetcher import token_status
+    return token_status(token)
 
 
 def _run_token_refresh() -> bool:
-    """Run auto_token.py in a subprocess (Playwright never runs inside the web process).
-
-    auto_token's normal mode verifies the current token LIVE before deciding to skip, so a
-    revoked token with a far-off exp claim is refreshed, not skipped. Its own file lock makes
-    this safe against a concurrent cron refresh."""
-    import subprocess
-    import sys
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    try:
-        r = subprocess.run([sys.executable, "auto_token.py"], cwd=root,
-                           capture_output=True, text=True, timeout=360)
-        return r.returncode == 0
-    except Exception as e:
-        logger.warning(f"[token-probe] refresh subprocess failed: {e}")
-        return False
+    """auto_token.py in a subprocess (Playwright never runs inside the web process)."""
+    from stockbit_fetcher import refresh_token_subprocess
+    return refresh_token_subprocess()
 
 
 def run_token_live_probe(token_file: str = None):
-    """16:10 WIB: verify the Stockbit token against the live API before the 16:15 EOD run.
+    """16:05 WIB: verify the Stockbit token against the live API before the 16:15 EOD run.
 
     Why (2026-09-21, 2026-09-22): the token was revoked server-side mid-afternoon while its
     exp claim still showed ~21h left. run_token_health_check reads only the exp claim, so it
