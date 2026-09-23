@@ -66,6 +66,7 @@ from scheduler.jobs import (  # noqa: F401
     run_stockbit_screener_fetch,
     run_ohlcv_reconciliation,
     run_token_health_check,
+    run_token_live_probe,
     run_ohlcv_coverage_check,
     run_foreign_snapshot,
     run_news_fetch,
@@ -351,6 +352,13 @@ def start_scheduler():
         _add_job(scheduler, run_token_health_check, CronTrigger(
             day_of_week="mon-fri", hour=_h, minute=_m, timezone=WIB),
             id=f"token_health_{_h:02d}{_m:02d}", name=f"Token Health {_h:02d}:{_m:02d}")
+
+    # Live token probe — 16:10 WIB, 5 min before the 16:15 EOD finalisation. The exp-based
+    # health check above cannot see a server-side revocation (2026-09-21/22: "OK, 21.2h left",
+    # then 401 on all 958 tickers at 16:15); this one calls the API and refreshes on 401/403.
+    _add_job(scheduler, run_token_live_probe, CronTrigger(
+        day_of_week="mon-fri", hour=16, minute=10, timezone=WIB),
+        id="token_live_probe_1610", name="Token Live Probe 16:10")
 
     # OHLCV coverage monitor — 17:00 WIB (after EOD scraper/trade-plan settle)
     _add_job(scheduler, run_ohlcv_coverage_check, CronTrigger(

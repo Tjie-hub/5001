@@ -641,6 +641,100 @@ def run_token_health_check(token_file: str = None):
     logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Token health ALERT: {s['status']} ({left})")
 
 
+def _stockbit_probe_status(token: str):
+    """One live Stockbit call; returns the HTTP status, or None on a network error.
+
+    Same endpoint stockbit_fetcher.verify_token() uses, but the status is returned
+    rather than collapsed to a bool: the probe must tell a revoked token (401/403)
+    apart from a transient 429/5xx, and only the former justifies a re-login."""
+    import requests
+    try:
+        r = requests.get(
+            "https://exodus.stockbit.com/keystats/BBCA",
+            headers={"Authorization": f"Bearer {token}",
+                     "User-Agent": "Mozilla/5.0", "Origin": "https://stockbit.com",
+                     "Referer": "https://stockbit.com/"},
+            timeout=10)
+        return r.status_code
+    except Exception as e:
+        logger.warning(f"[token-probe] network error: {e}")
+        return None
+
+
+def _run_token_refresh() -> bool:
+    """Run auto_token.py in a subprocess (Playwright never runs inside the web process).
+
+    auto_token's normal mode verifies the current token LIVE before deciding to skip, so a
+    revoked token with a far-off exp claim is refreshed, not skipped. Its own file lock makes
+    this safe against a concurrent cron refresh."""
+    import subprocess
+    import sys
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    try:
+        r = subprocess.run([sys.executable, "auto_token.py"], cwd=root,
+                           capture_output=True, text=True, timeout=360)
+        return r.returncode == 0
+    except Exception as e:
+        logger.warning(f"[token-probe] refresh subprocess failed: {e}")
+        return False
+
+
+def run_token_live_probe(token_file: str = None):
+    """16:10 WIB: verify the Stockbit token against the live API before the 16:15 EOD run.
+
+    Why (2026-09-21, 2026-09-22): the token was revoked server-side mid-afternoon while its
+    exp claim still showed ~21h left. run_token_health_check reads only the exp claim, so it
+    reported "OK", and the 16:15 EOD scraper got HTTP 401 on all 958 tickers, leaving each
+    session provisional with no alert until the next morning.
+
+    401/403 (or no token) -> run auto_token.py once, re-probe, report the outcome.
+    Any other failure (429/5xx/network) is reported as inconclusive and does NOT trigger a
+    re-login: a new login may itself revoke a working session.
+    """
+    if _holiday_skip("run_token_live_probe"):
+        return
+    now = datetime.now(WIB).strftime("%H:%M")
+    tf = token_file or os.path.join(os.path.dirname(os.path.dirname(__file__)), ".stockbit_token")
+    try:
+        tok = open(tf).read().strip()
+    except Exception:
+        tok = ""
+    status = _stockbit_probe_status(tok) if tok else 401
+    if status == 200:
+        logger.info(f"[{now}] Token live probe OK (HTTP 200)")
+        return
+    if status not in (401, 403):
+        logger.warning(f"[{now}] Token live probe inconclusive (HTTP {status})")
+        send_telegram(
+            f"⚠️ <b>Stockbit token probe inconclusive</b> ({now})\n\n"
+            f"Live check returned {'a network error' if status is None else f'HTTP {status}'}, "
+            f"not 401. No re-login attempted (a new login can revoke a working session).\n"
+            f"Watch the 16:15 EOD finalisation.")
+        return
+
+    what = "missing" if not tok else f"HTTP {status}"
+    logger.warning(f"[{now}] Token live probe: {what} — running auto_token refresh")
+    refreshed = _run_token_refresh()
+    try:
+        tok2 = open(tf).read().strip()
+    except Exception:
+        tok2 = ""
+    after = _stockbit_probe_status(tok2) if tok2 else None
+    if after == 200:
+        send_telegram(
+            f"🟡 <b>Stockbit token revoked — recovered</b> ({now})\n\n"
+            f"Live probe got {what} although the exp claim looked valid; auto_token refreshed "
+            f"it and the new token verifies. 16:15 EOD should finalise normally.")
+    else:
+        send_telegram(
+            f"🔴 <b>Stockbit token DEAD before EOD</b> ({now})\n\n"
+            f"Live probe got {what}; auto_token refresh "
+            f"{'ran but the token still fails' if refreshed else 'failed'} "
+            f"(re-probe: {after}). The 16:15 EOD finalisation will fail.\n"
+            f"Fix: <code>python3 auto_token.py --login</code>, then after 16:30 "
+            f"<code>python3 scripts/repair_provisional_bars.py --apply</code>")
+
+
 def run_ohlcv_coverage_check(date_str: str = None):
     """Alert when a trading day's OHLCV ticker coverage is thin/absent vs the
     active universe (Phase 3A) — catches fetch outages (e.g. token death) and

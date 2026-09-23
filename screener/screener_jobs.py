@@ -65,7 +65,8 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None,
                 )
             except Exception:
                 pass
-        return {'ok': 0, 'err': 0, 'duration_s': 0, 'type': 'intraday', 'error': 'no_token'}
+        return {'ok': 0, 'err': 0, 'duration_s': 0, 'type': 'intraday', 'error': 'no_token',
+                'filled': 0, 'total': 0}
 
     tickers = load_all_tickers()
     total = len(tickers)
@@ -124,7 +125,41 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None,
     db.log_run('intraday', ok, err, duration)
     _task_state.update({'running': False, 'result': {'ok': ok, 'err': err, 'duration_s': duration}})
     logger.info(f"[screener] Intraday done: {ok} ok, {err} err, {duration}s")
-    return {'ok': ok, 'err': err, 'duration_s': duration, 'type': 'intraday'}
+    return {'ok': ok, 'err': err, 'duration_s': duration, 'type': 'intraday',
+            'filled': filled, 'total': total}
+
+
+# A healthy 16:15 run gets bars for ~775 of 958 tickers (~81%; the rest did not trade).
+# Every stranded session on record sat at 0-3% (2026-09-07 0/958, 09-18 14/958, 09-21 and
+# 09-22 HTTP 401 on all 958), so half the universe separates the two with a wide margin.
+EOD_MIN_FILL_FRAC = 0.5
+
+
+def _alert_if_eod_degraded(intraday_result: dict, trade_date: str, send_telegram=None) -> bool:
+    """Telegram-alert when the EOD finalisation pass got data for too few tickers.
+
+    Why (2026-09-23): run_eod() called run_intraday() without a sender, so a 16:15 run that
+    finalised nothing was silent; the first warning was the 09:00 provisional-bars check the
+    next morning. Returns True when degraded. Fail-soft: never raises into run_eod()."""
+    filled = int(intraday_result.get('filled') or 0)
+    total = int(intraday_result.get('total') or 0)
+    if total and filled / total >= EOD_MIN_FILL_FRAC:
+        return False
+    logger.error(f"[screener] EOD finalisation DEGRADED: {filled}/{total} tickers with data ({trade_date})")
+    if send_telegram:
+        try:
+            send_telegram(
+                f"🔴 <b>EOD finalisation DEGRADED</b> ({trade_date})\n\n"
+                f"Stockbit returned data for only <b>{filled}/{total}</b> tickers "
+                f"(normal ~775). Bars for {trade_date} are NOT final and research reads "
+                f"will not see them.\n"
+                f"Likely: token revoked (HTTP 401) or empty upstream responses — see app.log.\n"
+                f"Fix the token (<code>python3 auto_token.py --login</code>), then "
+                f"<code>python3 scripts/repair_provisional_bars.py --apply</code>"
+            )
+        except Exception as e:
+            logger.warning(f"[screener] EOD degraded alert send failed: {e}")
+    return True
 
 
 def _eod_calendar_cleanup(min_days: int = 1) -> int:
@@ -157,6 +192,7 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
     logger.info(f"[screener] EOD RUN {trade_date}")
 
     intraday_result = run_intraday(trade_date, final=True)   # 16:15: bars become FINAL
+    _alert_if_eod_degraded(intraday_result, trade_date, send_telegram)
 
     # VPIN calculation
     logger.info("[screener] Calculating VPIN...")
