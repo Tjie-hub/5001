@@ -267,6 +267,75 @@ def _alert_if_eod_degraded(intraday_result: dict, trade_date: str, send_telegram
     return True
 
 
+def _final_state(trade_date: str, tickers: list) -> tuple[set, set]:
+    """(tickers with a FINAL bar, tickers with only a PROVISIONAL bar) on trade_date."""
+    conn = db.get_conn()
+    try:
+        rows = conn.execute("SELECT ticker, is_final FROM ohlcv WHERE date=?",
+                            (trade_date,)).fetchall()
+    finally:
+        conn.close()
+    universe = set(tickers)
+    final = {r[0] for r in rows if r[1] == 1 and r[0] in universe}
+    prov = {r[0] for r in rows if r[1] != 1 and r[0] in universe} - final
+    return final, prov
+
+
+def run_eod_retry(trade_date: str = None, send_telegram=None, today: str = None) -> dict:
+    """17:30 WIB: re-run the FINAL scrape for today's tickers the 16:15 pass did not finalise.
+
+    Why (2026-09-23): a failed 16:15 pass (token revoked 09-21/22, empty upstream 09-18) left
+    each session provisional until a manual repair the next day. This retries the same day,
+    from the same source (Stockbit tradebook).
+      degraded (final < EOD_MIN_FILL_FRAC of the universe) -> every ticker without a final bar
+      otherwise                                            -> only leftover provisional bars
+    Tickers that did not trade stay absent: no bar is ever fabricated. Idempotent (a final bar
+    is replaced by the same final bar); the scheduler wrapper dedups it per day.
+    The tradebook endpoint has no date parameter — it always serves the current session — so
+    this refuses any date but today."""
+    today = today or dt_date.today().isoformat()
+    trade_date = trade_date or today
+    if trade_date != today:
+        logger.error(f"[screener] EOD retry refused: {trade_date} is not today ({today}); "
+                     f"the tradebook only serves the current session")
+        return {'action': 'refused', 'reason': 'not_today', 'retried': 0, 'finalised': 0}
+
+    tickers = load_all_tickers()
+    total = len(tickers)
+    final, prov = _final_state(trade_date, tickers)
+    degraded = bool(total) and len(final) / total < EOD_MIN_FILL_FRAC
+    targets = [t for t in tickers if t not in final] if degraded else sorted(prov)
+    base = {'final_before': len(final), 'provisional_before': len(prov), 'total': total,
+            'degraded': degraded}
+    if not targets:
+        logger.info(f"[screener] EOD retry: nothing to do ({len(final)}/{total} final)")
+        return {**base, 'action': 'none', 'retried': 0, 'finalised': 0}
+
+    sb_token, note = _eod_verified_token()
+    if not sb_token:
+        logger.error(f"[screener] EOD retry aborted: Stockbit token {note}")
+        _send(send_telegram,
+              f"🔴 <b>EOD retry ABORTED</b> ({trade_date})\n\n"
+              f"{len(final)}/{total} final, {len(targets)} to retry, but the Stockbit token is "
+              f"{note}. Nothing saved.\nFix: <code>python3 auto_token.py --login</code>")
+        return {**base, 'action': 'token_invalid', 'retried': 0, 'finalised': 0}
+
+    logger.info(f"[screener] EOD retry: {len(targets)} tickers ({'degraded' if degraded else 'provisional'})")
+    ohlcv, _ = scraper.fetch_all_stockbit(tickers=targets, token=sb_token, trade_date=trade_date)
+    got = {t: v for t, v in ohlcv.items() if v.get('close')}
+    saved = scraper.save_ohlcv_to_db(got, trade_date, is_final=True) if got else 0
+    final_after, prov_after = _final_state(trade_date, tickers)
+    logger.info(f"[screener] EOD retry done: {saved} finalised; now {len(final_after)}/{total} final")
+    _send(send_telegram,
+          f"{'🟢' if len(final_after) / max(total, 1) >= EOD_MIN_FILL_FRAC else '🔴'} "
+          f"<b>EOD retry</b> ({trade_date})\n\n"
+          f"Retried {len(targets)} tickers ({'degraded day' if degraded else 'provisional leftovers'}), "
+          f"token {note}.\nFinal bars: {len(final)} → <b>{len(final_after)}/{total}</b>; "
+          f"provisional left: {len(prov_after)}.")
+    return {**base, 'action': 'retried', 'retried': len(targets), 'finalised': saved,
+            'final_after': len(final_after), 'provisional_after': len(prov_after), 'token': note}
+
+
 def _eod_calendar_cleanup(min_days: int = 1) -> int:
     """Phase 3A: self-clean the corpus daily — refresh the IHSG-derived trading
     calendar, then drop non-trading-day rows (yfinance holiday-fills). Previously

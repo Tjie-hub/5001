@@ -67,6 +67,7 @@ from scheduler.jobs import (  # noqa: F401
     run_ohlcv_reconciliation,
     run_token_health_check,
     run_token_live_probe,
+    run_eod_retry_job,
     run_ohlcv_coverage_check,
     run_foreign_snapshot,
     run_news_fetch,
@@ -360,6 +361,14 @@ def start_scheduler():
     _add_job(scheduler, run_token_live_probe, CronTrigger(
         day_of_week="mon-fri", hour=16, minute=5, timezone=WIB),
         id="token_live_probe_1605", name="Token Live Probe 16:05")
+
+    # EOD finalisation retry — 17:30 WIB, same day. Re-scrapes (Stockbit tradebook) the tickers
+    # the 16:15 pass left without a final bar, after the 16:40 trade plan and 17:05 screener
+    # fetch are done. The tradebook only serves the current session, so this cannot wait for
+    # tomorrow; the 09:00 provisional-bars check stays the backstop.
+    _add_job(scheduler, run_eod_retry_job, CronTrigger(
+        day_of_week="mon-fri", hour=17, minute=30, timezone=WIB),
+        id="eod_retry_1730", name="EOD Finalisation Retry 17:30")
 
     # OHLCV coverage monitor — 17:00 WIB (after EOD scraper/trade-plan settle)
     _add_job(scheduler, run_ohlcv_coverage_check, CronTrigger(

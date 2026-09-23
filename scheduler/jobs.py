@@ -840,6 +840,30 @@ def _run_screener_eod():
         logger.warning(f"[scheduler] Screener EOD error: {e}")
 
 
+def run_eod_retry_job():
+    """17:30 WIB: same-day retry of the 16:15 EOD finalisation (screener.run_eod_retry).
+
+    Deduped per day through _job_sentinel (first INSERT wins) so a systemd-restart race never
+    scrapes twice; fails open on a lock error like the other sentinel users, skipping the run."""
+    if _holiday_skip("run_eod_retry_job"):
+        return
+    date_str = datetime.now(WIB).strftime("%Y-%m-%d")
+    try:
+        with db_connect(DB_PATH) as _g:
+            _g.execute("CREATE TABLE IF NOT EXISTS _job_sentinel "
+                       "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))")
+            _g.execute("INSERT INTO _job_sentinel VALUES ('eod_retry', ?)", (date_str,))
+    except sqlite3.IntegrityError:
+        logger.info(f"[eod-retry] already ran {date_str} — skipped (dup guard)")
+        return
+    except sqlite3.OperationalError as e:
+        logger.warning(f"[eod-retry] dedup guard error — skipped: {e}")
+        return
+    from screener.screener_jobs import run_eod_retry
+    result = run_eod_retry(trade_date=date_str, send_telegram=send_telegram, today=date_str)
+    logger.info(f"[eod-retry] {result}")
+
+
 # _refresh_backtest_cache moved to research/jobs.py in M3 (spec §10-M3)
 
 

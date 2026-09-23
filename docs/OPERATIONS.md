@@ -279,6 +279,33 @@ cooldown)`) and rolled into the next alert as a "+N suppressed" count once the c
 -- ledger is the scoped remaining gap (see the Operations Dashboard / Job History phase).
 ```
 
+## EOD finalisation & the Stockbit token (2026-09-23)
+
+The 16:15 `screener_eod` pass is what turns the day's scraper bars FINAL (`ohlcv.is_final=1`);
+research reads only final bars. Its token defences, in time order (WIB, Mon–Fri):
+
+| time | job id | what |
+|---|---|---|
+| 08:20, 12:00 | `token_health_*` | JWT `exp` claim only — blind to a server-side revocation |
+| 16:05 | `token_live_probe_1605` | live API call; on 401/403 runs `auto_token.py` once (a credential login takes 3–4 min, hence 16:05, not 16:10) |
+| 16:15 | `screener_eod` | verifies the token live before scraping (401/403 → one refresh; 5xx/timeout → retried with backoff, never a login). Refresh fails → Telegram, nothing saved. A scrape under 50% coverage whose failures are mostly 401/403 → one refresh + re-fetch of just those tickers. Under 50% after that → "EOD finalisation DEGRADED" Telegram |
+| 17:30 | `eod_retry_1730` | same-day retry: on a degraded day re-scrapes every ticker without a final bar, otherwise only leftover provisional bars. Deduped per day via `_job_sentinel` (`eod_retry`). The tradebook serves only the current session, so this cannot run for a past date |
+| 09:00 next day | cron `provisional_bars_check` | backstop: alerts on any past session still provisional |
+
+**Incident (2026-09-21/22).** The Stockbit token was revoked server-side mid-afternoon (09-21
+~15:35; 09-22 between 12:52 and 13:35) while its `exp` claim showed ~21h left. The exp-only
+check reported OK, and the 16:15 pass got HTTP 401 on all 958 tickers, so both sessions stayed
+provisional with no alert until the next morning. This host made no login in that window. The
+revocation came from elsewhere — the working hypothesis is one active session per account, so a
+login on another device (the Windows box keeps its own token; `.stockbit_token*` is not synced)
+invalidates this host's token. Avoid ad-hoc Stockbit logins on other devices during market hours.
+
+**Manual recovery** when a session is still provisional after 17:30:
+`python3 auto_token.py --login`, then the same evening re-run the retry
+(`python3 -c "from screener.screener_jobs import run_eod_retry; print(run_eod_retry())"`), or for a
+past session `python3 scripts/repair_provisional_bars.py` (dry run) → `--apply` (settled
+yfinance data, split-guarded; IHSG is fetched as `^JKSE`).
+
 ## Logging
 
 - `logs/app.log` — structured JSON (rotating 10 MB × 5), correlation IDs.

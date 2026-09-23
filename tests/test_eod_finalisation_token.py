@@ -148,3 +148,82 @@ def test_provisional_runs_do_not_verify_or_refresh(env, monkeypatch):
     sj.run_intraday('2026-09-23', final=False)
     assert not called.called and not env['refresh'].called
     assert env['save'].call_args[1]['is_final'] is False
+
+
+# ── 17:30 same-day EOD retry (run_eod_retry) ─────────────────────────────────
+
+def _retry_env(env, monkeypatch, final, prov):
+    state = {'final': set(final), 'prov': set(prov)}
+
+    def fstate(date, tickers):
+        return set(state['final']), set(state['prov'])
+
+    def save(got, date, is_final=False):
+        assert is_final is True
+        state['final'] |= set(got)
+        state['prov'] -= set(got)
+        return len(got)
+    monkeypatch.setattr(sj, "_final_state", fstate)
+    monkeypatch.setattr(sj.scraper, "save_ohlcv_to_db", save)
+    return state
+
+
+def test_retry_on_degraded_day_targets_every_ticker_without_a_final_bar(env, monkeypatch):
+    _retry_env(env, monkeypatch, final=TICKERS[:2], prov=TICKERS[2:5])
+    env['scrape'] = _scrape_ok_for('old')
+    r = sj.run_eod_retry('2026-09-23', env['sent'], today='2026-09-23')
+    assert env['fetch_calls'][0][0] == TICKERS[2:]          # provisional AND missing
+    assert r['action'] == 'retried' and r['final_after'] == len(TICKERS)
+    assert '10/10' in env['sent'].call_args[0][0]
+
+
+def test_retry_on_healthy_day_only_touches_provisional_leftovers(env, monkeypatch):
+    _retry_env(env, monkeypatch, final=TICKERS[:8], prov=['T09'])
+    env['scrape'] = _scrape_ok_for('old')
+    r = sj.run_eod_retry('2026-09-23', env['sent'], today='2026-09-23')
+    assert env['fetch_calls'][0][0] == ['T09']                # T08 (no bar = no trade) left alone
+    assert r['retried'] == 1
+
+
+def test_retry_does_nothing_when_all_final(env, monkeypatch):
+    _retry_env(env, monkeypatch, final=TICKERS[:8], prov=[])
+    env['scrape'] = _scrape_ok_for('old')
+    r = sj.run_eod_retry('2026-09-23', env['sent'], today='2026-09-23')
+    assert r['action'] == 'none' and not env['fetch_calls'] and not env['sent'].called
+
+
+def test_retry_refuses_a_past_date(env, monkeypatch):
+    _retry_env(env, monkeypatch, final=[], prov=[])
+    r = sj.run_eod_retry('2026-09-22', env['sent'], today='2026-09-23')
+    assert r['action'] == 'refused' and not env['fetch_calls']
+
+
+def test_retry_with_dead_token_saves_nothing_and_alerts(env, monkeypatch):
+    state = _retry_env(env, monkeypatch, final=[], prov=[])
+    env['status'] = {'old': [401], 'new': [401]}
+    env['scrape'] = _scrape_ok_for('new')
+    r = sj.run_eod_retry('2026-09-23', env['sent'], today='2026-09-23')
+    assert r['action'] == 'token_invalid' and not env['fetch_calls'] and not state['final']
+    assert env['refresh'].call_count == 1
+    assert 'ABORTED' in env['sent'].call_args[0][0]
+
+
+def test_retry_job_is_deduped_per_day(tmp_path, monkeypatch):
+    import scheduler.jobs as jobs
+    calls = MagicMock(return_value={})
+    monkeypatch.setattr(jobs, "DB_PATH", str(tmp_path / "t.db"))
+    monkeypatch.setattr(jobs, "_holiday_skip", lambda name: False)
+    monkeypatch.setattr(sj, "run_eod_retry", calls)
+    jobs.run_eod_retry_job()
+    jobs.run_eod_retry_job()
+    assert calls.call_count == 1
+
+
+def test_retry_job_registered_at_1730():
+    import inspect
+    import scheduler as sched
+    src = inspect.getsource(sched.start_scheduler)
+    idx = src.index("run_eod_retry_job, CronTrigger")
+    window = src[idx:idx + 200]
+    assert "hour=17, minute=30" in window and 'day_of_week="mon-fri"' in window
+    assert 'id="eod_retry_1730"' in window
