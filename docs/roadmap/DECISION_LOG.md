@@ -1444,6 +1444,71 @@ takes HYP-PM-0012.
 `P-M/HYP-PM-0012_REGISTERED.md` · `P-M/forward_fade/scripts/fade_failed_breakdown.py`
 (SHA256SUMS verified 2026-09-21).
 
+### D-053 · Cross-Sectional Volatility {V1} family determined; FWD-PM-VOLEX-SN-001 spec v2 approved; one pre-declared ex-ante re-measurement authorized; registration deferred to D-054
+**Status:** RECORDED · **Date:** 2026-09-23 · **Type:** Family determination + pre-registration act (D-028/PG-3) ·
+**Approval authority:** Owner instruction 2026-09-23 (approving Option B of
+`P-M/forward_volex/OWNER_DECISION_PACKAGE_V1_FAMILY_2026-09-23.md`, commit `c7980d1`)
+
+**Family.** The sector-neutral volatility overlay, when registered, enters a NEW family
+`P-M · Cross-Sectional Volatility {V1}` — cross-sectional volatility-level characteristics from OHLCV
+only, applied as within-universe exclusion/tilt, measured as a book-level increment vs the same
+unfiltered universe, liquid IDX. Beta, factor-model idiosyncratic volatility, skewness/MAX measures,
+and any flow or fundamental input are out of scope until a widening amendment. The family opens at its
+first registration (D-054); this act consumes no slot. FWD-PM-VOLEX-001 remains outside {V1} as an
+unregistered prospective record, declared non-independent: neither test may be cited as evidence for
+the other. HYP-PM-0013 is reserved for the registration.
+
+**Pre-registration audit.** The 2026-09-19 draft was not frozen: its headline "clean" evidence row
+conditions on zero-volume sessions in the forward holding window (`ext_panel.py` `z_fwd`); four of the
+five evidence rows have no committed code; the entry convention differed between evidence and spec;
+and its decision rule had ~0.26–0.54 power at the modern-era effect (+0.20%/mo). Spec v2 repairs all
+of these before any forward observation exists.
+
+**Pre-declared re-measurement (the last in-sample look).** The exact v2 spec (PROTOCOL_DRAFT §2–§3):
+ex-ante filters only, close(t+1) entry, gross increment, iid t. Script
+`P-M/forward_volex/remeasure/remeasure_v2.py`, sha256
+`5caa68b8bdd3d65ec8250d5133ed32fa9bb1d8df695de2ecfff00e015959e80b`, pinned before execution. It
+passed a synthetic self-test (planted effect recovered against an oracle, null ≈ 0, no look-ahead
+through future zero-volume) and a structural-only dry run (no returns computed). **Bar:** pre-2021
+formations (2000-07..2020-12) t >= 2.87 (Bonferroni-12 over prior pre-2021 overlay looks) AND mean
+>= +0.10%/mo.
+- **Clears:** D-054 registers HYP-PM-0013 and opens FWD-PM-VOLEX-SN-001.
+- **Fails:** no registration. The result is recorded in EXPERIMENT_LEDGER.jsonl, the draft is marked
+  REFUSED-AT-G1, and no re-cut is permitted.
+
+**Input provenance.** The original pre-2021 backfill was never committed and did not survive. It was
+regenerated 2026-09-23 by `remeasure/fetch_pre2021.py` (sha256
+`d8c016b12ebc5bb7e6111270ef47dcc269653e77168989caea2c321bb4de8b4a`) over the 772 tickers of
+`data_gaps/data/hist_meta.pkl`: 1,414,611 bars, identical to the original count; content fingerprint
+`fd9f54e34f1d7d61300186f760aec943bcfdb5ccf3c39958e7a0462f327c14c9`. Sector file
+`sector_map_frozen_v2.csv` (sha256 `3c2c537a81269c87e70b950514dbe7c43be968a976454d9b29e5683d06c0f15d`)
+is identical to production `ticker_sector`. Dry-run structure: 88 valid pre-2021 months (median
+universe 108, held 96), and 67 valid 2021-26 months.
+
+**Decision rule v2 (to be frozen at D-054).** 48-month single decision: PASS one-sided t > 1.68 AND
+mean >= +0.10%/mo; FAIL mean < +0.10%/mo; otherwise INCONCLUSIVE. Harm stop at n >= 12 if the mean is
+< -0.20%/mo. 12- and 24-month reports carry no decision.
+
+**Mechanism.** Leverage- and short-sale-constrained demand for high-volatility names (participant
+class: leverage-constrained and retail IDX investors); persistence via the Constraint barrier (no IDX
+short side) and the Capacity barrier (the pooled version is absent in the top-ADV tercile). No M-class
+assignment: ECONOMIC_MECHANISM_TAXONOMY has no fitting class. Referred to the CRO as a candidate class
+amendment (01_SCIENTIFIC_FOUNDATION §3.4). The same absence is recorded for HYP-PM-0010 and
+HYP-PM-0012.
+
+**Mandate acknowledgement.** A PASS is not deployable under the current book mandate (needs ~100+
+names; negative inside IDX80). The registration's purpose is knowledge.
+
+**Non-wiring.** BOOK_OVERLAY_POLICY (still bound to FWD-PM-VOLEX-001), FWD-PM-REGIME-002, and
+FWD-PM-FADE-001 are untouched.
+
+**Receipts:** package `P-M/forward_volex/OWNER_DECISION_PACKAGE_V1_FAMILY_2026-09-23.md` ·
+`P-M/forward_volex/PROTOCOL_DRAFT.md` v2 (sha256
+`1bc868c73f1cbc4925eb06678202594ea80efa50821b9b908f9d9fc532eaa6c2`) ·
+`P-M/forward_volex/remeasure/remeasure_v2.py` (sha256
+`5caa68b8bdd3d65ec8250d5133ed32fa9bb1d8df695de2ecfff00e015959e80b`) ·
+`P-M/forward_volex/sector_map_frozen_v2.csv`.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
