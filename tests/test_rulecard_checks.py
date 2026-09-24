@@ -199,6 +199,37 @@ def test_spl1_unadjusted_splits_in_holding_windows_invalidate():
     assert r["detail"]["holdings"] > 0 and r["status"] == "FAIL"
 
 
+def test_spl1_data1_scale_contamination_now_fails():
+    """Regression (validity audit 2026-09-24): DATA-1 left 0.38% of holdings with a >35%
+    session and passed the old 0.5% bar. A comparable trace must now be INVALID."""
+    raw = synthetic.make_panel(n_tickers=60, years=3, seed=31)
+    dates = list(pd.to_datetime(sorted(raw.date.unique())))
+    for k, tk in enumerate(["S003", "S017", "S041"]):
+        _unadjusted_split(raw, tk, dates[200 + 150 * k], ratio=1.6)   # -37.5% print, < 100%
+    pan = engine.Panel(raw)
+    months = engine.run_months(pan, synthetic.z_signal(pan.P), CARD, engine.calendar(pan.P))
+    r = checks.split_band(months)
+    d = r["detail"]
+    assert d["holdings_with_big_move"] >= 1
+    assert d["share"] <= 0.005, "fixture must be a trace the OLD threshold would have passed"
+    assert d["max_abs_move"] < checks.IMPOSSIBLE_MOVE
+    assert r["status"] == "FAIL"
+
+
+def test_spl1_single_impossible_move_fails():
+    """One +200% print (a split adjusted twice) in one holding invalidates the run even
+    though the share of affected holdings is far below the bar."""
+    raw = synthetic.make_panel(n_tickers=60, years=3, seed=32)
+    dates = list(pd.to_datetime(sorted(raw.date.unique())))
+    _unadjusted_split(raw, "S010", dates[400], ratio=1.0 / 3.0)       # x3 jump = +200%
+    pan = engine.Panel(raw)
+    months = engine.run_months(pan, synthetic.z_signal(pan.P), CARD, engine.calendar(pan.P))
+    r = checks.split_band(months)
+    assert r["detail"]["share"] < checks.MAX_BIG_MOVE_SHARE
+    assert r["detail"]["max_abs_move"] >= checks.IMPOSSIBLE_MOVE
+    assert r["status"] == "FAIL"
+
+
 def test_spl1_lookback_big_move_is_excluded_ex_ante():
     raw = synthetic.make_panel(n_tickers=60, years=3, seed=25)
     dates = list(pd.to_datetime(sorted(raw.date.unique())))

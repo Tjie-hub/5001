@@ -1,0 +1,1354 @@
+{
+ "generated_utc": "2026-09-24T06:38:09+00:00",
+ "data_cutoff": "2026-09-16",
+ "descriptive_only": true,
+ "load_errors": {},
+ "A_corpus": {
+  "is_final": [
+   {
+    "is_final": 0,
+    "n": 814,
+    "first": "2026-09-16",
+    "last": "2026-09-24"
+   },
+   {
+    "is_final": 1,
+    "n": 1091998,
+    "first": "2021-07-05",
+    "last": "2026-09-23"
+   }
+  ],
+  "rows_final": 1087571,
+  "tickers": 958,
+  "first": "2021-07-05",
+  "last": "2026-09-16",
+  "sessions": 1250,
+  "weekend_dates": [],
+  "partial_sessions_lt95pct": {
+   "2026-07-08": 910,
+   "2026-07-09": 136,
+   "2026-07-24": 133
+  },
+  "non_session_dates_zv2": [],
+  "sessions_missing_ihsg": [
+   "2026-08-25",
+   "2026-09-16"
+  ],
+  "n_sessions_missing_ihsg": 2,
+  "zero_volume_share_by_year": {
+   "2021": 0.0965,
+   "2022": 0.0986,
+   "2023": 0.1029,
+   "2024": 0.1038,
+   "2025": 0.1108,
+   "2026": 0.1041
+  },
+  "zero_volume_share_liquid_by_year": {
+   "2021": 0.0056,
+   "2022": 0.0035,
+   "2023": 0.006,
+   "2024": 0.0147,
+   "2025": 0.0151,
+   "2026": 0.0097
+  }
+ },
+ "B_survivorship": {
+  "tickers": 958,
+  "start_within_5_sessions_of_corpus_start": 724,
+  "started_later": 234,
+  "stopped_more_than_60_sessions_before_end": 0,
+  "stopped_examples": [],
+  "reading": "If almost no ticker stops before the end, the corpus holds only names that still trade today: survivorship is present and unmeasurable from this table."
+ },
+ "C_big_moves": {
+  "threshold": 0.25,
+  "n": 2101,
+  "rows": 1086323,
+  "all": {
+   "n": 2101,
+   "up": 1936,
+   "down": 165,
+   "by_class": {
+    "unmatched": 1897,
+    "rups": 85,
+    "suspension": 30,
+    "after_zero_volume": 30,
+    "warrant": 26,
+    "rightissue": 11,
+    "dividend": 7,
+    "split": 7,
+    "after_calendar_gap": 6,
+    "stocksplit": 2
+   }
+  },
+  "gt35": {
+   "n": 206,
+   "up": 143,
+   "down": 63,
+   "by_class": {
+    "unmatched": 175,
+    "rups": 15,
+    "split": 6,
+    "after_zero_volume": 4,
+    "rightissue": 3,
+    "suspension": 2,
+    "after_calendar_gap": 1
+   }
+  },
+  "liquid": {
+   "n": 882,
+   "up": 833,
+   "down": 49,
+   "by_class": {
+    "unmatched": 806,
+    "rups": 31,
+    "suspension": 13,
+    "after_zero_volume": 12,
+    "rightissue": 10,
+    "after_calendar_gap": 5,
+    "split": 3,
+    "dividend": 2
+   }
+  },
+  "liquid_gt35": {
+   "n": 37,
+   "up": 28,
+   "down": 9,
+   "by_class": {
+    "unmatched": 28,
+    "rightissue": 3,
+    "split": 3,
+    "rups": 2,
+    "after_calendar_gap": 1
+   }
+  },
+  "unmatched_top": [
+   [
+    "TOPS",
+    "2024-06-06",
+    1.0,
+    false
+   ],
+   [
+    "TOPS",
+    "2024-06-12",
+    1.0,
+    false
+   ],
+   [
+    "TOPS",
+    "2024-06-19",
+    1.0,
+    false
+   ],
+   [
+    "TOPS",
+    "2024-06-26",
+    1.0,
+    false
+   ],
+   [
+    "MKNT",
+    "2024-05-16",
+    1.0,
+    false
+   ],
+   [
+    "TAXI",
+    "2024-05-16",
+    1.0,
+    false
+   ],
+   [
+    "TAXI",
+    "2024-05-21",
+    1.0,
+    false
+   ],
+   [
+    "MKNT",
+    "2024-06-20",
+    1.0,
+    false
+   ],
+   [
+    "TAXI",
+    "2024-06-14",
+    1.0,
+    false
+   ],
+   [
+    "TAXI",
+    "2024-06-24",
+    1.0,
+    false
+   ],
+   [
+    "TAXI",
+    "2024-06-20",
+    1.0,
+    false
+   ],
+   [
+    "MKNT",
+    "2024-06-12",
+    1.0,
+    false
+   ],
+   [
+    "TAXI",
+    "2024-06-12",
+    1.0,
+    false
+   ],
+   [
+    "MKNT",
+    "2024-06-07",
+    1.0,
+    false
+   ],
+   [
+    "MKNT",
+    "2024-05-28",
+    1.0,
+    false
+   ],
+   [
+    "MKNT",
+    "2024-05-08",
+    1.0,
+    false
+   ],
+   [
+    "SBAT",
+    "2024-03-26",
+    1.0,
+    false
+   ],
+   [
+    "SBAT",
+    "2024-05-08",
+    1.0,
+    false
+   ],
+   [
+    "SBAT",
+    "2024-04-18",
+    1.0,
+    false
+   ],
+   [
+    "SBAT",
+    "2024-05-14",
+    1.0,
+    false
+   ],
+   [
+    "SBAT",
+    "2024-05-21",
+    1.0,
+    false
+   ],
+   [
+    "TAXI",
+    "2024-07-05",
+    1.0,
+    false
+   ],
+   [
+    "BTEK",
+    "2024-06-10",
+    1.0,
+    false
+   ],
+   [
+    "ARTI",
+    "2024-06-27",
+    1.0,
+    false
+   ],
+   [
+    "SBAT",
+    "2024-06-06",
+    1.0,
+    false
+   ],
+   [
+    "MKNT",
+    "2024-04-29",
+    1.0,
+    false
+   ],
+   [
+    "SBAT",
+    "2024-06-12",
+    1.0,
+    false
+   ],
+   [
+    "SBAT",
+    "2024-06-14",
+    1.0,
+    false
+   ],
+   [
+    "SBAT",
+    "2024-06-26",
+    1.0,
+    false
+   ],
+   [
+    "MKNT",
+    "2024-04-18",
+    1.0,
+    false
+   ],
+   [
+    "SBAT",
+    "2024-06-28",
+    1.0,
+    false
+   ],
+   [
+    "TAXI",
+    "2024-06-10",
+    1.0,
+    false
+   ],
+   [
+    "BTEK",
+    "2024-06-19",
+    1.0,
+    false
+   ],
+   [
+    "BTEK",
+    "2024-07-01",
+    1.0,
+    false
+   ],
+   [
+    "MKNT",
+    "2024-06-26",
+    1.0,
+    false
+   ],
+   [
+    "TAXI",
+    "2024-05-29",
+    1.0,
+    false
+   ],
+   [
+    "TAXI",
+    "2024-06-05",
+    1.0,
+    false
+   ],
+   [
+    "TAXI",
+    "2024-05-27",
+    1.0,
+    false
+   ],
+   [
+    "MKNT",
+    "2023-12-13",
+    1.0,
+    false
+   ],
+   [
+    "SCCO",
+    "2024-02-01",
+    -0.75,
+    false
+   ]
+  ],
+  "split_continuity": {
+   "verifiable_splits": 81,
+   "continuous_in_db": 78,
+   "gapped_in_db": 3,
+   "outside_corpus": 0,
+   "gapped": [
+    [
+     "MLPT",
+     "2026-07-21",
+     25.0
+    ],
+    [
+     "RAJA",
+     "2026-07-16",
+     5.0
+    ],
+    [
+     "RMKE",
+     "2026-07-17",
+     5.0
+    ]
+   ]
+  }
+ },
+ "D_ca_ex_dates": {
+  "baseline": {
+   "n": 1085365,
+   "median": 0.0,
+   "share_lt_-10pct": 0.006735982826053908,
+   "share_lt_-20pct": 0.0004984498302414395,
+   "share_gt_+50pct": 4.146070676684802e-05
+  },
+  "bonus": {
+   "events_in_corpus": 41,
+   "matched_bars": 41,
+   "median": 0.01167267203300959,
+   "mean": 0.02098628860882087,
+   "share_lt_-10pct": 0.0975609756097561,
+   "share_lt_-20pct": 0.04878048780487805,
+   "share_gt_+50pct": 0.0,
+   "raw_json_keys": [
+    "company_id",
+    "company_symbol",
+    "corp_action_active",
+    "event_note",
+    "sahambonus_id",
+    "sahambonus_iqp_id",
+    "sahambonus_lastupdate",
+    "sahambonus_new_price",
+    "sahambonus_new_share",
+    "sahambonus_ratio",
+    "stocksplit_created",
+    "stocksplit_cumdate",
+    "stocksplit_exdate",
+    "stocksplit_factor",
+    "stocksplit_new",
+    "stocksplit_old",
+    "stocksplit_paymentdate",
+    "stocksplit_recdate"
+   ],
+   "samples": [
+    "{\"company_id\": \"43\", \"company_symbol\": \"ASRM\", \"corp_action_active\": false, \"sahambonus_id\": \"7720\", \"sahambonus_iqp_id\": \"\", \"sahambonus_lastupdate\": \"2025-09-26 16:45:06\", \"sahambonus_new_price\": 0, \"sahambonus_new_share\": 0, \"sahambonus_ratio\": \"\", \"stocksplit_created\": \"2025-09-26\", \"stocksplit_cumdate\": \"2025-11-12\", \"stocksplit_exdate\": \"2025-11-13\", \"stocksplit_factor\": \"1.0500\", \"stockspli",
+    "{\"company_id\": \"1000002072\", \"company_symbol\": \"BEEF\", \"corp_action_active\": false, \"sahambonus_id\": \"7707\", \"sahambonus_iqp_id\": \"\", \"sahambonus_lastupdate\": \"2025-05-02 16:45:02\", \"sahambonus_new_price\": 0, \"sahambonus_new_share\": 0, \"sahambonus_ratio\": \"\", \"stocksplit_created\": \"2025-04-09\", \"stocksplit_cumdate\": \"2025-05-26\", \"stocksplit_exdate\": \"2025-05-27\", \"stocksplit_factor\": \"1.1300\", \"s"
+   ]
+  },
+  "dividend": {
+   "events_in_corpus": 2136,
+   "matched_bars": 2136,
+   "median": -0.022222222222222254,
+   "mean": -0.026176344191721518,
+   "share_lt_-10pct": 0.05102996254681648,
+   "share_lt_-20pct": 0.0018726591760299626,
+   "share_gt_+50pct": 0.0,
+   "raw_json_keys": [
+    "company_id",
+    "company_symbol",
+    "corp_action_active",
+    "dividend_created",
+    "dividend_cumdate",
+    "dividend_currency",
+    "dividend_datahash",
+    "dividend_exdate",
+    "dividend_fiscal_year",
+    "dividend_id",
+    "dividend_iqp_id",
+    "dividend_lastupdate",
+    "dividend_lock",
+    "dividend_paydate",
+    "dividend_recdate",
+    "dividend_value",
+    "dividend_value_adjusted",
+    "dividend_value_formatted",
+    "event_note",
+    "lastprice",
+    "lastprice_formatted"
+   ],
+   "samples": [
+    "{\"company_id\": \"1000005203\", \"company_symbol\": \"AADI\", \"corp_action_active\": false, \"dividend_created\": \"2026-05-26\", \"dividend_cumdate\": \"2026-06-04\", \"dividend_datahash\": \"8a4dc9eafadbb73e0c1ac03bdd3973a4\", \"dividend_exdate\": \"2026-06-05\", \"dividend_id\": \"117826\", \"dividend_iqp_id\": \"\", \"dividend_lastupdate\": \"2026-06-08\", \"dividend_lock\": 0, \"dividend_paydate\": \"2026-06-18\", \"dividend_recdate\":",
+    "{\"company_id\": \"1000005203\", \"company_symbol\": \"AADI\", \"corp_action_active\": false, \"dividend_created\": \"2025-11-07\", \"dividend_cumdate\": \"2025-11-17\", \"dividend_datahash\": \"9ea0e34f1f28185123565f3b8716e8e1\", \"dividend_exdate\": \"2025-11-18\", \"dividend_id\": \"117597\", \"dividend_iqp_id\": \"\", \"dividend_lastupdate\": \"2025-11-19\", \"dividend_lock\": 0, \"dividend_paydate\": \"2025-11-27\", \"dividend_recdate\":"
+   ]
+  },
+  "rightissue": {
+   "events_in_corpus": 144,
+   "matched_bars": 144,
+   "median": -0.002878211181460366,
+   "mean": 0.007431367828976739,
+   "share_lt_-10pct": 0.06944444444444445,
+   "share_lt_-20pct": 0.020833333333333332,
+   "share_gt_+50pct": 0.0,
+   "raw_json_keys": [
+    "company_id",
+    "company_symbol",
+    "corp_action_active",
+    "event_note",
+    "rightissue_adj_factor",
+    "rightissue_company_id",
+    "rightissue_created",
+    "rightissue_cumdate",
+    "rightissue_exdate",
+    "rightissue_factor",
+    "rightissue_foreign_percentage",
+    "rightissue_id",
+    "rightissue_iqp_id",
+    "rightissue_lastupdate",
+    "rightissue_local_percentage",
+    "rightissue_lock",
+    "rightissue_new",
+    "rightissue_new_share",
+    "rightissue_number_of_securities",
+    "rightissue_old",
+    "rightissue_price",
+    "rightissue_price_adj",
+    "rightissue_price_factor",
+    "rightissue_price_formatted",
+    "rightissue_ratio",
+    "rightissue_recdate",
+    "rightissue_subdate",
+    "rightissue_total",
+    "rightissue_trading_end",
+    "rightissue_trading_start"
+   ],
+   "samples": [
+    "{\"company_id\": \"151\", \"company_symbol\": \"ENRG\", \"corp_action_active\": true, \"rightissue_adj_factor\": 0, \"rightissue_created\": \"2026-06-11\", \"rightissue_cumdate\": \"2026-08-13\", \"rightissue_exdate\": \"2026-08-14\", \"rightissue_factor\": \"1.5\", \"rightissue_id\": \"11541\", \"rightissue_iqp_id\": \"\", \"rightissue_lastupdate\": \"2026-06-11 16:45:07\", \"rightissue_lock\": 0, \"rightissue_new\": \"1\", \"rightissue_new_s",
+    "{\"company_id\": \"50\", \"company_symbol\": \"BAJA\", \"corp_action_active\": true, \"rightissue_adj_factor\": 0, \"rightissue_created\": \"2026-06-15\", \"rightissue_cumdate\": \"2026-08-24\", \"rightissue_exdate\": \"2026-08-26\", \"rightissue_factor\": \"1.5\", \"rightissue_id\": \"11545\", \"rightissue_iqp_id\": \"\", \"rightissue_lastupdate\": \"2026-06-15 16:45:07\", \"rightissue_lock\": 0, \"rightissue_new\": \"1\", \"rightissue_new_sh"
+   ]
+  },
+  "rups": {
+   "events_in_corpus": 5781,
+   "matched_bars": 5779,
+   "median": 0.0,
+   "mean": 0.0014236725857985884,
+   "share_lt_-10pct": 0.008998096556497664,
+   "share_lt_-20pct": 0.0006921612735767433,
+   "share_gt_+50pct": 0.0,
+   "raw_json_keys": [
+    "company_icon_url",
+    "company_id",
+    "company_name",
+    "company_symbol",
+    "corp_action_active",
+    "rups_created",
+    "rups_datahash",
+    "rups_date",
+    "rups_eligible_date",
+    "rups_id",
+    "rups_iqp_agenda",
+    "rups_iqp_id",
+    "rups_iqp_rec_dt",
+    "rups_iqp_remark",
+    "rups_iqp_result",
+    "rups_iqp_revised_date",
+    "rups_iqp_type",
+    "rups_time",
+    "rups_venue"
+   ],
+   "samples": [
+    "{\"company_id\": \"1000002780\", \"company_symbol\": \"BESS\", \"corp_action_active\": false, \"rups_created\": \"2026-07-15\", \"rups_datahash\": \"c4cd7cbfd025e97e018f2fffdae72be4\", \"rups_date\": \"2026-08-21\", \"rups_id\": \"1461390\", \"rups_time\": \"10:00\", \"rups_iqp_agenda\": \"\", \"rups_iqp_id\": \"\", \"rups_iqp_rec_dt\": \"\", \"rups_iqp_remark\": \"\", \"rups_iqp_result\": \"\", \"rups_iqp_revised_date\": \"\", \"rups_iqp_type\": \"\", \"",
+    "{\"company_id\": \"1000002302\", \"company_symbol\": \"KAYU\", \"corp_action_active\": false, \"rups_created\": \"2026-07-23\", \"rups_datahash\": \"0d7c262cb1b61bea1ae4999e5e6b06de\", \"rups_date\": \"2026-08-28\", \"rups_id\": \"1461402\", \"rups_time\": \"14:00\", \"rups_iqp_agenda\": \"\", \"rups_iqp_id\": \"\", \"rups_iqp_rec_dt\": \"\", \"rups_iqp_remark\": \"\", \"rups_iqp_result\": \"\", \"rups_iqp_revised_date\": \"\", \"rups_iqp_type\": \"\", \""
+   ]
+  },
+  "stock_reverse": {
+   "events_in_corpus": 2,
+   "matched_bars": 2,
+   "median": -0.03657984455405627,
+   "mean": -0.03657984455405627,
+   "share_lt_-10pct": 0.0,
+   "share_lt_-20pct": 0.0,
+   "share_gt_+50pct": 0.0,
+   "raw_json_keys": [
+    "company_id",
+    "company_symbol",
+    "corp_action_active",
+    "event_note",
+    "stocksplit_created",
+    "stocksplit_cumdate",
+    "stocksplit_exdate",
+    "stocksplit_factor",
+    "stocksplit_id",
+    "stocksplit_iqp_id",
+    "stocksplit_lastupdate",
+    "stocksplit_lock",
+    "stocksplit_new",
+    "stocksplit_new_price",
+    "stocksplit_new_share",
+    "stocksplit_old",
+    "stocksplit_ratio",
+    "stocksplit_recdate"
+   ],
+   "samples": [
+    "{\"company_id\": \"468\", \"company_symbol\": \"BBRM\", \"corp_action_active\": false, \"stocksplit_created\": \"2022-02-17 00:00:00\", \"stocksplit_cumdate\": \"2022-02-17\", \"stocksplit_exdate\": \"2022-02-18\", \"stocksplit_factor\": \"0.6667\", \"stocksplit_id\": \"3913\", \"stocksplit_iqp_id\": \"\", \"stocksplit_lastupdate\": \"2022-02-17 00:00:00\", \"stocksplit_lock\": 0, \"stocksplit_new\": \"2\", \"stocksplit_new_price\": 75, \"stoc",
+    "{\"company_id\": \"1000003549\", \"company_symbol\": \"NETV\", \"corp_action_active\": false, \"stocksplit_created\": \"2024-08-29 00:00:00\", \"stocksplit_cumdate\": \"2024-10-21\", \"stocksplit_exdate\": \"2024-10-22\", \"stocksplit_factor\": \"0.5\", \"stocksplit_id\": \"6072\", \"stocksplit_iqp_id\": \"\", \"stocksplit_lastupdate\": \"2024-10-20 00:00:00\", \"stocksplit_lock\": 0, \"stocksplit_new\": \"1\", \"stocksplit_new_price\": 156, "
+   ]
+  },
+  "stocksplit": {
+   "events_in_corpus": 58,
+   "matched_bars": 58,
+   "median": -0.016305160807778607,
+   "mean": -0.06001963005368256,
+   "share_lt_-10pct": 0.08620689655172414,
+   "share_lt_-20pct": 0.06896551724137931,
+   "share_gt_+50pct": 0.0,
+   "raw_json_keys": [
+    "company_id",
+    "company_symbol",
+    "corp_action_active",
+    "event_note",
+    "stocksplit_created",
+    "stocksplit_cumdate",
+    "stocksplit_exdate",
+    "stocksplit_factor",
+    "stocksplit_id",
+    "stocksplit_iqp_id",
+    "stocksplit_lastupdate",
+    "stocksplit_lock",
+    "stocksplit_new",
+    "stocksplit_new_price",
+    "stocksplit_new_share",
+    "stocksplit_old",
+    "stocksplit_ratio",
+    "stocksplit_recdate"
+   ],
+   "samples": [
+    "{\"company_id\": \"17\", \"company_symbol\": \"AKRA\", \"corp_action_active\": false, \"stocksplit_created\": \"2022-01-06 00:00:00\", \"stocksplit_cumdate\": \"2022-01-11\", \"stocksplit_exdate\": \"2022-01-12\", \"stocksplit_factor\": \"5\", \"stocksplit_id\": \"3911\", \"stocksplit_iqp_id\": \"\", \"stocksplit_lastupdate\": \"2022-01-06 10:15:46\", \"stocksplit_lock\": 0, \"stocksplit_new\": \"5\", \"stocksplit_new_price\": 0, \"stocksplit_",
+    "{\"company_id\": \"19\", \"company_symbol\": \"ALDO\", \"corp_action_active\": false, \"stocksplit_created\": \"2024-07-01 00:00:00\", \"stocksplit_cumdate\": \"2024-07-05\", \"stocksplit_exdate\": \"2024-07-08\", \"stocksplit_factor\": \"2\", \"stocksplit_id\": \"6066\", \"stocksplit_iqp_id\": \"\", \"stocksplit_lastupdate\": \"2024-07-01 16:45:04\", \"stocksplit_lock\": 0, \"stocksplit_new\": \"2\", \"stocksplit_new_price\": 0, \"stocksplit_"
+   ]
+  },
+  "tenderoffer": {
+   "events_in_corpus": 134,
+   "matched_bars": 134,
+   "median": 0.0,
+   "mean": 0.010908481342512079,
+   "share_lt_-10pct": 0.0,
+   "share_lt_-20pct": 0.0,
+   "share_gt_+50pct": 0.0,
+   "raw_json_keys": [
+    "company_id",
+    "company_name",
+    "company_symbol",
+    "corp_action_active",
+    "event_note",
+    "tender_created",
+    "tender_datahash",
+    "tender_end",
+    "tender_id",
+    "tender_paydate",
+    "tender_percentage",
+    "tender_price",
+    "tender_price_formatted",
+    "tender_shares",
+    "tender_start"
+   ],
+   "samples": [
+    "{\"company_id\": \"0\", \"company_name\": \"Asuransi Bina Dana Arta Tbk.\", \"company_symbol\": \"ABDA\", \"corp_action_active\": false, \"tender_created\": \"2022-10-18\", \"tender_datahash\": \"\", \"tender_end\": \"2022-11-16\", \"tender_id\": \"311\", \"tender_paydate\": \"2022-11-25\", \"tender_percentage\": \"12.82\", \"tender_price\": \"6803\", \"tender_shares\": \"79608746\", \"tender_start\": \"2022-10-18\", \"event_note\": \"\", \"tender_pri",
+    "{\"company_id\": \"0\", \"company_name\": \"Agung Menjangan Mas Tbk.\", \"company_symbol\": \"AMMS\", \"corp_action_active\": false, \"tender_created\": \"2026-02-02\", \"tender_datahash\": \"\", \"tender_end\": \"2026-03-04\", \"tender_id\": \"396\", \"tender_paydate\": \"2026-03-09\", \"tender_percentage\": \"20.00\", \"tender_price\": \"156\", \"tender_shares\": \"247059302\", \"tender_start\": \"2026-02-03\", \"event_note\": \"\", \"tender_price_f"
+   ]
+  },
+  "warrant": {
+   "events_in_corpus": 112,
+   "matched_bars": 18,
+   "median": -0.00877192982456143,
+   "mean": -0.024722161813554452,
+   "share_lt_-10pct": 0.05555555555555555,
+   "share_lt_-20pct": 0.05555555555555555,
+   "share_gt_+50pct": 0.0,
+   "raw_json_keys": [
+    "company_id",
+    "company_symbol",
+    "corp_action_active",
+    "event_note",
+    "wrant_company_id",
+    "wrant_exc_end",
+    "wrant_exc_from",
+    "wrant_exc_price",
+    "wrant_exc_price_formatted",
+    "wrant_foreign_percentage",
+    "wrant_id",
+    "wrant_iqp_id",
+    "wrant_lastupdate",
+    "wrant_local_percentage",
+    "wrant_number_of_securities",
+    "wrant_serie",
+    "wrant_total",
+    "wrant_trading_end",
+    "wrant_trading_from"
+   ],
+   "samples": [
+    "{\"company_id\": \"1000004465\", \"company_symbol\": \"ACRO-W\", \"corp_action_active\": false, \"wrant_exc_end\": \"2026-01-09\", \"wrant_exc_from\": \"2024-07-11\", \"wrant_exc_price\": \"186\", \"wrant_id\": \"1662\", \"wrant_iqp_id\": \"\", \"wrant_lastupdate\": \"2025-05-28\", \"wrant_serie\": \"I\", \"wrant_total\": \"231276000\", \"wrant_trading_end\": \"2026-01-06\", \"wrant_trading_from\": \"2024-01-11\", \"event_note\": \"\", \"wrant_exc_pri",
+    "{\"company_id\": \"1000004271\", \"company_symbol\": \"AEGS-W\", \"corp_action_active\": false, \"wrant_exc_end\": \"2024-09-10\", \"wrant_exc_from\": \"2024-03-11\", \"wrant_exc_price\": \"90\", \"wrant_id\": \"354\", \"wrant_iqp_id\": \"\", \"wrant_lastupdate\": \"2025-05-28\", \"wrant_serie\": \"I\", \"wrant_total\": \"100000000\", \"wrant_trading_end\": \"2024-09-05\", \"wrant_trading_from\": \"2023-09-11\", \"event_note\": \"\", \"wrant_exc_price"
+   ]
+  }
+ },
+ "E_guard": {
+  "fade": {
+   "h5": {
+    "signals_with_exit": 12140,
+    "dropped_by_guard": 5,
+    "ca_window_among_kept": 17,
+    "IHSG kept GROSS (registered set)": {
+     "N": 12135,
+     "clusters": 1154,
+     "registered": [
+      -0.5396786444127898,
+      -4.209734476829492
+     ],
+     "month": [
+      -0.5396786444127898,
+      -3.026876781329064
+     ],
+     "dk_L5": [
+      -0.5396786444127898,
+      -3.2599316569208323
+     ],
+     "dk_L10": [
+      -0.5396786444127898,
+      -3.0016723855705774
+     ]
+    },
+    "IHSG dropped-by-guard GROSS mean%": 4.443214884198015,
+    "IHSG kept+dropped GROSS": {
+     "N": 12140,
+     "clusters": 1154,
+     "registered": [
+      -0.5376263818392272,
+      -4.193985977724211
+     ],
+     "month": [
+      -0.5376263818392272,
+      -3.0161095760459546
+     ],
+     "dk_L5": [
+      -0.5376263818392272,
+      -3.2485754077042293
+     ],
+     "dk_L10": [
+      -0.5376263818392272,
+      -2.9915605887241696
+     ]
+    },
+    "IHSG kept, no CA window GROSS": {
+     "N": 12118,
+     "clusters": 1153,
+     "registered": [
+      -0.5444762254600772,
+      -4.244716874635151
+     ],
+     "month": [
+      -0.5444762254600772,
+      -3.048781848170263
+     ],
+     "dk_L5": [
+      -0.5444762254600772,
+      -3.284931351083209
+     ],
+     "dk_L10": [
+      -0.5444762254600772,
+      -3.026281192754636
+     ]
+    },
+    "EW-book kept GROSS (registered set)": {
+     "N": 12135,
+     "clusters": 1154,
+     "registered": [
+      -0.4461888215415156,
+      -5.085776388911914
+     ],
+     "month": [
+      -0.4461888215415156,
+      -3.7056654434796585
+     ],
+     "dk_L5": [
+      -0.4461888215415156,
+      -4.331062104933383
+     ],
+     "dk_L10": [
+      -0.4461888215415156,
+      -4.087537193745279
+     ]
+    },
+    "EW-book dropped-by-guard GROSS mean%": 5.458031360268926,
+    "EW-book kept+dropped GROSS": {
+     "N": 12140,
+     "clusters": 1154,
+     "registered": [
+      -0.44375709988508616,
+      -5.05604808103364
+     ],
+     "month": [
+      -0.44375709988508616,
+      -3.688942804127632
+     ],
+     "dk_L5": [
+      -0.44375709988508616,
+      -4.315145015199105
+     ],
+     "dk_L10": [
+      -0.44375709988508616,
+      -4.0767463965126804
+     ]
+    },
+    "EW-book kept, no CA window GROSS": {
+     "N": 12118,
+     "clusters": 1153,
+     "registered": [
+      -0.4510697504815232,
+      -5.140020430488806
+     ],
+     "month": [
+      -0.4510697504815232,
+      -3.7476072757199237
+     ],
+     "dk_L5": [
+      -0.4510697504815232,
+      -4.373280879469838
+     ],
+     "dk_L10": [
+      -0.4510697504815232,
+      -4.127308028554853
+     ]
+    },
+    "EW-book(symmetric guard) kept GROSS": {
+     "N": 12135,
+     "clusters": 1154,
+     "registered": [
+      -0.4436095505900156,
+      -5.049897852027556
+     ],
+     "month": [
+      -0.4436095505900156,
+      -3.6875113968235538
+     ],
+     "dk_L5": [
+      -0.4436095505900156,
+      -4.311982647867966
+     ],
+     "dk_L10": [
+      -0.4436095505900156,
+      -4.06863950050195
+     ]
+    },
+    "dropped_trigger_direction": {
+     "sampled": 5,
+     "up_gt35": 0,
+     "down_gt35": 0,
+     "split_flag_only": 5
+    }
+   },
+   "h20": {
+    "signals_with_exit": 12140,
+    "dropped_by_guard": 57,
+    "ca_window_among_kept": 78,
+    "IHSG kept GROSS (registered set)": {
+     "N": 12080,
+     "clusters": 1153,
+     "registered": [
+      -0.8583243528912458,
+      -3.338850096538609
+     ],
+     "month": [
+      -0.8583243528912458,
+      -1.6542488734411886
+     ],
+     "dk_L20": [
+      -0.8583243528912458,
+      -1.8627164654044834
+     ],
+     "dk_L40": [
+      -0.8583243528912458,
+      -1.9760134870419124
+     ]
+    },
+    "IHSG dropped-by-guard GROSS mean%": -3.0460752266505926,
+    "IHSG kept+dropped GROSS": {
+     "N": 12136,
+     "clusters": 1153,
+     "registered": [
+      -0.8684194459145258,
+      -3.3731989432196943
+     ],
+     "month": [
+      -0.8684194459145258,
+      -1.67381728726639
+     ],
+     "dk_L20": [
+      -0.8684194459145258,
+      -1.888177778080879
+     ],
+     "dk_L40": [
+      -0.8684194459145258,
+      -2.0167350960554966
+     ]
+    },
+    "IHSG kept, no CA window GROSS": {
+     "N": 12002,
+     "clusters": 1152,
+     "registered": [
+      -0.8632037727364291,
+      -3.346513825545094
+     ],
+     "month": [
+      -0.8632037727364291,
+      -1.6561657927894908
+     ],
+     "dk_L20": [
+      -0.8632037727364291,
+      -1.8622424003029427
+     ],
+     "dk_L40": [
+      -0.8632037727364291,
+      -1.9734956510367707
+     ]
+    },
+    "EW-book kept GROSS (registered set)": {
+     "N": 12083,
+     "clusters": 1154,
+     "registered": [
+      -0.8858312635335246,
+      -4.955995190747915
+     ],
+     "month": [
+      -0.8858312635335246,
+      -3.5611497024246934
+     ],
+     "dk_L20": [
+      -0.8858312635335246,
+      -3.8501636803661223
+     ],
+     "dk_L40": [
+      -0.8858312635335246,
+      -3.9560753185172812
+     ]
+    },
+    "EW-book dropped-by-guard GROSS mean%": -2.9865428519162034,
+    "EW-book kept+dropped GROSS": {
+     "N": 12140,
+     "clusters": 1154,
+     "registered": [
+      -0.8956945716503131,
+      -5.007660921126439
+     ],
+     "month": [
+      -0.8956945716503131,
+      -3.5952394544912525
+     ],
+     "dk_L20": [
+      -0.8956945716503131,
+      -3.893702011620015
+     ],
+     "dk_L40": [
+      -0.8956945716503131,
+      -3.985774743191358
+     ]
+    },
+    "EW-book kept, no CA window GROSS": {
+     "N": 12005,
+     "clusters": 1153,
+     "registered": [
+      -0.8888473984527601,
+      -4.975426391849738
+     ],
+     "month": [
+      -0.8888473984527601,
+      -3.597291432635198
+     ],
+     "dk_L20": [
+      -0.8888473984527601,
+      -3.896716323529525
+     ],
+     "dk_L40": [
+      -0.8888473984527601,
+      -4.030269833127357
+     ]
+    },
+    "EW-book(symmetric guard) kept GROSS": {
+     "N": 12083,
+     "clusters": 1154,
+     "registered": [
+      -0.8904745212081584,
+      -4.969986023886365
+     ],
+     "month": [
+      -0.8904745212081584,
+      -3.5700642432736713
+     ],
+     "dk_L20": [
+      -0.8904745212081584,
+      -3.860907393026998
+     ],
+     "dk_L40": [
+      -0.8904745212081584,
+      -3.9601088589056164
+     ]
+    },
+    "dropped_trigger_direction": {
+     "sampled": 57,
+     "up_gt35": 0,
+     "down_gt35": 0,
+     "split_flag_only": 57
+    }
+   }
+  },
+  "t1": {
+   "kept": 7191,
+   "dropped_by_guard": 40,
+   "dropped_mean_exc_pct": 26.302461435158758,
+   "dropped_up_gt35": 3,
+   "dropped_down_gt35": 1,
+   "kept_with_ca_window": 18,
+   "FULL kept (registered)": {
+    "N": 7191,
+    "clusters": 1154,
+    "registered": [
+     2.140891337992903,
+     6.194526038917781
+    ],
+    "month": [
+     2.140891337992903,
+     3.440661894719629
+    ],
+    "dk_L60": [
+     2.140891337992903,
+     2.725863096539184
+    ],
+    "dk_L120": [
+     2.140891337992903,
+     2.3474409955350404
+    ],
+    "dk_L20": [
+     2.140891337992903,
+     3.450390187841095
+    ]
+   },
+   "ex-2025 kept (registered)": {
+    "N": 5388,
+    "clusters": 925,
+    "registered": [
+     0.8872751077674453,
+     2.700474285934583
+    ],
+    "month": [
+     0.8872751077674453,
+     1.8391525018677481
+    ],
+    "dk_L60": [
+     0.8872751077674453,
+     1.5504620930958004
+    ],
+    "dk_L120": [
+     0.8872751077674453,
+     1.4604030960127201
+    ],
+    "dk_L20": [
+     0.8872751077674453,
+     1.8952229673216854
+    ]
+   },
+   "ex-2025 kept+dropped": {
+    "N": 5421,
+    "clusters": 928,
+    "registered": [
+     1.0590540889374451,
+     3.1810302114125624
+    ],
+    "month": [
+     1.0590540889374451,
+     2.1599128780950285
+    ],
+    "dk_L60": [
+     1.0590540889374451,
+     1.7790321031595069
+    ],
+    "dk_L120": [
+     1.0590540889374451,
+     1.6306713920315075
+    ],
+    "dk_L20": [
+     1.0590540889374451,
+     2.2526590580071124
+    ]
+   },
+   "ex-2025 kept, no CA window": {
+    "N": 5373,
+    "clusters": 925,
+    "registered": [
+     0.8238103020000873,
+     2.5195253769398787
+    ],
+    "month": [
+     0.8238103020000873,
+     1.728115634839404
+    ],
+    "dk_L60": [
+     0.8238103020000873,
+     1.4561219050749412
+    ],
+    "dk_L120": [
+     0.8238103020000873,
+     1.363881804382492
+    ],
+    "dk_L20": [
+     0.8238103020000873,
+     1.7852121919462518
+    ]
+   }
+  }
+ },
+ "F_arms": [
+  {
+   "arm": "P2 resistance breakout",
+   "h": 5,
+   "bench": "IHSG",
+   "N": 14553,
+   "net%_registered_endpoint": -0.026,
+   "net_t_registered": -0.2,
+   "gross%": 0.574,
+   "t_entry_date": 4.49,
+   "t_month": 2.42,
+   "t_dk_Lh": 2.78,
+   "t_calendar": 0.87
+  },
+  {
+   "arm": "P2 resistance breakout",
+   "h": 5,
+   "bench": "EW-book",
+   "N": 14553,
+   "net%_registered_endpoint": -0.132,
+   "net_t_registered": -1.15,
+   "gross%": 0.468,
+   "t_entry_date": 4.08,
+   "t_month": 2.38,
+   "t_dk_Lh": 2.8,
+   "t_calendar": 1.23
+  },
+  {
+   "arm": "P2 resistance breakout",
+   "h": 20,
+   "bench": "IHSG",
+   "N": 14495,
+   "net%_registered_endpoint": 1.421,
+   "net_t_registered": 5.01,
+   "gross%": 2.021,
+   "t_entry_date": 7.13,
+   "t_month": 2.56,
+   "t_dk_Lh": 2.66,
+   "t_calendar": 0.93
+  },
+  {
+   "arm": "P2 resistance breakout",
+   "h": 20,
+   "bench": "EW-book",
+   "N": 14510,
+   "net%_registered_endpoint": 0.976,
+   "net_t_registered": 4.09,
+   "gross%": 1.576,
+   "t_entry_date": 6.61,
+   "t_month": 3.06,
+   "t_dk_Lh": 3.31,
+   "t_calendar": 1.27
+  },
+  {
+   "arm": "P3a failed breakdown",
+   "h": 5,
+   "bench": "IHSG",
+   "N": 12135,
+   "net%_registered_endpoint": -1.14,
+   "net_t_registered": -8.89,
+   "gross%": -0.54,
+   "t_entry_date": -4.21,
+   "t_month": -3.03,
+   "t_dk_Lh": -3.26,
+   "t_calendar": -4.22
+  },
+  {
+   "arm": "P3a failed breakdown",
+   "h": 5,
+   "bench": "EW-book",
+   "N": 12135,
+   "net%_registered_endpoint": -1.046,
+   "net_t_registered": -11.92,
+   "gross%": -0.446,
+   "t_entry_date": -5.09,
+   "t_month": -3.71,
+   "t_dk_Lh": -4.33,
+   "t_calendar": -4.48
+  },
+  {
+   "arm": "P3a failed breakdown",
+   "h": 20,
+   "bench": "IHSG",
+   "N": 12080,
+   "net%_registered_endpoint": -1.458,
+   "net_t_registered": -5.67,
+   "gross%": -0.858,
+   "t_entry_date": -3.34,
+   "t_month": -1.65,
+   "t_dk_Lh": -1.86,
+   "t_calendar": -3.13
+  },
+  {
+   "arm": "P3a failed breakdown",
+   "h": 20,
+   "bench": "EW-book",
+   "N": 12083,
+   "net%_registered_endpoint": -1.486,
+   "net_t_registered": -8.31,
+   "gross%": -0.886,
+   "t_entry_date": -4.96,
+   "t_month": -3.56,
+   "t_dk_Lh": -3.85,
+   "t_calendar": -4.42
+  },
+  {
+   "arm": "P3b failed breakout",
+   "h": 5,
+   "bench": "IHSG",
+   "N": 12504,
+   "net%_registered_endpoint": -0.423,
+   "net_t_registered": -3.77,
+   "gross%": 0.177,
+   "t_entry_date": 1.58,
+   "t_month": 1.22,
+   "t_dk_Lh": 1.21,
+   "t_calendar": -0.04
+  },
+  {
+   "arm": "P3b failed breakout",
+   "h": 5,
+   "bench": "EW-book",
+   "N": 12504,
+   "net%_registered_endpoint": -0.465,
+   "net_t_registered": -4.58,
+   "gross%": 0.135,
+   "t_entry_date": 1.33,
+   "t_month": 1.12,
+   "t_dk_Lh": 1.15,
+   "t_calendar": 0.31
+  },
+  {
+   "arm": "P3b failed breakout",
+   "h": 20,
+   "bench": "IHSG",
+   "N": 12450,
+   "net%_registered_endpoint": 0.17,
+   "net_t_registered": 0.71,
+   "gross%": 0.77,
+   "t_entry_date": 3.23,
+   "t_month": 1.4,
+   "t_dk_Lh": 1.4,
+   "t_calendar": 0.35
+  },
+  {
+   "arm": "P3b failed breakout",
+   "h": 20,
+   "bench": "EW-book",
+   "N": 12462,
+   "net%_registered_endpoint": -0.105,
+   "net_t_registered": -0.5,
+   "gross%": 0.495,
+   "t_entry_date": 2.37,
+   "t_month": 1.45,
+   "t_dk_Lh": 1.55,
+   "t_calendar": 0.52
+  },
+  {
+   "arm": "P4 falling wedge + break",
+   "h": 5,
+   "bench": "IHSG",
+   "N": 13549,
+   "net%_registered_endpoint": -1.08,
+   "net_t_registered": -8.66,
+   "gross%": -0.48,
+   "t_entry_date": -3.85,
+   "t_month": -2.23,
+   "t_dk_Lh": -2.51,
+   "t_calendar": -5.25
+  },
+  {
+   "arm": "P4 falling wedge + break",
+   "h": 5,
+   "bench": "EW-book",
+   "N": 13549,
+   "net%_registered_endpoint": -1.162,
+   "net_t_registered": -12.02,
+   "gross%": -0.562,
+   "t_entry_date": -5.81,
+   "t_month": -4.21,
+   "t_dk_Lh": -4.52,
+   "t_calendar": -6.31
+  },
+  {
+   "arm": "P4 falling wedge + break",
+   "h": 20,
+   "bench": "IHSG",
+   "N": 13519,
+   "net%_registered_endpoint": -1.323,
+   "net_t_registered": -5.0,
+   "gross%": -0.723,
+   "t_entry_date": -2.73,
+   "t_month": -1.29,
+   "t_dk_Lh": -1.23,
+   "t_calendar": -2.96
+  },
+  {
+   "arm": "P4 falling wedge + break",
+   "h": 20,
+   "bench": "EW-book",
+   "N": 13523,
+   "net%_registered_endpoint": -1.808,
+   "net_t_registered": -9.53,
+   "gross%": -1.208,
+   "t_entry_date": -6.37,
+   "t_month": -4.7,
+   "t_dk_Lh": -4.81,
+   "t_calendar": -6.03
+  },
+  {
+   "arm": "P4b falling wedge",
+   "h": 5,
+   "bench": "IHSG",
+   "N": 80890,
+   "net%_registered_endpoint": -0.887,
+   "net_t_registered": -13.74,
+   "gross%": -0.287,
+   "t_entry_date": -4.44,
+   "t_month": -1.98,
+   "t_dk_Lh": -2.28,
+   "t_calendar": -2.96
+  },
+  {
+   "arm": "P4b falling wedge",
+   "h": 5,
+   "bench": "EW-book",
+   "N": 80890,
+   "net%_registered_endpoint": -0.856,
+   "net_t_registered": -22.6,
+   "gross%": -0.256,
+   "t_entry_date": -6.76,
+   "t_month": -3.13,
+   "t_dk_Lh": -3.62,
+   "t_calendar": -4.23
+  },
+  {
+   "arm": "P4b falling wedge",
+   "h": 20,
+   "bench": "IHSG",
+   "N": 80741,
+   "net%_registered_endpoint": -0.988,
+   "net_t_registered": -6.4,
+   "gross%": -0.388,
+   "t_entry_date": -2.52,
+   "t_month": -0.74,
+   "t_dk_Lh": -0.74,
+   "t_calendar": -1.3
+  },
+  {
+   "arm": "P4b falling wedge",
+   "h": 20,
+   "bench": "EW-book",
+   "N": 80767,
+   "net%_registered_endpoint": -1.23,
+   "net_t_registered": -14.45,
+   "gross%": -0.63,
+   "t_entry_date": -7.4,
+   "t_month": -2.42,
+   "t_dk_Lh": -2.54,
+   "t_calendar": -3.23
+  }
+ ]
+}

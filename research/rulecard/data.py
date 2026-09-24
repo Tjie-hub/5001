@@ -16,7 +16,14 @@ DATA-2 (same dry run): the backfill has isolated scale glitches — single bars 
 GLITCH_FACTOR away from the median of its 5-bar neighbourhood (no IDX band allows a 3x
 session move; a real re-pricing moves the median with it). This reads two bars ahead; it is vendor-error cleaning on the backfill only, never
 applied to the DB corpus, and every dropped bar is listed in the audit.
-On a duplicate (ticker, date) the DB row wins; the DB corpus is never re-adjusted.
+On a duplicate (ticker, date) the DB row wins.
+DB-SPLIT (validity audit, 2026-09-24): the DB corpus is split-adjusted at the source, but 3 of
+81 verifiable `corporate_actions` splits were still gapped in it (a new-basis bar appended
+after old-basis history, the case `data/adjustments.py` describes). `repair_db_splits` runs
+the repository's own gap-verified adjustment (`data.adjustments.adjust_ohlcv`) over the DB
+rows, so only a split whose jump is actually in the prices is applied, and lists each one.
+SPL-1 cannot catch these: a forward split left unadjusted is a drop of less than 100%, and
+three of them are far below the 0.1% share bar, yet each is a -50% or worse fake return.
 """
 from __future__ import annotations
 
@@ -90,13 +97,41 @@ def adjust_unadjusted_splits(O: pd.DataFrame, SPL: pd.DataFrame, cut=CUT):
     return O, audit
 
 
-def merge_extended(H: pd.DataFrame, D: pd.DataFrame, SPL: pd.DataFrame, cut=CUT) -> pd.DataFrame:
+def repair_db_splits(D: pd.DataFrame, factors: dict):
+    """Gap-verified split repair of DB rows via data/adjustments.py (the single adjustment
+    authority). factors: {ticker: [(ex_date 'YYYY-MM-DD', ratio), ...]} as returned by
+    data.adjustments.load_split_factors. Returns (frame, list of applied 'TICKER date xR')."""
+    from data.adjustments import adjust_ohlcv, _gap_is_real
+    if not factors or D.empty:
+        return D, []
+    D = D.copy()
+    D["date"] = pd.to_datetime(D["date"]).dt.strftime("%Y-%m-%d")
+    D = D.sort_values(["ticker", "date"], kind="mergesort").reset_index(drop=True)
+    parts, applied = [], []
+    for tk, g in D.groupby("ticker", sort=False):
+        sp = factors.get(tk)
+        if sp:
+            g = g.reset_index(drop=True)
+            for ex, r in sp:
+                if _gap_is_real(g["date"].astype(str), g["close"], str(ex)[:10], float(r)):
+                    applied.append(f"{tk} {str(ex)[:10]} x{float(r):g}")
+            g = adjust_ohlcv(g, sp)
+        parts.append(g)
+    O = pd.concat(parts, ignore_index=True)
+    O["date"] = pd.to_datetime(O["date"])
+    return O, applied
+
+
+def merge_extended(H: pd.DataFrame, D: pd.DataFrame, SPL: pd.DataFrame, cut=CUT,
+                   db_splits: dict | None = None) -> pd.DataFrame:
     H, D = H.copy(), D[D["ticker"] != "IHSG"].copy()
+    D, db_applied = repair_db_splits(D, db_splits or {})
     H["date"], D["date"] = pd.to_datetime(H["date"]), pd.to_datetime(D["date"])
     H = H[H["date"] < cut]
     H, glitches = drop_scale_glitches(H[COLS])
     Hadj, audit = adjust_unadjusted_splits(H, SPL, cut)
     audit["scale_glitches_dropped"] = glitches
+    audit["db_splits_repaired"] = db_applied
     O = pd.concat([Hadj, D[COLS]], ignore_index=True)
     O = O.drop_duplicates(["ticker", "date"], keep="last")
     O = O[(O["close"] > 0) & (O["low"] > 0) & (O["high"] >= O["low"])]
@@ -109,6 +144,8 @@ def load_extended_ohlcv(hist=DEFAULT_HIST, splits=DEFAULT_SPLITS) -> pd.DataFram
     from data.db import connect          # lazy: keeps this module importable without a DB
     H = pd.read_pickle(hist)
     SPL = pd.read_pickle(splits)
+    from data.adjustments import load_split_factors
     with connect(read_only=True) as c:
         D = pd.read_sql("SELECT ticker,date,open,high,low,close,volume FROM ohlcv WHERE is_final=1", c)
-    return merge_extended(H, D, SPL)
+        factors = load_split_factors(c)
+    return merge_extended(H, D, SPL, db_splits=factors)

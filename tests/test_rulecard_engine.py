@@ -295,3 +295,37 @@ def test_backfill_scale_glitches_are_dropped_not_traded():
     O = merge_extended(H, H.iloc[0:0], pd.DataFrame(columns=["ticker", "date", "ratio"]))
     assert O["close"].tolist() == [825.0, 825.0, 815.0, 810.0, 780.0]
     assert len(O.attrs["split_audit"]["scale_glitches_dropped"]) == 2
+
+
+def _db_frame(closes, dates):
+    import pandas as pd
+    return pd.DataFrame({"ticker": "AAA", "date": dates, "open": closes, "high": closes,
+                         "low": closes, "close": closes, "volume": [1e6] * len(closes)})
+
+
+def test_db_gapped_split_is_repaired_and_listed():
+    """DB-SPLIT (validity audit 2026-09-24): 3 of 81 DB splits were still gapped. A forward
+    split left unadjusted is a fake -50% that SPL-1's share bar cannot see; the loader must
+    repair it through data/adjustments.py (gap-verified) and list it."""
+    import pandas as pd
+    from research.rulecard.data import merge_extended, COLS
+    dates = ["2023-02-24", "2023-02-27", "2023-02-28", "2023-03-01", "2023-03-02", "2023-03-03"]
+    D = _db_frame([100.0, 101, 100, 50, 51, 50], dates)
+    empty_h = pd.DataFrame(columns=COLS)
+    O = merge_extended(empty_h, D, pd.DataFrame(columns=["ticker", "date", "ratio"]),
+                       db_splits={"AAA": [("2023-03-01", 2.0)]})
+    assert O["close"].tolist() == [50.0, 50.5, 50.0, 50.0, 51.0, 50.0]
+    assert O["volume"].tolist()[:3] == [2e6] * 3
+    assert O.attrs["split_audit"]["db_splits_repaired"] == ["AAA 2023-03-01 x2"]
+
+
+def test_db_continuous_split_is_left_alone():
+    """The DB is split-adjusted at source (78 of 81): re-applying would fabricate a rally."""
+    import pandas as pd
+    from research.rulecard.data import merge_extended, COLS
+    dates = ["2023-02-24", "2023-02-27", "2023-02-28", "2023-03-01", "2023-03-02", "2023-03-03"]
+    D = _db_frame([50.0, 50.5, 50, 50, 51, 50], dates)
+    O = merge_extended(pd.DataFrame(columns=COLS), D, pd.DataFrame(columns=["ticker", "date", "ratio"]),
+                       db_splits={"AAA": [("2023-03-01", 2.0)]})
+    assert O["close"].tolist() == [50.0, 50.5, 50.0, 50.0, 51.0, 50.0]
+    assert O.attrs["split_audit"]["db_splits_repaired"] == []

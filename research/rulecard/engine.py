@@ -227,8 +227,10 @@ def run_months(pan: Panel, scores: pd.Series, card: dict, calendar_df: pd.DataFr
         ret = pd.Series((x_px / e_open - 1.0) * 100.0)
         win = pan.ret_w.loc[(pan.ret_w.index > E) & (pan.ret_w.index <= X), tk]
         big_hold = (win.abs() > SPLIT_BAND).any().values
+        absw = np.abs(win.values)
+        max_move = float(np.nanmax(absw)) if absw.size and not np.isnan(absw).all() else 0.0
         rec.update(stale_exits=int(stale.sum()), big_moves_in_hold=int(big_hold.sum()),
-                   zero_returns=int((ret == 0).sum()))
+                   max_abs_move_in_hold=max_move, zero_returns=int((ret == 0).sum()))
         if use_long and used_b is not None:
             prev_close = pan.close_ff.loc[pan.close_ff.index[pan.close_ff.index.get_loc(E) - 1]].reindex(tk).values
             unfill = ara_open(prev_close, e_open) & (b.values == used_b)

@@ -20,7 +20,8 @@ Incident register — keep this table in sync with tests/test_rulecard_checks.py
 |        | (2026-09-15)                                                              | + entry_exit_order             |
 | FILL-1 | pattern scan filled at the signal bar's close (2026-09-17 self-audit)      | entry_exit_order               |
 | BM-1   | IHSG benchmark bias +0.35%/20d vs the EW liquid book                      | placebo (EW-rest machinery)    |
-| SPL-1  | FORU ~20:1 split inside a provisional gap (2026-09-23 repair)             | split_band                     |
+| SPL-1  | FORU ~20:1 split inside a provisional gap (2026-09-23 repair); DATA-1     | split_band                     |
+|        | double adjustment passed the old 0.5% bar at 0.38% (tightened 2026-09-24) | (share <= 0.1%, no move >=100%)|
 
 Survivorship (corpus = names listed in 2026-09) cannot be checked in data; the card
 declares its direction instead. Known limitation, not checked: back-adjusted price
@@ -37,7 +38,8 @@ from research.rulecard import engine
 MIN_SCORE_COVERAGE = 0.80
 MAX_MODAL_SHARE = 0.50
 MAX_ZERO_RETURN_SHARE = 0.25
-MAX_BIG_MOVE_SHARE = 0.005
+MAX_BIG_MOVE_SHARE = 0.001   # was 0.005: DATA-1 (double split adjustment, D-056) gave 0.38% and passed
+IMPOSSIBLE_MOVE = 1.0        # one session >= +/-100% fits no IDX band in any regime: one is a data defect
 PLACEBO_MAX_ABS_T = 3.0
 PREFIX_SAMPLE = 6
 
@@ -152,13 +154,25 @@ def forward_returns_nontrivial(months: list[dict]) -> dict:
 def split_band(months: list[dict]) -> dict:
     """SPL-1. Moves beyond any IDX price band inside holding windows mean unadjusted
     corporate actions in the data. Reported per month; the run is INVALID if they are
-    more than a trace. (Excluding them would condition on the holding period.)"""
+    more than a trace, or if any single session moved >= 100% (no band allows it, and
+    one such print can dominate a month's spread: HMSP 2016-06 +2,404% under DATA-1).
+    Excluding them would condition on the holding period, so the data is fixed instead.
+
+    Tightened 2026-09-24 (validity audit): at 0.5% the check passed the DATA-1
+    double-adjusted backfill (0.38% of holdings), the exact defect it exists to catch."""
     v = [m for m in months if m.get("valid") and "big_moves_in_hold" in m]
     n = sum(m["univ"] for m in v)
     big = sum(m["big_moves_in_hold"] for m in v)
     share = big / n if n else float("nan")
-    return _res("SPL-1", "split_band", bool(n) and share <= MAX_BIG_MOVE_SHARE,
-                {"holdings": n, "holdings_with_big_move": big, "share": share})
+    worst = max((m.get("max_abs_move_in_hold", 0.0) for m in v), default=0.0)
+    ok = bool(n) and share <= MAX_BIG_MOVE_SHARE and worst < IMPOSSIBLE_MOVE
+    worst_months = sorted(((m.get("max_abs_move_in_hold", 0.0), str(m.get("formation")))
+                           for m in v if m.get("max_abs_move_in_hold", 0.0) >= IMPOSSIBLE_MOVE),
+                          reverse=True)[:5]
+    return _res("SPL-1", "split_band", ok,
+                {"holdings": n, "holdings_with_big_move": big, "share": share,
+                 "max_share": MAX_BIG_MOVE_SHARE, "max_abs_move": worst,
+                 "impossible_move_months": worst_months})
 
 
 def placebo(primary_placebo: list[float], lag: int = 3) -> dict:

@@ -225,10 +225,23 @@ Testable implications (each becomes a fingerprint, R7):
   in its top tercile, or retail net-buy proxy).
 - **T-c.** Overpriced-side spreads are larger in low-ADV, low-price names.
 
-Consistent in-house facts: every significant pattern-scan result is an anti-edge; VOLEX works as
-exclusion; OJK's IDX transaction study (2013–15, 582 stocks, 285 million transactions) finds individuals
-trade contrarian — sell winners, buy losers — while institutions trade momentum [V]. Retail buying
-weakness *is* the losing side of the failed-breakdown anti-edge.
+In-house facts — **corrected 2026-09-24** by `docs/research_programs/AUDIT_2026-09-24_RESULT_VALIDITY.md`:
+- The first draft cited "every significant pattern-scan result is an anti-edge". **That no longer stands
+  as evidence.**
+  - The scan's endpoint charged the 0.60% round trip to the signal leg only, so a pattern with no
+    information scores −0.60%.
+  - Its t used entry-date clusters over overlapping holds.
+- Re-measured gross with overlap-robust t, only the failed breakdown against the EW liquid book is
+  confirmed so far:
+  - h20: −0.89%, t −3.6 to −4.4.
+  - h5: −0.45%, t −3.7 to −4.5.
+- The same pattern against IHSG is **not** confirmed (−0.86%, t −1.7 to −2.0). The other arms are
+  unmeasured on that basis until `P-M/validity_audit/validity_audit.py` §F runs.
+- VOLEX exclusion survives only as the pooled top-200 construction (ex-ante +0.30%/mo, t 2.6). The
+  sector-neutral construction does not survive.
+- OJK's IDX transaction study (2013–15, 582 stocks, 285 million transactions) finds that individuals
+  trade contrarian (sell winners, buy losers) while institutions trade momentum [V].
+- **Conclusion.** The thesis rests on the external literature. The in-house scan is not support for it.
 
 ---
 
