@@ -1511,6 +1511,207 @@ FWD-PM-FADE-001 are untouched.
 
 ---
 
+### D-055 · Rule-first gate adopted: one Rule Card + a frozen single run replaces the DRAFT→POWER→REGISTERED→AUDIT chain for new candidates; past defects become mandatory code checks (`research/rulecard/`)
+**Status:** RECORDED · **Date:** 2026-09-24 · **Type:** Research-workflow procedure (governance) ·
+**Approval authority:** Owner instruction 2026-09-24 ("approve", Cowork session), approving the recommendation
+recorded in `docs/research_notes/RULE_FIRST_PROTOCOL_2026-09-24.md` §0/§3 and the chat recommendation of the
+same date.
+
+**Numbering.** D-053 reserved D-054 for the conditional VOLEX-SN registration. The re-measurement failed
+(REFUSED AT G1, 2026-09-23), so that registration never happened. D-054 stays reserved-unused, following the
+HYP-PM-0011/0013 precedent. This entry is D-055.
+
+**Why.** Seven registered hypotheses executed in ten weeks, zero validated; about 2 MB of markdown in `P-M/`, with
+the weight in data admission and chained audits (g1_harness 29 files / 452 KB, broker-flow admission 139 KB, I7
+112 KB, HYP-PM-0008 110 KB and never registered). The OHLCV registrations (HYP-PM-0010, -0012) had already slimmed
+to a 4–5 KB note plus one protocol. What prevents false discoveries is: freezing before the run, running once,
+recording every trial, and PIT discipline. The chained audits did catch real defects, and those are kept — as
+tests, not prose.
+
+**Decision.**
+1. **Scope.** Every *new* candidate. Frozen tests keep their own protocols unchanged: FWD-PM-REGIME-002,
+   FWD-PM-FADE-001, FWD-PM-VOLEX-001, and `BOOK_OVERLAY_POLICY.md`. So do the registries' append-only rules
+   and family semantics (D-028/PG-3). `family_mapping` is a required card field, decided by the Owner per card.
+2. **Three artefacts plus one ledger line per candidate.**
+   - `CARD.yaml`, validated by `research/rulecard/card.py`. It merges DRAFT, POWER and REGISTERED.
+   - `RESULT.json`, written once by `python -m research.rulecard.cli run`.
+   - `VERDICT.md`, generated from the result; the author adds at most five lines of interpretation.
+   - One appended line in `EXPERIMENT_LEDGER.jsonl` (`record_type: rule_card_run`).
+   Registry rows are still appended by hand.
+3. **Freeze.** `FREEZE.json` pins the card, the rule script and the framework (`research/rulecard/*.py`) by
+   sha256, plus the Owner approval. A change to any of the three after the freeze makes the run refuse, because
+   the verdict logic lives in the framework. A run refuses if `RESULT.json` exists. A crashed run can resume
+   only with an explicit flag, and the resume is recorded in the result.
+4. **Hurdles (RULE_FIRST_PROTOCOL R3).**
+   - Tier R (published rule, literature-default parameters, ≥2 anchors tagged V/V2): one-sided NW t ≥ 2.0, and
+     the predicted sign in the discovery half, the confirmation half and ex-2025.
+   - Tier N (novel or scan-derived): t ≥ 3.0 and DSR ≥ 0.95, with every trial counted.
+   - A card may raise its hurdle, never lower it.
+   - The minimum Bayes factor is used only to calibrate these two thresholds to one false-discovery budget.
+     The tests themselves stay pre-registered frequentist severity tests, so **ADR-L1-002 is not superseded**.
+     This is recorded because the calibration borrows a Bayesian device.
+5. **Power gate (R5).** Planning effect = literature effect × 0.5 (× 0.3 if capacity-sensitive). It must reach
+   80% power at the declared N, or the card cannot be frozen. If the rule would fail but fewer than 80% of the
+   planned months were realised, the verdict is INCONCLUSIVE_UNDERPOWERED — not FAILED (rule R2).
+6. **Central verdict** (`evaluate.py`, never the rule script). In order of precedence:
+   - INVALID: a mandatory check failed. This is an implementation or data result, not a hypothesis failure.
+   - FAIL or INCONCLUSIVE_UNDERPOWERED.
+   - FAIL_NOT_MONOTONE: no Patton-Timmermann dose-response over the declared shape (full range, or median to
+     tail). The rule is reclassified as a pattern.
+   - EFFECT_PRESENT_MECHANISM_UNCONFIRMED: a pre-declared fingerprint has the wrong sign.
+   - PASS_NOT_DEPLOYABLE: the long-only bucket-minus-rest test fails.
+   - PASS.
+
+   Lifecycle mapping (HYPOTHESIS_LIFECYCLE):
+   - freeze = REGISTERED; run = IN_TESTING.
+   - FAIL and FAIL_NOT_MONOTONE go to FAILED (F2 unless defended otherwise).
+   - INVALID and INCONCLUSIVE_UNDERPOWERED are terminal but not failures.
+   - A PASS is not VALIDATED. Invariant 10 still requires forward evidence.
+7. **Mandatory checks as code** (`checks.py`, run on every dry and real run):
+
+   | code | defect it encodes | check |
+   |---|---|---|
+   | LA-1 | VOLEX ±20 suspension mask; VOLEX-SN `z_fwd` | prefix invariance of the signal and the universe |
+   | ZV-1 | REGIME-001 zero-volume carry-forward bars | independent traded-days guard |
+   | ID-1 | HYP-PM-0003 / BROKER-001 SUM(lot) identity | predictor coverage and non-degeneracy |
+   | EX-1 | EXP-PM-0009/R1 exit-index defect | forward returns non-trivial; exit after entry |
+   | FILL-1 | pattern-scan close fill | entry at next-session open |
+   | BM-1 | IHSG benchmark bias | EW rest-of-universe benchmark; within-date placebo \|t\| < 3 |
+   | SPL-1 | FORU unadjusted split | split band: an ex-ante lookback exclusion; the holding window only invalidates |
+
+   `tests/test_rulecard_checks.py` reproduces each defect on synthetic data. Each check must fail on the defect
+   and pass on the clean version.
+8. **Audits by exception.** An audit document is written only when a check fails or a result looks wrong
+   after the run, and it is at most one page. A new dataset gets a one-page DATA_CARD plus tests instead of an
+   admission chain. The DATA_CARD spec is written when the first dataset needs it.
+
+**Alternatives considered.**
+- *Keep the chain.* Rejected: the cost per test is the binding constraint, and the chain's real value (catching
+  defects) survives as code.
+- *One document without code checks.* Rejected: it would have shipped every defect in the table above.
+- *Card only for Tier R.* Rejected: Tier N uses the same path with the stricter hurdle, so there is one path, not
+  two.
+
+**Known gaps (recorded, not resolved).**
+- Event-time rules (index ADD, event windows) need an engine v2. Only month-end characteristic sorts run today.
+- The runner does not write a `research_runs` row (invariants 6/7). The panel fingerprint, git HEAD and hashes
+  are in `RESULT.json`; wiring into `research/tracking.py` is a follow-up.
+- Price-level filters (Rp 50) read back-adjusted prices, which embed future split information. Returns and value
+  traded are unaffected.
+- The MR test does not apply to flag (two-group) rules.
+
+**First card.** `P-M/rulecards/RC-0001-MAX/` (lottery avoidance, IDX replication) is filed as a DRAFT. It cannot
+be frozen until three things are done: the Step-0 external prior (JKP EM ex-Indonesia), an Owner ruling on the
+power haircut (at 0.3 the card is underpowered and must not run), and an Owner ruling on the family (widen `{V1}`,
+which D-053 scoped MAX out of, or open a new family).
+
+**Receipts:**
+- `research/rulecard/` (card, engine, checks, stats, evaluate, runner, data, synthetic, cli).
+- Tests: `tests/test_rulecard_checks.py`, `tests/test_rulecard_engine.py`, `tests/test_rulecard_runner.py`,
+  `tests/test_rc0001_max_rule.py`.
+- `docs/research_notes/RULE_FIRST_PROTOCOL_2026-09-24.md`
+- `docs/research_notes/RULE_CARD_TEMPLATE.yaml`
+- `docs/research_programs/P-M/rulecards/RC-0001-MAX/{CARD.yaml,rule.py}`
+
+---
+
+### D-056 · First Rule Card dry run: three backfill data defects recorded and fixed; R5 power rule tightened with a measured noise floor; RC-0001-MAX closed as underpowered and not tested; data-defect correction recorded against the D-053 re-measurement input
+**Status:** RECORDED · **Date:** 2026-09-24 · **Type:** Correction to D-055 + data-defect record + disposition ·
+**Approval authority:** Owner instruction 2026-09-24 ("approve ketiganya", Cowork session), approving the
+three proposals in `P-M/rulecards/RC-0001-MAX/DRY_FINDINGS_2026-09-24.md` §5.
+
+**Source.** The first D-055 dry run on the Owner's machine (RC-0001-MAX, 2026-09-24 03:49 UTC) had 317
+formations, 215 valid, median universe 134, and all four no-return checks passing. It also had a
+scattered set of skipped months in 2011–2019 that the universe floor did not explain. The follow-up
+diagnostics used the pre-2021 backfill only. No MAX value and no signal-to-return relation was computed
+at any point.
+
+**1 · Data defects in the pre-2021 backfill (recorded).**
+- **ZV-2 — holiday rows.** yfinance prints IDX holidays and vendor gaps as rows for every ticker, with
+  zero volume and an unchanged price: 197 of 5,332 dates. Examples: Lebaran 2017–19, 2017-06-01,
+  2018-03-30, 2018-12-31, 2019-01-01, 2016-04-13..19. These rows became formation or entry sessions,
+  and they emptied the traded-20 window for weeks.
+- **DATA-1 — double split adjustment.** `yfinance history(auto_adjust=False)` already split-adjusts
+  OHLC. The D-053 loader (`remeasure_v2.split_adjust`) applied `split_hist.pkl` a second time.
+  - All 165 events with ratio ≥ 1.5 are continuous in the raw backfill.
+  - The second pass created fake jumps of ratio× (HMSP 2016-06 +2,404%, ASII 2012-06 +989%).
+- **DATA-2 — scale glitches.** 55 isolated bars are printed at about 1/10 or 10× their neighbours
+  (MAPI and TOWR, 2018). They produced monthly "returns" of +924% and +322%.
+- **Effect.** The σ of liquid-universe holding returns falls from 76.4% to 16.6% per month once
+  DATA-1 and DATA-2 are corrected.
+
+**2 · Framework fixes (under D-055, tested).**
+- `engine.non_session_dates` drops a date when fewer than 50% of names traded (against the prior-60
+  median) **and** fewer than 20% of prices moved. It is prefix-invariant. A real session with a volume
+  hole is kept.
+- `data.adjust_unadjusted_splits` adjusts a split event only when the raw prices show the jump.
+- `data.drop_scale_glitches` drops a backfill bar that is more than 3× off its 5-bar median. This is
+  backfill only, and every dropped bar is listed in the audit.
+- Every run now reports the audit counts.
+- Tests: `tests/test_rulecard_checks.py` (ZV-2) and `tests/test_rulecard_engine.py` (DATA-1, DATA-2).
+  70 pass.
+
+**3 · R5 tightened.**
+- The power table uses **σ = max(literature σ, noise floor)**. The noise floor is the σ of the primary
+  spread under random bucket assignment on the card's own panel. It is measured by
+  `python -m research.rulecard.cli power`, which never calls the rule's `signal()`.
+- `power.sigma_noise_floor` is required at freeze.
+- **Reason.** A published σ comes from the paper's universe (about 40 names per decile for the IDX MAX
+  paper). The liquid IDX universe gives about 12–15 names per decile.
+- **First measurement** (corrected backfill, ADV ≥ Rp 1 bn): decile ≈ 6.5%/mo, quintile ≈ 4.6%/mo.
+- **Consequence.** With about 245 months, 80% power at t* = 2 needs a true spread of about 1.2%/mo
+  (decile) or 0.85%/mo (quintile). Lowering the liquidity floor to Rp 100 m barely helps, because the
+  backfill's 772 tickers cap breadth.
+- **Structural reading, recorded.** A monthly cross-sectional sort on liquid IDX detects only large
+  effects. Every later card must be screened against the noise floor on paper before it is drafted.
+
+**4 · RC-0001-MAX closed: NOT TESTED — UNDERPOWERED.**
+- Planning effect 1.6 × 0.5 = 0.80 against ≈ 1.18 needed.
+- The card was never frozen and never run. No outcome was computed. **No trial and no family slot were
+  consumed**, so the `{V1}`/new-family question is moot.
+- The card stays on file with a `disposition` block. The framework refuses to freeze a closed card.
+- The disposition would reverse only if the full-panel floor came in below 4.41%/mo, which the backfill
+  alone rules out in practice.
+- Not a failure. It is not filed in FAILURE_REGISTRY, following the VOLEX-SN and pattern-scan
+  precedent.
+- One EXPERIMENT_LEDGER line is appended (`record_type: rule_card_disposition`).
+
+**5 · Data-defect correction recorded against the D-053 re-measurement input.**
+- The FWD-PM-VOLEX-SN-001 re-measurement (`remeasure_v2.py`, RESULT.json 2026-09-23) read the same
+  backfill through the double-adjusting loader, without holiday or glitch handling.
+- Its RESULT.json records 38 pre-2021 holdings with a > 35% session move, in 29 of the 88 gating
+  months. Those months average +0.197%/mo, against +0.087%/mo for the other 59.
+- **Recorded:** the input was defective (DATA-1 and ZV-2, with DATA-2 possible).
+- **Not changed:**
+  - the verdict (REFUSED AT G1);
+  - D-053's no-re-cut rule — no re-run is authorised by this entry;
+  - the frozen protocols of FWD-PM-VOLEX-001, -REGIME-002 and -FADE-001.
+- The mean in the affected months was higher, so the defect did not flatter the refused result's mean.
+  The FAIL is not expected to reverse, but that is **not measured**.
+- **Not audited, and likely affected:** any other pre-2021 panel built with the same `split_adjust`,
+  including `data_gaps/EXTENDED_PANEL_RESULT_2026-09-19.md` and the VOLEX-001 backtest expectation.
+  Those records are point-in-time and are not edited. Their pre-2021 numbers should be read as
+  potentially contaminated.
+- One EXPERIMENT_LEDGER line is appended (`record_type: data_defect_correction`).
+
+**Alternatives considered.**
+- *Run RC-0001 anyway, at about 47% power.* Rejected. A miss could not refute the rule (EVIDENCE_MODEL
+  R2), and a run would consume a trial.
+- *Lower the haircut to ≥ 0.74.* Rejected. The IDX paper is a 5-year, all-stock, equal-weighted sample,
+  the profile most exposed to decay.
+- *Re-run the D-053 re-measurement on corrected data.* Not authorised. D-053 spent it, and this entry
+  records the defect only.
+
+**Receipts:**
+- `P-M/rulecards/RC-0001-MAX/DRY_FINDINGS_2026-09-24.md`
+- `P-M/rulecards/RC-0001-MAX/CARD.yaml` (`disposition` block)
+- `research/rulecard/{engine,data,card,runner,cli}.py`
+- `tests/test_rulecard_{checks,engine,runner}.py`, `tests/test_rc0001_max_rule.py`
+- `docs/research_notes/RULE_FIRST_PROTOCOL_2026-09-24.md` (R5)
+- `EXPERIMENT_LEDGER.jsonl`: two appended lines
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

@@ -1,0 +1,141 @@
+# RC-0001-MAX — CLOSED 2026-09-24: NOT TESTED, UNDERPOWERED (D-056). Never frozen, never run;
+# no outcome was computed and no trial or family slot was consumed. Kept as the record of what
+# was planned. Evidence: DRY_FINDINGS_2026-09-24.md §4. A re-opened MAX rule is a new card id.
+
+disposition:
+  status: NOT_TESTED_UNDERPOWERED
+  date: "2026-09-24"
+  authority: "D-056 (Owner approval 2026-09-24)"
+  basis: >-
+    Noise floor of the decile spread on the corrected backfill 6.4-6.6 %/mo (random buckets, signal
+    never computed); with ~245 months 80% power at t*=2 needs ~1.18 %/mo against a planning effect of
+    1.6 x 0.5 = 0.80. The disposition would only reverse if the full-panel floor (`cli power`) came in
+    below 4.41 %/mo, which the backfill alone rules out in practice.
+
+id: RC-0001-MAX
+title: "Lottery avoidance — highest daily return of the month (MAX), IDX liquid universe"
+tier: R
+tier_justification: >-
+  Published rule with literature-default parameters: Bali-Cakici-Whitelaw 2011 (US, origin);
+  Julianto & Ekaputra 2020 replicate it on IDX 2013-2018 (H-L -1.6%/mo, t -3.57); a
+  price-limit-modified MAX predicts returns and is not the IVOL effect (J. Financial Markets 41, 2018).
+
+mechanism:
+  statement: >-
+    Investors with a preference for lottery-like payoffs overpay for stocks that just printed an
+    extreme up-day; the overpricing unwinds over the following month.
+  loser: >-
+    Attention-driven retail buyers of recent extreme up-day names (IDX individuals trade
+    contrarian and attention-driven; OJK WP/18/04, 2013-15 transactions).
+  barrier: >-
+    No practical short side on IDX keeps the overpricing (Miller 1977; Stambaugh-Yu-Yuan 2012);
+    auto-rejection caps the up-day, so demand spills into later sessions.
+  side: avoid
+
+literature:
+  - {cite: "Julianto & Ekaputra (2020), Max-Effect in the Indonesian Market, Capital Markets Review",
+     market: IDX, period: "2013-07..2018-06", effect: "H-L MAX decile -1.6%/mo (raw and FF3); high decile raw -0.7%/mo",
+     t: "-3.57", tag: V, url: "https://mfa-cmr.com/cmr/article/download/72/69"}
+  - {cite: "The MAX effect: Lottery stocks with price limits and limits to arbitrage, J. Financial Markets 41 (2018)",
+     market: "price-limit markets", period: "", effect: "limit-modified MAX predicts returns; not the IVOL effect",
+     t: "", tag: V, url: "https://ideas.repec.org/a/eee/finmar/v41y2018icp77-91.html"}
+  - {cite: "Bali, Cakici & Whitelaw (2011), Maxing out, JFE", market: US, period: "", effect: "", t: "",
+     tag: M, url: ""}
+
+external_prior:
+  series: "JKP Global Factor Data, emerging markets EXCLUDING Indonesia, rmax1_21d (fallback rmax5_21d), capped VW, monthly"
+  sign: "PENDING — Step 0 not done"
+  t: "PENDING — Step 0 not done"
+
+signal:
+  script: rule.py
+  description: "MAX = highest close-to-close daily return inside the formation's calendar month"
+  inputs: [close]
+  parameters: {window: "calendar month of the formation", statistic: "max of daily returns"}
+  parameter_source: "Julianto & Ekaputra (2020) sorting variable; Bali-Cakici-Whitelaw (2011) MAX(1)"
+  formation: month_end
+
+universe:
+  preset: liquid_idx_v1
+
+portfolio:
+  bucketing: decile
+  use: avoid
+  use_end: high
+
+estimand:
+  primary_kind: top_minus_bottom        # the published IDX estimand
+  predicted_sign: negative
+  control: false
+  nw_lag: 3
+
+hurdle:
+  t_min: 2.0
+
+deployment:
+  predicted_sign: negative              # high-MAX decile minus the rest of the liquid universe
+  hurdle_t: 2.0
+
+power:
+  sigma_planning: 3.47
+  sigma_source: "Julianto & Ekaputra (2020): 1.6 x sqrt(60) / 3.57 = 3.47 %/mo (all IDX stocks, ~40 per decile)"
+  sigma_noise_floor: 6.5                # backfill-only measurement 2026-09-24 (range 6.41-6.58); see disposition
+  literature_effect: 1.6
+  haircut: 0.5
+  haircut_justification: >-
+    PENDING — Owner: 0.5 treats MAX as not microcap-driven (the paper is equal-weighted over ALL
+    IDX stocks; our universe is liquid names only, where the effect is plausibly smaller). At the
+    protocol's 0.3 capacity haircut the plan is 0.48 < 0.79 needed and the card must NOT run.
+  n_months: 245                         # ~183 corrected backfill months + ~61 DB months
+
+monotonicity:
+  grid: quintile
+  shape: tail
+  shape_justification: >-
+    Lottery demand concentrates on the extreme up-day names: the IDX paper's high-MAX decile is
+    negative in raw terms (-0.7%/mo). The test requires the gradient from the median quintile to
+    the top; a pure step in the top decile still fails.
+  alpha: 0.10
+  n_boot: 1000
+  block: 6
+
+fingerprints:
+  - name: adv_tercile                   # overpricing survives where arbitrage is costliest
+    predicted_sign: negative
+  - name: market_state                  # short-leg anomalies are stronger after high sentiment
+    predicted_sign: negative            # (Stambaugh-Yu-Yuan 2012)
+
+windows:
+  start: null
+  end: null
+  split: "2021-07-01"                   # discovery = pre-2021 backfill; confirmation = DB corpus
+
+costs:
+  round_trip_pct: 0.60
+
+survivorship_direction: >-
+  conservative (inference): delisted names are disproportionately lottery/distress names that
+  would sit in the high-MAX decile; their absence flatters the high decile and biases H-L toward 0.
+
+trials:
+  n_trials: 1
+  sr_trials_std: null
+  variants_declared:
+    - "MAX(5): mean of the 5 highest daily returns"
+    - "limit-hit count (J. Financial Markets 2018 modified MAX)"
+    - "conditional on Parkinson-60 volatility terciles (incremental over VOLEX)"
+  prior_looks: >-
+    None on MAX. Correlated characteristic already measured on this corpus: Parkinson-60 volatility
+    exclusion (VOLEX-001 forward; VOLEX-SN refused at G1 2026-09-23). The 2026-09-17 pattern scan
+    measured OHLCV patterns, not MAX. Variants above are not run by this card; each would be a new
+    card and raise n_trials on every card in the set.
+
+kill_rule: >-
+  FAIL, FAIL_NOT_MONOTONE or INCONCLUSIVE_UNDERPOWERED ends MAX as an IDX rule on this corpus — no
+  re-cut of window, bucket, definition or universe. PASS_NOT_DEPLOYABLE: effect recorded, no book use.
+  EFFECT_PRESENT_MECHANISM_UNCONFIRMED: no book use until a new card tests the mechanism. PASS:
+  candidate for a book-level exclusion overlay, which still needs its own forward record.
+
+family_mapping: >-
+  PENDING — Owner: (a) widen P-M {V1} (D-053 scoped skewness/MAX out until a widening amendment),
+  or (b) open a new family, e.g. P-M {L1} lottery / extreme-return characteristics.

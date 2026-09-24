@@ -1,0 +1,28 @@
+{
+ "card": "RC-0001-MAX",
+ "mode": "power",
+ "generated_utc": "2026-09-24T04:20:48+00:00",
+ "seeds": 10,
+ "signal_called": false,
+ "sigma_noise_floor": 6.329507925163793,
+ "sigma_noise_floor_range": [
+  5.769621127612533,
+  6.947619893727395
+ ],
+ "months_valid": 245,
+ "median_universe": 140.0,
+ "non_sessions_dropped": 197,
+ "panel_fingerprint": "c4e087e684d04149342cf871a8970435fee8158117aac668100323ccd7509198",
+ "power_with_floor": {
+  "sigma": 6.329507925163793,
+  "sigma_literature": 3.47,
+  "sigma_noise_floor": 6.329507925163793,
+  "literature_effect": 1.6,
+  "haircut": 0.5,
+  "planning_effect": 0.8,
+  "n_months": 245,
+  "t_star": 2.0,
+  "needed_effect_80pct": 1.1490874861712896,
+  "admissible": false
+ }
+}

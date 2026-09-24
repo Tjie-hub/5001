@@ -1,0 +1,107 @@
+# RULE CARD TEMPLATE — D-055 · machine-validated by research/rulecard/card.py
+# Copy to docs/research_programs/<program>/rulecards/<ID>/CARD.yaml, next to its rule.py.
+#
+#   python -m research.rulecard.cli validate CARD.yaml   # lists every problem at once
+#   python -m research.rulecard.cli dry      CARD.yaml   # structure only, no returns, no freeze needed
+#   python -m research.rulecard.cli power    CARD.yaml   # noise floor + realised months; never calls signal()
+#   python -m research.rulecard.cli freeze   CARD.yaml --owner "who, when, where recorded"
+#   python -m research.rulecard.cli run      CARD.yaml   # once; RESULT.json + VERDICT.md + ledger line
+#
+# Every field is filled BEFORE any outcome is computed. "PENDING" is allowed for a dry run
+# and refused at freeze. A changed rule after freeze is a new card id, never an edit.
+
+id: ""                         # RC-0001-MAX-AVOID
+title: ""
+tier: R                        # R = replication of a published rule with literature-default parameters
+                               #     (hurdle one-sided t >= 2.0 + same sign in both halves and ex-2025)
+                               # N = novel / came from a scan (hurdle t >= 3.0 AND DSR >= 0.95)
+tier_justification: ""         # R: which >= 2 independent replications, incl. >= 1 emerging market
+
+mechanism:
+  statement: ""                # one sentence: why the return pattern exists
+  loser: ""                    # who is on the other side and keeps losing
+  barrier: ""                  # why capital does not remove it
+  side: avoid                  # avoid | long
+
+literature:                    # tag V = primary abstract/page verified; V2 = secondary summary;
+                               # M = memory — M never counts toward tier R
+  - {cite: "", market: "", period: "", effect: "", t: "", tag: V, url: ""}
+  - {cite: "", market: "", period: "", effect: "", t: "", tag: V, url: ""}
+
+external_prior:                # Step 0 — JKP emerging-markets series EXCLUDING Indonesia
+  series: ""                   # (JKP-Indonesia is read only AFTER the run: same sample)
+  sign: ""
+  t: ""
+
+signal:
+  script: rule.py              # defines load_panel(ctx), signal(panel)[, control(panel)]
+  description: ""              # the formula in words, e.g. MAX5 = mean of the 5 highest daily returns, prior 21 sessions
+  inputs: []                   # panel columns used; event data joined on its AVAILABILITY date
+  parameters: {}               # every value copied from the literature
+  parameter_source: ""
+  formation: month_end         # only month_end is implemented (event-time rules need an engine v2)
+
+universe:
+  preset: liquid_idx_v1        # adv20 >= Rp1e9, close >= Rp50, >= 25 prior sessions, volume > 0,
+                               # >= 18 of trailing 20 traded, no |move| > 36% in the prior 21 sessions
+
+portfolio:
+  bucketing: decile            # decile | quintile | flag (flag: score > 0 = flagged)
+  use: avoid                   # avoid | long
+  use_end: high                # which end is avoided / held
+
+estimand:
+  primary_kind: top_minus_bottom   # the PUBLISHED estimand (top_minus_bottom | bucket_minus_rest)
+  predicted_sign: negative
+  control: false               # true -> conditional sort within control() terciles
+  nw_lag: 3
+
+hurdle:
+  t_min: 2.0                   # may be raised above the tier floor, never lowered
+
+deployment:                    # used bucket minus rest of universe: decides long-only usability
+  predicted_sign: negative
+  hurdle_t: 2.0
+
+power:                         # decided before data; the runner refuses an underpowered card
+  sigma_planning: null         # %/month of the primary series, sourced (e.g. mean*sqrt(N)/t of a paper)
+  sigma_source: ""
+  sigma_noise_floor: null      # REQUIRED at freeze: `cli power` (random buckets, signal never called);
+                               # the power table uses max(sigma_planning, sigma_noise_floor)
+  literature_effect: null      # %/month, published estimand
+  haircut: 0.5                 # 0.3 if microcap/capacity-sensitive
+  n_months: null               # realised valid months from `cli power`
+
+monotonicity:                  # Patton-Timmermann MR test (R6)
+  grid: quintile               # quintile (default; deciles are averaged in pairs) | native
+  shape: full                  # full = graded across all buckets | tail = graded from median to used end
+  shape_justification: ""      # required for tail
+  alpha: 0.10
+  n_boot: 1000
+  block: 6
+
+fingerprints:                  # >= 1; observable = spread(A) - spread(B) of used-bucket-minus-rest
+  - name: adv_tercile          # A = lowest ADV tercile,   B = highest
+    predicted_sign: negative
+  # - name: price_tercile      # A = lowest price tercile, B = highest
+  # - name: market_state       # A = months whose ex-ante 63-session EW return is in the top tercile
+  #                            #     of all PRIOR months, B = bottom tercile
+
+windows:
+  start: null                  # first formation (null = first available)
+  end: null
+  split: "2021-07-01"          # discovery < split <= confirmation; both need >= 12 months, same sign
+
+costs:
+  round_trip_pct: 0.60         # engine/exits/costs.py authority (0.15+0.25+2x0.10)
+
+survivorship_direction: ""     # conservative (avoid side) | inflating (long side)
+
+trials:
+  n_trials: 1                  # every variant ever computed on this data (tier N: feeds the DSR)
+  sr_trials_std: null
+  variants_declared: []        # robustness variants listed now; never used for selection
+  prior_looks: ""              # disclose any earlier scan that touched this signal
+
+kill_rule: ""                  # the condition that ends the rule, no rescue
+family_mapping: ""             # Owner decision
