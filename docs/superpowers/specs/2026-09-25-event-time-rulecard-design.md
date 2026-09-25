@@ -28,7 +28,7 @@ uses it.
 | rule | FADE-001 frozen definition. On an eligible row, `low < lo20` and `close > lo20`, where `lo20` = min(low) over the prior 20 sessions (excluding today). Entry at the next session's open. Hold 20 sessions. Exit at the close of session t+20 |
 | data | pre-2021 backfill only, loaded by `research.rulecard.data` with the D-056 repairs. **Every row dated ≥ 2021-07-05 is excluded** (the discovery corpus) |
 | universe | `liquid_idx_v1` (ADV20 ≥ Rp 1bn nominal, close ≥ Rp 50, ≥ 25 prior sessions, ≥ 18/20 traded, no >36% move in the prior 21 sessions) |
-| primary estimand | **calendar-time, day-weighted.** Each session d: EW mean daily return of all open positions − EW mean daily return of the liquid book (names eligible at d−1). Daily excess is summed within each calendar month into a monthly series. Newey-West t, lag 3 |
+| primary estimand | **calendar-time, day-weighted.** Each session d: EW mean daily return of all open positions − EW mean daily return of the liquid book (names eligible at d−1). A month's value = mean daily excess over the month's position-days × sessions in the month (the flagged sleeve's return relative to the book; equals the sum when positions are open every day). Newey-West t, lag 3 |
 | predicted sign | negative (avoid) |
 | halves | `windows.split = 2011-01-01`. Discovery and confirmation halves must each have the predicted sign (≥ 12 months each) |
 | tier / hurdle | **N**: t ≤ −3.0 **and** DSR ≥ 0.95 |
@@ -36,7 +36,7 @@ uses it.
 | fingerprint | `adv_tercile`, predicted negative: the anti-edge is stronger in the lowest-ADV tercile (limits to arbitrage) |
 | costs | 0.60% round trip, used only in the derived book uplift. The primary is gross |
 | survivorship | corpus = names listed in 2026-09, so delisted pre-2021 losers are missing. For an avoid rule this biases **against** the effect (conservative) |
-| family_mapping | proposed: out-of-sample replication of HYP-PM-0012 inside `{R1}`, no new slot. **Owner call before freeze** |
+| family_mapping | out-of-sample replication of HYP-PM-0012 inside `{R1}`, no new slot (Owner delegated 2026-09-25: "complete all path with your recommendation") |
 | power | planning effect = in-house monthly calendar-time effect × 0.5. σ = max(in-house σ, measured noise floor). `n_months` from `power` |
 
 **Deliberate deviation from FADE-001.** FADE-001 drops events with a > 35% session move inside the holding
@@ -70,8 +70,8 @@ holding-window content; bad data makes the run INVALID via SPL-1 instead. Stated
   - A month with fewer than `MIN_EVENT_DAYS` position-days (5) is marked invalid with a reason.
 - `placebo_flags(pan, flags, seed)`: shuffle flags across eligible names within each date, so the per-date
   event count is kept.
-- `random_flags(pan, flags_rate_by_date, seed)`: used by `power`, with the same per-date count and random
-  names. `signal()` is never called.
+- `random_flags(pan, rate, seed)`: used by `power`. Each eligible row is flagged with probability
+  `power.event_rate`, the rate measured by `dry`. `signal()` is never called.
 - `event_order_check(events)`: FILL-1/EX-1 per event (signal < entry < exit), returned in the checks format.
 
 ### 3.2 `card.py`

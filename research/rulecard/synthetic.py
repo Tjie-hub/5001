@@ -63,3 +63,40 @@ def make_panel(n_tickers: int = 120, years: int = 6, effect_pct_per_month: float
 def z_signal(panel: pd.DataFrame) -> pd.Series:
     """Trailing-only reference signal: the characteristic revealed on this row."""
     return panel["z"].astype(float)
+
+
+def make_event_panel(n_tickers: int = 80, years: int = 4, effect_pct_per_event: float = 0.0,
+                     hold: int = 20, event_rate: float = 0.005, vol: float = 0.02, seed: int = 0,
+                     start: str = "2012-01-02", low_adv_boost: float | None = None) -> pd.DataFrame:
+    """Random 0/1 events (column `ev`, known at that row's close); each event adds a drift of
+    effect_pct_per_event spread evenly over the name's next `hold` sessions. low_adv_boost as in
+    make_panel (even-numbered names trade 10x less value and carry the effect x boost)."""
+    rng = np.random.default_rng(seed)
+    dates = pd.bdate_range(start, periods=252 * years)
+    T = len(dates)
+    frames = []
+    for i in range(n_tickers):
+        ev = rng.random(T) < event_rate
+        ev[:30] = False
+        low = low_adv_boost is not None and i % 2 == 0
+        boost = low_adv_boost if low else 1.0
+        volume = (5e6 if low else 5e7) if low_adv_boost is not None else 1e7
+        drift = np.zeros(T)
+        for t in np.flatnonzero(ev):
+            drift[t + 1:t + 1 + hold] += effect_pct_per_event * boost / 100.0 / hold
+        r = rng.normal(drift - vol ** 2 / 2, vol, T)
+        close = 1000.0 * np.exp(np.cumsum(r))
+        gap = np.exp(rng.normal(0, 0.002, T))
+        open_ = np.r_[close[0], close[:-1]] * gap
+        rngv = np.abs(rng.normal(0, vol, T)) + vol / 2
+        hi = np.maximum(open_, close) * np.exp(rngv / 2)
+        lo = np.minimum(open_, close) * np.exp(-rngv / 2)
+        frames.append(pd.DataFrame({"ticker": f"S{i:03d}", "date": dates, "open": open_, "high": hi,
+                                    "low": lo, "close": close, "volume": volume,
+                                    "ev": ev.astype(float)}))
+    return pd.concat(frames, ignore_index=True)
+
+
+def ev_signal(panel: pd.DataFrame) -> pd.Series:
+    """Trailing-only reference event flag: the event revealed at this row's close."""
+    return panel["ev"].astype(float)
