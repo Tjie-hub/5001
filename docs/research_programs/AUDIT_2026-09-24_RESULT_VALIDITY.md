@@ -289,13 +289,24 @@ has three options for each:
 - **(c)** Issue new spec ids with robust inference and honest horizons. For T1 that means about 6–9
   years, which effectively ends it as a decision test. This is a spec change, and not recommended now.
 
-**FWD-PM-VOLEX-001.** Its inference is right. Runner hazard 1 from the 2026-09-23 audit is still open:
-exits can land on partial sessions, and outcomes are frozen once written. It is time-bound to the first
-maturity (≈ mid-October). It needs an Owner call before then.
+**FWD-PM-VOLEX-001.** Its inference is right.
+
+**Corrected 2026-09-24.** The first version of this paragraph said runner hazard 1 (exits on partial
+sessions) was still open. **That was wrong.** DEV-002 (`forward_exclusion/deviation_log.md`,
+2026-09-23) had already closed it: the scorer now waits for complete entry and exit sessions. Two
+items are still open:
+- hazard 2 (run-time `suspension_events` look-ahead into forward formations);
+- the stranded provisional bars. This audit's §7-A found 814 `is_final=0` rows dated 2026-09-16 →
+  09-24, and IHSG missing on 2026-08-25 and 2026-09-16.
+
+**Decisions taken 2026-09-24 (D-057, "approve all"):**
+- option (b) for REGIME-002 and FADE-001: `forward_regime/deviation_log.md` DEV-001 and
+  `forward_fade/deviation_log.md` DEV-001, both implemented by `P-M/forward_robust/robust_report.py`;
+- this audit recorded as D-057.
 
 ---
 
-## 5. Owner decisions requested
+## 5. Owner decisions requested (all approved 2026-09-24 → D-057)
 
 1. **Record this audit.** Proposed as D-057, RECORDED type, in the same shape as D-056. No verdict is
    changed by it; rows 14, 19, 23, 30 and 31 are re-read.

@@ -1712,6 +1712,117 @@ at any point.
 
 ---
 
+### D-057 · Result-validity audit recorded; overlap-robust and gross observability added to FWD-PM-REGIME-002 and FWD-PM-FADE-001 (decision rules unchanged); DB split repair and SPL-1 tightening under D-055
+**Status:** RECORDED · **Date:** 2026-09-24 · **Type:** Audit record + observability-only deviations +
+framework fixes · **Approval authority:** Owner instruction 2026-09-24 ("approve all", Cowork session),
+covering the three items put to the Owner after `AUDIT_2026-09-24_RESULT_VALIDITY.md`.
+
+**Source.**
+- `docs/research_programs/AUDIT_2026-09-24_RESULT_VALIDITY.md`, which contains:
+  - a rules check (R-1…R-14);
+  - a result register covering 35 recorded results;
+  - DB results (§7).
+- It rests on two runs on the Owner's DB, both read-only and on the registration-era corpus
+  (≤ 2026-09-16):
+  - `P-M/overlap_audit/overlap_audit.py`;
+  - `P-M/validity_audit/validity_audit.py` (`RESULT_20260924T063842Z.json`).
+
+**1 · Rules found wrong (recorded; no verdict is edited).**
+- **R-1.** A t clustered on entry date, with multi-session holds that overlap. Used by the REGIME-002
+  reference, the FADE-001 reference, the pattern scan and the F0–F5 filter table.
+  - On a simulated null it rejects 39% at a nominal 5%.
+  - In-sample t-statistics shrink ×0.44–0.94 under month-cluster, Driscoll-Kraay and calendar-time
+    estimators.
+- **R-2.** The round trip is charged to the signal leg only, against gross benchmarks (FADE-001, pattern
+  scan). A no-information pattern scores −0.60%.
+- **R-3.** A holding-window contamination guard: a trade is dropped if its future window contains a
+  > 35% session or a split. This is look-ahead.
+  - Measured immaterial for FADE.
+  - For T1 it removed 40 winners (mean excess +26%). The look-ahead biased T1 down.
+- **R-10.** Power and horizons derived from R-1 standard errors.
+- **R-13.** Legacy `wf_edge` walk-forward metrics are not evidence:
+  - parameters are fixed;
+  - the "train" window is only an indicator warm-up;
+  - strategies are selected per ticker;
+  - there is no inference.
+
+**2 · Re-readings of recorded results (point-in-time records are not edited).**
+- **Every FAILED / NOT CONFIRMED / REFUSED verdict stands.**
+- **T1 ex-2025** (+0.93%/trade, t 2.83) is **not established in-sample**. Robust t is 1.5–1.8; without
+  the look-ahead guard it is +1.06%, t 1.8–2.2.
+- **FADE h20:**
+  - against the EW-book, gross −0.89%, robust t −3.6 to −4.4: **survives**;
+  - against IHSG, gross −0.86%: **mixed** (month −1.65, DK −1.9, calendar −3.13).
+- **Pattern scan:** "every mean-reversion pattern is significantly negative" is **withdrawn as
+  stated**.
+  - Failed breakdown, falling wedge + break and falling wedge survive gross against the EW-book at h5
+    and h20.
+  - Failed breakout is null; its anti-edge was the cost.
+  - Resistance breakout is significant trade-weighted only.
+- **EXTENDED_PANEL 2026-09-19** (volatility and dividend "out-of-sample"): **invalid**. It was already
+  superseded 2026-09-23 for look-ahead. Its pre-2021 input also carries DATA-1, ZV-2 and DATA-2.
+- **DB data:**
+  - no holiday rows;
+  - **survivorship certain** (0 of 958 names stop trading);
+  - rights/bonus ex-date drops exist but are few, and move FADE by < 0.01pp and T1 by −0.06%/trade;
+  - **3 of 81 DB splits still gapped:** MLPT 2026-07-21 ×25, RAJA 2026-07-16 ×5, RMKE 2026-07-17 ×5.
+
+**3 · Calibration of the two frozen decision rules (recorded, not changed).**
+- REGIME-002 §3: P(PASS | zero effect) ≈ 13–17%. 80% power at +0.928% needs ≈ 73–103 months, against
+  the 36 planned.
+- FADE-001 §3: P(PROMOTE at 18 months | no information) ≈ 3–14%, against about 0.1% intended.
+
+**4 · Observability-only deviations (Owner option (b)).**
+- **Deviation entries:**
+  - `P-M/forward_regime/deviation_log.md` DEV-001 (new file);
+  - `P-M/forward_fade/deviation_log.md` DEV-001 (new file).
+- **Report:** `P-M/forward_robust/robust_report.py` (read-only; tests
+  `tests/test_forward_robust_report.py`). At every read it reports, next to the frozen statistic:
+  - month-cluster t, Driscoll-Kraay t (L = maximum hold) and calendar-time t;
+  - for FADE, the gross contrast.
+- **Pre-declared reading:** a frozen PASS or PROMOTE that the gross calendar-time t does not confirm is
+  recorded as "<verdict> under the frozen rule; not confirmed under overlap-robust inference". It has
+  no automatic consequence.
+- **Blind.** Both ledgers held 0 closed rows (REGIME `c06970ac…`, FADE `cb2de076…`).
+- **Unchanged:** PROTOCOL.md hashes (`4063752e…`, `e1959672…`), the recorders and the decision rules.
+
+**5 · Framework fixes under D-055 (tested).**
+- **SPL-1.** The bar moves from ≤ 0.5% to ≤ 0.1% of holdings with a > 35% session, and any single
+  session ≥ 100% now fails. At the old bar, DATA-1's 0.38% passed.
+- **DB split repair.** `research/rulecard/data.py::repair_db_splits` runs the repository's
+  gap-verified `data/adjustments.py` over DB rows. SPL-1 cannot see a forward split left unadjusted.
+- **Test count:** 88 pass, including the robust-report tests.
+- `RULE_FIRST_PROTOCOL_2026-09-24.md` §4: the in-house evidence paragraph is corrected.
+
+**6 · VOLEX-001.**
+- The partial-session exit hazard was already closed by **DEV-002** (2026-09-23, in
+  `forward_exclusion/deviation_log.md`; the scorer waits for complete entry and exit sessions). The
+  audit's §4 statement that it was open was wrong and is corrected there.
+- **Still open, not decided here:**
+  - hazard 2 of the 2026-09-23 suspension audit (run-time `suspension_events` leaking a few sessions
+    of look-ahead into forward formations);
+  - provisional bars: 814 `is_final=0` rows, 2026-09-16 → 09-24;
+  - IHSG missing on 2026-08-25 and 2026-09-16.
+
+  The remedy for the provisional bars and the IHSG gaps is `scripts/repair_provisional_bars.py --apply`.
+  It writes to production.
+
+**Alternatives considered.**
+- *(a) Change nothing.* Rejected. It leaves a future PASS or PROMOTE read at its nominal error rate.
+- *(c) New spec ids with robust inference.* Rejected for now. For T1 it means an honest horizon of
+  about 6–9 years, which ends it as a decision test, and it would be a spec change mid-test.
+
+**Receipts:**
+- `docs/research_programs/AUDIT_2026-09-24_RESULT_VALIDITY.md`
+- `P-M/overlap_audit/{overlap_audit.py, RESULT_20260924T043858Z.json}`
+- `P-M/validity_audit/{validity_audit.py, RESULT_20260924T063842Z.json}`
+- `P-M/forward_robust/robust_report.py`
+- `P-M/forward_regime/deviation_log.md`, `P-M/forward_fade/deviation_log.md`
+- `research/rulecard/{checks,engine,data}.py`
+- `tests/test_{overlap_audit,validity_audit,forward_robust_report,rulecard_checks,rulecard_engine}.py`
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
