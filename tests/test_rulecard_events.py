@@ -138,3 +138,60 @@ def test_event_card_refusals(mut, msg):
     mut(c)
     with pytest.raises(cardmod.CardError, match=msg):
         cardmod.validate(c, strict=True)
+
+
+import textwrap  # noqa: E402
+
+import yaml  # noqa: E402
+
+from research.rulecard import runner  # noqa: E402
+
+EV_RULE = textwrap.dedent('''
+    from research.rulecard import synthetic
+
+    def load_panel(ctx):
+        return synthetic.make_event_panel(n_tickers=100, years=5, effect_pct_per_event=-3.0,
+                                          event_rate=0.005, seed=3, low_adv_boost=2.0)
+
+    def signal(panel):
+        return synthetic.ev_signal(panel)
+''')
+
+
+@pytest.fixture
+def ev_dir(tmp_path):
+    d = tmp_path / "RC-EV"
+    d.mkdir()
+    c = event_card()
+    c["windows"] = {"split": "2014-06-01"}
+    (d / "CARD.yaml").write_text(yaml.safe_dump(c, sort_keys=False))
+    (d / "rule.py").write_text(EV_RULE)
+    return d
+
+
+def test_event_dry_reports_rate_without_returns(ev_dir):
+    out = runner.dry(ev_dir / "CARD.yaml")
+    assert 0.003 < out["event_rate"] < 0.007 and out["events_per_year"]
+    assert all(c["status"] == "PASS" for c in out["checks"]), out["checks"]
+
+
+def test_event_power_never_calls_signal(ev_dir, monkeypatch):
+    real = runner._load_module
+
+    def guarded(p):
+        m = real(p)
+
+        def boom(*_):
+            raise AssertionError("signal() called by power")
+        m.signal = boom
+        return m
+    monkeypatch.setattr(runner, "_load_module", guarded)
+    out = runner.power(ev_dir / "CARD.yaml", seeds=3)
+    assert out["signal_called"] is False and out["sigma_noise_floor"] > 0
+
+
+def test_event_card_freeze_run_pass(ev_dir, tmp_path):
+    runner.freeze(ev_dir / "CARD.yaml", "Owner test")
+    out = runner.run(ev_dir / "CARD.yaml", tmp_path / "ledger.jsonl")
+    assert all(c["status"] == "PASS" for c in out["checks"]), out["checks"]
+    assert out["verdict"]["verdict"] == "PASS", out["verdict"]

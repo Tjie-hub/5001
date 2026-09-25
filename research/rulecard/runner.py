@@ -30,7 +30,7 @@ import numpy as np
 import pandas as pd
 
 from research.rulecard import card as cardmod
-from research.rulecard import checks, engine, evaluate
+from research.rulecard import checks, engine, evaluate, events
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FRAMEWORK_DIR = Path(__file__).resolve().parent
@@ -88,6 +88,8 @@ def _compute(card_path: Path, card: dict, mode: str, with_returns: bool):
     scores = mod.signal(pan.P)
     if not isinstance(scores, pd.Series) or not scores.index.equals(pan.P.index):
         raise RefusedError("signal() must return a Series on the prepared panel's index")
+    if _is_event(card):
+        return _compute_event(card, mod, pan, scores, with_returns)
     control = None
     if (card.get("estimand") or {}).get("control"):
         if not callable(getattr(mod, "control", None)):
@@ -103,6 +105,29 @@ def _compute(card_path: Path, card: dict, mode: str, with_returns: bool):
            checks.entry_exit_order(months)]
     if with_returns:
         plac = engine.run_months(pan, engine.placebo_scores(pan, scores, cal), card, cal, None)
+        res += [checks.forward_returns_nontrivial(months), checks.split_band(months),
+                checks.placebo([m["primary"] for m in plac if m.get("valid") and "primary" in m],
+                               int(card["estimand"].get("nw_lag", 3)))]
+    return pan, months, res
+
+
+def _is_event(card) -> bool:
+    return (card.get("signal") or {}).get("formation") == "event"
+
+
+def _compute_event(card, mod, pan, scores, with_returns):
+    """Event-time cards (events.py). Checks run on event dates instead of month-ends; the
+    month-end FILL-1 and ID-1 checks are replaced by their per-event equivalents."""
+    w = card.get("windows") or {}
+    months, E = events.run_event_months(pan, scores, card, w.get("start"), w.get("end"), with_returns)
+    forms = sorted(pd.to_datetime(pd.Series(E.loc[E["tradeable"], "signal_date"].unique())))
+    res = [checks.prefix_invariance(pan, mod.signal, scores, forms),
+           checks.traded_days_guard(pan, forms),
+           events.event_nondegenerate(pan, scores),
+           events.event_order_check(E)]
+    if with_returns:
+        plac, _ = events.run_event_months(pan, events.placebo_flags(pan, scores), card,
+                                          w.get("start"), w.get("end"), True)
         res += [checks.forward_returns_nontrivial(months), checks.split_band(months),
                 checks.placebo([m["primary"] for m in plac if m.get("valid") and "primary" in m],
                                int(card["estimand"].get("nw_lag", 3)))]
@@ -139,6 +164,22 @@ def dry(card_path) -> dict:
            "median_universe": float(pd.Series([m["univ"] for m in valid]).median()) if valid else None,
            "checks": res,
            "skipped": [{"month": m["month"], "reason": m.get("reason")} for m in months if not m.get("valid")]}
+    if _is_event(card):
+        # event density is structure, not outcome: it is what power.event_rate is set from
+        w = card.get("windows") or {}
+        d = pan.P["date"]
+        inw = pan.eligible.copy()
+        if w.get("start"):
+            inw &= d >= pd.Timestamp(w["start"])
+        if w.get("end"):
+            inw &= d <= pd.Timestamp(w["end"])
+        per_year = {}
+        for m in months:
+            per_year[m["month"][:4]] = per_year.get(m["month"][:4], 0) + m["events"]
+        n_ev = sum(per_year.values())
+        out.update(events_total=n_ev, events_per_year=per_year,
+                   event_rate=n_ev / int(inw.sum()) if int(inw.sum()) else float("nan"),
+                   median_book=float(pd.Series([m["book_median"] for m in valid]).median()) if valid else None)
     (card_path.parent / f"DRY_{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.json").write_text(
         json.dumps(out, indent=1, default=str))
     return out
@@ -160,10 +201,19 @@ def power(card_path, seeds: int = 10) -> dict:
     pan = engine.Panel(mod.load_panel(ctx))
     w = card.get("windows") or {}
     cal = engine.calendar(pan.P, w.get("start"), w.get("end"))
+    rate = (card.get("power") or {}).get("event_rate")
+    if _is_event(card) and (not isinstance(rate, (int, float)) or isinstance(rate, bool) or rate <= 0):
+        raise RefusedError("power.event_rate is required for an event card: run `dry` and copy its event_rate")
     sds, n_valid, univ = [], 0, []
     for k in range(seeds):
-        r = pd.Series(np.random.default_rng(1000 + k).random(len(pan.P)), index=pan.P.index)
-        mm = [m for m in engine.run_months(pan, r, card, cal) if m.get("valid") and "primary" in m]
+        if _is_event(card):
+            # random events at the rule's measured density; the rule's signal() is never called
+            flags = events.random_flags(pan, float(rate), 1000 + k)
+            mm = [m for m in events.run_event_months(pan, flags, card, w.get("start"), w.get("end"))[0]
+                  if m.get("valid") and "primary" in m]
+        else:
+            r = pd.Series(np.random.default_rng(1000 + k).random(len(pan.P)), index=pan.P.index)
+            mm = [m for m in engine.run_months(pan, r, card, cal) if m.get("valid") and "primary" in m]
         prim = [m["primary"] for m in mm]
         if len(prim) > 2:
             sds.append(float(np.std(prim, ddof=1)))
