@@ -195,3 +195,18 @@ def test_event_card_freeze_run_pass(ev_dir, tmp_path):
     out = runner.run(ev_dir / "CARD.yaml", tmp_path / "ledger.jsonl")
     assert all(c["status"] == "PASS" for c in out["checks"]), out["checks"]
     assert out["verdict"]["verdict"] == "PASS", out["verdict"]
+
+
+def test_rc0002_panel_is_pre2021_only(monkeypatch):
+    import importlib.util
+    p = ROOT / "docs/research_programs/P-M/rulecards/RC-0002-FB-PRE2021/rule.py"
+    spec = importlib.util.spec_from_file_location("rc0002", p)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    fake = synthetic.make_event_panel(n_tickers=3, years=12, start="2012-01-02").drop(columns="ev")
+    assert fake.date.max() >= pd.Timestamp("2021-07-05")
+    monkeypatch.setattr(m, "load_extended_ohlcv", lambda: fake)
+    P = m.load_panel({})
+    assert P.date.max() < pd.Timestamp("2021-07-05")
+    s = m.signal(engine.prepare(P))
+    assert set(np.unique(s.values)) <= {0.0, 1.0} and s.sum() > 0

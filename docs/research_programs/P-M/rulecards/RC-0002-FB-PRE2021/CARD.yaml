@@ -1,0 +1,120 @@
+# RC-0002-FB-PRE2021 — first event-time Rule Card (design 2026-09-25,
+# docs/superpowers/specs/2026-09-25-event-time-rulecard-design.md).
+
+id: RC-0002-FB-PRE2021
+title: "Failed-breakdown anti-edge (HYP-PM-0012 rule), out-of-sample on the pre-2021 backfill"
+tier: N
+tier_justification: >-
+  In-house pattern found by a scan (2026-09-17 pattern scan, ~12 arms + 6 wedge variants) on
+  2021-26 data; no published replication. Tier N hurdle (t >= 3.0, DSR >= 0.95) applies although
+  this card reads only data the scan never saw.
+
+mechanism:
+  statement: >-
+    A session that undercuts the prior 20-session low and closes back above it looks like a
+    rejected breakdown. Dip-buyers read it as support; the name keeps underperforming the liquid
+    book over the next month.
+  loser: >-
+    Contrarian retail dip-buyers. OJK's 2013-15 IDX transaction study finds individuals trade
+    contrarian (buy losers) while institutions trade momentum.
+  barrier: >-
+    No practical short side on IDX (short constraints keep the overpricing, Miller 1977;
+    Stambaugh-Yu-Yuan 2012).
+  side: avoid
+
+literature:
+  - {cite: "In-house: validity audit 2026-09-24 section 7-F, failed breakdown vs EW book (2021-26)",
+     market: IDX, period: "2021-07..2026-07", effect: "h20 gross -0.89%/event; calendar-time t -4.42; h5 -0.45%",
+     t: "-3.6 to -4.4 (robust)", tag: M, url: ""}
+  - {cite: "OJK working paper WP/18/04 (IDX transactions 2013-15)", market: IDX, period: "2013-2015",
+     effect: "individuals contrarian, institutions momentum", t: "", tag: V, url: ""}
+
+external_prior:
+  series: "none: Tier N in-house pattern, no published return series"
+  sign: "negative (in-house 2021-26 discovery; not independent evidence)"
+  t: "-4.42 calendar-time, discovery data only"
+
+signal:
+  script: rule.py
+  description: "low < min(low, prior 20 sessions) and close > that level, on a liquid_idx_v1 row"
+  inputs: [low, close]
+  parameters: {lookback: 20, hold_sessions: 20}
+  parameter_source: "FADE-001 frozen spec (P-M/forward_fade/scripts/fade_failed_breakdown.py), copied"
+  formation: event
+  hold_sessions: 20
+
+universe:
+  preset: liquid_idx_v1
+
+portfolio:
+  bucketing: flag
+  use: avoid
+  use_end: high
+
+estimand:
+  primary_kind: bucket_minus_rest
+  aggregation: calendar_time
+  predicted_sign: negative
+  control: false
+  nw_lag: 3
+
+hurdle:
+  t_min: 3.0
+
+deployment:
+  predicted_sign: negative
+  hurdle_t: 3.0
+
+power:
+  sigma_planning: 1.66
+  sigma_source: >-
+    in-house calendar-time series, backed out: 0.93 x sqrt(62) / 4.42 = 1.66 %/mo
+    (failed breakdown vs EW book, 2021-26, audit section 7-F)
+  sigma_noise_floor: null              # set from `cli power` before freeze
+  literature_effect: 0.93
+  literature_effect_source: "-0.89% per 20-session event = -0.0445%/day x 21 sessions"
+  haircut: 0.5
+  haircut_justification: "R9 decay haircut; the in-house effect is itself a scan survivor"
+  n_months: 200                         # planning value; replaced by `power` months_valid before freeze
+  event_rate: null                     # set from `cli dry` before power
+
+fingerprints:
+  - name: adv_tercile                   # limits to arbitrage: stronger where trading is costliest
+    predicted_sign: negative
+
+windows:
+  start: null
+  end: "2021-05-31"                     # last signal; its 20-session hold completes before the cut
+  split: "2011-01-01"                   # discovery-as-replication half / confirmation half
+
+costs:
+  round_trip_pct: 0.60
+
+survivorship_direction: >-
+  conservative: the backfill holds only names still listed in 2026-09. Delisted pre-2021 names,
+  disproportionately the persistent decliners this rule flags, are missing, which biases the
+  flagged sleeve upward and the estimand toward 0.
+
+trials:
+  n_trials: 18
+  sr_trials_std: null
+  prior_looks: >-
+    The pattern scan (2021-26) ran ~12 independent arms + 6 wedge-strictness variants; this rule
+    was selected there. n_trials counts all 18 (conservative). No look at pre-2021 data for this
+    pattern exists (checked 2026-09-25: only VOLEX re-measurement and ext_panel read the backfill;
+    neither computes 20-session lows).
+  deviations_from_fade_001: >-
+    (1) no holding-window >35% contamination guard (look-ahead, audit R-3; measured <= 0.01 pp);
+    (2) universe = liquid_idx_v1 (adds a 21-session prior big-move guard, traded 18/20 including
+    today); (3) estimand = day-weighted calendar time vs EW book, gross, instead of per-event
+    net vs IHSG.
+
+kill_rule: >-
+  FAIL or INCONCLUSIVE_UNDERPOWERED: the failed-breakdown anti-edge is not replicated out of
+  sample; it stays an in-sample pattern and FWD-PM-FADE-001 carries the only remaining test. No
+  re-cut of lookback, hold, window or universe. PASS: replicated; eligible for a book-level
+  avoidance overlay after its own forward record. EFFECT_PRESENT_MECHANISM_UNCONFIRMED: no book use.
+
+family_mapping: >-
+  P-M {R1} Price-Reversal, out-of-sample replication evidence for HYP-PM-0012; no new family slot
+  (Owner delegated 2026-09-25: "complete all path with your recommendation").
