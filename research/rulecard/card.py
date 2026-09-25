@@ -25,6 +25,7 @@ BUCKETINGS = {"decile": 10, "quintile": 5, "flag": 2}
 PRIMARY_KINDS = {"top_minus_bottom", "bucket_minus_rest"}
 FINGERPRINTS = {"adv_tercile", "price_tercile", "market_state"}
 SIGNS = {"negative", "positive"}
+FORMATIONS = {"month_end", "event"}
 
 
 class CardError(ValueError):
@@ -153,8 +154,25 @@ def validate(card, strict: bool = False) -> dict:
             p.append(f"{f} must be negative or positive")
     if _get(card, "portfolio.bucketing") == "flag" and _get(card, "estimand.primary_kind") == "top_minus_bottom":
         p.append("flag bucketing has no top/bottom — use bucket_minus_rest")
-    if _get(card, "signal.formation") != "month_end":
-        p.append("signal.formation: only month_end is implemented (event-time rules need a v2 engine)")
+    form = _get(card, "signal.formation")
+    if form not in FORMATIONS:
+        p.append(f"signal.formation must be one of {sorted(FORMATIONS)}")
+    if form == "event":
+        # event-time cards (research/rulecard/events.py): a 0/1 flag held for a fixed number of
+        # own sessions, measured day-weighted against the EW book (design 2026-09-25)
+        h = _get(card, "signal.hold_sessions")
+        if not isinstance(h, int) or isinstance(h, bool) or h < 1:
+            p.append("signal.hold_sessions must be an integer >= 1 for formation: event")
+        if _get(card, "portfolio.bucketing") != "flag":
+            p.append("formation: event needs portfolio.bucketing: flag")
+        if _get(card, "estimand.primary_kind") != "bucket_minus_rest":
+            p.append("formation: event needs estimand.primary_kind: bucket_minus_rest")
+        if _get(card, "estimand.aggregation") != "calendar_time":
+            p.append("formation: event needs estimand.aggregation: calendar_time")
+        if strict:
+            r = _get(card, "power.event_rate")
+            if not isinstance(r, (int, float)) or isinstance(r, bool) or not 0 < r <= 0.5:
+                p.append("power.event_rate must be a number in (0, 0.5] (measured by `dry`)")
     if _get(card, "universe.preset") != "liquid_idx_v1":
         p.append("universe.preset: only liquid_idx_v1 is implemented")
 

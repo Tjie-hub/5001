@@ -78,3 +78,63 @@ def test_no_event_dropped_for_holding_window_content():
     assert ((E.ticker == tk) & (E.signal_row == ev.signal_row) & E.tradeable).any()
     months, _ = events.run_event_months(pan, synthetic.ev_signal(pan.P), EVCARD)
     assert sum(r.get("big_moves_in_hold", 0) for r in months) >= 1
+
+
+def test_placebo_keeps_per_date_count_and_is_null():
+    pan = _pan(n_tickers=120, years=4, effect_pct_per_event=-3.0, event_rate=0.005, seed=6)
+    f = synthetic.ev_signal(pan.P)
+    p = events.placebo_flags(pan, f, seed=7)
+    el = pan.eligible.values
+    a = pd.Series((f.values > 0) & el).groupby(pan.P.date.values).sum()
+    b = pd.Series(p.values > 0).groupby(pan.P.date.values).sum()
+    assert (a.values == b.values).all()
+    months, _ = events.run_event_months(pan, p, EVCARD)
+    assert abs(nw_t([m["primary"] for m in months if m.get("valid")], 3)) < 3.0
+
+
+def test_random_flags_rate_and_event_checks():
+    pan = _pan(n_tickers=80, years=2, event_rate=0.01, seed=8)
+    r = events.random_flags(pan, 0.02, seed=1)
+    share = r[pan.eligible].mean()
+    assert 0.015 < share < 0.025 and r[~pan.eligible].sum() == 0
+    E = events.build_events(pan, synthetic.ev_signal(pan.P), 20)
+    assert events.event_order_check(E)["status"] == "PASS"
+    assert events.event_nondegenerate(pan, synthetic.ev_signal(pan.P))["status"] == "PASS"
+    assert events.event_nondegenerate(pan, pd.Series(1.0, index=pan.P.index))["status"] == "FAIL"
+    assert events.event_nondegenerate(pan, pd.Series(0.0, index=pan.P.index))["status"] == "FAIL"
+
+
+from research.rulecard import card as cardmod  # noqa: E402
+
+
+def event_card():
+    from tests.test_rulecard_engine import valid_card
+    c = valid_card()
+    c["tier"] = "N"
+    c["trials"] = {"n_trials": 1}
+    c.pop("monotonicity", None)
+    c["signal"].update(formation="event", hold_sessions=20)
+    c["portfolio"] = {"bucketing": "flag", "use": "avoid", "use_end": "high"}
+    c["estimand"].update(primary_kind="bucket_minus_rest", aggregation="calendar_time")
+    c["power"].update(event_rate=0.005, sigma_planning=1.0, sigma_noise_floor=1.0,
+                      literature_effect=4.0, n_months=40)
+    c["hurdle"] = {"t_min": 3.0}
+    c["deployment"]["hurdle_t"] = 3.0
+    return c
+
+
+def test_event_card_validates():
+    cardmod.validate(event_card(), strict=True)
+
+
+@pytest.mark.parametrize("mut,msg", [
+    (lambda c: c["signal"].pop("hold_sessions"), "hold_sessions"),
+    (lambda c: c["portfolio"].update(bucketing="decile"), "bucketing: flag"),
+    (lambda c: c["estimand"].pop("aggregation"), "calendar_time"),
+    (lambda c: c["power"].update(event_rate="PENDING"), "event_rate"),
+    (lambda c: c["signal"].update(formation="weekly"), "signal.formation")])
+def test_event_card_refusals(mut, msg):
+    c = event_card()
+    mut(c)
+    with pytest.raises(cardmod.CardError, match=msg):
+        cardmod.validate(c, strict=True)
