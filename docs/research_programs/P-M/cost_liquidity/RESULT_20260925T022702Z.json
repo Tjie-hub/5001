@@ -1,0 +1,461 @@
+{
+ "generated_utc": "2026-09-25T02:25:01+00:00",
+ "data_cutoff": "2026-09-16",
+ "predeclaration": "PREDECLARATION.md",
+ "descriptive_only": true,
+ "cost_table": {
+  "1-2bn": {
+   "name_days": 77874,
+   "median_spread_pct": 1.053,
+   "median_tick_floor_pct": 0.735,
+   "share_at_tick_floor": 0.498,
+   "median_sigma_d_pct": 2.67,
+   "median_impact_rt_pct_Q25m": 0.712,
+   "median_impact_rt_pct_Q100m": 1.424,
+   "median_impact_rt_pct_Q500m": 3.184
+  },
+  "2-5bn": {
+   "name_days": 94817,
+   "median_spread_pct": 0.99,
+   "median_tick_floor_pct": 0.714,
+   "share_at_tick_floor": 0.513,
+   "median_sigma_d_pct": 2.93,
+   "median_impact_rt_pct_Q25m": 0.522,
+   "median_impact_rt_pct_Q100m": 1.045,
+   "median_impact_rt_pct_Q500m": 2.336
+  },
+  "5-20bn": {
+   "name_days": 118266,
+   "median_spread_pct": 0.909,
+   "median_tick_floor_pct": 0.621,
+   "share_at_tick_floor": 0.513,
+   "median_sigma_d_pct": 3.05,
+   "median_impact_rt_pct_Q25m": 0.314,
+   "median_impact_rt_pct_Q100m": 0.628,
+   "median_impact_rt_pct_Q500m": 1.404
+  },
+  "20-100bn": {
+   "name_days": 84183,
+   "median_spread_pct": 0.855,
+   "median_tick_floor_pct": 0.467,
+   "share_at_tick_floor": 0.48,
+   "median_sigma_d_pct": 2.84,
+   "median_impact_rt_pct_Q25m": 0.147,
+   "median_impact_rt_pct_Q100m": 0.293,
+   "median_impact_rt_pct_Q500m": 0.656
+  },
+  ">100bn": {
+   "name_days": 31924,
+   "median_spread_pct": 0.676,
+   "median_tick_floor_pct": 0.365,
+   "share_at_tick_floor": 0.516,
+   "median_sigma_d_pct": 3.04,
+   "median_impact_rt_pct_Q25m": 0.064,
+   "median_impact_rt_pct_Q100m": 0.128,
+   "median_impact_rt_pct_Q500m": 0.287
+  }
+ },
+ "validation": {
+  "ticks_window": [
+   "2026-04-18",
+   "2026-09-25"
+  ],
+  "names": 863,
+  "1-2bn": {
+   "names": 89,
+   "median_ar_pct": 1.316,
+   "median_roll_pct": 0.844,
+   "spearman": 0.67
+  },
+  "2-5bn": {
+   "names": 94,
+   "median_ar_pct": 1.178,
+   "median_roll_pct": 0.741,
+   "spearman": 0.61
+  },
+  "5-20bn": {
+   "names": 122,
+   "median_ar_pct": 0.928,
+   "median_roll_pct": 0.716,
+   "spearman": 0.61
+  },
+  "20-100bn": {
+   "names": 67,
+   "median_ar_pct": 0.847,
+   "median_roll_pct": 0.458,
+   "spearman": 0.2
+  },
+  ">100bn": {
+   "names": 33,
+   "median_ar_pct": 0.685,
+   "median_roll_pct": 0.379,
+   "spearman": 0.17
+  },
+  "ratio_roll_over_ar_1_5bn": 0.64,
+  "model_uncertainty_flag": false
+ },
+ "t1": {
+  "trades_costed": 7540,
+  "FULL": {
+   "Q25m": {
+    "all": {
+     "N": 7540,
+     "mean_net_pct": 0.679,
+     "mean_cost_pct": 2.279,
+     "t_month": 1.22,
+     "t_dk60": 1.0
+    },
+    "A5 in (>=5bn)": {
+     "N": 4750,
+     "mean_net_pct": -0.274,
+     "mean_cost_pct": 1.985,
+     "t_month": -0.51,
+     "t_dk60": -0.54
+    },
+    "A5 out (<5bn)": {
+     "N": 2790,
+     "mean_net_pct": 2.301,
+     "mean_cost_pct": 2.779,
+     "t_month": 2.54,
+     "t_dk60": 1.92
+    },
+    "1-2bn": {
+     "N": 1242,
+     "mean_net_pct": 2.75,
+     "mean_cost_pct": 3.009,
+     "t_month": 1.84,
+     "t_dk60": 1.48
+    },
+    "2-5bn": {
+     "N": 1548,
+     "mean_net_pct": 1.941,
+     "mean_cost_pct": 2.595,
+     "t_month": 1.83,
+     "t_dk60": 1.65
+    },
+    "5-20bn": {
+     "N": 2224,
+     "mean_net_pct": 0.884,
+     "mean_cost_pct": 2.244,
+     "t_month": 0.91,
+     "t_dk60": 1.11
+    },
+    "20-100bn": {
+     "N": 1752,
+     "mean_net_pct": -1.332,
+     "mean_cost_pct": 1.853,
+     "t_month": -1.94,
+     "t_dk60": -1.71
+    },
+    ">100bn": {
+     "N": 774,
+     "mean_net_pct": -1.207,
+     "mean_cost_pct": 1.542,
+     "t_month": -1.63,
+     "t_dk60": -1.69
+    }
+   },
+   "Q100m": {
+    "all": {
+     "N": 7540,
+     "mean_net_pct": 0.173,
+     "mean_cost_pct": 2.785,
+     "t_month": 0.31,
+     "t_dk60": 0.26
+    },
+    "A5 in (>=5bn)": {
+     "N": 4750,
+     "mean_net_pct": -0.561,
+     "mean_cost_pct": 2.272,
+     "t_month": -1.04,
+     "t_dk60": -1.11
+    },
+    "A5 out (<5bn)": {
+     "N": 2790,
+     "mean_net_pct": 1.422,
+     "mean_cost_pct": 3.658,
+     "t_month": 1.58,
+     "t_dk60": 1.21
+    },
+    "1-2bn": {
+     "N": 1242,
+     "mean_net_pct": 1.679,
+     "mean_cost_pct": 4.079,
+     "t_month": 1.13,
+     "t_dk60": 0.91
+    },
+    "2-5bn": {
+     "N": 1548,
+     "mean_net_pct": 1.215,
+     "mean_cost_pct": 3.32,
+     "t_month": 1.15,
+     "t_dk60": 1.05
+    },
+    "5-20bn": {
+     "N": 2224,
+     "mean_net_pct": 0.455,
+     "mean_cost_pct": 2.672,
+     "t_month": 0.47,
+     "t_dk60": 0.57
+    },
+    "20-100bn": {
+     "N": 1752,
+     "mean_net_pct": -1.531,
+     "mean_cost_pct": 2.051,
+     "t_month": -2.23,
+     "t_dk60": -1.97
+    },
+    ">100bn": {
+     "N": 774,
+     "mean_net_pct": -1.284,
+     "mean_cost_pct": 1.618,
+     "t_month": -1.73,
+     "t_dk60": -1.79
+    }
+   },
+   "Q500m": {
+    "all": {
+     "N": 7540,
+     "mean_net_pct": -1.077,
+     "mean_cost_pct": 4.035,
+     "t_month": -1.99,
+     "t_dk60": -1.68
+    },
+    "A5 in (>=5bn)": {
+     "N": 4750,
+     "mean_net_pct": -1.269,
+     "mean_cost_pct": 2.98,
+     "t_month": -2.35,
+     "t_dk60": -2.5
+    },
+    "A5 out (<5bn)": {
+     "N": 2790,
+     "mean_net_pct": -0.751,
+     "mean_cost_pct": 5.831,
+     "t_month": -0.85,
+     "t_dk60": -0.66
+    },
+    "1-2bn": {
+     "N": 1242,
+     "mean_net_pct": -0.967,
+     "mean_cost_pct": 6.725,
+     "t_month": -0.66,
+     "t_dk60": -0.54
+    },
+    "2-5bn": {
+     "N": 1548,
+     "mean_net_pct": -0.578,
+     "mean_cost_pct": 5.114,
+     "t_month": -0.55,
+     "t_dk60": -0.51
+    },
+    "5-20bn": {
+     "N": 2224,
+     "mean_net_pct": -0.604,
+     "mean_cost_pct": 3.732,
+     "t_month": -0.62,
+     "t_dk60": -0.76
+    },
+    "20-100bn": {
+     "N": 1752,
+     "mean_net_pct": -2.022,
+     "mean_cost_pct": 2.543,
+     "t_month": -2.96,
+     "t_dk60": -2.61
+    },
+    ">100bn": {
+     "N": 774,
+     "mean_net_pct": -1.473,
+     "mean_cost_pct": 1.807,
+     "t_month": -1.98,
+     "t_dk60": -2.05
+    }
+   }
+  },
+  "ex-2025": {
+   "Q25m": {
+    "all": {
+     "N": 5737,
+     "mean_net_pct": -0.333,
+     "mean_cost_pct": 2.181,
+     "t_month": -0.77,
+     "t_dk60": -0.65
+    },
+    "A5 in (>=5bn)": {
+     "N": 3710,
+     "mean_net_pct": -1.026,
+     "mean_cost_pct": 1.918,
+     "t_month": -2.15,
+     "t_dk60": -2.03
+    },
+    "A5 out (<5bn)": {
+     "N": 2027,
+     "mean_net_pct": 0.935,
+     "mean_cost_pct": 2.664,
+     "t_month": 1.21,
+     "t_dk60": 1.09
+    },
+    "1-2bn": {
+     "N": 885,
+     "mean_net_pct": 0.026,
+     "mean_cost_pct": 2.852,
+     "t_month": 0.02,
+     "t_dk60": 0.02
+    },
+    "2-5bn": {
+     "N": 1142,
+     "mean_net_pct": 1.64,
+     "mean_cost_pct": 2.518,
+     "t_month": 1.42,
+     "t_dk60": 1.39
+    },
+    "5-20bn": {
+     "N": 1726,
+     "mean_net_pct": -0.397,
+     "mean_cost_pct": 2.164,
+     "t_month": -0.55,
+     "t_dk60": -0.63
+    },
+    "20-100bn": {
+     "N": 1400,
+     "mean_net_pct": -1.876,
+     "mean_cost_pct": 1.798,
+     "t_month": -2.59,
+     "t_dk60": -2.16
+    },
+    ">100bn": {
+     "N": 584,
+     "mean_net_pct": -0.846,
+     "mean_cost_pct": 1.475,
+     "t_month": -0.98,
+     "t_dk60": -1.02
+    }
+   },
+   "Q100m": {
+    "all": {
+     "N": 5737,
+     "mean_net_pct": -0.8,
+     "mean_cost_pct": 2.649,
+     "t_month": -1.85,
+     "t_dk60": -1.55
+    },
+    "A5 in (>=5bn)": {
+     "N": 3710,
+     "mean_net_pct": -1.3,
+     "mean_cost_pct": 2.192,
+     "t_month": -2.71,
+     "t_dk60": -2.55
+    },
+    "A5 out (<5bn)": {
+     "N": 2027,
+     "mean_net_pct": 0.114,
+     "mean_cost_pct": 3.484,
+     "t_month": 0.15,
+     "t_dk60": 0.13
+    },
+    "1-2bn": {
+     "N": 885,
+     "mean_net_pct": -0.975,
+     "mean_cost_pct": 3.852,
+     "t_month": -0.94,
+     "t_dk60": -0.83
+    },
+    "2-5bn": {
+     "N": 1142,
+     "mean_net_pct": 0.958,
+     "mean_cost_pct": 3.2,
+     "t_month": 0.83,
+     "t_dk60": 0.81
+    },
+    "5-20bn": {
+     "N": 1726,
+     "mean_net_pct": -0.808,
+     "mean_cost_pct": 2.575,
+     "t_month": -1.12,
+     "t_dk60": -1.26
+    },
+    "20-100bn": {
+     "N": 1400,
+     "mean_net_pct": -2.066,
+     "mean_cost_pct": 1.988,
+     "t_month": -2.85,
+     "t_dk60": -2.37
+    },
+    ">100bn": {
+     "N": 584,
+     "mean_net_pct": -0.915,
+     "mean_cost_pct": 1.545,
+     "t_month": -1.06,
+     "t_dk60": -1.1
+    }
+   },
+   "Q500m": {
+    "all": {
+     "N": 5737,
+     "mean_net_pct": -1.956,
+     "mean_cost_pct": 3.804,
+     "t_month": -4.44,
+     "t_dk60": -3.71
+    },
+    "A5 in (>=5bn)": {
+     "N": 3710,
+     "mean_net_pct": -1.978,
+     "mean_cost_pct": 2.869,
+     "t_month": -4.04,
+     "t_dk60": -3.78
+    },
+    "A5 out (<5bn)": {
+     "N": 2027,
+     "mean_net_pct": -1.915,
+     "mean_cost_pct": 5.514,
+     "t_month": -2.54,
+     "t_dk60": -2.27
+    },
+    "1-2bn": {
+     "N": 885,
+     "mean_net_pct": -3.447,
+     "mean_cost_pct": 6.325,
+     "t_month": -3.24,
+     "t_dk60": -2.92
+    },
+    "2-5bn": {
+     "N": 1142,
+     "mean_net_pct": -0.728,
+     "mean_cost_pct": 4.885,
+     "t_month": -0.64,
+     "t_dk60": -0.62
+    },
+    "5-20bn": {
+     "N": 1726,
+     "mean_net_pct": -1.826,
+     "mean_cost_pct": 3.593,
+     "t_month": -2.49,
+     "t_dk60": -2.78
+    },
+    "20-100bn": {
+     "N": 1400,
+     "mean_net_pct": -2.536,
+     "mean_cost_pct": 2.458,
+     "t_month": -3.5,
+     "t_dk60": -2.9
+    },
+    ">100bn": {
+     "N": 584,
+     "mean_net_pct": -1.088,
+     "mean_cost_pct": 1.717,
+     "t_month": -1.26,
+     "t_dk60": -1.31
+    }
+   }
+  },
+  "verdict_primary_cell": {
+   "cell": "ex-2025, adv20 < Rp 5bn, Q100m",
+   "N": 2027,
+   "mean_net_pct": 0.114,
+   "mean_cost_pct": 3.484,
+   "t_month": 0.15,
+   "t_dk60": 0.13,
+   "verdict": "friction"
+  }
+ }
+}

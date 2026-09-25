@@ -1821,6 +1821,56 @@ covering the three items put to the Owner after `AUDIT_2026-09-24_RESULT_VALIDIT
 - `research/rulecard/{checks,engine,data}.py`
 - `tests/test_{overlap_audit,validity_audit,forward_robust_report,rulecard_checks,rulecard_engine}.py`
 
+### D-058 · Retail universe-screen note filed; price/ADV cutoffs pre-declared for one exploratory in-sample split of the T1 reference; no protocol changed
+**Status:** RECORDED · **Date:** 2026-09-25 · **Type:** Exploratory analysis pre-declaration ·
+**Approval authority:** Owner instruction 2026-09-25 ("Save and test", Claude Code session).
+
+**Source.** `P-M/universe_screen/SCREEN_HYPOTHESIS_2026-09-25.md`: a NotebookLM-derived proposal for a
+structural pre-filter (board status, liquidity, price tier), with the note's own quarantine of the
+foreign-participation and PDY-quality filters, plus a repository review added at filing.
+
+**Decision.**
+1. The note is filed as a **screen, not a hypothesis**. It takes no family slot and no Rule Card.
+2. Cutoffs are fixed before any data is looked at: **P200** (`close >= 200`), **A5** (`adv20 >= Rp 5e9`)
+   and **P200+A5**. No other cutoff will be run. `P-M/universe_screen/PREDECLARATION.md`, sha256
+   `bee3bd1a9d068f27ad9c42c88bca06aad8d68a07742da413f466965442453ace`.
+3. One run splits the spec-002 reference trades (data ≤ 2026-09-16) into in- vs out-of-filter.
+   Inference: month-cluster and DK(L=60) t (D-057 R-1). The interpretation rules are the ones fixed in
+   the pre-declaration.
+4. **FWD-PM-REGIME-002 is untouched.** Its frozen universe stands whatever the split shows. Adopting a
+   screen for any live or paper strategy needs a separate Owner decision.
+5. **Filter 1 (board status) is not tested.** There is no point-in-time board-status or index-membership
+   history in the DB, and a current snapshot would be look-ahead.
+
+**Receipts:** `P-M/universe_screen/{SCREEN_HYPOTHESIS_2026-09-25.md, PREDECLARATION.md, screen_split.py,
+RESULT_*.json}`; one `exploratory_split` line in `EXPERIMENT_LEDGER.jsonl`.
+
+### D-059 · Trading cost by liquidity measured; T1 reference net of modeled cost is FRICTION; REGIME-002's 0.60% round trip recorded as materially understated (no protocol changed)
+**Status:** RECORDED · **Date:** 2026-09-25 · **Type:** Exploratory measurement, pre-declared ·
+**Approval authority:** Owner instruction 2026-09-25 ("start path 1", Claude Code session).
+
+**Why.** D-058 found the T1 ex-2025 edge sits in adv20 < Rp 5bn names. The frozen 0.60% round trip is fees
+plus a nominal slippage (PROTOCOL §2, "open ambiguity"), and no fills exist to test it.
+
+**What was run.** `P-M/cost_liquidity/cost_by_adv.py`, once, under `PREDECLARATION.md` (sha256
+`ac3a1a19c9a0f21e90b5cc3de66f5117ab435e5fad131b4324c24a6ada3f596b`). The cost model is 0.50% fees, plus the
+Abdi-Ranaldo spread floored at one tick, plus 2·σ_d·√(Q/adv20). It was validated against a Roll spread on
+1-minute `ticks`.
+
+**Result.** Primary cell (ex-2025, adv20 < Rp 5bn, Rp 100m per position): **+0.11%/trade, DK t 0.13 → FRICTION.**
+- Liquid names are negative at every size.
+- At Rp 25m the small-cap cell is +0.94%, t 1.1.
+- Roll spreads run about 36% below AR, which does not change the verdict.
+
+**Recorded, not decided.**
+1. The 0.60% endpoint in FWD-PM-REGIME-002 understates modeled all-in cost by roughly 1–3 pp per trade. A
+   forward PASS under it would not imply a tradeable edge.
+2. The protocol's remedy (realised fills) still governs. Whether to add a modeled-cost observability line
+   to `forward_regime/deviation_log.md`, as D-057 did for robust t, is an **Owner decision**.
+
+**Receipts:** `P-M/cost_liquidity/{PREDECLARATION.md, cost_by_adv.py, RESULT_20260925T022702Z.json, VERDICT.md}`;
+`tests/test_cost_by_adv.py`; one `exploratory_split` line in `EXPERIMENT_LEDGER.jsonl`.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
