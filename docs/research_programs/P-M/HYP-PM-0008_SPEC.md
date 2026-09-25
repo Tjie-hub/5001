@@ -375,3 +375,22 @@ Does not register HYP-PM-0008 · does not consume a family slot · does not modi
 compute any return, event count, or power figure from data · does not touch Dataset B, the semantic register,
 `g1_config`, C3, C7, C8, or any production database (the §9 check was read-only coverage metadata) · does not
 open, narrow, widen, or pool any multiplicity family · does not create a terminal verdict.
+
+---
+
+## Disposition — 2026-09-25 (appended; nothing above is edited)
+
+**D-1 decided: option (c), registration refused.** Authority: D-060, Owner delegation 2026-09-25 ("complete
+all path with your recommendation"). **No family slot consumed, no trial counted, nothing executed.**
+
+Reasons, each from this document or the corpus, not from data:
+1. **§19/D-3: the capturable leg is structurally absent.** A permanent family slot would buy a gross-only
+   answer that no long-only book can use (RULE_FIRST_PROTOCOL §6 parked list: "ARA/ARB limit continuation:
+   not capturable").
+2. **D-2 is unresolved.** The 2023-09-04 and 2025-04-08 band decrees are not primary-verified, and an M6
+   claim is fatally exposed to market-structure obsolescence (B8).
+3. **B4: the exclusion instruments do not exist.** There is no board-membership table (Papan Pemantauan
+   Khusus / FCA) and no listing or suspension table. The 2026-09-25 universe-screen review confirmed the
+   board-status gap independently.
+4. **D-055 now governs new candidates.** If an ARB rule is ever re-opened, it is a new Rule Card id on the
+   event-time engine (`research/rulecard/events.py`) with an avoid-side estimand. It is not this draft.

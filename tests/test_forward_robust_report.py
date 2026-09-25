@@ -106,3 +106,25 @@ def test_calendar_positions_use_the_right_windows(RR):
     (s, r, b), = RR.fade_positions(F, M, "EW-book", h=20)
     assert s == 5 and len(r) == 20 and r[0] == M["CO"][5, 1] and b[0] == M["ew_co"][5]
     assert r[1] == M["CC"][6, 1] and b[19] == M["ew_cc"][24]
+
+
+def test_modeled_cost_column_is_gross_minus_model_minus_market(RR):
+    """DEV-002 (D-059): the modeled-cost excess is gross - (fees + 1/2 s_in + 1/2 s_out
+    + 2 sigma sqrt(Q/adv20)) - market; it sits beside the frozen column and never replaces it."""
+    led = _regime_ledger(n=40)
+    for t in led["trades"]:
+        t["gross_return"] = t["net_return"] + 0.006
+    T = RR.regime_frame(led)
+    rows = []
+    for t in T.itertuples():
+        rows.append({"ticker": t.ticker, "date": t.entry_date, "s": 0.011, "sig_d": 0.02, "adv20": 4e9})
+        rows.append({"ticker": t.ticker, "date": t.exit_date, "s": 0.011, "sig_d": 0.02, "adv20": 4e9})
+    L = pd.DataFrame(rows).drop_duplicates(["ticker", "date"])
+    cost = RR.modeled_cost(T, L)
+    want = 0.005 + 0.011 + 2 * 0.02 * np.sqrt(100e6 / 4e9)
+    assert np.allclose(cost.dropna(), want)
+    rep = RR.report_regime(led, CAL, L=L)
+    k = "excess (modeled cost D-059, vs IHSG) - observability"
+    assert k in rep and "excess (net, vs IHSG) - frozen endpoint" in rep
+    x = (T.gross_return - cost - T.market_return).dropna()
+    assert rep[k]["mean_pct"] == pytest.approx(100 * x.mean())

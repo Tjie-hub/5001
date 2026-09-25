@@ -1871,6 +1871,58 @@ Abdi-Ranaldo spread floored at one tick, plus 2·σ_d·√(Q/adv20). It was vali
 **Receipts:** `P-M/cost_liquidity/{PREDECLARATION.md, cost_by_adv.py, RESULT_20260925T022702Z.json, VERDICT.md}`;
 `tests/test_cost_by_adv.py`; one `exploratory_split` line in `EXPERIMENT_LEDGER.jsonl`.
 
+### D-060 · Event-time Rule Card engine adopted; RC-0002 (failed breakdown, pre-2021) closed as underpowered; modeled-cost observability added to REGIME-002 (DEV-002); HYP-PM-0008 registration refused
+**Status:** RECORDED · **Date:** 2026-09-25 · **Type:** Framework extension (under D-055) + card disposition +
+observability-only deviation + registration decision · **Approval authority:** Owner instruction 2026-09-25,
+"complete all path with your recommendation" (Claude Code session). The Owner delegated each open
+decision below to the recommendation made in that session, and every such decision is stated here.
+
+**1 · Event-time engine (framework, under D-055).**
+- `research/rulecard/events.py` adds `signal.formation: event`: 0/1 flags, next-open entry, a fixed hold of
+  own sessions, and a day-weighted calendar-time estimand against the EW liquid book. Stale exits are
+  flagged, not dropped. No holding-window drop (audit R-3).
+- It emits the month-engine record schema, so `evaluate.py`/`checks.py` verdict logic is shared.
+- `card.py` and `runner.py` branch on formation. `power` uses random events at `power.event_rate` and never
+  calls `signal()`.
+- Design: `docs/superpowers/specs/2026-09-25-event-time-rulecard-design.md`. Tests:
+  `tests/test_rulecard_events.py` (17). The Rule Card suites are unchanged and pass.
+- `framework_sha256` changes. No card was frozen, so nothing is invalidated.
+
+**2 · RC-0002-FB-PRE2021 closed: NOT TESTED — UNDERPOWERED.**
+- The rule was FADE-001's, copied. The data was the pre-2021 backfill only (the pattern was discovered on
+  2021–26, and the backfill had never been read for it). Tier N, t* = 3.0, `n_trials` 18.
+- Dry run: 11,790 events, 183 valid months, median book 125, all structure checks PASS.
+- Power: noise floor 2.04 %/mo, which needs 0.58 %/mo for 80% power, against a planning effect of
+  0.93 × 0.5 = 0.47. **Not run.**
+- No trial or family slot consumed. Not a failure (RC-0001 precedent).
+- The haircut was not revisited after the power result (R5). Doing so would move the goalpost.
+- **Consequence:** FWD-PM-FADE-001 (forward, open since 2026-09-22) remains the only test of the
+  failed-breakdown anti-edge.
+
+**3 · DEV-002 on FWD-PM-REGIME-002 (D-059 point 2 decided: yes).**
+- The report now carries a modeled-cost excess row beside the frozen statistic (`robust_report.py`).
+- It was first run on a ledger holding 1 trade. That outcome was visible and is recorded in DEV-002.
+- The §3 rule is unchanged, and so is the PROTOCOL.md sha256 (`4063752e…`).
+
+**4 · HYP-PM-0008 (I1 band pinning): D-1 option (c), registration refused.**
+- Its own §19/D-3 says the capturable leg is structurally absent.
+- The decrees are unverified (D-2), and the board/suspension exclusion data does not exist (B4).
+- No slot consumed. Any re-opening is a new Rule Card id. Disposition appended to `HYP-PM-0008_SPEC.md`.
+
+**State after D-058…D-060 (the edge search as of 2026-09-25).**
+- No tradeable long edge is established.
+- T1 is friction under modeled cost (D-059).
+- The surviving evidence is the in-sample, 2021–26 avoidance family (failed breakdown / falling wedge vs
+  EW book) and VOLEX-001 (AT-RISK). Both are now decided only by their forward tests.
+
+**Receipts:**
+- `research/rulecard/{events.py, card.py, runner.py, synthetic.py}`
+- `tests/test_rulecard_events.py`, `tests/test_forward_robust_report.py`
+- `P-M/rulecards/RC-0002-FB-PRE2021/{CARD.yaml, rule.py, DRY_20260925T032651Z.json, POWER_20260925T032742Z.json}`
+- `P-M/forward_regime/deviation_log.md` DEV-002
+- `P-M/HYP-PM-0008_SPEC.md` disposition
+- two `EXPERIMENT_LEDGER.jsonl` lines
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)

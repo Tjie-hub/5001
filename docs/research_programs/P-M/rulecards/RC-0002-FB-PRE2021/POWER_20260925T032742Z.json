@@ -1,0 +1,28 @@
+{
+ "card": "RC-0002-FB-PRE2021",
+ "mode": "power",
+ "generated_utc": "2026-09-25T03:27:42+00:00",
+ "seeds": 10,
+ "signal_called": false,
+ "sigma_noise_floor": 2.039738371890314,
+ "sigma_noise_floor_range": [
+  1.9018560121992032,
+  2.285903522528503
+ ],
+ "months_valid": 183,
+ "median_universe": 60.0,
+ "non_sessions_dropped": 197,
+ "panel_fingerprint": "eb9f1439c53b0d6fd92a9f3542715844042ba8f5c891e9b5599b18c432d6f694",
+ "power_with_floor": {
+  "sigma": 2.039738371890314,
+  "sigma_literature": 1.66,
+  "sigma_noise_floor": 2.039738371890314,
+  "literature_effect": 0.93,
+  "haircut": 0.5,
+  "planning_effect": 0.465,
+  "n_months": 183,
+  "t_star": 3.0,
+  "needed_effect_80pct": 0.5792465613214867,
+  "admissible": false
+ }
+}

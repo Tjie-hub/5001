@@ -154,8 +154,40 @@ def fade_positions(F, M, bench, h=FADE_H):
     return pos
 
 
+# ------------------------------------------------------------------ modeled cost (DEV-002, D-059)
+MODELED_Q = 100e6            # Rp per position: D-059's primary size
+MODELED_FEES = 0.005         # commissions + 0.1% sell tax (PROTOCOL section 2 "open ambiguity")
+COST_SCRIPT = os.path.join("cost_liquidity", "cost_by_adv.py")
+
+
+def modeled_cost(T, L):
+    """All-in round trip per trade under the D-059 model: fees + 1/2 spread at entry + 1/2 spread
+    at exit + 2 sigma_d sqrt(Q / adv20) at entry. L: one row per (ticker, date) with s (Abdi-Ranaldo
+    spread floored at one tick), sig_d and adv20, all known at t-1 (cost_by_adv.per_day_liquidity).
+    NaN where a trade's session is missing from L (reported, never imputed)."""
+    L = L.assign(date=pd.to_datetime(L["date"]))
+    e = L[["ticker", "date", "s", "sig_d", "adv20"]].rename(columns={"date": "entry_date"})
+    x = L[["ticker", "date", "s"]].rename(columns={"date": "exit_date", "s": "s_exit"})
+    M = T[["ticker", "entry_date", "exit_date"]].merge(e, on=["ticker", "entry_date"], how="left")
+    M = M.merge(x, on=["ticker", "exit_date"], how="left")
+    c = MODELED_FEES + 0.5 * M["s"] + 0.5 * M["s_exit"] + 2 * M["sig_d"] * np.sqrt(MODELED_Q / M["adv20"])
+    return pd.Series(c.values, index=T.index)
+
+
+def liquidity_panel(D):
+    """Build L from stock OHLCV exactly as D-059 did (adv20 as the frozen universe filter)."""
+    cb = _load("cost_by_adv", COST_SCRIPT)
+    d = D[D.ticker != "IHSG"].copy()
+    d["date"] = pd.to_datetime(d["date"])
+    d = d.sort_values(["ticker", "date"]).reset_index(drop=True)
+    val = d.close * d.volume
+    d["adv20"] = val.groupby(d.ticker).transform(lambda s: s.rolling(20, min_periods=15).mean())
+    d["adv20"] = d.groupby("ticker", sort=False)["adv20"].shift(1)
+    return cb.per_day_liquidity(d)[["ticker", "date", "s", "sig_d", "adv20"]]
+
+
 # ------------------------------------------------------------------ reports
-def report_regime(led, cal, M=None, oa=None):
+def report_regime(led, cal, M=None, oa=None, L=None):
     oa = oa or OA()
     T = regime_frame(led)
     out = {"test": "FWD-PM-REGIME-002", "frozen_rule": FROZEN["REGIME-002"], "trades": int(len(T))}
@@ -164,6 +196,12 @@ def report_regime(led, cal, M=None, oa=None):
     out["excess (net, vs IHSG) - frozen endpoint"] = estimators(T["excess"], T["entry_date"], cal, REGIME_L, oa)
     if M is not None:
         out["excess (net, vs IHSG) - frozen endpoint"]["calendar_gross"] = calendar_t(regime_positions(T, M), len(M["cal"]), oa)
+    if L is not None and "gross_return" in T:
+        x = T["gross_return"] - modeled_cost(T, L) - T["market_return"]
+        ok = x.notna()
+        out["excess (modeled cost D-059, vs IHSG) - observability"] = estimators(
+            x[ok], T.loc[ok, "entry_date"], cal, REGIME_L, oa)
+        out["excess (modeled cost D-059, vs IHSG) - observability"]["trades_without_cost_data"] = int((~ok).sum())
     return out
 
 
@@ -219,8 +257,9 @@ def main():
     M = None
     if not a.no_calendar and (regime.get("trades") or fade.get("trades")):
         M = va.fade_panel(D, x, oa)
-    print("OBSERVABILITY ONLY (D-057). The frozen section 3 rule is the only decision.")
-    _print(report_regime(regime, cal, M, oa))
+    L = liquidity_panel(D) if regime.get("trades") else None
+    print("OBSERVABILITY ONLY (D-057, D-059). The frozen section 3 rule is the only decision.")
+    _print(report_regime(regime, cal, M, oa, L))
     _print(report_fade(fade, cal, M, oa))
 
 

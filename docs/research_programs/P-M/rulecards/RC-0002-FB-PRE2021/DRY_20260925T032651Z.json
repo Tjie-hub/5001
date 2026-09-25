@@ -1,0 +1,356 @@
+{
+ "card": "RC-0002-FB-PRE2021",
+ "mode": "dry",
+ "generated_utc": "2026-09-25T03:26:51+00:00",
+ "power": {
+  "sigma": 1.66,
+  "sigma_literature": 1.66,
+  "sigma_noise_floor": null,
+  "literature_effect": 0.93,
+  "haircut": 0.5,
+  "planning_effect": 0.465,
+  "n_months": 200,
+  "t_star": 3.0,
+  "needed_effect_80pct": 0.4509284465515998,
+  "admissible": true
+ },
+ "panel_rows": 1370915,
+ "panel_fingerprint": "eb9f1439c53b0d6fd92a9f3542715844042ba8f5c891e9b5599b18c432d6f694",
+ "non_sessions_dropped": 197,
+ "months_total": 247,
+ "months_valid": 183,
+ "median_universe": 50.0,
+ "checks": [
+  {
+   "code": "LA-1",
+   "check": "prefix_invariance",
+   "status": "PASS",
+   "detail": {
+    "dates_checked": [
+     "2000-08-30",
+     "2007-11-28",
+     "2008-01-22",
+     "2014-10-24",
+     "2016-01-11",
+     "2016-03-10",
+     "2018-10-29",
+     "2021-05-31"
+    ],
+    "violations": []
+   }
+  },
+  {
+   "code": "ZV-1",
+   "check": "traded_days_guard",
+   "status": "PASS",
+   "detail": {
+    "rows_checked": 1294,
+    "violations": []
+   }
+  },
+  {
+   "code": "ID-1",
+   "check": "event_nondegenerate",
+   "status": "PASS",
+   "detail": {
+    "events": 11982,
+    "eligible_rows": 483890,
+    "share": 0.02476182603484263
+   }
+  },
+  {
+   "code": "FILL-1",
+   "check": "event_entry_exit_order",
+   "status": "PASS",
+   "detail": {
+    "events": 11758,
+    "violations": 0
+   }
+  }
+ ],
+ "skipped": [
+  {
+   "month": "2000-08",
+   "reason": "fewer than MIN_EVENT_DAYS position-days"
+  },
+  {
+   "month": "2000-09",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2000-10",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2000-11",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2001-02",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2001-03",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2001-04",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2001-05",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2001-06",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2001-07",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2001-08",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2001-09",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2001-10",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2001-11",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2001-12",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2002-01",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2002-03",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2002-04",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2002-05",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2002-06",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2002-07",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2002-08",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2002-09",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2002-10",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2002-11",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2002-12",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2003-02",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2003-03",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2003-04",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2003-05",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2003-06",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2003-07",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2003-08",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2003-09",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2003-10",
+   "reason": "fewer than MIN_EVENT_DAYS position-days"
+  },
+  {
+   "month": "2003-11",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2003-12",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2004-01",
+   "reason": "fewer than MIN_EVENT_DAYS position-days"
+  },
+  {
+   "month": "2004-02",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2004-03",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2004-04",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2004-05",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2004-06",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2004-07",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2004-08",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2004-09",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2004-10",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2004-11",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2005-05",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2005-06",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2005-07",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2005-09",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2005-10",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2005-11",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2005-12",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2006-06",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2006-07",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2006-08",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2006-09",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2008-11",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2008-12",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2009-01",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2009-02",
+   "reason": "book below minimum universe"
+  },
+  {
+   "month": "2009-03",
+   "reason": "book below minimum universe"
+  }
+ ],
+ "events_total": 11790,
+ "events_per_year": {
+  "2000": 6,
+  "2001": 45,
+  "2002": 58,
+  "2003": 41,
+  "2004": 76,
+  "2005": 194,
+  "2006": 135,
+  "2007": 235,
+  "2008": 558,
+  "2009": 213,
+  "2010": 422,
+  "2011": 676,
+  "2012": 663,
+  "2013": 728,
+  "2014": 650,
+  "2015": 1016,
+  "2016": 753,
+  "2017": 809,
+  "2018": 1121,
+  "2019": 1268,
+  "2020": 1258,
+  "2021": 865
+ },
+ "event_rate": 0.024669142647905005,
+ "median_book": 125.0
+}

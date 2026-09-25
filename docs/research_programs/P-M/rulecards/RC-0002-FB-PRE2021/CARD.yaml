@@ -1,5 +1,20 @@
-# RC-0002-FB-PRE2021 — first event-time Rule Card (design 2026-09-25,
-# docs/superpowers/specs/2026-09-25-event-time-rulecard-design.md).
+# RC-0002-FB-PRE2021 — CLOSED 2026-09-25: NOT TESTED, UNDERPOWERED (D-060). Never frozen, never run;
+# no outcome was computed and no trial or family slot was consumed. Kept as the record of what was
+# planned. Evidence: DRY_*.json (structure) and POWER_*.json (random events; signal() never called).
+
+disposition:
+  status: NOT_TESTED_UNDERPOWERED
+  date: "2026-09-25"
+  authority: "D-060 (Owner delegation 2026-09-25: 'complete all path with your recommendation')"
+  basis: >-
+    Noise floor of the day-weighted calendar-time series at the measured event rate (0.0247 of
+    eligible name-days) is 2.04 %/mo (10 seeds, range 1.90-2.29) over 183 valid months. At the
+    Tier-N hurdle t* = 3.0, 80% power needs 0.58 %/mo; the planning effect is 0.93 x 0.5 = 0.47.
+    Expected t at the planning effect is ~3.1, i.e. ~50% power. Reversal would need a longer valid
+    history (none exists pre-2000; 61 early months fail the 50-name book floor) or a larger
+    literature effect, which a Tier-N in-house pattern does not have.
+
+# First event-time Rule Card (design docs/superpowers/specs/2026-09-25-event-time-rulecard-design.md).
 
 id: RC-0002-FB-PRE2021
 title: "Failed-breakdown anti-edge (HYP-PM-0012 rule), out-of-sample on the pre-2021 backfill"
@@ -70,13 +85,13 @@ power:
   sigma_source: >-
     in-house calendar-time series, backed out: 0.93 x sqrt(62) / 4.42 = 1.66 %/mo
     (failed breakdown vs EW book, 2021-26, audit section 7-F)
-  sigma_noise_floor: null              # set from `cli power` before freeze
+  sigma_noise_floor: 2.04               # `cli power` 2026-09-25, 10 seeds, range 1.90-2.29
   literature_effect: 0.93
   literature_effect_source: "-0.89% per 20-session event = -0.0445%/day x 21 sessions"
   haircut: 0.5
   haircut_justification: "R9 decay haircut; the in-house effect is itself a scan survivor"
-  n_months: 200                         # planning value; replaced by `power` months_valid before freeze
-  event_rate: null                     # set from `cli dry` before power
+  n_months: 183                         # `cli power` months_valid
+  event_rate: 0.0247                   # `cli dry` 2026-09-25: 11,790 events / eligible rows in window
 
 fingerprints:
   - name: adv_tercile                   # limits to arbitrage: stronger where trading is costliest
