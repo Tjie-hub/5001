@@ -150,6 +150,49 @@ def test_provisional_runs_do_not_verify_or_refresh(env, monkeypatch):
     assert env['save'].call_args[1]['is_final'] is False
 
 
+# ── partial-run refusal: a FINAL pass under the fill gate saves PROVISIONAL (2026-09-28) ──
+
+def _scrape_thin(good):
+    def scrape(tickers, token, statuses):
+        for t in tickers:
+            statuses[t] = 200
+        return ({t: (dict(BAR) if t in good else {'close': None}) for t in tickers},
+                {t: [] for t in tickers})
+    return scrape
+
+
+def test_partial_final_run_saved_provisional_and_refused(env):
+    env['status'] = {'old': [200]}
+    env['scrape'] = _scrape_thin(set(TICKERS[:3]))    # 3/10 = 30% < the 50% gate
+    r = sj.run_intraday('2026-09-23', final=True, send_telegram=env['sent'])
+    assert env['refresh'].call_count == 0             # failures were not auth — no login
+    assert env['save'].call_args[1]['is_final'] is False
+    assert r['saved_final'] is False and r['filled'] == 3
+
+
+def test_final_run_at_the_gate_is_saved_final(env):
+    env['status'] = {'old': [200]}
+    env['scrape'] = _scrape_thin(set(TICKERS[:5]))    # exactly 50% — the gate is >=
+    r = sj.run_intraday('2026-09-23', final=True)
+    assert env['save'].call_args[1]['is_final'] is True
+    assert r['saved_final'] is True
+
+
+def test_degraded_alert_announces_the_refusal(env):
+    sent = MagicMock()
+    degraded = sj._alert_if_eod_degraded(
+        {'filled': 3, 'total': len(TICKERS)}, '2026-09-23', send_telegram=sent)
+    assert degraded is True
+    msg = sent.call_args[0][0]
+    assert 'REFUSED' in msg and 'provisional' in msg and '2026-09-23' in msg
+
+
+def test_healthy_run_raises_no_degraded_alert(env):
+    assert sj._alert_if_eod_degraded(
+        {'filled': 8, 'total': len(TICKERS)}, '2026-09-23',
+        send_telegram=MagicMock()) is False
+
+
 # ── 17:30 same-day EOD retry (run_eod_retry) ─────────────────────────────────
 
 def _retry_env(env, monkeypatch, final, prov):

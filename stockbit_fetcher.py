@@ -255,28 +255,60 @@ def _auto_login_fallback():
     return None
 
 
-def ensure_valid_token(manual_token=None):
-    """Return a valid token, running auto_token refresh/login if needed.
+AUTH_FAIL_STATUSES = (401, 403)
+VERIFY_BACKOFF_S = (5, 15, 45)
+
+
+def ensure_valid_token(manual_token=None, sleep=time.sleep):
+    """Return a valid token; re-login ONLY on an auth rejection (401/403).
+
+    2026-09-21/22: the token was revoked server-side mid-afternoon while its exp claim was still
+    valid, and verify_token()'s bool collapse made every network error / 5xx / rate limit look
+    like a dead token. An unnecessary login may itself revoke the account's other sessions, so
+    transient or inconclusive statuses are retried with backoff and then abort the run WITHOUT a
+    login attempt — the cron retries next session; only 401/403 justifies a re-login.
 
     Every production cron passes --token "$(cat .stockbit_token)" (see
-    deploy/crontab), so `manual_token` is always set in practice. An invalid
-    manual token used to be a dead end (`return None` here, with the
-    auto_refresh()/credential_login() fallback below structurally
-    unreachable) -- see docs/audit/STOCKBIT_TOKEN_REFRESH_HARDENING.md §1b.
-    It now falls through to the same fallback used when no manual token is
-    supplied at all.
+    deploy/crontab), so `manual_token` is always set in practice. An invalid manual
+    token falls through to the same fallback used when no manual token is supplied at
+    all -- see docs/audit/STOCKBIT_TOKEN_REFRESH_HARDENING.md §1b (the 2026-07-27
+    regression where it was a dead end).
+    `sleep` is injectable for tests.
     """
+    def _status_with_backoff(token):
+        status = token_status(token)
+        for wait in VERIFY_BACKOFF_S:
+            if status == 200 or status in AUTH_FAIL_STATUSES:
+                return status
+            log(f"Token verify inconclusive ({status}) — retry in {wait}s")
+            sleep(wait)
+            status = token_status(token)
+        return status
+
     if manual_token:
         log("Using manual token")
-        if verify_token(manual_token):
+        status = _status_with_backoff(manual_token)
+        if status == 200:
             return manual_token
-        log("Manual token expired/invalid — attempting auto-login fallback...")
+        if status not in AUTH_FAIL_STATUSES:
+            log(f"Token verify inconclusive ({status}) after retries — NOT re-login "
+                f"(only 401/403 justifies one); aborting this run")
+            return None
+        log(f"Manual token revoked (HTTP {status}) — attempting auto-login fallback...")
     else:
         token = extract_token_from_chrome()
-        if token and verify_token(token):
-            log("Token OK!")
-            return token
-        log("Token invalid/missing — running auto_token refresh...")
+        if token:
+            status = _status_with_backoff(token)
+            if status == 200:
+                log("Token OK!")
+                return token
+            if status not in AUTH_FAIL_STATUSES:
+                log(f"Token verify inconclusive ({status}) after retries — NOT re-login; "
+                    f"aborting this run")
+                return None
+            log(f"Token revoked (HTTP {status}) — running auto_token refresh...")
+        else:
+            log("Token missing — running auto_token refresh...")
 
     try:
         return _auto_login_fallback()

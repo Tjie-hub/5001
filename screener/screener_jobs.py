@@ -199,7 +199,14 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None,
         except Exception:
             pass
 
-    scraper.save_ohlcv_to_db(ohlcv_all, trade_date, is_final=final)
+    # Refuse to finalise a partial run (2026-09-28): a FINAL pass under the fill gate saves every
+    # bar PROVISIONAL, so research never reads a mostly-empty session as settled history. The
+    # degraded alert (run_eod) and the 17:30 retry (run_eod_retry) own the session from there.
+    saved_final = bool(final and total and filled / total >= EOD_MIN_FILL_FRAC)
+    if final and not saved_final:
+        logger.error(f"[screener] EOD finalisation REFUSED: {filled}/{total} tickers with data — "
+                     f"bars stay provisional (gate {EOD_MIN_FILL_FRAC:.0%})")
+    scraper.save_ohlcv_to_db(ohlcv_all, trade_date, is_final=saved_final)
 
     for i, ticker in enumerate(tickers):
         _task_state['current'] = ticker
@@ -231,7 +238,8 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None,
     _task_state.update({'running': False, 'result': {'ok': ok, 'err': err, 'duration_s': duration}})
     logger.info(f"[screener] Intraday done: {ok} ok, {err} err, {duration}s")
     return {'ok': ok, 'err': err, 'duration_s': duration, 'type': 'intraday',
-            'filled': filled, 'total': total, 'retried': retried, 'token': token_note}
+            'filled': filled, 'total': total, 'retried': retried, 'token': token_note,
+            'saved_final': saved_final}
 
 
 # A healthy 16:15 run gets bars for ~775 of 958 tickers (~81%; the rest did not trade).
@@ -256,8 +264,9 @@ def _alert_if_eod_degraded(intraday_result: dict, trade_date: str, send_telegram
             send_telegram(
                 f"🔴 <b>EOD finalisation DEGRADED</b> ({trade_date})\n\n"
                 f"Stockbit returned data for only <b>{filled}/{total}</b> tickers "
-                f"(normal ~775). Bars for {trade_date} are NOT final and research reads "
-                f"will not see them.\n"
+                f"(normal ~775). The finalisation was REFUSED: bars for {trade_date} stay "
+                f"provisional and research reads will not see them. The 17:30 EOD retry "
+                f"re-attempts automatically.\n"
                 f"Likely: token revoked (HTTP 401) or empty upstream responses — see app.log.\n"
                 f"Fix the token (<code>python3 auto_token.py --login</code>), then "
                 f"<code>python3 scripts/repair_provisional_bars.py --apply</code>"

@@ -61,6 +61,14 @@ def no_telegram(monkeypatch):
     monkeypatch.setattr(at, "send_telegram", lambda *a, **k: None)
 
 
+@pytest.fixture(autouse=True)
+def isolated_log_file(tmp_path, monkeypatch):
+    """at.log() appends to LOG_FILE at call time — without this redirect the suite
+    wrote fake "Token refreshed" lines into the real logs/auto_token.log, where
+    they have been mistaken for run evidence."""
+    monkeypatch.setattr(at, "LOG_FILE", tmp_path / "auto_token.log")
+
+
 # ── should_skip_refresh: margin threshold (Requirement 2 + 3) ──
 
 def test_skips_when_remaining_exceeds_margin(token_file, monkeypatch):
