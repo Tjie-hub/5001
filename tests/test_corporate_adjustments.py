@@ -284,3 +284,21 @@ def test_storage_stays_raw(monkeypatch):
         ).fetchone()[0]
         conn.close()
     assert close0 == 1000   # loader never writes back
+
+
+def test_read_raw_ohlcv_returns_raw_settled_rows_only():
+    """The sanctioned raw read behind the guard: settled rows only, prices RAW —
+    adjustment is the caller's job (gap-verified, with an audit trail)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        db = os.path.join(tmp, "t.db")
+        _seed_corpus(db)
+        from data.adjustments import read_raw_ohlcv
+        conn = sqlite3.connect(db)
+        try:
+            out = read_raw_ohlcv(conn)
+        finally:
+            conn.close()
+    splt = out[out["ticker"] == "SPLT"].sort_values("date")
+    assert splt.iloc[0]["close"] == pytest.approx(1000)   # RAW — no back-adjustment here
+    assert len(out[out["ticker"] == "RAWW"]) == 1         # is_final fence: provisional excluded
+    assert set(out["ticker"]) == {"SPLT", "RAWW"}

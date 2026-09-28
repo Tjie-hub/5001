@@ -144,8 +144,8 @@ def load_extended_ohlcv(hist=DEFAULT_HIST, splits=DEFAULT_SPLITS) -> pd.DataFram
     from data.db import connect          # lazy: keeps this module importable without a DB
     H = pd.read_pickle(hist)
     SPL = pd.read_pickle(splits)
-    from data.adjustments import load_split_factors
+    from data.adjustments import load_split_factors, read_raw_ohlcv
     with connect(read_only=True) as c:
-        D = pd.read_sql("SELECT ticker,date,open,high,low,close,volume FROM ohlcv WHERE is_final=1", c)
+        D = read_raw_ohlcv(c)
         factors = load_split_factors(c)
     return merge_extended(H, D, SPL, db_splits=factors)

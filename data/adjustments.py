@@ -54,6 +54,18 @@ def load_split_factors(conn):
     return factors
 
 
+def read_raw_ohlcv(conn):
+    """The raw settled corpus (is_final=1) — the one sanctioned raw ohlcv read for
+    research flows. The result exists only to be run through gap-verified adjustment
+    (adjust_ohlcv with load_split_factors, which yields the applied-factor audit);
+    using it unadjusted is the exact hole audit R-1 found. The SELECT lives here, in
+    the adjustment authority, so research/ stays free of raw price reads
+    (tests/test_corporate_adjustments.py enforces that)."""
+    import pandas as pd
+    return pd.read_sql(
+        "SELECT ticker,date,open,high,low,close,volume FROM ohlcv WHERE is_final=1", conn)
+
+
 def _gap_is_real(dates, closes, ex_date: str, ratio: float) -> bool:
     """True iff the series shows the split's PERSISTENT gap at ex_date.
 
