@@ -1,0 +1,150 @@
+{
+ "method": "E[max|Z|] = (1-g)*Phi^-1(1-1/N) + g*Phi^-1(1-1/(N*e)), g=0.5772",
+ "census": {
+  "ledger_records_by_type": {
+   "?": 1,
+   "hypothesis": 6,
+   "strategy_falsification": 2,
+   "census": 1,
+   "pre_registration_remeasurement": 1,
+   "rule_card_disposition": 2,
+   "data_defect_correction": 1,
+   "exploratory_split": 2,
+   "registration_refused": 1,
+   "exploratory_screen": 1
+  },
+  "disclosed": {
+   "discovery_sprint_constructions": [
+    120,
+    "P-M discovery/SPRINT_2026-09-15 DISCOVERY_REPORT_2026-09-15.md (6 families, ~120 constructions, memory D-056 era)"
+   ],
+   "pattern_scan_arms": [
+    12,
+    "LIM-7 / PATTERN_SCAN_2026-09-17.md (~12 arms)"
+   ],
+   "wedge_variants": [
+    6,
+    "LIM-7 (detector-invariance set)"
+   ],
+   "entry_filters": [
+    6,
+    "LIM-7"
+   ],
+   "threshold_cells": [
+    48,
+    "LIM-7"
+   ],
+   "alignment_cells": [
+    27,
+    "LIM-7 / table27.py"
+   ],
+   "universe_screen_trials": [
+    6,
+    "D-058 EXPERIMENT_LEDGER (trials: 6)"
+   ],
+   "insider_screen_cells": [
+    16,
+    "D-061 SCREEN-PM-INS-001 (16 cells)"
+   ],
+   "registered_hypotheses": [
+    8,
+    "HYPOTHESIS_REGISTRY (0001,0003,0004,0005,0006,0009,0010,0012)"
+   ],
+   "g1_arms": [
+    3,
+    "C-family {C2,C3,C7}"
+   ]
+  },
+  "total_disclosed_trials": 252
+ },
+ "deflation_bars": {
+  "registered_only (N=8)": 1.46,
+  "registered+scans (N=50)": 2.28,
+  "+discovery sprint (N=120)": 2.59,
+  "all disclosed trials (N=252)": 2.84
+ },
+ "headlines": [
+  {
+   "stat": "T1 reference A/EX-2025 (raw, overlapping-hold t)",
+   "abs_z": 2.98,
+   "survives_at": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)",
+    "all disclosed trials (N=252)"
+   ],
+   "receipt": "audit2.py current-data run, 2026-09-28 review; claimed 2.83 @09-16"
+  },
+  {
+   "stat": "T1 reference D/EX-2025 next-open vs EW (raw)",
+   "abs_z": 3.84,
+   "survives_at": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)",
+    "all disclosed trials (N=252)"
+   ],
+   "receipt": "audit2.py current-data run; claimed 3.90"
+  },
+  {
+   "stat": "T1 reference ex-2025 (overlap-robust, D-057)",
+   "abs_z": 1.8,
+   "survives_at": [
+    "registered_only (N=8)"
+   ],
+   "receipt": "AUDIT_2026-09-24_RESULT_VALIDITY.md R-1 re-reading: 1.5-1.8"
+  },
+  {
+   "stat": "FADE failed-breakdown h20 gross vs EW-book (D-057)",
+   "abs_z": 4.4,
+   "survives_at": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)",
+    "all disclosed trials (N=252)"
+   ],
+   "receipt": "D-057: robust t -3.6 to -4.4, survives"
+  },
+  {
+   "stat": "FADE h20 vs IHSG (D-057 re-read, mixed)",
+   "abs_z": 3.13,
+   "survives_at": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)",
+    "all disclosed trials (N=252)"
+   ],
+   "receipt": "D-057: calendar-time t -3.13; month -1.65, DK -1.9"
+  },
+  {
+   "stat": "VOLEX-001 pooled ex-ante (2026-09-23 audit)",
+   "abs_z": 2.59,
+   "survives_at": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)"
+   ],
+   "receipt": "+0.298%/mo t 2.59, suspension-audit basis"
+  },
+  {
+   "stat": "Insider E1s >=1% distributions h5 ex-2025 (D-061)",
+   "abs_z": 2.74,
+   "survives_at": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)"
+   ],
+   "receipt": "SCREEN-PM-INS-001 descriptive cell"
+  },
+  {
+   "stat": "Insider E3 director/commissioner h20 ex-2025 (D-061)",
+   "abs_z": 1.41,
+   "survives_at": [
+    "none"
+   ],
+   "receipt": "SCREEN-PM-INS-001 descriptive cell"
+  }
+ ],
+ "spa_status": "BLOCKED: Hansen SPA needs per-arm return series; the pattern-arm series are not regenerable from the frozen manifest (review F-1, 2026-09-28). Recorded, not swept away.",
+ "generated_utc": "2026-09-28T04:38:41.136140+00:00"
+}

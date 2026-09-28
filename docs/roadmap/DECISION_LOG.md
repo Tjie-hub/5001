@@ -1949,6 +1949,48 @@ deciders.
 **Receipts:** `P-M/insider_screen/{PREDECLARATION.md, PREDECLARATION.sha256, insider_screen.py,
 RESULT_20260928T035303Z.json, VERDICT.md}`; one `EXPERIMENT_LEDGER.jsonl` line.
 
+### D-062 · Standing no-correlated-registration directive; V2 adversarial review executed (main-session fallback); program-wide deflation audit recorded — only the FADE family survives
+**Status:** RECORDED · **Date:** 2026-09-28 · **Type:** Standing directive + review record +
+audit record · **Approval authority:** Owner instruction 2026-09-28, "Start item 2. Complete"
+(item 2 of the what-is-left review's recommendations; the recommendation's substantive content
+was the wait-period governance work).
+
+**1 · Standing directive (the recommendation as written).** No new registration correlated with
+an in-flight forward test before that test's first maturity. Concretely: the MIRROR anti-edge
+and falling-wedge variants (correlated with {R1}/FWD-PM-FADE-001) and any {T1}-correlated
+refinement (e.g. the 002 mid-vol-band variant) stay unregistered until FADE-001's first
+closures (~2026-10-19). Screens remain permitted (no slot); registrations are owner decisions.
+
+**2 · V2 adversarial review executed.** The cold-subagent backend was unavailable
+(model-not-found, twice); the 2026-09-21 owner-accepted fallback applied — main-session
+execution, one pass, independence deficit recorded in the artifact. Contract honored
+(read-only; all writes under /tmp; `run_formation.py` never executed; `git status` byte-identical).
+Full findings: `P-M/ZCODE_REVIEW_V2_FINDINGS_2026-09-28.md`. Verdicts:
+- **STANDS:** C-9 (all four fronts: hashes, +88/−0 additivity at current HEAD, added-content
+  inspection, code trace incl. weekly look-ahead and exit semantics), C-6 (exact: BULL 9
+  episodes/98 sessions — infeasible by 2 sessions even on a sessions reading), C-7/C-8 (within
+  recorded drift; score+2 ex-2025 −4.43 exact), G-1..G-4.
+- **STANDS with qualifiers:** C-1 (drifted reproduction +1.22/t 3.84 vs claimed +1.26/3.90;
+  D-057's robust 1.5–1.8 remains the recorded inference).
+- **NOT TESTED as-frozen:** C-2 figures, C-3, C-4, C-5 — systemic finding **F-1**: the frozen
+  manifest cannot regenerate its own inputs (§6 names `t1.py`/`t2.py`, absent; the
+  `f5/f20/m5/m20/bad20` forward columns have no producer; the limitation-9 execution audit was
+  never staged). Restoring the lost drivers is an **owner decision**; until then the deflation
+  audit below is the program-wide guard.
+
+**3 · Program-wide deflation audit** (`AUDIT_2026-09-28_DEFLATION.md`,
+`deflation_audit/RESULT_2026-09-28.json`). Census: **252 disclosed trials**. E[max |Z|] bar:
+1.46 / 2.28 / 2.59 / **2.84** at N=8/50/120/252. Only the **FADE avoidance family** (h20 gross
+vs EW-book 4.4; vs IHSG calendar 3.13) survives the full-census bar — and it is already owned
+by FWD-PM-FADE-001. T1's raw statistics clear the bar only as the overlapping-hold estimator
+D-057 re-read at 1.5–1.8 robust (dies everywhere). VOLEX (2.59) and insider E1s (2.74) die at
+full census. Hansen SPA is recorded as blocked by F-1, not skipped. Practical guard going
+forward: a future candidate must clear ~2.8–3.0 |Z| after its own grid joins the census.
+
+**Receipts:** `P-M/ZCODE_REVIEW_V2_FINDINGS_2026-09-28.md`; `AUDIT_2026-09-28_DEFLATION.md`;
+`deflation_audit/{deflation_audit.py, RESULT_2026-09-28.json}`; one `EXPERIMENT_LEDGER.jsonl`
+line; `/tmp/frz_review/` (reviewer scratch, outside the repo).
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
