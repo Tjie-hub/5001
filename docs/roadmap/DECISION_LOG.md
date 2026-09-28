@@ -1923,6 +1923,32 @@ decision below to the recommendation made in that session, and every such decisi
 - `P-M/HYP-PM-0008_SPEC.md` disposition
 - two `EXPERIMENT_LEDGER.jsonl` lines
 
+### D-061 · Insider-event screen (SCREEN-PM-INS-001) closed: FAIL (null) on the pre-declared primary; the last unscanned in-house dataset is read
+**Status:** RECORDED · **Date:** 2026-09-28 · **Type:** Exploratory screen, pre-declared ·
+**Approval authority:** Owner goal 2026-09-28, "complete test for 1 until exhausted" —
+recommendation 1 of the what-is-left review.
+
+**What was run.** The `insider_transactions` dataset (98,950 rows, 2017-10 → 2026-09-24, KSEI/IDX
+sourced, collected 2026-09-22/25, never previously read by this program) screened through the D-060
+event-time engine under `P-M/insider_screen/PREDECLARATION.md` (sha256 `e88a9147…`, committed
+`0d5f350` before any number existed). One run; 16 pre-declared cells; PIT convention: flag on the
+first own session after the transaction, entry two own sessions later.
+
+**Result.** Primary cell (E1 ≥1% accumulation, h20, ex-2025, gross): **−0.758%/mo, t −0.98, 78
+valid months → FAIL (null)** at the pre-declared |t| ≥ 3.0 bar. Descriptive only: E3
+director/commissioner BUYs +2.86%/mo (t 1.41, 617 events — thin); E1s ≥1% distributions −2.41%/mo,
+t −2.74 at h5 ex-2025 — the avoidance direction from a new instrument, owner-gated and correlated
+with {R1}/FADE-001. The RESULT's `net` columns are the engine's mirror-overlay uplift, not a
+long-sleeve net — recorded as a mis-specified lens in the verdict.
+
+**Decision.** The insider-accumulation lead is closed at screen level. No slot consumed, nothing
+registered; a re-open is a new screen id. The "no tradeable long edge" record now covers every
+in-house dataset; the three forward tests (REGIME-002, FADE-001, VOLEX-001) remain the only
+deciders.
+
+**Receipts:** `P-M/insider_screen/{PREDECLARATION.md, PREDECLARATION.sha256, insider_screen.py,
+RESULT_20260928T035303Z.json, VERDICT.md}`; one `EXPERIMENT_LEDGER.jsonl` line.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
