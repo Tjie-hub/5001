@@ -21,8 +21,10 @@ edited; closure is a new event row. Status is derived, never stored mutable.
 """
 from __future__ import annotations
 
+import glob
 import hashlib
 import json
+import os
 import sqlite3
 import uuid
 from datetime import date, datetime
@@ -121,6 +123,50 @@ def _paper_config(conn) -> dict:
     return {k: v for k, v in rows if k in keep}
 
 
+REGISTRY_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "registry")
+# Everything under these paths is what production admits from; SCHEMA.md is prose.
+_REGISTRY_GLOBS = ("edge_registry.yaml", "manifests/*", "artifacts/*")
+
+
+def _registry_state() -> dict:
+    """Identify the registry by its CONTENT, never by the git commit.
+
+    registry_loader's own 'hash' is `git rev-parse HEAD` -- right for per-trade
+    provenance, wrong here: until 2026-09-29 it made every commit + restart close
+    all three cohorts as CONTAMINATED (six false closures 09-15..09-28 with zero
+    registry bytes changed), so no window could ever reach its stopping rule.
+    File names are hashed along with bytes, so an added/removed manifest rolls too.
+    """
+    h = hashlib.sha256()
+    try:
+        paths = sorted({p for g in _REGISTRY_GLOBS
+                        for p in glob.glob(os.path.join(REGISTRY_DIR, g))
+                        if os.path.isfile(p)})
+        for p in paths:
+            h.update(os.path.relpath(p, REGISTRY_DIR).replace(os.sep, "/").encode())
+            h.update(b"\0")
+            with open(p, "rb") as f:
+                h.update(f.read())
+            h.update(b"\0")
+        content = h.hexdigest()[:16] if paths else None
+    except OSError:
+        content = None
+    try:
+        from engine.registry_loader import get_registry
+        r = get_registry()
+        summary = {
+            "approved": sum(1 for e in r["entries"] if e["status"] == "APPROVED"),
+            "shadow": sum(1 for e in r["entries"] if e["status"] == "SHADOW"),
+            "skipped": len(r["skipped"]),
+            "debt": len(r.get("debt", [])),
+            "unverified": len(r.get("violations", [])),
+        }
+    except Exception:
+        summary = None
+    return {"content_hash": content, "summary": summary}
+
+
 def frozen_config(conn, cohort: str) -> dict[str, Any]:
     """Everything that can change what this cohort trades.
 
@@ -135,11 +181,7 @@ def frozen_config(conn, cohort: str) -> dict[str, Any]:
     from engine import strategy_version as sv
     import config as cfg
 
-    try:
-        from engine.registry_loader import get_registry, startup_summary
-        reg = {"hash": get_registry()["hash"], "summary": startup_summary()}
-    except Exception:
-        reg = {"hash": None, "summary": None}
+    reg = _registry_state()
 
     try:
         from scheduler.scanner import (_REGIME_STRATEGY_MAP, _COUNTER_TREND_BOOK,

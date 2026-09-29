@@ -205,3 +205,67 @@ class TestForwardWindow:
         from scheduler import jobs
         src = inspect.getsource(jobs.run_forward_test_cycle)
         assert "forward_window" in src and "check_all" in src
+
+
+class TestWindowRegistryIdentity:
+    """The window must key on what the registry SAYS, not on the git commit.
+
+    Until 2026-09-29 frozen_config used registry_loader's hash, which is
+    `git rev-parse HEAD`: every commit + restart closed all three cohorts as
+    CONTAMINATED (six false closures 09-15..09-28, zero registry bytes changed),
+    so no window could ever reach the 125-session stopping rule.
+    """
+
+    @pytest.fixture()
+    def reg_dir(self, tmp_path, monkeypatch):
+        d = tmp_path / "registry"
+        (d / "manifests").mkdir(parents=True)
+        (d / "artifacts").mkdir()
+        (d / "edge_registry.yaml").write_text("entries: []\n")
+        (d / "manifests" / "X_v1.yaml").write_text("id: X\n")
+        (d / "artifacts" / "X_tickers.json").write_text('["AAAA"]')
+        monkeypatch.setattr(fw, "REGISTRY_DIR", str(d))
+        return d
+
+    def _fake_head(self, monkeypatch, sha):
+        from engine import registry_loader as rl
+        monkeypatch.setattr(rl, "get_registry", lambda: {
+            "hash": sha, "entries": [{"status": "SHADOW"}], "skipped": [],
+            "debt": [1], "violations": []})
+
+    def test_a_new_commit_alone_does_not_roll_the_window(self, db, reg_dir, monkeypatch):
+        conn = sqlite3.connect(db)
+        self._fake_head(monkeypatch, "226d405")
+        fw.check(conn, "eod")
+        self._fake_head(monkeypatch, "f46f33d")
+        r = fw.check(conn, "eod")
+        conn.close()
+        assert r["action"] == "unchanged", r["changes"]
+
+    def test_the_commit_sha_is_not_in_the_frozen_config(self, db, reg_dir, monkeypatch):
+        self._fake_head(monkeypatch, "f46f33d")
+        conn = sqlite3.connect(db)
+        cfg = fw.frozen_config(conn, "eod")
+        conn.close()
+        assert "f46f33d" not in json.dumps(cfg)
+
+    @pytest.mark.parametrize("rel", ["edge_registry.yaml", "manifests/X_v1.yaml",
+                                     "artifacts/X_tickers.json"])
+    def test_a_registry_content_change_still_rolls(self, db, reg_dir, monkeypatch, rel):
+        self._fake_head(monkeypatch, "226d405")
+        conn = sqlite3.connect(db)
+        fw.check(conn, "eod")
+        (reg_dir / rel).write_text("changed\n")
+        r = fw.check(conn, "eod")
+        conn.close()
+        assert r["action"] == "rolled"
+        assert any("registry" in c for c in r["changes"])
+
+    def test_a_new_manifest_file_rolls(self, db, reg_dir, monkeypatch):
+        self._fake_head(monkeypatch, "226d405")
+        conn = sqlite3.connect(db)
+        fw.check(conn, "eod")
+        (reg_dir / "manifests" / "X_v2.yaml").write_text("id: X\nversion: 2\n")
+        r = fw.check(conn, "eod")
+        conn.close()
+        assert r["action"] == "rolled"
