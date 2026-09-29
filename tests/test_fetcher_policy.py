@@ -222,3 +222,69 @@ def test_calendar_purge_noop_when_calendar_sparse(db):
     conn.close()
     assert MIN_CALENDAR_DAYS >= 100
     assert purge_non_calendar_days() == 0       # refused: calendar too sparse
+
+
+# ── IHSG finalisation (2026-09-29) ───────────────────────────────────────────
+# The index is never covered by the 16:15 EOD scraper (it is not a tradebook
+# ticker), and the incremental refresh starts from MAX(date)+1, so every IHSG
+# bar written provisional on its own day stayed is_final=0 forever
+# (09-22..09-28 stranded). finalise_index_bars settles past sessions.
+
+def _seed_ihsg(db, rows):
+    conn = sqlite3.connect(db)
+    conn.executemany("INSERT INTO ohlcv (ticker,date,open,high,low,close,volume,is_final)"
+                     " VALUES ('IHSG',?,?,?,?,?,0,?)", rows)
+    conn.commit()
+    conn.close()
+
+
+def test_finalise_index_bars_settles_past_provisional_sessions(db, monkeypatch):
+    import data.fetcher as f
+    monkeypatch.setattr(f, "_wib_today", lambda: "2026-09-29")
+    _seed_ihsg(db, [("2026-09-25", 6300, 6320, 6240, 6247.0, 0),
+                    ("2026-09-28", 6200, 6210, 6150, 6154.0, 0),
+                    ("2026-09-29", 6150, 6160, 6140, 6155.0, 0)])   # today: stays provisional
+    seen = {}
+
+    def fake_download(sym, start=None, end=None, **kw):
+        seen.update(sym=sym, start=start, end=end)
+        return _yf_frame(["2026-09-25", "2026-09-28"], [6250.0, 6160.0])
+    monkeypatch.setattr(f.yf, "download", fake_download)
+
+    n = f.finalise_index_bars()
+
+    conn = sqlite3.connect(db)
+    got = dict(conn.execute("SELECT date, is_final FROM ohlcv WHERE ticker='IHSG'").fetchall())
+    close = conn.execute("SELECT close FROM ohlcv WHERE ticker='IHSG' AND date='2026-09-28'").fetchone()[0]
+    conn.close()
+    assert n == 2
+    assert seen["sym"] == "^JKSE" and seen["start"] == "2026-09-25" and seen["end"] == "2026-09-29"
+    assert got == {"2026-09-25": 1, "2026-09-28": 1, "2026-09-29": 0}
+    assert close == 6160.0      # settled value replaces the intraday snapshot
+
+
+def test_finalise_index_bars_leaves_a_session_the_source_lacks(db, monkeypatch):
+    import data.fetcher as f
+    monkeypatch.setattr(f, "_wib_today", lambda: "2026-09-29")
+    _seed_ihsg(db, [("2026-09-24", 6360, 6370, 6290, 6300.0, 0)])
+    monkeypatch.setattr(f.yf, "download", lambda *a, **k: _yf_frame([], []))
+    assert f.finalise_index_bars() == 0
+    conn = sqlite3.connect(db)
+    assert conn.execute("SELECT is_final FROM ohlcv WHERE ticker='IHSG'").fetchone()[0] == 0
+    conn.close()
+
+
+def test_finalise_index_bars_is_a_noop_with_nothing_stranded(db, monkeypatch):
+    import data.fetcher as f
+    monkeypatch.setattr(f, "_wib_today", lambda: "2026-09-29")
+
+    def boom(*a, **k):
+        raise AssertionError("no fetch expected")
+    monkeypatch.setattr(f.yf, "download", boom)
+    assert f.finalise_index_bars() == 0
+
+
+def test_incremental_fetch_finalises_the_index():
+    import inspect
+    import data.fetcher as f
+    assert "finalise_index_bars(" in inspect.getsource(f.fetch_all_incremental)

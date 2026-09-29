@@ -103,6 +103,54 @@ def fetch_ticker(ticker, period="2y"):
     return _save_df(ticker, df)
 
 
+def finalise_index_bars(ticker: str = "IHSG", symbol: str = "^JKSE") -> int:
+    """Settle past-session index bars still left provisional (is_final=0).
+
+    The C1 finality guard writes today's bar provisional and leaves settling to
+    the 16:15 EOD scraper — which covers tradebook tickers, never the index. The
+    incremental refresh then starts from MAX(date)+1 and _save_df only repairs
+    NULL-close rows, so every IHSG session stayed provisional forever
+    (2026-09-22..28 found stranded, 2026-09-29). An index has no splits, so the
+    settled value simply replaces the intraday snapshot — no rebase question,
+    unlike stocks (those stay with scripts/repair_provisional_bars.py's guards).
+    """
+    import math
+    wib_today = _wib_today()
+    conn = get_db()
+    try:
+        pending = {r[0] for r in conn.execute(
+            "SELECT date FROM ohlcv WHERE ticker=? AND is_final=0 AND date<?",
+            (ticker, wib_today))}
+    finally:
+        conn.close()
+    if not pending:
+        return 0
+    # end is exclusive in yfinance: today's (still-forming) bar is never touched.
+    df = yf.download(symbol, start=min(pending), end=wib_today,
+                     auto_adjust=False, progress=False)
+    if df is None or df.empty:
+        return 0
+    df = df.reset_index()
+    df.columns = [c[0] if isinstance(c, tuple) else c for c in df.columns]
+    conn = get_db()
+    n = 0
+    try:
+        for _, row in df.iterrows():
+            d = str(row["Date"])[:10]
+            c = row["Close"]
+            if d not in pending or c is None or (isinstance(c, float) and math.isnan(c)):
+                continue
+            n += conn.execute(
+                "UPDATE ohlcv SET open=?, high=?, low=?, close=?, volume=?, is_final=1 "
+                "WHERE ticker=? AND date=? AND is_final=0",
+                (float(row["Open"]), float(row["High"]), float(row["Low"]), float(c),
+                 float(row["Volume"]), ticker, d)).rowcount
+        conn.commit()
+    finally:
+        conn.close()
+    return n
+
+
 # ── Batch helpers ─────────────────────────────────────────────────────────────
 
 def _save_df(ticker, df) -> int:
@@ -375,6 +423,13 @@ def fetch_all_incremental(category: str = None):
         df_ihsg = yf.download("^JKSE", start=ihsg_start, auto_adjust=False, progress=False)
         if not df_ihsg.empty:
             total_saved += _save_df("IHSG", df_ihsg)
+    # The MAX(date)+1 refresh above never revisits yesterday's provisional bar.
+    try:
+        n_fin = finalise_index_bars()
+        if n_fin:
+            print(f"  IHSG: finalised {n_fin} provisional past session(s)")
+    except Exception as e:
+        logging.warning("IHSG finalisation failed (non-fatal): %s", e)
 
     # Refresh the trading calendar from IHSG, then strip any non-trading-day
     # rows (holiday/weekend fills from yfinance). Never deletes real sessions

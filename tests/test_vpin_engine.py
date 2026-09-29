@@ -170,3 +170,20 @@ def test_signal_map_keys_are_tuples():
     for key in SIGNAL_MAP:
         assert isinstance(key, tuple)
         assert len(key) == 3
+
+
+def test_calc_vpin_multi_tolerates_null_close_on_a_zero_volume_session():
+    # 2026-09-28: BTON/CASH/HDIT/IDPR/LPGI/PNSE crashed the scan with
+    # "NoneType - int" -- a no-trade session has a VPIN row but close IS NULL.
+    conn = _make_conn()
+    for i in range(7):
+        close = None if i == 6 else 360.0 + i
+        conn.execute(
+            "INSERT INTO daily_screen VALUES (?,?,?,?,?,?,?,?,?,?)",
+            ("BTON", f"2026-09-{i+20:02d}", 0.3 + i * 0.01, 10, 10,
+             close, 0 if close is None else 5000, 1.0, None, None),
+        )
+    result = calc_vpin_multi(conn, "BTON", "2026-09-26")
+    assert result is not None
+    assert result["price_move"] in ("FLAT", "UP", "DOWN")
+    conn.close()

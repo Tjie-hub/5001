@@ -528,7 +528,9 @@ def calc_vpin_multi(
     # ── Price trend (3-day) ──────────────────────────────────────────────
     price_start = closes[-3] if len(closes) >= 3 else closes[0]
     price_end = closes[-1]
-    if price_start and price_start > 0:
+    # A no-trade session keeps its VPIN row but has close NULL (2026-09-28:
+    # six tickers crashed the scan) -- treat an unpriced endpoint as no move.
+    if price_start and price_start > 0 and price_end is not None:
         price_chg_3d = (price_end - price_start) / price_start
     else:
         price_chg_3d = 0.0
