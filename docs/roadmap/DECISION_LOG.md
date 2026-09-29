@@ -1993,6 +1993,83 @@ line; `/tmp/frz_review/` (reviewer scratch, outside the repo).
 
 ---
 
+### D-063 · Seven queued owner decisions resolved per the recommendation: windows not re-joined; FORU/TGUK bars settled; F-1 accepted (deflation audit is the standing guard); revocation closed as mitigated; VOLEX-SN attribution declined; BOOK_OVERLAY_POLICY evidence corrected early; TREND-003 declined, HYP-PM-0007 alias ratified, Mimosa re-audit substituted locally
+**Status:** RECORDED · **Date:** 2026-09-29 · **Type:** Owner rulings (batch) · **Approval authority:**
+Owner instruction 2026-09-29, "for 7 waiting decision do the recomended". Each ruling below is
+Claude's recommendation adopted verbatim under that instruction; the evidence was gathered in-session.
+
+**1 · Forward-test windows 09-07..09-28 — NOT re-joined (option a).** The falsely closed windows
+(registry identity was `git HEAD`; fixed `88446f6`) are configuration-identical apart from the commit
+sha, but re-joining them would be the first exception to "cohorts are never pooled" to recover about
+15 of 125 sessions. The clean window starts at the 2026-09-29 deploy. The closed windows stay closed
+and are never cited toward a GO/NO-GO.
+
+**2 · FORU / TGUK provisional bars — settled.**
+- **TGUK 09-16/18/21:** settled to yfinance raw values (100 / 101 / 111). No corporate action: from
+  09-22 on, local and yfinance bars match exactly (121, 109, 119, 108, 98). The repair script's
+  "rebase needed" came from local references on 09-15 and 09-17 being truncated intraday snapshots
+  finalised by pre-fill-gate code (89 vs 91, 107 vs 110). Those two final bars are **recorded, not
+  mutated**.
+- **FORU 09-18/21/22:** finalised **as-is**. They are correct raw prints: 3010 and 2560 equal yfinance
+  × 19.504 exactly. 176 on 09-22 is the auto-reject-upper limit from a reference of about 131
+  (= 2560 / 19.5). The corporate action behind the 19.5 factor is **unconfirmed**: public sources
+  report no FORU split, and the factor is non-integral. **No `corporate_actions` row is written**, so
+  FORU's 09-21 → 09-22 discontinuity stands in the raw corpus. Research must exclude FORU from
+  2026-09-14 onward until the action is identified; that is an open data item, not a ruling.
+- Pre-write rows: `backups/ohlcv_provisional_pre_repair_2026-09-29.csv`.
+
+**3 · F-1 — accepted; drivers not re-staged.** `t1.py`/`t2.py`, the `f5/f20/m5/m20/bad20` producer and
+the limitation-9 audit script were never committed and are absent from this host. "Restoring" them
+means rewriting them, and the V2 reviewer's rewrite already failed a subset check (7,523 trades at
+the cutoff vs 7,287 full-sample). A rewrite would be a new artifact, not the frozen evidence.
+C-2..C-5 are recorded as **NOT REPRODUCIBLE** (permanent), and D-062's deflation audit is the
+standing program-wide guard. If the original drivers surface on the Dell/ZCode host, they may be
+staged under a later dated entry. **New rule:** a frozen manifest's driver scripts are committed with
+the manifest, or the manifest is not frozen.
+
+**4 · Stockbit token revocation source — closed as MITIGATED, no controlled test.** No revocation
+since 2026-09-22 (`logs/auto_token.log`). Re-login on 401/403 (`ad9485c`) plus the 17:30
+finalisation retry made a revocation harmless, as the 09-28 fill-gate run showed. A controlled
+revocation test would deliberately put an EOD run at risk for a question that no longer changes any
+control. It reopens only if revocations recur.
+
+**5 · VOLEX-SN descriptive attribution — DECLINED.** The re-measurement's own note stands: it would
+mean further looks at the same data and cannot change the verdict. D-062's deflation audit already
+kills VOLEX at full census (2.59 < 2.84). An attribution would add looks, not information.
+
+**6 · BOOK_OVERLAY_POLICY — early review executed (evidence correction only; rule unchanged).** §4's
+cited prior (high-vol decile −2.93%/mo vs +0.78%/mo) came from a look-ahead-filtered measurement
+(D-053; AUDIT_2026-09-24 row 32, UNVERIFIED). A dated §8 entry now cites VOLEX-001's audited
+pooled **+0.30%/mo (t 2.6)** as the sole basis and marks the §3 book table as an in-sample operating
+figure. The rule stays **ACTIVE**: §7 ties withdrawal to VOLEX-001 failing, and it has not failed.
+Withdrawing early on a weakened prior would itself be a decision taken on an interim look.
+
+**7a · TREND-003 ("episode-onset" variant) — DECLINED.** It is {T1}-correlated, so D-062's standing
+directive bars registering it before REGIME-002's first read, and D-062's deflation audit finds T1
+dead everywhere at 1.5–1.8 robust. It may be re-offered only after that read, with its §6
+multiplicity accounting (001/002/003 as one adaptive family).
+
+**7b · HYP-PM-0007 alias — RATIFIED.** research.db `BROKER-001` (BFI-001, prereg sha `91c0eb9a…`,
+executed 2026-09-03) **is HYP-PM-0007**, the **4th member of P-M {I5,I6,I7,I12}**. Counting an
+executed, pre-registered trial is the conservative reading (rule X8, OS-10); leaving it unassigned
+kept a real trial out of the family denominator. Outcome as owner-ratified 2026-09-11: primary
+**INVALID · data** (identity-attenuated NV/GV); structure secondaries valid → NOT CONFIRMED. Filed as
+**FAIL-PM-0007** (INVALID · data, outside F1–F9, mirroring FAIL-PM-0004-G1). research.db
+`hypothesis_links` is not written from this session (research-owned table); the documentary alias is
+authoritative until a research job populates it.
+
+**7c · Mimosa re-audit — substituted locally; the Mimosa run itself stays owed on the ZCode host.**
+Mimosa is not installed on this host. As the local equivalent: `tests/security/` 55/55 pass at HEAD,
+and a secret-shape scan of all 121 commits since 2026-09-11 found 0 hits. The prior `scanner_enobufs`
+reports were a scanner resource error on docs-only commits (PROVENANCE_BASELINE_COMMIT_2026-09-12
+§A.1), not detections.
+
+**Files changed:** this entry · `HYPOTHESIS_REGISTRY.md` (HYP-PM-0007 row + family ledger 3→4) ·
+`FAILURE_REGISTRY.md` (FAIL-PM-0007 + distribution) · `EXPERIMENT_LEDGER.jsonl` (one line) ·
+`BOOK_OVERLAY_POLICY.md` (§8) · `P-M/HANDOFF_2026-09-23.md` (09-29 addendum) · `ohlcv` (6 bars).
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

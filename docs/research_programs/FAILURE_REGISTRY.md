@@ -2,7 +2,7 @@
 
 > The institutional repository of falsified hypotheses and failed experiments ([[FAILURE_LIBRARY_SCHEMA]]). **Append-only and immutable** — a failure entry is never edited or deleted (HL-1, R12). Preserving negative results maps the boundaries of market efficiency and keeps the family denominator honest (OS-10). A refutation is a first-class product (PG-11), not a defect.
 
-**Owner:** Chief Research Officer · **Last updated:** 2026-09-15 · **Governed by:** [[FAILURE_LIBRARY_SCHEMA]] · [[HYPOTHESIS_LIFECYCLE]]
+**Owner:** Chief Research Officer · **Last updated:** 2026-09-29 · **Governed by:** [[FAILURE_LIBRARY_SCHEMA]] · [[HYPOTHESIS_LIFECYCLE]]
 
 ## Entries
 
@@ -14,6 +14,7 @@
 | **FAIL-PM-0004-G1** | HYP-PM-0004 | C2 conduit disagreement (C-family) | G1 Run 1 (`G1_REAL_OUTPUT_RUN1_2026-09-11.json` sha256 `74883c04…`) | **INVALID · governance** — registered species-mix control unimplementable (freq-dependent); executed unconditional contrast is not the designed conditional estimand; NOT CONFIRMED (Holm p = 1.0) | 2026-09-11 | DECISION_LOG D-048 · `G1_FINAL_EXECUTION_REPORT_2026-09-11.md` |
 | **FAIL-PM-0005-G1** | HYP-PM-0005 | C3 breadth surprise (C-family) | G1 Run 1 (same output) | **NOT CONFIRMED (VALID, bounded)** — primary k=5 θ = +5.8 bp, NW t = +0.323, Holm p = 1.0; determinate null at 329 daily observations; signs +/+/−; net of 0.60% floor ≈ −54 bp | 2026-09-11 | DECISION_LOG D-048 · `G1_FINAL_EXECUTION_REPORT_2026-09-11.md` |
 | **FAIL-PM-0009** | HYP-PM-0009 | M2 · information / adverse selection — **I7 intraday execution timing** (v004 PIT cohort, `stockbit_flow_bars`) | EXP-PM-0009/R2 (`run_utc` 2026-09-15T01:41:30Z · script sha256 `d2e7a9a2…`) | **F2 · Prediction failure** — kill rule not met: primary k=1 θ_primary = +0.0337%/day, NW HAC t (lag 5) = 0.1102, two-sided p = 0.912223, 64 daily observations; θ_net sensitivity −0.5663% (sensitivity only). **NO POWER CLAIM (D-050): non-rejection is NOT evidence of absence.** R7 PIT provenance limitation retained | 2026-09-15 | [[FAILURE_ENTRY]] (in `experiments/EXP-PM-0009/`) · `MANIFEST.md` · DECISION_LOG D-050/D-051 |
+| **FAIL-PM-0007** | HYP-PM-0007 | Broker-flow imbalance baseline (BFI-001 / research.db `BROKER-001`) | `10_execute_bfi001` (run 2026-09-03 · `90_results.json`) | **INVALID · data** — primary BFI_broad = NV/GV identity-attenuated (\|NV/GV\| p90 0.00201, p99 0.0146, max 0.060, P(≥0.2)=0); structure secondaries VALID → NOT CONFIRMED (CONC t −2.65 Holm 0.097; BREADTH t +2.41, LOKAL t +2.43, Holm 0.164) | 2026-09-29 (alias ratified; outcome owner-ratified 2026-09-11) | DECISION_LOG D-063 · EXPERIMENT_LEDGER `BROKER-001` |
 
 ## Failure-mode distribution (institutional self-diagnostic — §5.3)
 
@@ -29,9 +30,10 @@
 | F8 Capacity extinction | 0 | |
 | F9 Decay (not an error) | 0 | |
 | INVALID · governance (outside F1–F9) | **1** | FAIL-PM-0004-G1 — governance-invalidated arm, recorded for denominator honesty; not an F-mode |
+| INVALID · data (outside F1–F9) | **1** | FAIL-PM-0007 — primary unmeasurable on the instrument (identity attenuation); filed on alias ratification (D-063) for denominator honesty; not an F-mode |
 | NOT CONFIRMED (registered no-rescue vocabulary) | **1** | FAIL-PM-0005-G1 — valid bounded null at the registered inference |
 
-> N=6 (5 failure-classified + 1 governance-invalidated + 1 valid bounded null). All F2 entries died at short-to-swing horizons against the same 0.60% round-trip friction — a program-level pattern (horizon/friction mismatch) that no single F-code expresses. Recorded here because the distribution alone will not surface it. The two 2026-09-11 G1-family rows (FAIL-PM-0004-G1, FAIL-PM-0005-G1) receipt the first C-family empirical outcome per DECISION_LOG D-048: C2 governance-invalidated, C3 a valid bounded null — neither is a rescue of the other, and the withdrawn C1a/C1b produced no numbers.
+> N=7 (4 F2 + 1 governance-invalidated + 1 data-invalidated + 1 valid bounded null; FAIL-PM-0007 added 2026-09-29 per D-063). All F2 entries died at short-to-swing horizons against the same 0.60% round-trip friction — a program-level pattern (horizon/friction mismatch) that no single F-code expresses. Recorded here because the distribution alone will not surface it. The two 2026-09-11 G1-family rows (FAIL-PM-0004-G1, FAIL-PM-0005-G1) receipt the first C-family empirical outcome per DECISION_LOG D-048: C2 governance-invalidated, C3 a valid bounded null — neither is a rescue of the other, and the withdrawn C1a/C1b produced no numbers.
 
 ## Notes
 

@@ -98,3 +98,18 @@ open without a dated superseding entry in this file.
 
 Reviewed when `FWD-PM-VOLEX-001` reaches its own decision point. If VOLEX FAILS, this overlay is
 withdrawn — its entire evidential basis is that test, not the section 3 table.
+
+## 8. Early review — 2026-09-29 (dated superseding entry; §1–§7 above are as declared)
+
+Owner ruling D-063 §6. **Evidence corrected; rule unchanged, status ACTIVE.**
+
+- §4's prior ("high-vol decile −2.93%/month vs +0.78%/month") is **withdrawn as a citation**. It came
+  from a measurement that used a look-ahead tradeability filter (D-053; AUDIT_2026-09-24 row 32:
+  UNVERIFIED). The overlay's sole evidential basis is now `FWD-PM-VOLEX-001`'s audited pooled result,
+  **+0.30%/month, t 2.6** (n = 24, power ≈ 55%), which survived its ±20 suspension look-ahead audit.
+  D-062's deflation audit puts VOLEX at 2.59 against a 2.84 full-census bar, so this basis is
+  **thin**: it is an operating rule on weak evidence, not an established effect.
+- §3's book table is an **in-sample operating figure**. It is not evidence and is never cited as such
+  (§2 already forbids it).
+- §7 is unchanged: withdrawal is tied to VOLEX-001 failing at its own decision point. It has not
+  failed, and withdrawing early on a weakened prior would be a decision taken on an interim look.
