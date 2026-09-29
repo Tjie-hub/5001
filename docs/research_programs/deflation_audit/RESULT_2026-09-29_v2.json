@@ -1,0 +1,140 @@
+{
+ "method": "E[max|Z|] = int_0^inf 1-(2*Phi(z)-1)^N dz (exact, iid two-sided)",
+ "supersedes_method": "E[max|Z|] = (1-g)*Phi^-1(1-1/N) + g*Phi^-1(1-1/(N*e)), g=0.5772",
+ "bars_v1": {
+  "registered_only (N=8)": 1.46,
+  "registered+scans (N=50)": 2.28,
+  "+discovery sprint (N=120)": 2.59,
+  "all disclosed trials (N=252)": 2.84
+ },
+ "bars_v2": {
+  "registered_only (N=8)": 1.7834,
+  "registered+scans (N=50)": 2.5096,
+  "+discovery sprint (N=120)": 2.8067,
+  "all disclosed trials (N=252)": 3.0394,
+  "+broad search 2026-09-29 (N=266)": 3.0558
+ },
+ "headlines": [
+  {
+   "stat": "T1 reference A/EX-2025 (raw, overlapping-hold t)",
+   "abs_z": 2.98,
+   "survives_at_v1": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)",
+    "all disclosed trials (N=252)"
+   ],
+   "survives_at_v2": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)"
+   ]
+  },
+  {
+   "stat": "T1 reference D/EX-2025 next-open vs EW (raw)",
+   "abs_z": 3.84,
+   "survives_at_v1": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)",
+    "all disclosed trials (N=252)"
+   ],
+   "survives_at_v2": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)",
+    "all disclosed trials (N=252)",
+    "+broad search 2026-09-29 (N=266)"
+   ]
+  },
+  {
+   "stat": "T1 reference ex-2025 (overlap-robust, D-057)",
+   "abs_z": 1.8,
+   "survives_at_v1": [
+    "registered_only (N=8)"
+   ],
+   "survives_at_v2": [
+    "registered_only (N=8)"
+   ]
+  },
+  {
+   "stat": "FADE failed-breakdown h20 gross vs EW-book (D-057)",
+   "abs_z": 4.4,
+   "survives_at_v1": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)",
+    "all disclosed trials (N=252)"
+   ],
+   "survives_at_v2": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)",
+    "all disclosed trials (N=252)",
+    "+broad search 2026-09-29 (N=266)"
+   ]
+  },
+  {
+   "stat": "FADE h20 vs IHSG (D-057 re-read, mixed)",
+   "abs_z": 3.13,
+   "survives_at_v1": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)",
+    "all disclosed trials (N=252)"
+   ],
+   "survives_at_v2": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)",
+    "all disclosed trials (N=252)",
+    "+broad search 2026-09-29 (N=266)"
+   ]
+  },
+  {
+   "stat": "VOLEX-001 pooled ex-ante (2026-09-23 audit)",
+   "abs_z": 2.59,
+   "survives_at_v1": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)"
+   ],
+   "survives_at_v2": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)"
+   ]
+  },
+  {
+   "stat": "Insider E1s >=1% distributions h5 ex-2025 (D-061)",
+   "abs_z": 2.74,
+   "survives_at_v1": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)"
+   ],
+   "survives_at_v2": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)"
+   ]
+  },
+  {
+   "stat": "Insider E3 director/commissioner h20 ex-2025 (D-061)",
+   "abs_z": 1.41,
+   "survives_at_v1": [
+    "none"
+   ],
+   "survives_at_v2": []
+  },
+  {
+   "stat": "SCREEN-PM-LC-001 primary (broad search S2)",
+   "abs_z": 3.66,
+   "survives_at_v2": [
+    "registered_only (N=8)",
+    "registered+scans (N=50)",
+    "+discovery sprint (N=120)",
+    "all disclosed trials (N=252)",
+    "+broad search 2026-09-29 (N=266)"
+   ]
+  }
+ ]
+}

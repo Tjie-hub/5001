@@ -2070,6 +2070,72 @@ reports were a scanner resource error on docs-only commits (PROVENANCE_BASELINE_
 
 ---
 
+### D-064 · Broad edge search recorded: SCREEN-PM-CF-001 ({CF} issuance) FAIL; SCREEN-PM-LC-001 ({LC} young listings) PASS at screen level but era-concentrated — {LC} NOT opened; census bar corrected to the exact two-sided value; issuance-event adjustment added (opt-in) with a forward-window monitor
+**Status:** RECORDED · **Date:** 2026-09-29 · **Type:** Screen verdicts + methodology correction +
+engineering · **Approval authority:** Owner instruction 2026-09-29, "do the recommended A–D and
+push", on the checker review `P-M/broad_search/CHECKER_REVIEW_2026-09-29.md`.
+
+**A · Screen verdicts (ZCode, `9131d56` → `0029123` → `1abaa52`; checked `6b0566d`).**
+- Process verified: freeze before run, hashes match, no post-freeze drift, and an independent
+  re-run reproduced S2 exactly (−2.4475 %/mo, t −3.6557, 62 mo). The estimator is a calendar-time
+  portfolio (non-overlapping months), and the listing proxy flags real listings.
+- **SCREEN-PM-CF-001 = FAIL (null)**: primary −0.635 %/mo, t −0.56; grid max |t| 1.10; the
+  discovery half has the wrong sign. The `{CF}` issuance lead closes at screen level.
+- **SCREEN-PM-LC-001 = PASS (screen level)** under its frozen rule: −2.448 %/mo, t −3.66, discovery
+  half same sign (−1.26, t −1.29), vs IHSG t −3.21, placebo t −0.41. Stop rule honoured. Checker
+  findings, attached to the verdict:
+  - **Era-concentrated.** By year vs IHSG: 2021 −10.6, 2022 −3.7, 2023 −3.1, 2024 −0.3, 2025 −2.1,
+    2026 +1.2 %/mo. Dropping 2021 gives t −2.32; the last ~33 months are ≈ null. This is mostly the
+    2021–23 IPO-boom unwind.
+  - **{V}-independence untested**: the vol cells ran on the pooled window (disclosed deviation), with
+    t ≈ −1.8.
+  - **Book economics +0.15 %/mo** net.
+  - **Issuance-correction defect in the screen's `wealth_correct`.** It tested materiality on the
+    holder's return rather than the mechanical step, and it skipped every non-drop print, so TERP-priced
+    rights and all reverse splits went uncorrected (12 applied vs 25 by the correct rule). A validity
+    re-run with the correct rule (an audit, not a variant) gives **−2.456 %/mo, t −3.664**: S2 is
+    unaffected, and only one young window (PDPP bonus) spans an ex-date. S1's bias ran toward its own
+    hypothesis and it still returned null, so the null stands.
+- **B · `{LC}` NOT opened; RC-0003 not drafted.** The pass is carried by 2021–23, book economics are
+  small, and D-062 independence is unshown. A prospective no-slot recorder remains available on
+  request.
+- **Census:** 252 → **266** disclosed trials (14 broad-search arms; the checker's diagnostics add no
+  arm).
+
+**C · Deflation bar corrected (supersedes D-062 §3's bar values; D-062's receipt is not edited).**
+`deflation_audit.py` applied the one-sided Bailey–López de Prado approximation to the two-sided
+|Z|. The exact E[max|Z|] for N iid normals (`deflation_audit/bar_v2.py` →
+`RESULT_2026-09-29_v2.json`) is **1.78 / 2.51 / 2.81 / 3.04 / 3.06 at N = 8 / 50 / 120 / 252 / 266**
+(was 1.46 / 2.28 / 2.59 / 2.84 / 2.86).
+- Re-read: FADE vs EW-book 4.4 and vs IHSG 3.13, T1-D 3.84, and S2 3.66 all still clear.
+- T1's raw overlapping-hold 2.98 no longer clears full census (already dead under D-057's robust
+  re-read).
+- VOLEX 2.59 and insider 2.74 now fail from N = 120. **Nothing recorded as dead revives.**
+- The standing guard for any future candidate is **|Z| ≥ 3.06** after its own arms join.
+
+**D · Issuance-event adjustment + monitor.**
+- `data/adjustments.py` gains `load_issuance_events()` and `correct_issuance()`. They apply a
+  holder-wealth factor φ = P_ex/(m·P_ex − c) at rights/bonus/reverse-split ex-dates, gap-verified
+  (the step must have φ's direction and correcting must bring it closer to zero), with a 5%
+  materiality floor on the step, and volume scaled by 1/φ.
+- **Opt-in**: `research.rulecard.data.load_extended_ohlcv(issuance=False)` by default, so every
+  result frozen before 2026-09-29 reproduces. **New research runs set `issuance=True` and record it
+  in their params.** `load_split_factors`/`adjust_ohlcv` are unchanged.
+- `scripts/check_issuance_windows.py` (cron 09:45 weekdays) alerts once when a recorded
+  REGIME/FADE/VOLEX **holding** window spans such an ex-date. It is detection only; the frozen
+  protocols and ledgers are untouched (ZCode's proposed recorder censoring would have changed
+  in-flight rules, the §3.2e prohibition).
+- First run: 2 VOLEX-001 hold hits (BUVA ex 09-25, ENRG ex 10-05, both HELD). They are logged as
+  **OBS-2026-09-29, no deviation**: equal-weight held vs same-universe benchmark ⇒ net ≈ 0.01%.
+- ZCode's audit "zero windows" was correct at its 09-16 cutoff and did not cover the VOLEX hold.
+
+**Files:** this entry · `P-M/broad_search/CHECKER_REVIEW_2026-09-29.md` · `deflation_audit/bar_v2.py` +
+`RESULT_2026-09-29_v2.json` · `data/adjustments.py` · `research/rulecard/data.py` ·
+`scripts/check_issuance_windows.py` · `deploy/crontab` · `forward_exclusion/deviation_log.md` ·
+`EXPERIMENT_LEDGER.jsonl` (3 lines) · tests.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

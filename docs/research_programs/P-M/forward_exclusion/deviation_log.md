@@ -92,3 +92,26 @@ behaviour is out of scope here; the audit measured it at 5 names over ~47 period
 enters or exits on it. That is deliberate: a missing outcome is recoverable, a wrong one in an
 append-only ledger is not. `[stuck]` hands the case to the Owner. The standing remedy for a stranded
 session is `scripts/repair_provisional_bars.py --apply`.
+
+---
+
+## OBS-2026-09-29 · Issuance ex-dates inside the first holding window — observation, NO deviation
+
+**Detected by** `scripts/check_issuance_windows.py` (new under D-064 §D; detection only, never edits
+the ledger). Formation 2026-09-15 holds two names whose rights-issue ex-date falls inside the
+21-session hold (entry close 2026-09-16 → d1 ≈ 2026-10-15):
+
+- **BUVA**: rightissue ex 2026-09-25 (m 1.25, c 62.5), HELD.
+- **ENRG**: rightissue ex 2026-10-05 (m 1.5, c 155), HELD.
+
+The research price corpus is split-adjusted only (D-063/D-064), so each prints a mechanical step.
+
+**Why no deviation.** Both names are in the 180-name HELD leg, and the benchmark is the equal-weight
+**same 200-name universe**. The step therefore enters both sides with weights 1/180 vs 1/200: net
+effect on the spread ≈ step × (1/180 − 1/200) ≈ **0.01%** for a −20% step. That is immaterial
+against the decision rule. The frozen protocol is unchanged, the formation is scored as specified,
+and this note exists so the question is on record before the outcome is visible (`outcome: null`).
+
+Five further names (BNBR, ENRG 08-14, SINI, COCO, PADI) have July–August ex-dates inside the
+Parkinson-60 **lookback**. The estimator is range-based (ln(high/low) per day), so a close-to-close
+gap barely moves it. This is reported as information and is not a contamination claim.
