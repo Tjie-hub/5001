@@ -140,12 +140,38 @@ def merge_extended(H: pd.DataFrame, D: pd.DataFrame, SPL: pd.DataFrame, cut=CUT,
     return O
 
 
-def load_extended_ohlcv(hist=DEFAULT_HIST, splits=DEFAULT_SPLITS) -> pd.DataFrame:
+def load_extended_ohlcv(hist=DEFAULT_HIST, splits=DEFAULT_SPLITS,
+                        issuance: bool = False) -> pd.DataFrame:
+    """issuance=True also applies the gap-verified rights/bonus/reverse-split
+    holder-wealth correction (data.adjustments.correct_issuance, D-064). Off by
+    default so every result frozen before 2026-09-29 reproduces on its own basis;
+    new research runs set it and record it in their params."""
     from data.db import connect          # lazy: keeps this module importable without a DB
     H = pd.read_pickle(hist)
     SPL = pd.read_pickle(splits)
-    from data.adjustments import load_split_factors, read_raw_ohlcv
+    from data.adjustments import load_split_factors, read_raw_ohlcv, load_issuance_events
     with connect(read_only=True) as c:
         D = read_raw_ohlcv(c)
         factors = load_split_factors(c)
-    return merge_extended(H, D, SPL, db_splits=factors)
+        events = load_issuance_events(c) if issuance else {}
+    O = merge_extended(H, D, SPL, db_splits=factors)
+    if issuance:
+        O = apply_issuance(O, events)
+    return O
+
+
+def apply_issuance(O: pd.DataFrame, events: dict) -> pd.DataFrame:
+    """Per-ticker correct_issuance over a merged frame; audit in attrs['issuance_audit']."""
+    from data.adjustments import correct_issuance
+    attrs = dict(O.attrs)
+    parts, applied = [], []
+    for tk, g in O.groupby("ticker", sort=False):
+        ev = events.get(tk)
+        if ev:
+            g, a = correct_issuance(g, ev)
+            applied += [f"{tk} {x}" for x in a]
+        parts.append(g)
+    O = pd.concat(parts, ignore_index=True) if parts else O
+    O.attrs.update(attrs)
+    O.attrs["issuance_audit"] = applied
+    return O

@@ -124,3 +124,98 @@ def adjust_ohlcv(df, splits):
             df.loc[before, col] = df.loc[before, col] / ratio
         df.loc[before, "volume"] = df.loc[before, "volume"] * ratio
     return df
+
+
+# ── Issuance events: rights issues, bonus shares, reverse splits ─────────────
+# D-064 (2026-09-29): only splits were adjusted, so every rights/bonus/reverse
+# ex-date left a mechanical price step in the research corpus (FORU x19.5,
+# PACK x13.2, PANI x5.7; median rights factor ~1.43, i.e. a ~-30% step that
+# sits inside the +-35% band and is invisible to split-style guards). Terms come
+# from the exchange (corporate_action_events), so the factor is exact; the only
+# uncertainty is whether the source series is already adjusted -- hence the same
+# gap-verification discipline as splits. Deliberately a SEPARATE, opt-in path:
+# load_split_factors/adjust_ohlcv are unchanged, so frozen results reproduce.
+
+ISSUANCE_TYPES = ("rightissue", "bonus", "stock_reverse")
+# Mechanical steps smaller than this are immaterial next to ordinary daily moves.
+MIN_ISSUANCE_STEP = 1.05
+
+
+def load_issuance_events(conn):
+    """{ticker: [(ex_date, m, c, type), ...]} from corporate_action_events.
+
+    m = shares held after the event per share before; c = cash paid per share
+    before (rights subscription). Events without usable terms are dropped.
+    Fail-soft: a DB without the table yields {}.
+    """
+    import json
+    try:
+        rows = conn.execute(
+            "SELECT ticker, action_type, raw_json FROM corporate_action_events "
+            "WHERE action_type IN ('rightissue','bonus','stock_reverse')").fetchall()
+    except Exception:
+        return {}
+    out = {}
+    for ticker, kind, raw in rows:
+        try:
+            j = json.loads(raw)
+            if kind == "rightissue":
+                f = float(j["rightissue_new"]) / float(j["rightissue_old"])
+                m, c = 1.0 + f, f * float(j["rightissue_price"])
+                ex = j.get("rightissue_exdate")
+            else:
+                m, c = float(j["stocksplit_factor"]), 0.0
+                ex = j.get("stocksplit_exdate")
+        except (KeyError, TypeError, ValueError, ZeroDivisionError):
+            continue
+        if not ex or not (m > 0 and c >= 0) or math.isnan(m) or math.isnan(c):
+            continue
+        out.setdefault(ticker, []).append((str(ex)[:10], m, c, kind))
+    for t in out:
+        out[t].sort()
+    return out
+
+
+def correct_issuance(df, events, min_step=MIN_ISSUANCE_STEP):
+    """Holder-wealth correction of one ticker's frame at issuance ex-dates.
+
+    phi = P_ex / (m * P_ex - c) is the mechanical price step (holder wealth is
+    m*P_ex - c against P_prev). Bars strictly before the ex-date get prices*phi
+    and volume/phi (traded value preserved). Applied only when the raw ex-day
+    move has phi's direction AND correcting brings it closer to zero -- a series
+    already adjusted at the source shows no step and is left alone (the split
+    rule, in log space). Returns (frame, ['TICKER? date type phi=...']).
+    """
+    if df is None or len(df) == 0 or not events:
+        return df, []
+    dates = df["date"].astype(str).str[:10].values
+    closes = df["close"].values
+    factor = [1.0] * len(df)
+    applied = []
+    for ex, m, c, kind in events:
+        pos = int((dates < ex).sum())
+        if pos == 0 or pos >= len(df):
+            continue
+        prev, pex = float(closes[pos - 1]), float(closes[pos])
+        arg = m * pex - c
+        if not (prev > 0 and pex > 0 and arg > 0):
+            continue
+        phi = pex / arg
+        step = math.log(phi)
+        if abs(step) < math.log(min_step):
+            continue
+        obs = math.log(pex / prev)
+        if obs * step <= 0 or abs(obs - step) >= abs(obs):
+            continue
+        for i in range(pos):
+            factor[i] *= phi
+        applied.append(f"{dates[pos]} {kind} phi={phi:.6f}")
+    if not applied:
+        return df, []
+    import numpy as np
+    fac = np.asarray(factor)
+    df = df.copy()
+    for col in ("open", "high", "low", "close"):
+        df[col] = df[col].values * fac
+    df["volume"] = df["volume"].values / fac
+    return df, applied

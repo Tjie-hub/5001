@@ -302,3 +302,96 @@ def test_read_raw_ohlcv_returns_raw_settled_rows_only():
     assert splt.iloc[0]["close"] == pytest.approx(1000)   # RAW — no back-adjustment here
     assert len(out[out["ticker"] == "RAWW"]) == 1         # is_final fence: provisional excluded
     assert set(out["ticker"]) == {"SPLT", "RAWW"}
+
+
+# ── Issuance-event correction (rights / bonus / reverse split), D-064 2026-09-29 ──
+# Splits only were adjusted; rights, bonus and reverse-split ex-dates left a
+# mechanical price drop in the research corpus (FORU x19.5, PACK x13.2, PANI x5.7).
+# Exchange-sourced terms (corporate_action_events) are applied as a holder-wealth
+# correction, gap-verified like splits, and OPT-IN so frozen results reproduce.
+
+import json as _json
+import sqlite3 as _sqlite3
+
+import pandas as _pd
+import pytest as _pytest
+
+
+def _cae_conn(rows):
+    c = _sqlite3.connect(":memory:")
+    c.execute("CREATE TABLE corporate_action_events (ticker TEXT, action_type TEXT, "
+              "event_id TEXT, event_date TEXT, raw_json TEXT, fetch_date TEXT, updated_at TEXT)")
+    for t, a, j in rows:
+        c.execute("INSERT INTO corporate_action_events (ticker, action_type, event_date, raw_json)"
+                  " VALUES (?,?,?,?)", (t, a, "2026-01-01", _json.dumps(j)))
+    return c
+
+
+def test_load_issuance_events_parses_terms():
+    from data.adjustments import load_issuance_events
+    c = _cae_conn([
+        ("AAAA", "rightissue", {"rightissue_old": "1", "rightissue_new": "1",
+                                "rightissue_price": "40", "rightissue_exdate": "2026-01-05"}),
+        ("BBBB", "bonus", {"stocksplit_old": "100", "stocksplit_new": "30",
+                           "stocksplit_factor": "1.3", "stocksplit_exdate": "2026-02-02 00:00:00"}),
+        ("CCCC", "stock_reverse", {"stocksplit_factor": "0.1", "stocksplit_exdate": "2026-03-03"}),
+        ("DDDD", "rightissue", {"rightissue_exdate": "2026-01-05"}),          # no terms
+        ("EEEE", "dividend", {"dividend_exdate": "2026-01-05"}),               # not issuance
+    ])
+    ev = load_issuance_events(c)
+    assert set(ev) == {"AAAA", "BBBB", "CCCC"}
+    assert ev["AAAA"] == [("2026-01-05", 2.0, 40.0, "rightissue")]
+    assert ev["BBBB"] == [("2026-02-02", 1.3, 0.0, "bonus")]
+    assert ev["CCCC"] == [("2026-03-03", 0.1, 0.0, "stock_reverse")]
+
+
+def _frame(closes, start="2026-01-01"):
+    d = _pd.bdate_range(start, periods=len(closes)).strftime("%Y-%m-%d")
+    return _pd.DataFrame({"date": d, "open": closes, "high": closes, "low": closes,
+                          "close": [float(x) for x in closes], "volume": [1000.0] * len(closes)})
+
+
+def test_correct_issuance_applies_holder_wealth_factor_before_ex():
+    from data.adjustments import correct_issuance
+    df = _frame([100, 100, 60, 61])                     # ex-date = 3rd bar (2026-01-05)
+    ex = df["date"].iloc[2]
+    out, applied = correct_issuance(df, [(ex, 2.0, 40.0, "rightissue")])
+    phi = 60 / (2 * 60 - 40)                            # 0.75
+    assert out["close"].iloc[:2].tolist() == _pytest.approx([100 * phi] * 2)
+    assert out["close"].iloc[2:].tolist() == [60.0, 61.0]
+    assert out["volume"].iloc[0] == _pytest.approx(1000 / phi)   # traded value preserved
+    # ex-day return now equals the holder's true wealth return (2*60-40)/100 - 1 = -20%
+    assert out["close"].iloc[2] / out["close"].iloc[1] - 1 == _pytest.approx(-0.20)
+    assert len(applied) == 1 and "rightissue" in applied[0]
+
+
+def test_correct_issuance_skips_an_already_adjusted_series():
+    from data.adjustments import correct_issuance
+    df = _frame([70, 70, 70, 71])                       # no gap: source already adjusted
+    out, applied = correct_issuance(df, [(df["date"].iloc[2], 2.0, 40.0, "rightissue")])
+    assert applied == [] and out["close"].tolist() == df["close"].tolist()
+
+
+def test_correct_issuance_skips_immaterial_and_rally_prints():
+    from data.adjustments import correct_issuance
+    small = _frame([100, 100, 98, 98])                  # mechanical drop < 5%
+    out, applied = correct_issuance(small, [(small["date"].iloc[2], 1.02, 0.0, "bonus")])
+    assert applied == []
+    rally = _frame([100, 100, 115, 116])                # non-drop print at ex: ambiguous
+    out, applied = correct_issuance(rally, [(rally["date"].iloc[2], 2.0, 40.0, "rightissue")])
+    assert applied == []
+
+
+def test_correct_issuance_handles_a_reverse_split():
+    from data.adjustments import correct_issuance
+    df = _frame([10, 10, 100, 101])                     # 10:1 reverse, raw jump UP
+    out, applied = correct_issuance(df, [(df["date"].iloc[2], 0.1, 0.0, "stock_reverse")])
+    assert out["close"].iloc[:2].tolist() == _pytest.approx([100.0, 100.0])
+    assert len(applied) == 1
+
+
+def test_research_loader_issuance_correction_is_opt_in():
+    import inspect
+    from research.rulecard import data as rd
+    p = inspect.signature(rd.load_extended_ohlcv).parameters
+    assert "issuance" in p and p["issuance"].default is False

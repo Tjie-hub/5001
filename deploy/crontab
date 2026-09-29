@@ -83,6 +83,13 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # Repair a stranded session with: scripts/repair_provisional_bars.py --apply
 0 9 * * * cd $D && $W provisional_bars_check venv/bin/python3 scripts/check_provisional_bars.py
 
+# Issuance ex-date monitor (D-064 §D): alerts once when a recorded forward-test
+# window (REGIME/FADE hold, VOLEX hold) spans a rights/bonus/reverse-split
+# ex-date -- research prices are split-adjusted only, so such a window carries a
+# mechanical price step. Detection only; never edits a ledger. After the 09:30
+# regime and 09:35 fade recorders so their fresh appends are covered.
+45 9 * * 1-5 cd $D && $W issuance_windows_check venv/bin/python3 scripts/check_issuance_windows.py
+
 # FWD-PM-REGIME-001 forward test (HYP-PM-0010, family P-M Price-Trend {T1}),
 # opened 2026-09-17. Appends CLOSED trades to
 # docs/research_programs/P-M/forward_regime/ledger.json. Read-only against the
