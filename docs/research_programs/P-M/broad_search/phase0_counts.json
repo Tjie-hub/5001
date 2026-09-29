@@ -1,0 +1,575 @@
+{
+ "snapshot": {
+  "path": "/home/tjiesar/wf_snapshot_20260929/walkforward-20260928-213012.db",
+  "sha256": "10f9c97fb20bf8e89b0688a4728bdae531dce9711f31ddd5270b414ea7946c13",
+  "meta": "/home/tjiesar/wf_snapshot_20260929/walkforward-20260928-213012.meta.json"
+ },
+ "events_total": {
+  "rups": 6708,
+  "dividend": 4754,
+  "rightissue": 317,
+  "stocksplit": 194,
+  "tenderoffer": 163,
+  "warrant": 147,
+  "bonus": 82,
+  "stock_reverse": 19
+ },
+ "pit_hygiene": {
+  "bonus": {
+   "n": 82,
+   "created_present": 1.0,
+   "created_le_exdate": 0.5366,
+   "n_created_le_exdate": 82,
+   "created_weekend_share": 0.0
+  },
+  "dividend": {
+   "n": 4754,
+   "created_present": 1.0,
+   "created_le_exdate": 0.723,
+   "n_created_le_exdate": 4754,
+   "created_weekend_share": 0.0032
+  },
+  "rightissue": {
+   "n": 317,
+   "created_present": 1.0,
+   "created_le_exdate": 0.8927,
+   "n_created_le_exdate": 317,
+   "created_weekend_share": 0.0032
+  },
+  "rups": {
+   "n": 6708,
+   "created_present": 1.0,
+   "created_le_exdate": null,
+   "n_created_le_exdate": 0,
+   "created_weekend_share": 0.0
+  },
+  "stock_reverse": {
+   "n": 19,
+   "created_present": 1.0,
+   "created_le_exdate": 0.4737,
+   "n_created_le_exdate": 19,
+   "created_weekend_share": 0.0
+  },
+  "stocksplit": {
+   "n": 194,
+   "created_present": 1.0,
+   "created_le_exdate": 0.7577,
+   "n_created_le_exdate": 194,
+   "created_weekend_share": 0.0103
+  },
+  "tenderoffer": {
+   "n": 163,
+   "created_present": 1.0,
+   "created_le_exdate": null,
+   "n_created_le_exdate": 0,
+   "created_weekend_share": 0.0368
+  },
+  "warrant": {
+   "n": 147,
+   "created_present": 0.0,
+   "created_le_exdate": null,
+   "n_created_le_exdate": 0,
+   "created_weekend_share": null
+  }
+ },
+ "events_adv_gate": {
+  "bonus": {
+   "n_2013plus": 82,
+   "adv_known": 75,
+   "adv_ge_5bn": 13,
+   "adv_ge_1bn": 34,
+   "adv_median_bn": 0.67
+  },
+  "dividend": {
+   "n_2013plus": 4745,
+   "adv_known": 4127,
+   "adv_ge_5bn": 1467,
+   "adv_ge_1bn": 2155,
+   "adv_median_bn": 1.26
+  },
+  "rightissue": {
+   "n_2013plus": 315,
+   "adv_known": 282,
+   "adv_ge_5bn": 98,
+   "adv_ge_1bn": 151,
+   "adv_median_bn": 1.46
+  },
+  "rups": {
+   "n_2013plus": 6692,
+   "adv_known": 6458,
+   "adv_ge_5bn": 1577,
+   "adv_ge_1bn": 2669,
+   "adv_median_bn": 0.44
+  },
+  "stock_reverse": {
+   "n_2013plus": 19,
+   "adv_known": 14,
+   "adv_ge_5bn": 3,
+   "adv_ge_1bn": 3,
+   "adv_median_bn": 0.02
+  },
+  "stocksplit": {
+   "n_2013plus": 194,
+   "adv_known": 158,
+   "adv_ge_5bn": 64,
+   "adv_ge_1bn": 91,
+   "adv_median_bn": 2.43
+  },
+  "tenderoffer": {
+   "n_2013plus": 162,
+   "adv_known": 147,
+   "adv_ge_5bn": 40,
+   "adv_ge_1bn": 75,
+   "adv_median_bn": 1.03
+  }
+ },
+ "events_per_year_total_liquid": {
+  "bonus": {
+   "2014": [
+    17,
+    4
+   ],
+   "2017": [
+    1,
+    0
+   ],
+   "2018": [
+    3,
+    0
+   ],
+   "2021": [
+    2,
+    0
+   ],
+   "2022": [
+    6,
+    2
+   ],
+   "2023": [
+    24,
+    4
+   ],
+   "2024": [
+    9,
+    2
+   ],
+   "2025": [
+    6,
+    1
+   ],
+   "2026": [
+    7,
+    0
+   ]
+  },
+  "dividend": {
+   "2015": [
+    114,
+    41
+   ],
+   "2016": [
+    168,
+    64
+   ],
+   "2017": [
+    201,
+    79
+   ],
+   "2018": [
+    986,
+    356
+   ],
+   "2019": [
+    207,
+    78
+   ],
+   "2020": [
+    187,
+    67
+   ],
+   "2021": [
+    254,
+    102
+   ],
+   "2022": [
+    348,
+    128
+   ],
+   "2023": [
+    396,
+    139
+   ],
+   "2024": [
+    429,
+    138
+   ],
+   "2025": [
+    453,
+    148
+   ],
+   "2026": [
+    384,
+    127
+   ]
+  },
+  "rightissue": {
+   "2015": [
+    17,
+    3
+   ],
+   "2016": [
+    25,
+    10
+   ],
+   "2017": [
+    22,
+    7
+   ],
+   "2018": [
+    21,
+    3
+   ],
+   "2019": [
+    17,
+    2
+   ],
+   "2020": [
+    20,
+    3
+   ],
+   "2021": [
+    39,
+    24
+   ],
+   "2022": [
+    44,
+    17
+   ],
+   "2023": [
+    21,
+    5
+   ],
+   "2024": [
+    15,
+    2
+   ],
+   "2025": [
+    16,
+    11
+   ],
+   "2026": [
+    25,
+    11
+   ]
+  },
+  "rups": {
+   "2013": [
+    1,
+    0
+   ],
+   "2020": [
+    410,
+    83
+   ],
+   "2021": [
+    512,
+    185
+   ],
+   "2022": [
+    971,
+    270
+   ],
+   "2023": [
+    939,
+    208
+   ],
+   "2024": [
+    1177,
+    220
+   ],
+   "2025": [
+    1264,
+    289
+   ],
+   "2026": [
+    1184,
+    322
+   ]
+  },
+  "stock_reverse": {
+   "2014": [
+    5,
+    2
+   ],
+   "2015": [
+    1,
+    0
+   ],
+   "2017": [
+    2,
+    1
+   ],
+   "2018": [
+    2,
+    0
+   ],
+   "2020": [
+    2,
+    0
+   ],
+   "2022": [
+    1,
+    0
+   ],
+   "2024": [
+    1,
+    0
+   ]
+  },
+  "stocksplit": {
+   "2014": [
+    30,
+    16
+   ],
+   "2015": [
+    8,
+    1
+   ],
+   "2016": [
+    13,
+    4
+   ],
+   "2017": [
+    18,
+    8
+   ],
+   "2018": [
+    9,
+    2
+   ],
+   "2019": [
+    11,
+    5
+   ],
+   "2020": [
+    6,
+    2
+   ],
+   "2021": [
+    11,
+    8
+   ],
+   "2022": [
+    11,
+    5
+   ],
+   "2023": [
+    15,
+    4
+   ],
+   "2024": [
+    16,
+    3
+   ],
+   "2025": [
+    4,
+    2
+   ],
+   "2026": [
+    6,
+    4
+   ]
+  },
+  "tenderoffer": {
+   "2015": [
+    1,
+    0
+   ],
+   "2017": [
+    3,
+    0
+   ],
+   "2018": [
+    1,
+    0
+   ],
+   "2019": [
+    4,
+    0
+   ],
+   "2020": [
+    4,
+    2
+   ],
+   "2021": [
+    19,
+    9
+   ],
+   "2022": [
+    15,
+    6
+   ],
+   "2023": [
+    10,
+    2
+   ],
+   "2024": [
+    26,
+    3
+   ],
+   "2025": [
+    28,
+    5
+   ],
+   "2026": [
+    36,
+    13
+   ]
+  }
+ },
+ "rups_to_rightissue_12m": {
+  "rightissues_2013plus": 315,
+  "preceded_by_rups_12m": 116
+ },
+ "rups_agenda_nonempty": 0,
+ "tender_offer": {
+  "n_2013plus": 162,
+  "median_duration_days": 29.0,
+  "premium_median": -0.0129,
+  "premium_n": 147,
+  "adv_ge_5bn": 40
+ },
+ "dividend_io": {
+  "n_dividend_events_2013plus": 4745,
+  "initiations": 294,
+  "omissions_proxy": 99
+ },
+ "suspensions": {
+  "by_class": {
+   "data_gap": 2830,
+   "suspension": 359
+  },
+  "resume_2013plus": 3189,
+  "resume_2013plus_susp_class": 359
+ },
+ "listing_lifecycle": {
+  "tickers": 929,
+  "first_bar_year_counts": {
+   "2000": 30,
+   "2001": 48,
+   "2002": 50,
+   "2003": 18,
+   "2004": 18,
+   "2005": 24,
+   "2006": 11,
+   "2007": 23,
+   "2008": 11,
+   "2009": 9,
+   "2010": 16,
+   "2011": 23,
+   "2012": 17,
+   "2013": 23,
+   "2014": 16,
+   "2015": 13,
+   "2016": 13,
+   "2017": 28,
+   "2018": 45,
+   "2019": 44,
+   "2020": 43,
+   "2021": 193,
+   "2022": 64,
+   "2023": 81,
+   "2024": 41,
+   "2025": 26,
+   "2026": 1
+  },
+  "last_bar_before_2026": 54,
+  "last_bar_before_2025": 29,
+  "note": "history_long.db read directly mode=ro (static backfill, 929-ticker corpus)"
+ },
+ "news_mentions": {
+  "d0": "2026-04-26",
+  "d1": "2026-09-28",
+  "n": "93492",
+  "tk": "972"
+ },
+ "ticker_sector": {
+  "rows": 780,
+  "by_sector": {
+   "Industrials": 141,
+   "Consumer Cyclical": 111,
+   "Consumer Defensive": 107,
+   "Financial Services": 82,
+   "Basic Materials": 79,
+   "Real Estate": 72,
+   "Energy": 51,
+   "Communication Services": 43,
+   "Healthcare": 36,
+   "Technology": 34,
+   "Utilities": 13,
+   "NaN": 11
+  }
+ },
+ "exdate_inventory_2013plus": {
+  "bonus": {
+   "n": 71,
+   "n_2021plus": 41,
+   "factor_median": 1.188
+  },
+  "rightissue": {
+   "n": 315,
+   "n_2021plus": 153,
+   "factor_median": 1.43
+  },
+  "stock_reverse": {
+   "n": 12,
+   "n_2021plus": 2,
+   "factor_median": 0.128
+  },
+  "stocksplit": {
+   "n": 167,
+   "n_2021plus": 59,
+   "factor_median": 5.0
+  }
+ },
+ "exdate_jump_presence": {
+  "bonus": {
+   "n_measurable": 66,
+   "n_jump_gt_35pct": 4
+  },
+  "rightissue": {
+   "n_measurable": 273,
+   "n_jump_gt_35pct": 17
+  },
+  "stock_reverse": {
+   "n_measurable": 10,
+   "n_jump_gt_35pct": 2
+  },
+  "stocksplit": {
+   "n_measurable": 138,
+   "n_jump_gt_35pct": 3
+  }
+ },
+ "ledger_window_audit": {
+  "REGIME-002": {
+   "recorded_windows": 18,
+   "exdate_hits": []
+  },
+  "FADE-001": {
+   "recorded_windows": 0,
+   "exdate_hits": []
+  },
+  "VOLEX-001": {
+   "recorded_windows": 0,
+   "exdate_hits": []
+  }
+ },
+ "forward_window_exdates_20260917_0928": {
+  "window": [
+   "2026-09-17",
+   "2026-09-28"
+  ],
+  "by_type": {},
+  "with_jump": 0
+ }
+}
