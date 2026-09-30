@@ -9,6 +9,7 @@ logs/app.log, so every log line emitted during the suite landed in production's 
 import logging
 import sys
 import tempfile
+from pathlib import Path
 
 import pytest
 
@@ -46,3 +47,61 @@ def _redirect_module_log_files(tmp_path, monkeypatch):
         mod = sys.modules.get(mod_name)
         if mod is not None and hasattr(mod, attr):
             monkeypatch.setattr(mod, attr, tmp_path / f"{mod_name.rsplit('.', 1)[-1]}.log")
+
+
+# --- Real-database isolation (2026-09-30) --------------------------------
+# Root conftest.py pins DB_PATH for the whole process, which covers the
+# `from config import DB_PATH` bindings that ~20 modules freeze at import
+# time. This adds the per-test layer: the two call-time resolvers --
+# os.getenv("DB_PATH", ...) (security/audit_trail.py:32) and config.DB_PATH
+# -- are re-pointed at a per-test scratch file, and every test is wrapped
+# with a snapshot of the repo's real data/ directory (which is also a Python
+# package) so a test that creates or modifies a database there fails naming
+# the file.
+_REPO_DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+_DB_FILE_SUFFIXES = (".db", ".db-wal", ".db-shm", ".db-journal")
+
+# Modules that bypass config/env with their own module-level DB path computed
+# from __file__ (news_filter.py:28 does exactly this). Same shape and same
+# caveat as _LOG_PATH_ATTRS above: only modules already imported at collection
+# time are redirected; the per-test data/ snapshot catches any others.
+_DB_PATH_ATTRS = [
+    ("news_filter", "_DB_PATH"),
+]
+
+
+def _real_db_files() -> set:
+    if not _REPO_DATA_DIR.is_dir():
+        return set()
+    found = set()
+    for p in _REPO_DATA_DIR.iterdir():
+        if p.is_file() and p.name.endswith(_DB_FILE_SUFFIXES):
+            st = p.stat()
+            found.add((p.name, st.st_size, st.st_mtime_ns))
+    return found
+
+
+# Snapshot at conftest import = before any test module runs, so a
+# pre-existing real database (a dev checkout's data/walkforward.db) never
+# trips the guard; only files the suite itself created or modified do.
+_SESSION_START_DB_FILES = _real_db_files()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_db_path(tmp_path, monkeypatch):
+    import config as config_module
+
+    scratch = tmp_path / "test_walkforward.db"
+    monkeypatch.setenv("DB_PATH", str(scratch))
+    monkeypatch.setattr(config_module, "DB_PATH", str(scratch), raising=False)
+    for mod_name, attr in _DB_PATH_ATTRS:
+        mod = sys.modules.get(mod_name)
+        if mod is not None and hasattr(mod, attr):
+            monkeypatch.setattr(mod, attr, str(scratch))
+    before = _real_db_files()
+    yield
+    offenders = _real_db_files() - before
+    assert not offenders, (
+        f"this test created/modified real database file(s) under {_REPO_DATA_DIR}: "
+        f"{sorted(name for name, _, _ in offenders)}; route DB writes through "
+        "db_path=/tmp_path instead (see _isolate_db_path in tests/conftest.py)")
