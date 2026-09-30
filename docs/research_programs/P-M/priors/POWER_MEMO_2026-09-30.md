@@ -1,65 +1,68 @@
-# POWER MEMO — can the local panel confirm the literature priors? · 2026-09-30
+# POWER MEMO v2 — detectability in IR terms (supersedes v1) · 2026-09-30
 
-**Panel:** factor-zoo construction (ADV60 ≥ Rp 1bn, price ≥ Rp 50, month-end snapshots,
-59 months 2021-07→2026-09), **ex-frozen rows and volume>0 at entry AND exit** (the tradeability
-rule proposed in D-065 §2), computed on the 2026-09-30 DB copy · 19,248 name-months, 58 calendar
-months, 51 usable book months after warm-up. Books: hi52 (52-week-high proximity) sorted monthly;
-(i) top-⅓ tercile tilt, (ii) top-20% concentrated. Book returns are gross of costs (turnover cost
-≈ 0.6–2.9pp/yr at the observed 0.39/mo turnover; the TE and MDE rows are cost-insensitive).
-Numbers only — method notes at the bottom.
+**Framing (C2):** long–short factor premia and long-only book tracking error are different units.
+Detectability of an effect with annual information ratio `IR` over `T` years is
+`expected t = IR·√T`; years needed at bar `b` = `(b/IR)²`. No TE-unit mixing.
+**C1 applied:** tradeability = real print at entry (`volume>0`, no carry-forward); a position
+untradeable at `t+1` is **carried to its next real print**; delisting exits at the last print
+(no true delists occur in-corpus; a −100% sensitivity is noted, not scored).
+**Window:** 59 months ≈ 4.9 years, `√T = 2.21`.
 
-## 1. Realized tracking error vs equal-weight universe
+## 1. Realized local rows under C1 (re-measurement, not a discovery)
 
-| book | book %/yr | EW universe %/yr | realized excess | t | TE (monthly) | TE (annualized) |
-|---|---|---|---|---|---|---|
-| hi52 top-20% | +28.37 | +30.53 | **−2.16 pp/yr** | −0.30 | 4.712% | **16.32%** |
-| hi52 top-⅓ tercile | +20.56 | +30.53 | **−9.97 pp/yr** | −1.33 | 4.019% | **13.92%** |
+Panel as v1 (zoo filters), C1 rule applied, plus removal of rows with `fwd < −95%`
+(mechanical corporate-action drops — 0.2–0.4% of rows; the corpus carries unadjusted drops per
+the D-064 rights audit). 19,332 clean name-months, 50 book months:
 
-Read: a hi52 tilt carries 14–16%/yr of tracking error against the EW universe; the realized
-tradeable excess over the sample is ~zero-to-negative. (The unfiltered FINDINGS figure of
-+15.30pp/yr is not comparable: it excludes nothing frozen, ignores exit-side volume, and nets
-costs against a slightly different universe.)
+| row | book %/yr | universe %/yr | excess | t | TE (ann.) |
+|---|---|---|---|---|---|
+| hi52 top-20% (no volex) | +14.73 | −5.35 | +20.08 pp | **3.91** | 10.0% |
+| hi52 tercile | +8.45 | −5.35 | +13.80 pp | 3.56 | 7.7% |
+| EW universe itself | −5.35 (books window) / −3.90 (57 mo) | — | — | — | — |
 
-## 2. Prior sizes and whether 60 local months can see them
+**Read with care — three honest flags.**
+1. The old benchmark (+30.5%/yr in v1) was inflated by the exit-volume look-ahead (C1) and by
+   mechanical-drop rows; corrected, the universe earns ≈ −4 to −5%/yr, consistent with XP-001's
+   "EW ≈ IHSG −6.7pp". The book's own absolute return (+14.7%) is close to FINDINGS' +13.7% net.
+2. t = 3.91 / 3.56 are **convention-hopped re-measurements of already-disclosed arms** (hi52 was
+   inside the 92-trial census). They clear the old bars only because the benchmark bias was
+   removed after the fact. They are not bankable as discoveries; they ARE the reason D-065 §2
+   freezes the C1 tradeability rule going forward — any test under the frozen rule starts fresh.
+3. The book-vs-EW excess rides on the universe benchmark (UNIVERSE_BENCHMARK_MEMO); vs IHSG the
+   same book is ≈ +13pp/yr over a falling index — a beta/regime statement, not alpha.
 
-MDE over T=60 months = t_bar × σ_TE × √12 / √60 (%/yr). Months needed = (t_bar × σ_TE / α_m)².
-Two TE columns (top-20 / tercile); the verdict is identical, tercile shown where it differs.
+## 2. Detectability table (literature IRs vs our 4.9-year window)
 
-| effect | prior size (source, see §3) | MDE %/yr @60mo: t=1.65 | t=2.00 | t=2.8575 | t=3.46 | months to detect prior: t=1.65 | t=2.00 | t=2.8575 | t=3.46 | local data can confirm? |
-|---|---|---|---|---|---|---|---|---|---|---|
-| value — IDX | 0.37%/mo (Li, Wei & Zhang 2023)¹ | 12.0 (10.3) | 14.6 (12.5) | 20.9 (17.8) | 25.3 (21.5) | 441 (321) | 649 (472) | >60y (>60y) | >60y (>60y) | **NO** — not at any bar |
-| size — IDX | 0.28%/mo (LWZ)¹ | 12.0 (10.3) | 14.6 (12.5) | 20.9 (17.8) | 25.3 (21.5) | >60y (>60y) | >60y (>60y) | >60y | >60y | **NO** |
-| quality — IDX | 0.26%/mo (LWZ)¹ | 12.0 (10.3) | 14.6 (12.5) | 20.9 (17.8) | 25.3 (21.5) | >60y (650) | >60y (>60y) | >60y | >60y | **NO** |
-| profitability — IDX | 0.24%/mo (LWZ)¹ | 12.0 (10.3) | 14.6 (12.5) | 20.9 (17.8) | 25.3 (21.5) | >60y (>60y) | >60y | >60y | >60y | **NO** |
-| momentum — IDX | not significant (LWZ)¹ | — no prior size to detect — | | | | | | | | n/a |
-| value — EM | 0.72%/mo (Rouwenhorst 1999, EM EW, t 3.82)² | 12.0 (10.3) | 14.6 (12.5) | 20.9 (17.8) | 25.3 (21.5) | 117 (85) | 171 (125) | 350 (254) | 513 (373) | **NO** — needs 10–43y |
-| size — EM | 0.70%/mo (Rouwenhorst 1999, t 3.09)² | 12.0 (10.3) | 14.6 (12.5) | 20.9 (17.8) | 25.3 (21.5) | 123 (90) | 181 (132) | 370 (269) | 542 (395) | **NO** |
+`expected t = IR·√4.9`; `years needed = (bar/IR)²`. XP-001 rule B (planner reference): TE
+≈ 0.78%/mo (≈2.7%/yr), IR ≈ 1.6.
 
-¹ Li, Wei & Zhang premia are **planner-supplied and NOT verified against the PDF** — the paper
-   could not be imported into the NotebookLM corpus (paywalled fetch failure); page-level
-   citation pending. Verified status required before any card cites them.
-² Rouwenhorst numbers are from the imported full-text working paper (Yale ICF 98-95) and were
-   extracted with per-page citations by NotebookLM; the Indonesia-specific rows it reports
-   (B/M +1.11%/mo t 1.74; E/P +1.18%/mo t 2.11; S−B −0.46%/mo t −0.77, 1990–1997) are consistent
-   with the planner's framing but carry the same verification caveat before card use.
+| effect | source | annual IR (basis) | expected t @4.9y | years @ t 1.65 | @ 2.00 | @ 2.8575 | verdict |
+|---|---|---|---|---|---|---|---|
+| value — IDX | LWZ 2023 · 0.37%/mo | PENDING-EXTERNAL (files absent — Task 1 not runnable) | — | — | — | — | **PENDING** `priors/external/lwz/` |
+| size — IDX | LWZ · 0.28%/mo | PENDING-EXTERNAL | — | — | — | — | PENDING |
+| quality — IDX | LWZ · 0.26%/mo | PENDING-EXTERNAL | — | — | — | — | PENDING |
+| profitability — IDX | LWZ · 0.24%/mo | PENDING-EXTERNAL | — | — | — | — | PENDING |
+| momentum — IDX | LWZ · n.s. | — (no prior) | — | — | — | — | nothing to detect |
+| B/M — IDX 1990–97 | Rouwenhorst WP (verified via NotebookLM) t=1.74/8y | **0.61** | 1.36 | 7.2y | 10.6y | 21.6y | **NO** in-window |
+| E/P — IDX 1990–97 | Rouwenhorst t=2.11/8y | **0.75** | 1.65 | 4.9y | 7.2y | 14.7y | **NO** at census bar; marginal at 1.65 |
+| size — IDX 1990–97 | Rouwenhorst t=−0.77/8y | **−0.27** | −0.60 | never (sign contrary) | never | never | **NO** — local sign test is the only use |
+| value — EM agg 1987–97 | Rouwenhorst t=3.82/11y (EW) | **1.15** | 2.55 | 2.1y | 3.0y | 6.1y | **MAYBE** — ~6y needed at census bar |
+| E/P — EM agg | Rouwenhorst t=4.46/11y | **1.34** | 2.98 | 1.5y | 2.2y | 4.5y | **YES in-window** at census bar (4.5y) |
+| size — EM agg | Rouwenhorst t=3.09/11y | **0.93** | 2.06 | 3.1y | 4.6y | 9.4y | **NO** at census bar |
+| XP-001 rule B (vol-excl top-200 tilt) | program record | **1.6** | 3.54 | 1.1y | 1.6y | 3.2y | **YES** — already measured |
 
-## 3. Verdict (one line per effect)
+## 3. Verdict
 
-- Every literature prior (3–9%/yr in alpha terms) is **below the 60-month MDE at every bar
-  except t=1.65 on the tercile book for the EM value/size priors (MDE 10.3%)** — and even there
-  the required windows are 85–132 months, i.e. 7–11 years of clean data that do not exist.
-- The only effect sizes the local 60-month panel can detect at the census bar (t 2.8575) are
-  ≥ ~18–21%/yr — larger than any published equity factor premium; anything that small that
-  "clears" locally is more plausibly a residual artifact than a factor.
-- Implication feeding D-065 §1: external priors must carry the weight; local tests can only
-  **fail to reject**, never confirm, at these TEs.
+- The only rows detectable **in-window at the census bar** are the EM-aggregate E/P prior (4.5y)
+  and XP-001-B (already measured). IDX-specific single-country priors (IR 0.6–0.75) need 7–22
+  years — our panel can never confirm them; local tests can only fail to reject.
+- Consequence for D-065 §1 unchanged from v1: the external prior carries the weight; local
+  confirmation is not a reachable standard for IDX-specific factors.
+- LWZ rows activate the moment the Owner drops the paper/data in `priors/external/lwz/`
+  (Task 1 then computes: per factor, mean %/mo, t, annual IR — full sample and era splits).
 
-## Method (for reproduction)
+## Method
 
-- Panel rebuilt from `ohlcv` (is_final=1) with the zoo filters; features at month-end t, return
-  t→t+1; frozen rows removed by requiring `volume>0` at both t and t+1; books = top-20% / top-⅓
-  by hi52 among eligible names, ≥60 names and ≥10 picks per month else skip; EW universe = mean
-  of the same eligible cross-section; TE = std(book − EW) monthly.
-- MDE and months-needed are analytic (Gaussian), two-sided t bars as listed; the 2.8575 bar is
-  the program's census-adjusted discovery bar (N=266), 3.46 the Bonferroni-92 bar from
-  `FINDINGS_2026-09-18.md`.
+Same panel code as v1 (month-end snapshots, zoo filters), C1 carry-to-next-real-print returns,
+mechanical-drop screen at −95%, Gaussian detectability math. Computations ran as one-off heredocs
+on the 2026-09-30 DB copy; the conventions above are the specification.
