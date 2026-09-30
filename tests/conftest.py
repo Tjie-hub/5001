@@ -105,3 +105,28 @@ def _isolate_db_path(tmp_path, monkeypatch):
         f"this test created/modified real database file(s) under {_REPO_DATA_DIR}: "
         f"{sorted(name for name, _, _ in offenders)}; route DB writes through "
         "db_path=/tmp_path instead (see _isolate_db_path in tests/conftest.py)")
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Session-level sweep: the run FAILS (nonzero exit status) if anything
+    created or modified a database under the repo's real data/ directory.
+
+    Compares against _SESSION_START_DB_FILES (snapshotted at conftest import,
+    before any test module runs), so it also catches writes the per-test
+    wrapper cannot attribute -- import-time side effects between tests,
+    collection-time activity, or writes from code that ignores DB_PATH
+    entirely. Supported way to fail the session from this hook: wrap_session
+    assigns session.exitstatus BEFORE this hook runs and RETURNS the same
+    attribute afterwards (_pytest/main.py::wrap_session), so setting it here
+    changes the status pytest returns to the shell.
+    """
+    offenders = _real_db_files() - _SESSION_START_DB_FILES
+    if not offenders:
+        return
+    names = sorted(name for name, _, _ in offenders)
+    sys.stderr.write(
+        f"\n=== DB-ISOLATION GUARD: the session created/modified real database "
+        f"file(s) under {_REPO_DATA_DIR}: {names} ===\n"
+        f"=== DB writes must go through db_path=/tmp_path (see "
+        f"_isolate_db_path in tests/conftest.py); failing the session. ===\n")
+    session.exitstatus = pytest.ExitCode.TESTS_FAILED
