@@ -2,6 +2,11 @@
 
 Run: 2026-09-30T15:25:50 | corpus as-of 2026-07-29 | liquid universe 958 tickers | CV boundary 2024-12-23
 
+**Data source note:** this run used a read-only local snapshot copy of the
+production DB (`D:\IDX\data\walkforward.db` as of 2026-09-30, data through
+2026-07-29) taken into the WSL dev clone for this audit -- not a live
+connection to production.
+
 ## T1 — universe pooled (net of round-trip costs)
 - exp -1.298%/trade | N 899 | win 29.0% | **FAIL** (bar >= +0.50%, N >= 300)
 
