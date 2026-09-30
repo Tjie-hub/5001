@@ -1,17 +1,18 @@
 """
-Regime Filter — AI-powered market regime detection per ticker.
+Regime Filter — rule-based market regime detection per ticker.
 ==============================================================
-Deteksi regime: BULL / BEAR / SIDEWAYS
+Deteksi regime: BULL / BEAR / SIDEWAYS (rule-based ADX / MA-slope / close-vs-MA).
 Lalu pilih strategi yang sesuai.
 
+Catatan (P4-8, 2026-09-30): docstring lama mengklaim "AI-powered" — tidak akurat. Jalur
+produksi adalah aturan rule-based; ada overlay ML Regime Classifier (bawah) yang hanya
+dipakai bila lolos gate holdout/baseline (lihat P4-4 — gate-nya sendiri masih dikerjakan).
+
 Usage:
-    from engine.regime_filter import detect_regime, strategy_regime_adaptive
+    from engine.regime_filter import detect_regime
 
     # Detect regime saja
     regime = detect_regime(df)  # "BULL" / "BEAR" / "SIDEWAYS"
-
-    # Full strategy — auto-select berdasarkan regime
-    result = strategy_regime_adaptive(df, capital=50_000_000)
 """
 
 import numpy as np
