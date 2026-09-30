@@ -44,13 +44,17 @@ baseline — see `build_c4_panel.py`'s docstring/comments for the full account).
 
 **Not issuance-corrected per D-064.** That mechanism is fully coded
 (`data/adjustments.py: load_issuance_events`/`correct_issuance`) but its data table
-(`corporate_action_events`, populated from a live Stockbit endpoint) is empty in production —
-verified directly, read-only, 2026-09-30. A live repopulation attempt failed: the cached Stockbit
-token is expired (401) and production's own `auto_token.log` shows auto-refresh failing since at
-least 2026-09-22 (`REFRESH_FAILED ... action=manual_intervention_required`) — a pre-existing infra
-issue, not something fixed here. Regular stock **splits are still applied** (the sanctioned
-`data.loaders._load_ohlcv_bulk(adjusted=True)` path, audit R-1, unaffected by the gap). Per Owner
-direction this rebuild falls back to the **standing interim rule already adopted in
+(`corporate_action_events`) is empty on **the Windows machine's DB copy** (data ends 2026-07-29,
+pre-D-064) — verified directly, read-only, 2026-09-30, against that copy specifically. This is
+**not** a claim about the Dell/real production system, which the Owner is checking separately.
+A live repopulation attempt against the Windows copy failed: its cached Stockbit token is expired
+(401) and that machine's `auto_token.log` shows auto-refresh failing since at least 2026-09-22
+(`REFRESH_FAILED ... action=manual_intervention_required`) — a pre-existing infra issue on that
+copy specifically, not something fixed here, and not necessarily true of the Dell. Regular stock
+**splits are still applied** (the sanctioned `data.loaders._load_ohlcv_bulk(adjusted=True)` path,
+audit R-1, unaffected by the gap — see "why the numbers changed" below for exactly which code
+this is and where it landed). Per Owner direction this rebuild falls back to the **standing
+interim rule already adopted in
 D-065_PROPOSAL_v2 §2**: rows below −95% in a single month are excluded from EW/CW means and
 reported separately. In this rebuild **zero rows** triggered that screen (see "why the numbers
 changed" below for why) — the screen stays in the code as a safety net, not because it fired.
@@ -80,7 +84,7 @@ date/return machinery is sound — the divergence is specifically in the EW/CW c
 | CW vs EW | CW ≈ EW every year (gap 0.0-0.1pp) | CW and EW diverge materially (e.g. 2023: EW −14.3% vs CW +9.5%, a 23.8pp gap) | true cap weight concentrates in resilient large caps (BBCA, BBRI, TPIA) that the old stale-share proxy didn't properly isolate |
 | Full-period FULL row | EW −11.25%/yr, CW −10.21%/yr | EW −7.85%/yr, CW −5.65%/yr | still negative vs IHSG, but materially less negative once true CW and correct split-adjustment are both applied |
 | Formation-vs-return timing | not stated explicitly | explicit: universe formed at t (data through t), return measured t→t+1 | the naive same-month version of this rebuild produced EW/CW of **+17%/+20%/yr** — a look-ahead bug now documented as a worked example in `build_c4_panel.py` |
-| "Impossible" contributor numbers (NAIK −13,200%, TRUE −163pp) | present, flagged as mechanical-drop artifacts, "not evidence" | **gone** — same tickers now show NAIK −63%, TRUE −95% cumulative over the full window, plausible | this was primarily a **split-adjustment bug** in whatever produced the old panel, not primarily the D-064 rights/bonus gap — issuance correction (still unavailable) is a smaller residual, not the dominant source of the old contamination |
+| "Impossible" contributor numbers (NAIK −13,200%, TRUE −163pp) | present, flagged as mechanical-drop artifacts, "not evidence" | **gone** — same tickers now show NAIK −63%, TRUE −95% cumulative over the full window, plausible | **not a new fix.** The sanctioned split-adjusted read (`data/loaders.py: _load_ohlcv_bulk`/`load_ohlcv_df`, via `data/adjustments.py: adjust_ohlcv`) already existed and was already correct — introduced `507a428` ("corporate-action split adjustment in research loading path, audit R-1, P0"), refined `f82da6a` ("gap-verified split adjustment") and `f46f33d` (moved the raw read into the adjustment authority), all predating this session. This rebuild's script simply calls that path (`_load_ohlcv_bulk(adjusted=True)`). Per POWER_MEMO's own Method note, the OLD panel's numbers came from an unsaved one-off heredoc — it was never committed, so there is no buggy commit to point to; the most defensible reading is that script didn't go through the sanctioned path, not that the sanctioned path itself was wrong. No production-code fix is being claimed or needed here. |
 | −95% single-month screen | fired routinely (basis for "contaminated, not evidence" caveat) | fired **zero** times in this rebuild | consistent with the split-adjustment finding above: most of what the screen used to catch is now handled upstream by correct adjustment |
 
 ## Top contributors (2026-09-30 rebuild — real, not "indicative")

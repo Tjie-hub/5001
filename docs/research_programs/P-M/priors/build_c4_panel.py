@@ -14,12 +14,16 @@ IMPORTANT DEVIATION FROM THE ORIGINAL INSTRUCTION: this panel is NOT
 issuance-corrected per D-064. That mechanism (data/adjustments.py
 load_issuance_events/correct_issuance) is fully coded, but its data table
 (corporate_action_events, populated by stockbit_corporate_actions.py from a
-live Stockbit endpoint) is empty in production -- verified directly against
-D:\\IDX\\data\\walkforward.db, read-only, 2026-09-30. Attempting to populate
-it live failed: the cached Stockbit token is expired (401), and
-production's own auto_token.log shows auto-refresh failing since at least
-2026-09-22 ("REFRESH_FAILED ... action=manual_intervention_required"), a
-pre-existing infra issue outside this session's scope to fix.
+live Stockbit endpoint) is empty on THE WINDOWS MACHINE'S DB COPY (data
+ends 2026-07-29, pre-D-064) -- verified directly against
+D:\\IDX\\data\\walkforward.db, read-only, 2026-09-30. This is a claim about
+that copy specifically, NOT about the Dell/real production system, which
+the Owner is checking separately. Attempting to populate it live against
+the Windows copy failed: its cached Stockbit token is expired (401), and
+that machine's auto_token.log shows auto-refresh failing since at least
+2026-09-22 ("REFRESH_FAILED ... action=manual_intervention_required") -- a
+pre-existing infra issue on that copy, outside this session's scope to fix,
+and not necessarily true of the Dell.
 
 Per Owner direction (2026-09-30), this panel therefore falls back to the
 STANDING interim rule already adopted in D-065_PROPOSAL_v2 SS2: rows with a
