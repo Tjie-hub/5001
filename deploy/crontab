@@ -99,3 +99,11 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # 09:00 provisional-bars dead-man's-switch, so a stranded session is flagged
 # before it can be silently recorded as a formation.
 30 9 * * * cd $D && $W fwd_regime_formation venv/bin/python3 docs/research_programs/P-M/forward_regime/run_formation.py
+
+# FWD-PM-FADE-001 forward test (HYP-PM-0012, family P-M Price-Reversal {R1}),
+# opened 2026-09-21 (D-052). Appends a signal to
+# docs/research_programs/P-M/forward_fade/ledger.json only when its h=20 leg
+# closes; read-only against the DB; refuses back-fill (signals dated before
+# opened_utc). Runs after the 09:30 regime recorder. Was installed live since
+# d73db17 but missing here until 2026-09-30 (installed/deploy drift).
+35 9 * * * cd $D && $W fwd_fade_recorder venv/bin/python3 docs/research_programs/P-M/forward_fade/run_recorder.py
