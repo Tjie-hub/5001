@@ -54,3 +54,15 @@ B. Delisted/inactive names (from `idx_tickers.status='inactive'`, 14 names):
 - Recommended interim use: survivors-only pre-2021 data is fit for *time-series* checks (e.g.
   regime/era robustness of an existing registered test) and unfit for new *cross-sectional*
   discoveries without an explicit survivorship caveat on the card.
+
+## From the second run (17ec02e)
+
+Findings unique to the second agent's pass (same POC file, probes complementary to this memo's):
+
+- **BTEL.JK** (Bakrie Telecom, forced delisting ~2019 — a confirmed delisting, unlike this
+  memo's probes): yfinance returns **0 rows** — direct evidence that Yahoo purges delisted
+  `.JK` names, not an inference.
+- Corpus-side survivorship count (S2 record): **54 of 929** `ohlcv_long` names end before 2026;
+  pre-2021 the panel is the yfinance backfill, so pre-fetch purges are absent by construction.
+- ELTY.JK (6,020 rows from 2002-06) and DUTI.JK (6,131 rows from 2002-01) confirm survivor
+  depth to ~2002 under daily bars, matching this memo's survivors finding.

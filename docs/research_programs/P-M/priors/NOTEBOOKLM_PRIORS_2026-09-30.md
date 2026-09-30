@@ -366,3 +366,23 @@ Emphasizes a census-adjusted discovery bar of
 .
 "💡 Next Step: Would you like me to build a custom Python script or interactive dashboard to compute the Deflated Sharpe Ratio (DSR) and"
 "-statistic cutoffs for your own backtested strategy return series?"
+
+## From the second run (17ec02e)
+
+The second agent independently created a second notebook for the same brief:
+https://notebook.google.com/notebook/3d4faa92-9382-48c0-9ce9-ec425596dcac (now marked
+SUPERSEDED in-notebook; this notebook is canonical). Unique content from it:
+
+- **Sources ingested there, not here:** McLean & Pontiff working-paper PDF (FMG,
+  fmg.ac.uk — direct primary source, vs this notebook's HLZ-critique route), Bailey & López de
+  Prado DSR author PDF (davidhbailey.com), Stambaugh/Yu/Yuan NBER w16898 page, HXZ NBER w23181.
+  11 fetch failures recorded (SSRN/Wiley/OUP/ScienceDirect/ResearchGate bot-walls; all three
+  idx.co.id PDFs rejected) — consistent with this notebook's experience.
+- **BCW weighting result surfaced by query (relevant to every EW book here):** in Bali,
+  Cakici & Whitelaw, the MAX lottery effect (VW −1.03%/mo, t −2.83) and the IVOL risk effect
+  (VW alpha −1.33%/mo, t −5.09) **cancel under equal-weighting** (IVOL flips sign: +0.37%/mo,
+  t 1.09 EW). An EW book's factor exposures are therefore not the published VW ones — priors
+  transfer as sign hypotheses only.
+- Setup note: the failed-fetch entries in that notebook carry "Info error" markers and were
+  left un-deleted there as the failure record; per the reconciliation instruction this
+  notebook (eb0bcc91) is the single canonical one.

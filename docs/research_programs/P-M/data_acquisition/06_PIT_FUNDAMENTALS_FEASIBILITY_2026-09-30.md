@@ -59,3 +59,18 @@ usable PIT approximation for screens, and it must be labelled as such on any car
   incl. delisted where obtainable): **3–5 days**, mostly per-statement date sourcing for delisted
   names; coverage realistically ≥90% of currently-listed, materially lower for delisted.
 - Authoritative IDX announcement scrape: 3–5 days **+ Owner authorization** (bot-guarded).
+
+## From the second run (17ec02e)
+
+Findings unique to the second agent's pass (POC: `poc_pit_fundamentals_ohlcv.py`, same run date):
+
+- **yfinance payload inspection (BBCA.JK, annual income statement):** FY2025 statement retrieved
+  free — period end 2025-12-31, TotalRevenue Rp 114,319,648,000,000,
+  NetIncomeContinuousOperations Rp 57,563,093,000,000 — and **no filing/publication timestamp
+  exists anywhere in the payload** (checked, not assumed). yfinance numbers are real but
+  PIT-by-construction only; any assumed filing lag is fabricated PIT.
+- **idx.co.id announcement endpoint (HTTP-level probe):** single unauthenticated GET to
+  `primary/Announcement/GetAnnouncement` returned **HTTP 403 Cloudflare** ("Just a moment") —
+  confirming this memo's JS-app assessment at the protocol level. Source dropped per ground
+  rules; no bypass attempted.
+- Stockbit credentials-are-provisioned assessment concurs with this memo's source 2; not attempted.
