@@ -17,6 +17,15 @@ def _wib_today() -> str:
     return datetime.now(_WIB).strftime("%Y-%m-%d")
 
 # ── Index Constituents (preserved for backward compat) ───────────────────────
+# Current-day snapshot only, hand-maintained -- NOT a point-in-time history.
+# Verified (audit P4-7): neither the live scan (scheduler/scanner.py, via
+# data.loaders.get_all_tickers -> idx_tickers/ohlcv) nor the research corpus
+# (research/studies/*.py's liquid_universe(), also ohlcv-derived) reads these
+# lists to build its ticker set -- they're consumed only by IDX80-scoped flow/
+# ownership backfill tools and screener category fallbacks, where "today's
+# membership" is the correct semantic. Never use these to backtest or
+# reconstruct a historical universe; for IDX80 specifically, use
+# research.idx80_membership's point-in-time accessor instead.
 IDX30 = [
     "AMMN", "AMRT", "ASII", "BBCA", "BBNI", "BBRI", "BBTN",
     "BMRI", "BREN", "BRIS", "BRPT", "CPIN", "EXCL", "GOTO",
