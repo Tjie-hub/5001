@@ -36,6 +36,29 @@ def test_pool_empty_is_zero_n():
     assert ns.pool([]) == {'exp_pct': 0.0, 'n': 0, 'win_rate': 0.0}
 
 
+# ── Task 1b: liquidity-scaled costs opt-in (audit P4-6) ─────────────────────
+def test_round_trip_net_pct_adv_none_matches_flat_default():
+    """Omitting adv_value_idr (every caller before P4-6, and gatekeeper/
+    candidate.py + regime/profile.py today) must be byte-identical to the
+    pre-P4-6 flat-cost result."""
+    assert ns.round_trip_net_pct(100.0, 110.0, adv_value_idr=None) == \
+        ns.round_trip_net_pct(100.0, 110.0)
+
+
+def test_round_trip_net_pct_low_adv_costs_more_than_flat():
+    flat = ns.round_trip_net_pct(100.0, 110.0)
+    illiquid = ns.round_trip_net_pct(100.0, 110.0, adv_value_idr=6_000_000_000)
+    assert illiquid < flat
+
+
+def test_pool_uses_per_trade_adv_when_present():
+    trade = _t('A', '2025-01-01', 100, 110)
+    trade['adv_value_idr'] = 6_000_000_000
+    r = ns.pool([trade])
+    assert r['exp_pct'] == pytest.approx(
+        ns.round_trip_net_pct(100, 110, adv_value_idr=6_000_000_000), abs=1e-9)
+
+
 # ── Task 3: CV split + selection ────────────────────────────────────────────
 def test_cv_split_partitions_by_date():
     trades = [_t('A', '2024-01-01', 100, 110), _t('A', '2025-06-01', 100, 90)]
