@@ -23,10 +23,9 @@ from engine.regime_filter import detect_regime
 from engine.exits.costs import COMMISSION_SELL, SLIPPAGE
 import research.nr7_study as ns
 
-DB_PATH = os.getenv('DB_PATH', os.path.join(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__))), 'data', 'walkforward.db'))
-RESULTS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                       'docs', 'superpowers', 'results',
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DB_PATH = os.getenv('DB_PATH', os.path.join(_REPO_ROOT, 'data', 'walkforward.db'))
+RESULTS = os.path.join(_REPO_ROOT, 'docs', 'superpowers', 'results',
                        '2026-07-07-nr7-generalization-study.md')
 
 # Matches run_walk_forward's get_warmup([calc_vwap, calc_adx, calc_ma_slope,
@@ -43,14 +42,21 @@ def _regime_at(full_df: pd.DataFrame, entry_date: str) -> str:
     return detect_regime(hist.reset_index(drop=True))
 
 
-def collect_trades_for_ticker(ticker: str, df: pd.DataFrame) -> list:
+def collect_trades_for_ticker(conn, ticker: str, df: pd.DataFrame) -> list:
     """NR7 OOS trades for one ticker as study-trade dicts (raw prices + regime).
 
     Mirrors run_walk_forward: each 3mo test window gets a 60-bar warmup tail
     prepended, and trades entered before test_start are dropped. strategy_nr7
     stores raw entry but SELL-cost-adjusted exit; we invert that one adjustment
     to recover raw_exit so nr7_study applies full round-trip costs from raw
-    prices (single cost authority)."""
+    prices (single cost authority).
+
+    Liquidity is gated per trade at its own entry date (audit P4-1): a trade
+    only counts if the ticker's trailing 30d ADV *as of that date* cleared the
+    floor, not whether the ticker happens to be liquid at the corpus's as-of
+    date. This can both drop trades (ticker was illiquid back then) and admit
+    trades a single as-of-today filter would have thrown away entirely (ticker
+    was liquid for years but has since gone quiet)."""
     df = df.sort_values('date').reset_index(drop=True)
     out = []
     for w in walk_forward_split(df, train_months=12, test_months=3):
@@ -64,37 +70,51 @@ def collect_trades_for_ticker(ticker: str, df: pd.DataFrame) -> list:
             entry = str(tr.entry_date)[:10]
             if entry < test_start:          # drop warmup-window trades
                 continue
+            adv = get_adv_value_30d(conn, ticker, entry)
+            if adv is None or adv < VALUE_LIQ_MIN_IDR:
+                continue
             out.append({
                 'ticker': ticker,
                 'entry_date': entry,
                 'raw_entry': float(tr.entry_price),
                 'raw_exit': float(tr.exit_price) / _SELL_ADJ,
                 'regime': _regime_at(df, entry),
+                'adv_value_idr': adv,  # opts into liquidity-scaled costs (P4-6)
             })
     return out
 
 
-def liquid_universe(conn, as_of: str) -> list:
-    tickers = [r[0] for r in conn.execute(
+def liquid_universe(conn) -> list:
+    """Every candidate ticker with any price history at all.
+
+    Not a liquidity filter -- the actual admission gate is the per-trade-date
+    ADV check in collect_trades_for_ticker, via the approved
+    engine.liquidity.get_adv_value_30d helper. Previously this function
+    applied *today's* ADV to the whole 5-year study, which both
+    look-ahead-biased early trades toward a ticker's current liquidity and
+    silently dropped the entire history of any ticker that has since gone
+    illiquid (audit P4-1). An earlier version of this fix added a coarse
+    any-time-liquid pre-filter here to avoid loading OHLCV for names that
+    were never tradeable, but that meant a hand-rolled raw `close` read on
+    ohlcv (unadjusted for splits) inside research/ -- exactly what audit R-1's
+    guard (tests/test_corporate_adjustments.py) exists to catch. Simpler and
+    correct: candidate selection reads no price column at all; every real
+    liquidity decision happens through the one approved, adjustment-aware
+    path."""
+    return [r[0] for r in conn.execute(
         "SELECT DISTINCT ticker FROM ohlcv WHERE ticker != 'IHSG'")]
-    liq = []
-    for t in tickers:
-        adv = get_adv_value_30d(conn, t, as_of)
-        if adv is not None and adv >= VALUE_LIQ_MIN_IDR:
-            liq.append(t)
-    return liq
 
 
 def run():
     conn = db_connect(DB_PATH)
     as_of = conn.execute("SELECT MAX(date) FROM ohlcv").fetchone()[0]
-    universe = liquid_universe(conn, as_of)
+    universe = liquid_universe(conn)
     all_trades = []
     for t in universe:
         df = load_ohlcv_df(conn, t)   # settled + split-adjusted (audit R-1)
         if len(df) < 300:
             continue
-        all_trades.extend(collect_trades_for_ticker(t, df))
+        all_trades.extend(collect_trades_for_ticker(conn, t, df))
     conn.close()
 
     dates = sorted(t['entry_date'] for t in all_trades)
