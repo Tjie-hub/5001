@@ -61,6 +61,28 @@ the D-064 rights audit). 19,332 clean name-months, 50 book months:
 - LWZ rows activate the moment the Owner drops the paper/data in `priors/external/lwz/`
   (Task 1 then computes: per factor, mean %/mo, t, annual IR — full sample and era splits).
 
+## 4. Evidence added 2026-09-30 (research consolidation) — both support D-065 §2's frozen-rule-going-forward stance
+
+- **XP-001 rule B re-measured under the corrected C1 rule: IR 1.6 → 1.19, ~5.8 years needed at
+  the D-064 census bar (2.8575)**, down from row 12's original 1.1y. This is a planner-record
+  figure (not independently re-derived in this pass — the `forward_volex/remeasure/` scripts on
+  disk cover the pre-2021 extension gate, not this specific rule-B re-measurement); recorded here
+  as directed. **Consequence for §3's verdict table:** row 12 ("XP-001 rule B ... YES — already
+  measured") should be read as **downgraded, not overturned** — 5.8y still clears a 4.9-year
+  in-window panel less comfortably than the 1.1y figure implied, another instance of §3's own
+  point 2 (convention-hopped re-measurements read more optimistic pre-correction than post).
+- **NR7's local passes were look-ahead artifacts (P4-1, `fix/p4-evidence-honesty` 46656f6,
+  2026-09-30).** A separate audit found `research/studies/nr7_generalization_study.py`'s
+  `liquid_universe()` filtered its whole 5-year study by *today's* ADV rather than gating each
+  trade at its own entry date. Corrected: T1 pooled expectancy +0.099%/trade → **−1.150%/trade**;
+  the T2 chronological-CV pass (retention 0.74) → **fail** (retention −1.90); the one passing
+  regime stratum (BULL, +1.44%) → **fail** (−0.35%). The DECISION was already DO-NOT-WIDEN before
+  and after (T1 never cleared the bar), but the only two locally-passing signals in that study
+  were a look-ahead artifact, not edge — a second, independent confirmation (after this memo's own
+  hi52 finding) that convention-hopped/uncorrected local re-measurements on this corpus read
+  systematically more optimistic than the frozen-rule truth. Directly supports D-065 §2's "any
+  test under the frozen rule starts fresh" stance and §1's "local tests can only fail to reject."
+
 ## Method
 
 Same panel code as v1 (month-end snapshots, zoo filters), C1 carry-to-next-real-print returns,

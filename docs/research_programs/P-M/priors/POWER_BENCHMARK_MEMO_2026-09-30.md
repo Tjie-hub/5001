@@ -1,3 +1,9 @@
+**SUPERSEDED by POWER_MEMO v2 (`priors/POWER_MEMO_2026-09-30.md`) — 2026-09-30 research
+consolidation.** This memo's "LW" (trailing-volume) weight proxy is replaced by true cap weights
+from `factor_zoo/data/fund_shares.pkl`; see `UNIVERSE_BENCHMARK_MEMO_2026-09-30.md`'s "2026-09-30
+rebuild" section for the corrected 2a-equivalent decomposition (GOTO/ARTO 2022, BBRI 2024 findings
+reproduce here; magnitudes differ under true CW). Retained below for provenance only.
+
 # POWER + BENCHMARK memo · 2026-09-30
 
 Panel/window identical to SCREEN-PM-XP-001 (fingerprinted panel sha256 `4fbc79db…`, VOLEX top-200
