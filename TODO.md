@@ -156,7 +156,7 @@ problem is that the evidence it rests on has since eroded (see P4) and nobody ha
       zero? Run `research/studies/phase5_tracker.py` against **production** data.
       _Where:_ XPS-13 (production data) · _Accept:_ a real N and expectancy, or a confirmed zero.
 
-- [ ] **P2-3. 🔑 OWNER DECISION — revoke or re-affirm** — with P2-1/P2-2 in hand:
+- [x] **P2-3. 🔑 OWNER DECISION — revoke or re-affirm** — SUPERSEDED by D-029 (4f3098f): NR7 already moved to SHADOW; the revoke/re-affirm choice is moot. (2026-09-30) — with P2-1/P2-2 in hand:
       **(a)** revoke to `SHADOW` (stops live selection immediately, keeps collecting forward data), or
       **(b)** re-affirm APPROVED in writing, explicitly acknowledging the P4 erosion.
       Drifting to the 2027-01-08 deadline by default is the one option that is not a decision.
