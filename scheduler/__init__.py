@@ -72,6 +72,7 @@ from scheduler.jobs import (  # noqa: F401
     run_foreign_snapshot,
     run_news_fetch,
     run_premover_eod,
+    run_staged_entry_fills,
     run_hourly_risk_bundle,
     run_eod_risk_summary,
     run_market_health_report,
@@ -264,6 +265,16 @@ def start_scheduler():
             hour=hour, minute=minute, timezone=WIB, day_of_week="mon-fri"),
             id=f"multi_strategy_scan_{hour:02d}{minute:02d}", name=f"Multi-Strategy Scan {label}")
         logger.info(f"  ✓ Multi-strategy scan @ {hour:02d}:{minute:02d} ({label})")
+
+    # Staged-entry fills (P3-2) — signals staged intraday/EOD fill at the NEXT
+    # session's open (the convention the backtests were validated under), never
+    # at the detection bar's price. 09:10 primary + 10:10 covers a late yfinance
+    # bar; an entry whose window passes expires rather than fills late.
+    for hour in (9, 10):
+        _add_job(scheduler, run_staged_entry_fills, CronTrigger(
+            day_of_week="mon-fri", hour=hour, minute=10, timezone=WIB),
+            id=f"staged_entry_fills_{hour:02d}10",
+            name=f"Staged Entry Fill {hour:02d}:10")
 
     # Screener intraday — registered at the same times as multi-strategy scan so they run in parallel
     for hour, minute, label in scan_times:
