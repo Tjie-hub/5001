@@ -102,3 +102,14 @@ PLAN/wildcat-*.md
 # Dead/broken local venvs left in repo root by past sessions (blow past Mimosa's
 # 5000-file scan budget when untracked) -- always ignore these, never commit one.
 venv_broken_*/
+
+# P0-5 untracked-pile triage (2026-09-30): local workspaces and machine
+# artifacts that stay untracked by design -- never commit any of these.
+# Informal session workspaces (Owner may promote real studies into
+# docs/research_programs/ under governance if wanted).
+Claude outputs/
+atr_plan/
+# Raw Ajaib Terminal JSON dumps (machine-local raw data, like the DBs).
+data/ajaib_raw/
+# FUSE artifacts from WSL/NTFS interop (often open file handles -- never delete).
+.fuse_hidden*
