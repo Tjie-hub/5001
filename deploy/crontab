@@ -107,3 +107,31 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # opened_utc). Runs after the 09:30 regime recorder. Was installed live since
 # d73db17 but missing here until 2026-09-30 (installed/deploy drift).
 35 9 * * * cd $D && $W fwd_fade_recorder venv/bin/python3 docs/research_programs/P-M/forward_fade/run_recorder.py
+
+# ── Owner to-do scheduled jobs (branch ops/owner-todo-jobs, 2026-10-01) ──
+# Box timezone is Asia/Jakarta (WIB), so every time field in this file is
+# WIB-local, including the five entries below. Scripts live in scripts/ops/;
+# each self-guards (date/branch/weekday) so a stray fire is a no-op.
+# J1 08:30 WIB daily — send today's ops/owner_todo.json items to the Owner
+# (silent when nothing is due)
+30 8 * * * cd $D && $W owner_reminders venv/bin/python3 scripts/ops/owner_reminders.py
+# J2 17:00 WIB 2026-10-01 ONE-SHOT — P1-3 cutover dry-run preflight (per-table
+# Tier-1 row counts, never --apply). The 2026-10-01 firing is delivered by a
+# one-shot systemd --user timer (atd is not installed and this crontab only
+# goes live with tonight's deploy); the script's exact-date guard makes this
+# line inert on every other day, and a /tmp marker prevents any double send
+0 17 1 10 * cd $D && $W p1_3_preflight venv/bin/python3 scripts/ops/p1_3_preflight.py
+# J3 17:15 WIB weekdays — {FQ} month-end keystats snapshot; exits quietly
+# unless today is the last weekday of the month, reports NOT READY until the
+# keystats branch is merged (Owner readiness check 2026-10-28), then runs
+# research.fq_snapshot repeatedly (50 tickers/run cap) and sends a count
+15 17 * * 1-5 cd $D && $W fq_snapshot_monthend venv/bin/python3 scripts/ops/fq_snapshot_monthend.py
+# J4 17:30 WIB Fridays — push tracked forward_*/ledger.json appends; only on
+# ops/hardening-2026-07-10; a rejected push alerts and stops (no pull/rebase)
+30 17 * * 5 cd $D && $W ledger_push_weekly venv/bin/python3 scripts/ops/ledger_push_weekly.py
+# J5 17:10 WIB weekdays — ops health, Telegram only on anomaly: Syncthing
+# folder fdds3-owznl must stay PAUSED, .git sync-conflict count must stay 4,
+# branch/service checks, P3 staged-fill marker in app.log, stuck
+# provider_switch audit rows not increasing (state: logs/ops_health_state.json)
+10 17 * * 1-5 cd $D && $W ops_health_daily venv/bin/python3 scripts/ops/ops_health_daily.py
+
