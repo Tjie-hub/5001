@@ -221,19 +221,13 @@ def calc_ara_arb_levels(price: float) -> dict:
     IDX Auto Rejection thresholds per BEI Peng-00009/BEI.POP/03-2023 (symmetric).
     Tier: <=200 -> ±35%; 200-5000 -> ±25%; >5000 -> ±20%.
     Returns {ara_pct, arb_pct, ara_price, arb_price}. Sub-Rp50 treated as tier 1.
+
+    P4-2: the tier table and band math live in engine.exits.price_limits (the
+    single authority shared with the backtest/walk-forward paths); this is the
+    live-path delegate so both sides can never drift.
     """
-    if price <= 200:
-        pct = 0.35
-    elif price <= 5000:
-        pct = 0.25
-    else:
-        pct = 0.20
-    return {
-        "ara_pct":   pct,
-        "arb_pct":   pct,
-        "ara_price": price * (1 + pct),
-        "arb_price": price * (1 - pct),
-    }
+    from engine.exits.price_limits import ara_arb_levels
+    return ara_arb_levels(price)
 
 
 def _calc_atr_from_db(ticker: str, periods: int = 14) -> float:

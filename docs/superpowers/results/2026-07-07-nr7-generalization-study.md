@@ -1,31 +1,26 @@
 # NR7 Edge-Generalization Study — Results
 
-Run: 2026-09-30T15:25:50 | corpus as-of 2026-07-29 | liquid universe 958 tickers | CV boundary 2024-12-23
-
-**Data source note:** this run used a read-only local snapshot copy of the
-production DB (`D:\IDX\data\walkforward.db` as of 2026-09-30, data through
-2026-07-29) taken into the WSL dev clone for this audit -- not a live
-connection to production.
+Run: 2026-10-01T15:36:08 | corpus as-of 2026-07-29 | liquid universe 958 tickers | CV boundary 2024-12-23
 
 ## T1 — universe pooled (net of round-trip costs)
-- exp -1.298%/trade | N 899 | win 29.0% | **FAIL** (bar >= +0.50%, N >= 300)
+- exp -1.262%/trade | N 899 | win 29.3% | **FAIL** (bar >= +0.50%, N >= 300)
 
 ## T2 — selection / chronological CV
 - early-selected tickers: late exp -1.649% | late N 14 | early exp +0.802% | retention -2.05 | **FAIL** (bar >= +0.50%, N >= 150, retention >= 0.50)
 
 ## T3 — regime strata
 - SIDEWAYS: exp -1.615% | N 507 | win 24.5% | **FAIL** (bar >= +0.50%, N >= 100)
-- BEAR: exp -1.560% | N 140 | win 26.4% | **FAIL** (bar >= +0.50%, N >= 100)
-- BULL: exp -0.515% | N 252 | win 39.7% | **FAIL** (bar >= +0.50%, N >= 100)
+- BEAR: exp -1.549% | N 140 | win 27.1% | **FAIL** (bar >= +0.50%, N >= 100)
+- BULL: exp -0.390% | N 252 | win 40.1% | **FAIL** (bar >= +0.50%, N >= 100)
 
 ## DECISION: **DO-NOT-WIDEN**
 
 ```json
 {
   "T1": {
-    "exp_pct": -1.2983436215767723,
+    "exp_pct": -1.2615176179163208,
     "n": 899,
-    "win_rate": 29.032258064516128,
+    "win_rate": 29.254727474972192,
     "pass": false
   },
   "T2": {
@@ -43,15 +38,15 @@ connection to production.
       "pass": false
     },
     "BEAR": {
-      "exp_pct": -1.5595844344571423,
+      "exp_pct": -1.548543513024523,
       "n": 140,
-      "win_rate": 26.428571428571427,
+      "win_rate": 27.142857142857142,
       "pass": false
     },
     "BULL": {
-      "exp_pct": -0.5153208784545613,
+      "exp_pct": -0.39007941698559656,
       "n": 252,
-      "win_rate": 39.682539682539684,
+      "win_rate": 40.07936507936508,
       "pass": false
     }
   },

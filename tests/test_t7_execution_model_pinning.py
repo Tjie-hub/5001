@@ -65,6 +65,27 @@ The prior finding is preserved above verbatim rather than corrected in place:
 it is the record of what was believed when NR7_BULL's evidence was assessed.
 NR7_BULL is SHADOW as of 2026-08-19 (D-029) and authorises no capital, so no
 live position was ever opened under the mistaken model.
+
+--------------------------------------------------------------------------
+AMENDED 2026-10-01 — P4-2 (ARA/ARB fillability, ZCODE brief
+ZCODE_BRIEF_P4_EVIDENCE_HONESTY_2026-09-30.md) changed strategy_nr7_breakout's
+source deliberately, hence the new pin below.
+
+`strategy_nr7_breakout` now caps its TP/SL to the entry-day auto-rejection
+band (engine/exits/price_limits.cap_levels — the same cap and capped-level
+re-gate paper_trade.open_trade applies live), so a target beyond ARA can no
+longer fill at a price the exchange never prints. Entry timing, trigger
+logic and the next-bar-open fill convention are UNCHANGED — this is a
+level-fillability correction, not a timing change.
+
+What that means for NR7_BULL v1's approval evidence: the expectancy the v1
+approval rested on was computed under the uncapped model and is therefore
+STALE. NR7_BULL remains SHADOW and authorises no capital, so nothing live is
+affected; the honest re-measured expectancy is the P4-2 re-run recorded in
+docs/superpowers/results/2026-07-07-nr7-generalization-study.md. Whether
+NR7_BULL's admission should be re-decided under the corrected numbers is an
+Owner call, flagged in the P4 handoff — updating this pin records what the
+code now is, not that the v1 evidence still describes it.
 """
 import hashlib
 import inspect
