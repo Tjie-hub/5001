@@ -96,6 +96,16 @@ class TestNextSessionOpenFill:
         assert rows[0]["decision_price"] == 1050.0
         assert rows[0]["status"] == "PENDING"
 
+    def test_note_persisted_for_audit_trail(self, pt_db):
+        """stage_entry(note=...) must land in the row — the premover lane
+        passes pattern/score there and it was silently dropped pre-fix."""
+        from paper_trade import stage_entry
+        _add_bar(pt_db, "TEST", "2026-06-01", o=1000, h=1060, l=990, c=1050)
+        stage_entry("TEST", 1050.0, source="premover_eod",
+                    note="pattern=NB sanity score=7", signal_date="2026-06-01")
+        rows = _staged_rows(pt_db)
+        assert rows[0]["note"] == "pattern=NB sanity score=7"
+
     def test_same_day_signal_never_fills(self, pt_db):
         """A signal staged today must not fill from today's forming bar."""
         from paper_trade import resolve_staged_entries, stage_entry

@@ -328,8 +328,8 @@ def stage_entry(ticker: str, decision_price: float, *, strategy: str = None,
     now = datetime.now(WIB).strftime("%Y-%m-%d %H:%M:%S")
     cur = conn.execute(
         "INSERT INTO staged_entries (ticker, strategy, signal_date, decision_price, "
-        "source, status, created_at) VALUES (?,?,?,?,?,'PENDING',?)",
-        (ticker, strategy, signal_date, decision_price, source, now))
+        "source, note, status, created_at) VALUES (?,?,?,?,?,?,'PENDING',?)",
+        (ticker, strategy, signal_date, decision_price, source, note, now))
     conn.commit()
     entry_id = cur.lastrowid
     conn.close()

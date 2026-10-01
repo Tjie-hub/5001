@@ -87,3 +87,32 @@ fail for that reason alone, verified against a pristine worktree of `90e1238`).
 Not deployed (per brief §3): no `deploy/crontab` change, no production restart. The new scheduler
 jobs activate on the next deliberate release; `staged_entries` creates itself idempotently on first
 use (`CREATE TABLE IF NOT EXISTS`, repo convention).
+
+## Addendum — independent WSL verification (2026-10-01, ZCode session)
+
+Re-verified the branch on WSL against the brief, on top of the 2026-09-30 sessions:
+
+- **Mutation check — the regression tests genuinely pin the bug.** Temporarily mutating
+  `resolve_staged_entries` to fill at the bar's `close` (the old same-bar semantics) fails
+  `test_fill_price_is_next_bar_open_not_forming_close` and
+  `test_suspension_resume_fills_at_first_traded_open`; restored, all pass.
+- **Call-site sweep re-done independently** (`grep open_trade(` across live paths): the table above
+  is complete. `scheduler/scanner.py`'s remaining `open_trade` (multi-strategy lane) sits behind
+  `executable_entry()`, which can only return STAGE/REJECT in the current code — unreachable today,
+  and any future FILL it returned would by contract use a genuinely obtainable price. Other hits:
+  `routes/backtest.py` manual open (operator price, by design), `engine/historical/runner.py`
+  (different `_open_trade` symbol), `migrations/applied/*` (historical scripts). `monitor.py`'s
+  exit path reads the latest close with no `is_final` filter — the deferred exit-timing gap, real
+  as described.
+- **Fix: `stage_entry()` silently dropped its `note` parameter** — the premover lane passes
+  `pattern={..} score={..}` there and it never reached the INSERT. Now persisted
+  (`test_note_persisted_for_audit_trail` pins it). Audit-trail only; fill semantics unchanged.
+- **Full-suite tally (WSL, Python 3.12.13 venv, `DB_PATH=data/walkforward.db`,
+  `logs/pytest_full_20261001_p3_zcode.log`): 8 failed / 3451 passed / 3 skipped in 394.39s.**
+  vs the 2026-09-30 baseline (12F/3446P/3S): +1 pass is the new note test; +4 passes are
+  `tests/test_value_format.py` — `node` (v24.18.0) is now installed in WSL. All 8 remaining
+  failures environmental, none in touched code, each re-derived this run: 6×
+  `test_config_validation.py` + 1× `test_provider_hierarchy.py` (the tree's production `.env` on
+  the 777-mode /mnt/d drvfs mount trips the chmod-600 startup check, and its provider override
+  reorders the router — CI runs without `.env` and passes), 1× `test_secret_hygiene.py` (untracked
+  vendored `.winvenv/` Windows packages). `tests/test_entry_staging.py`: 9/9 pass.
