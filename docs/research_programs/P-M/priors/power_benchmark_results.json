@@ -1,0 +1,524 @@
+{
+ "task": "P-M priors power+benchmark",
+ "generated_utc": "2026-09-30T07:06:34+00:00",
+ "panel": {
+  "sha256_prefix": "4fbc79db527c",
+  "max_date": "2026-07-29"
+ },
+ "months": 54,
+ "decomposition_full": {
+  "months": 54,
+  "ihsg_mean_pct": 0.059,
+  "lw_mean_pct": -0.353,
+  "ew_mean_pct": -0.404,
+  "ew_minus_ihsg_mean_pct": -0.463,
+  "ew_minus_ihsg_t": -1.3,
+  "lw_minus_ew_mean_pct": 0.051
+ },
+ "decomposition_by_year": {
+  "2021": {
+   "months": 5,
+   "ihsg_sum_pct": 7.88,
+   "lw_sum_pct": 2.2,
+   "ew_sum_pct": 1.33,
+   "ew_minus_ihsg_pct": -6.55,
+   "lw_minus_ew_pct": 0.87
+  },
+  "2022": {
+   "months": 9,
+   "ihsg_sum_pct": 6.79,
+   "lw_sum_pct": 3.91,
+   "ew_sum_pct": -10.37,
+   "ew_minus_ihsg_pct": -17.16,
+   "lw_minus_ew_pct": 14.28
+  },
+  "2023": {
+   "months": 10,
+   "ihsg_sum_pct": 8.75,
+   "lw_sum_pct": -2.33,
+   "ew_sum_pct": -4.99,
+   "ew_minus_ihsg_pct": -13.74,
+   "lw_minus_ew_pct": 2.66
+  },
+  "2024": {
+   "months": 12,
+   "ihsg_sum_pct": -2.0,
+   "lw_sum_pct": -5.24,
+   "ew_sum_pct": -1.01,
+   "ew_minus_ihsg_pct": 0.98,
+   "lw_minus_ew_pct": -4.23
+  },
+  "2025": {
+   "months": 12,
+   "ihsg_sum_pct": 22.79,
+   "lw_sum_pct": 31.54,
+   "ew_sum_pct": 33.37,
+   "ew_minus_ihsg_pct": 10.57,
+   "lw_minus_ew_pct": -1.83
+  },
+  "2026": {
+   "months": 6,
+   "ihsg_sum_pct": -41.06,
+   "lw_sum_pct": -49.16,
+   "ew_sum_pct": -40.14,
+   "ew_minus_ihsg_pct": 0.92,
+   "lw_minus_ew_pct": -9.02
+  }
+ },
+ "top10_contributors": {
+  "2021": [
+   {
+    "ticker": "BUKA",
+    "avg_weight_pct": 2.49,
+    "contribution_pct": -1.54
+   },
+   {
+    "ticker": "BBYB",
+    "avg_weight_pct": 1.32,
+    "contribution_pct": 1.41
+   },
+   {
+    "ticker": "BEBS",
+    "avg_weight_pct": 0.39,
+    "contribution_pct": 1.34
+   },
+   {
+    "ticker": "BABP",
+    "avg_weight_pct": 1.62,
+    "contribution_pct": -1.27
+   },
+   {
+    "ticker": "BBCA",
+    "avg_weight_pct": 5.54,
+    "contribution_pct": 1.06
+   },
+   {
+    "ticker": "BBRI",
+    "avg_weight_pct": 6.84,
+    "contribution_pct": 1.01
+   },
+   {
+    "ticker": "ADRO",
+    "avg_weight_pct": 1.39,
+    "contribution_pct": 0.86
+   },
+   {
+    "ticker": "TLKM",
+    "avg_weight_pct": 3.46,
+    "contribution_pct": 0.82
+   },
+   {
+    "ticker": "AGRO",
+    "avg_weight_pct": 2.55,
+    "contribution_pct": -0.67
+   },
+   {
+    "ticker": "NATO",
+    "avg_weight_pct": 2.08,
+    "contribution_pct": 0.66
+   },
+   {
+    "book_total_lw_pct": 2.2
+   }
+  ],
+  "2022": [
+   {
+    "ticker": "GOTO",
+    "avg_weight_pct": 3.93,
+    "contribution_pct": -4.21
+   },
+   {
+    "ticker": "BUMI",
+    "avg_weight_pct": 2.88,
+    "contribution_pct": 2.16
+   },
+   {
+    "ticker": "BBRI",
+    "avg_weight_pct": 6.39,
+    "contribution_pct": 1.89
+   },
+   {
+    "ticker": "ADRO",
+    "avg_weight_pct": 3.4,
+    "contribution_pct": 1.76
+   },
+   {
+    "ticker": "ARTO",
+    "avg_weight_pct": 2.9,
+    "contribution_pct": -1.6
+   },
+   {
+    "ticker": "BBCA",
+    "avg_weight_pct": 6.54,
+    "contribution_pct": 1.59
+   },
+   {
+    "ticker": "BMRI",
+    "avg_weight_pct": 4.05,
+    "contribution_pct": 1.47
+   },
+   {
+    "ticker": "BIPI",
+    "avg_weight_pct": 1.2,
+    "contribution_pct": 1.16
+   },
+   {
+    "ticker": "ADMR",
+    "avg_weight_pct": 1.88,
+    "contribution_pct": 1.02
+   },
+   {
+    "ticker": "BBNI",
+    "avg_weight_pct": 2.26,
+    "contribution_pct": 0.85
+   },
+   {
+    "book_total_lw_pct": 3.91
+   }
+  ],
+  "2023": [
+   {
+    "ticker": "BSBK",
+    "avg_weight_pct": 1.6,
+    "contribution_pct": -1.59
+   },
+   {
+    "ticker": "BMRI",
+    "avg_weight_pct": 6.27,
+    "contribution_pct": 1.45
+   },
+   {
+    "ticker": "AMMN",
+    "avg_weight_pct": 4.11,
+    "contribution_pct": 1.12
+   },
+   {
+    "ticker": "GOTO",
+    "avg_weight_pct": 3.8,
+    "contribution_pct": -0.9
+   },
+   {
+    "ticker": "CUAN",
+    "avg_weight_pct": 0.24,
+    "contribution_pct": 0.84
+   },
+   {
+    "ticker": "BBNI",
+    "avg_weight_pct": 3.21,
+    "contribution_pct": 0.69
+   },
+   {
+    "ticker": "BUMI",
+    "avg_weight_pct": 1.36,
+    "contribution_pct": -0.66
+   },
+   {
+    "ticker": "BRPT",
+    "avg_weight_pct": 0.9,
+    "contribution_pct": 0.63
+   },
+   {
+    "ticker": "TPIA",
+    "avg_weight_pct": 0.34,
+    "contribution_pct": 0.63
+   },
+   {
+    "ticker": "STRK",
+    "avg_weight_pct": 1.55,
+    "contribution_pct": -0.56
+   },
+   {
+    "book_total_lw_pct": -2.33
+   }
+  ],
+  "2024": [
+   {
+    "ticker": "BBRI",
+    "avg_weight_pct": 13.21,
+    "contribution_pct": -2.79
+   },
+   {
+    "ticker": "AMMN",
+    "avg_weight_pct": 3.82,
+    "contribution_pct": 1.65
+   },
+   {
+    "ticker": "TLKM",
+    "avg_weight_pct": 4.36,
+    "contribution_pct": -1.42
+   },
+   {
+    "ticker": "TPIA",
+    "avg_weight_pct": 2.08,
+    "contribution_pct": 1.29
+   },
+   {
+    "ticker": "PTRO",
+    "avg_weight_pct": 0.43,
+    "contribution_pct": 1.05
+   },
+   {
+    "ticker": "GOTO",
+    "avg_weight_pct": 2.63,
+    "contribution_pct": -0.94
+   },
+   {
+    "ticker": "BRPT",
+    "avg_weight_pct": 1.77,
+    "contribution_pct": -0.89
+   },
+   {
+    "ticker": "BBNI",
+    "avg_weight_pct": 3.6,
+    "contribution_pct": -0.59
+   },
+   {
+    "ticker": "BREN",
+    "avg_weight_pct": 2.22,
+    "contribution_pct": 0.57
+   },
+   {
+    "ticker": "PANI",
+    "avg_weight_pct": 0.67,
+    "contribution_pct": 0.53
+   },
+   {
+    "book_total_lw_pct": -5.24
+   }
+  ],
+  "2025": [
+   {
+    "ticker": "PTRO",
+    "avg_weight_pct": 2.46,
+    "contribution_pct": 4.81
+   },
+   {
+    "ticker": "BRMS",
+    "avg_weight_pct": 2.85,
+    "contribution_pct": 4.21
+   },
+   {
+    "ticker": "BUMI",
+    "avg_weight_pct": 1.48,
+    "contribution_pct": 3.0
+   },
+   {
+    "ticker": "BRPT",
+    "avg_weight_pct": 1.98,
+    "contribution_pct": 2.66
+   },
+   {
+    "ticker": "WIFI",
+    "avg_weight_pct": 1.79,
+    "contribution_pct": 2.37
+   },
+   {
+    "ticker": "CUAN",
+    "avg_weight_pct": 1.63,
+    "contribution_pct": 2.23
+   },
+   {
+    "ticker": "DSSA",
+    "avg_weight_pct": 1.71,
+    "contribution_pct": 2.08
+   },
+   {
+    "ticker": "DEWA",
+    "avg_weight_pct": 0.66,
+    "contribution_pct": 1.93
+   },
+   {
+    "ticker": "ENRG",
+    "avg_weight_pct": 0.34,
+    "contribution_pct": 0.98
+   },
+   {
+    "ticker": "RAJA",
+    "avg_weight_pct": 1.29,
+    "contribution_pct": 0.91
+   },
+   {
+    "book_total_lw_pct": 31.54
+   }
+  ],
+  "2026": [
+   {
+    "ticker": "BUMI",
+    "avg_weight_pct": 10.04,
+    "contribution_pct": -6.87
+   },
+   {
+    "ticker": "PTRO",
+    "avg_weight_pct": 2.9,
+    "contribution_pct": -2.55
+   },
+   {
+    "ticker": "CUAN",
+    "avg_weight_pct": 1.74,
+    "contribution_pct": -2.47
+   },
+   {
+    "ticker": "DEWA",
+    "avg_weight_pct": 3.13,
+    "contribution_pct": -2.19
+   },
+   {
+    "ticker": "BBCA",
+    "avg_weight_pct": 6.3,
+    "contribution_pct": -2.14
+   },
+   {
+    "ticker": "BRPT",
+    "avg_weight_pct": 1.85,
+    "contribution_pct": -1.81
+   },
+   {
+    "ticker": "BRMS",
+    "avg_weight_pct": 2.56,
+    "contribution_pct": -1.74
+   },
+   {
+    "ticker": "BMRI",
+    "avg_weight_pct": 4.57,
+    "contribution_pct": -1.41
+   },
+   {
+    "ticker": "CDIA",
+    "avg_weight_pct": 1.18,
+    "contribution_pct": -1.29
+   },
+   {
+    "ticker": "COIN",
+    "avg_weight_pct": 0.65,
+    "contribution_pct": -1.28
+   },
+   {
+    "book_total_lw_pct": -49.16
+   }
+  ]
+ },
+ "tracking_error": {
+  "b10_vs_lw": {
+   "te_monthly_pct": 1.951,
+   "mean_excess_pct": 0.292,
+   "months": 54
+  },
+  "b10_vs_ew": {
+   "te_monthly_pct": 0.752,
+   "mean_excess_pct": 0.343,
+   "months": 54
+  },
+  "tercile_vs_lw": {
+   "te_monthly_pct": 2.755,
+   "mean_excess_pct": 0.354,
+   "months": 54
+  },
+  "tercile_vs_ew": {
+   "te_monthly_pct": 2.004,
+   "mean_excess_pct": 0.405,
+   "months": 54
+  },
+  "low20_vs_lw": {
+   "te_monthly_pct": 3.823,
+   "mean_excess_pct": 0.496,
+   "months": 54
+  },
+  "low20_vs_ew": {
+   "te_monthly_pct": 3.555,
+   "mean_excess_pct": 0.547,
+   "months": 54
+  },
+  "ew_vs_ihsg": {
+   "te_monthly_pct": 2.623,
+   "mean_excess_pct": -0.463,
+   "months": 54
+  }
+ },
+ "mde": {
+  "b10_vs_lw": {
+   "1.65": 0.438,
+   "2.0": 0.531,
+   "2.8575": 0.759,
+   "3.46": 0.919,
+   "months_needed_for_0.50pct_mo": {
+    "1.65": 42,
+    "2.0": 61,
+    "2.8575": 125,
+    "3.46": 183
+   }
+  },
+  "b10_vs_ew": {
+   "1.65": 0.169,
+   "2.0": 0.205,
+   "2.8575": 0.292,
+   "3.46": 0.354,
+   "months_needed_for_0.50pct_mo": {
+    "1.65": 7,
+    "2.0": 10,
+    "2.8575": 19,
+    "3.46": 28
+   }
+  },
+  "tercile_vs_lw": {
+   "1.65": 0.619,
+   "2.0": 0.75,
+   "2.8575": 1.071,
+   "3.46": 1.297,
+   "months_needed_for_0.50pct_mo": {
+    "1.65": 83,
+    "2.0": 122,
+    "2.8575": 248,
+    "3.46": 364
+   }
+  },
+  "tercile_vs_ew": {
+   "1.65": 0.45,
+   "2.0": 0.545,
+   "2.8575": 0.779,
+   "3.46": 0.944,
+   "months_needed_for_0.50pct_mo": {
+    "1.65": 44,
+    "2.0": 65,
+    "2.8575": 132,
+    "3.46": 193
+   }
+  },
+  "low20_vs_lw": {
+   "1.65": 0.858,
+   "2.0": 1.04,
+   "2.8575": 1.487,
+   "3.46": 1.8,
+   "months_needed_for_0.50pct_mo": {
+    "1.65": 160,
+    "2.0": 234,
+    "2.8575": 478,
+    "3.46": 700
+   }
+  },
+  "low20_vs_ew": {
+   "1.65": 0.798,
+   "2.0": 0.968,
+   "2.8575": 1.382,
+   "3.46": 1.674,
+   "months_needed_for_0.50pct_mo": {
+    "1.65": 138,
+    "2.0": 203,
+    "2.8575": 413,
+    "3.46": 606
+   }
+  },
+  "ew_vs_ihsg": {
+   "1.65": 0.589,
+   "2.0": 0.714,
+   "2.8575": 1.02,
+   "3.46": 1.235,
+   "months_needed_for_0.50pct_mo": {
+    "1.65": 75,
+    "2.0": 111,
+    "2.8575": 225,
+    "3.46": 330
+   }
+  }
+ },
+ "note_capweight_proxy": "LW = trailing-60 median traded value weights; stockbit_keystats.market_cap is 100 percent NULL in the corpus"
+}
