@@ -124,7 +124,7 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # J3 17:15 WIB weekdays — {FQ} month-end keystats snapshot; exits quietly
 # unless today is the last weekday of the month, reports NOT READY until the
 # keystats branch is merged (Owner readiness check 2026-10-28), then runs
-# research.fq_snapshot repeatedly (50 tickers/run cap) and sends a count
+# research.fq_snapshot ONCE (50-ticker cap) and sends a partial N/50 count
 15 17 * * 1-5 cd $D && $W fq_snapshot_monthend venv/bin/python3 scripts/ops/fq_snapshot_monthend.py
 # J4 17:30 WIB Fridays — push tracked forward_*/ledger.json appends; only on
 # ops/hardening-2026-07-10; a rejected push alerts and stops (no pull/rebase)

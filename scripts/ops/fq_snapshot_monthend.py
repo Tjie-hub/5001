@@ -16,15 +16,11 @@ READY requires all of, in order:
   4. no rows exist yet in fq_keystats_snapshot for this month.
 Otherwise: one "[OPS] snapshot NOT READY: <reasons>" message, exit 0.
 
-When READY, calls `venv/bin/python3 -m research.fq_snapshot --limit 50`
-repeatedly (the module caps 50 tickers per run by design) until the DISTINCT
-tickers captured this month cover the 200-name universe. Distinct-count is
-measured from the DB because the module re-selects its top-50 by ADV60 every
-run — if it lacks skip-already-captured support the count plateaus and this
-stops and reports an honest partial instead of looping forever. An auth
-failure reported by the module (401/403) also stops the loop with an alert.
-All of this job's own DB reads are read-only (mode=ro); only the module
-writes.
+When READY, calls `venv/bin/python3 -m research.fq_snapshot --limit 50` ONCE
+(Owner decision 2026-10-01: single run per month-end, not a cover-the-
+universe loop — the module re-selects its top-50 by ADV60 every run anyway)
+and reports the partial result as N/50 captured this run. All of this job's
+own DB reads are read-only (mode=ro); only the module writes.
 """
 from __future__ import annotations
 
@@ -42,8 +38,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.ops._common import OPS_PREFIX, now_wib, repo_root, send_ops
 
 UNIVERSE_SIZE = 200
-MAX_RUNS = 10          # 200 names at the module's 50/run cap needs 4; 10 = headroom
-RUN_TIMEOUT_S = 900    # 50 tickers × (~1.5 s interval + fetch) ≈ 2–3 min
+RUN_LIMIT = 50            # matches the module's MAX_TICKERS_PER_RUN cap
+RUN_TIMEOUT_S = 900       # 50 tickers × (~1.5 s interval + fetch) ≈ 2–3 min
 TOKEN_EXPIRY_MARGIN_S = 300
 
 
@@ -154,35 +150,21 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     venv_py = root / "venv" / "bin" / "python3"
-    runs = 0
-    auth_failed = False
-    failed_total = 0
-    while runs < MAX_RUNS:
-        before = distinct_captured(root / "data" / "research.db", month)
-        proc = run_snapshot(venv_py, root)
-        runs += 1
-        try:
-            result = parse_run_output(proc.stdout)
-        except Exception:
-            result = {}
-        failed_total += len(result.get("failed", []))
-        if any("auth" in str(reason).lower() for _tkr, reason in result.get("failed", [])):
-            auth_failed = True
-            break
-        after = distinct_captured(root / "data" / "research.db", month)
-        if after >= UNIVERSE_SIZE or after <= before:
-            break
-
-    captured = distinct_captured(root / "data" / "research.db", month)
+    try:
+        proc = run_snapshot(venv_py, root, limit=RUN_LIMIT)
+        result = parse_run_output(proc.stdout)
+    except Exception as exc:
+        send_ops(f"{OPS_PREFIX} ⚠️ {{FQ}} snapshot run failed: {exc}", dry=dry)
+        return 0
+    captured = result.get("captured", [])
+    failed = result.get("failed", [])
     lines = [f"{OPS_PREFIX} 📸 {{FQ}} keystats snapshot {month}: "
-             f"{captured}/{UNIVERSE_SIZE} tickers in {runs} run(s)"]
-    if auth_failed:
-        lines.append("⚠️ Stockbit token rejected mid-run (401/403) — stopped; refresh and re-check")
-    if failed_total:
-        lines.append(f"⚠️ {failed_total} per-ticker failure(s) reported by the module")
-    if captured < UNIVERSE_SIZE and not auth_failed:
-        lines.append("⚠️ universe not fully covered — module made no further progress "
-                     "(no skip-already-captured support?); captured rows are append-only, nothing lost")
+             f"{len(captured)}/{RUN_LIMIT} tickers this run "
+             f"(single-run partial by design; universe {UNIVERSE_SIZE})"]
+    if any("auth" in str(reason).lower() for _tkr, reason in failed):
+        lines.append("⚠️ Stockbit token rejected (401/403) — refresh via auto_token.py and re-check")
+    if failed:
+        lines.append(f"⚠️ {len(failed)} per-ticker failure(s) reported by the module")
     send_ops("\n".join(lines), dry=dry)
     return 0
 
