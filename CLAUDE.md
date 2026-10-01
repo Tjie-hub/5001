@@ -26,6 +26,8 @@ defaults to `auto`, not single-provider `zai`). No router/circuit-breaker/quota-
 was a configuration-only change. Applies uniformly to all three Agent Firm call sites (post-close,
 premarket, and the intraday exit-veto in `monitor.py`), which all share one router built from this
 same config.
+**Amended:** 2026-10-01 — NR7_BULL retired (D-066): invariant #10 now has
+no grandfathered exception; registry_loader treats RETIRED as a hard admission exclusion.
 
 > This document is the canonical workspace operating manual for Claude sessions in this
 > repository. It defines how work should be performed but does not supersede repository source
@@ -383,7 +385,7 @@ v2, 11–12 added in v3):
 | 7 | Every experiment is traceable | `research_runs` spine + Phase E hypothesis↔evidence trace |
 | 8 | Every rejected hypothesis is preserved | `failure_registry` table + `FAILURE_REGISTRY.md`, both append-only |
 | 9 | Every promoted edge has statistical evidence | Gatekeeper (`research/gatekeeper/`) PROMOTE decision required |
-| 10 | Every promoted edge has forward-test evidence | R-10 receipt-bound registry lifecycle (`engine/registry_loader.py`); `NR7_BULL` is the sole, dated, deadlined exception |
+| 10 | Every promoted edge has forward-test evidence | R-10 receipt-bound registry lifecycle (`engine/registry_loader.py`); no remaining exceptions (NR7_BULL retired 2026-10-01, D-066) |
 | 11 | No capital-facing status transition without a verifiable evidence receipt | `set_status()` gateway in `research/knowledge`; signed receipts are a Phase H prerequisite, not yet built |
 | 12 | Multiplicity families are scoped by data epoch + feature space, **never decayed by wall-clock time** | Gate-config family scoping; any loosening is a versioned, non-retroactive, documented amendment |
 
