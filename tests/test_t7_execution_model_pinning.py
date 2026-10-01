@@ -86,6 +86,14 @@ docs/superpowers/results/2026-07-07-nr7-generalization-study.md. Whether
 NR7_BULL's admission should be re-decided under the corrected numbers is an
 Owner call, flagged in the P4 handoff — updating this pin records what the
 code now is, not that the v1 evidence still describes it.
+
+CORRECTED same day (reconcile brief §1): the pin below follows the 2026-09-02
+precedent properly — the current source hash is pinned HERE as a test constant
+and the manifests are left alone. A manifest's config_hash is the
+APPROVAL-TIME provenance and is not updated when the source later changes;
+test_nr7_bull_manifests_pin_the_approval_time_hash guards both manifests
+against exactly that mistake (an earlier version of the P4-2 commit
+overwrote v1's hash, which also left v1 and v2 disagreeing).
 """
 import hashlib
 import inspect
@@ -101,27 +109,42 @@ def _src_hash(fn) -> str:
 
 
 def test_nr7_backtest_source_matches_pinned_manifest_config_hash():
-    """The research-side function whose backtest produced NR7_BULL's approval
-    evidence must still be byte-identical to what was hashed at approval
-    time -- registry/manifests/NR7_BULL_v1.yaml's artifacts.config_hash."""
+    """The research-side function whose backtest produced NR7_BULL's evidence,
+    pinned to its CURRENT source hash (a test constant, per the 2026-09-02
+    precedent — the live checker below uses the same pattern).
+
+    This is the "what the code is now" pin: a deliberate execution-model
+    change must consciously update it (see the module docstring's amendment
+    history). The manifests keep the approval-time hash instead — see
+    test_nr7_bull_manifests_pin_the_approval_time_hash."""
     from engine.strategies import strategy_nr7_breakout
-    man_path = os.path.join(os.path.dirname(rl.REGISTRY_PATH),
-                            "manifests", "NR7_BULL_v1.yaml")
-    with open(man_path) as f:
-        manifest = yaml.safe_load(f)
-    pinned = manifest["artifacts"]["config_hash"]
-    assert _src_hash(strategy_nr7_breakout) == pinned, (
-        "strategy_nr7_breakout source has changed since NR7_BULL v1 was "
-        "approved -- its backtest evidence may no longer describe the "
-        "current strategy logic. See this file's module docstring before "
-        "updating the pinned hash.")
+    assert _src_hash(strategy_nr7_breakout) == _NR7_BACKTEST_HASH, (
+        "strategy_nr7_breakout source has changed since the pin below was "
+        "recorded. See this file's module docstring before updating it.")
 
 
-# No registry-schema field currently pins the LIVE checker's source (only
-# the research-side backtest function is covered by the manifest's
-# config_hash) -- pinned here as a plain constant, the same pattern this
-# codebase already uses for shrink-only debt allowlists.
+# The hash of strategy_nr7_breakout's source as of the P4-2 fillability fix
+# (2026-10-01). Recomputed at that time; do not copy from a manifest.
+_NR7_BACKTEST_HASH = "a87badb0c138722e9fee33df7d8c4ccc9202993de15b10507597b2e9afacada1"
+
 _NR7_LIVE_CHECKER_HASH = "3efae1a0615b4ce56ef550f65c4a1c343ed54813f2354eda1b8418ad75c42861"
+
+
+def test_nr7_bull_manifests_pin_the_approval_time_hash():
+    """Guard (reconcile brief §1): both NR7_BULL manifests' config_hash are the
+    APPROVAL-TIME provenance and must stay frozen at the hash the v1 approval
+    was measured under — regardless of later source changes. Overwriting a
+    manifest hash to make a pin pass rewrites what was approved."""
+    approval_hash = ("8845c57b918a67ed513e67357d89f5f60388ce6110"
+                     "5c20d8d496e303eab87a08")
+    manifests_dir = os.path.join(os.path.dirname(rl.REGISTRY_PATH), "manifests")
+    for name in ("NR7_BULL_v1.yaml", "NR7_BULL_v2.yaml"):
+        with open(os.path.join(manifests_dir, name)) as f:
+            manifest = yaml.safe_load(f)
+        assert manifest["artifacts"]["config_hash"] == approval_hash, (
+            f"{name} config_hash must remain the approval-time hash; it is "
+            "provenance, not a pin to keep current. Update the test constant "
+            "_NR7_BACKTEST_HASH instead.")
 
 
 def test_nr7_live_checker_source_is_pinned():
