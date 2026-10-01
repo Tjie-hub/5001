@@ -102,3 +102,8 @@ PLAN/wildcat-*.md
 # Dead/broken local venvs left in repo root by past sessions (blow past Mimosa's
 # 5000-file scan budget when untracked) -- always ignore these, never commit one.
 venv_broken_*/
+
+# P0-5 triage 2026-10-01: FUSE mount droppings under data/ (stale-handle artefacts,
+# never content) and raw broker snapshot scrapes -- raw market data stays out of git.
+.fuse_hidden*
+data/ajaib_raw/
