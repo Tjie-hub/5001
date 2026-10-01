@@ -221,19 +221,13 @@ def calc_ara_arb_levels(price: float) -> dict:
     IDX Auto Rejection thresholds per BEI Peng-00009/BEI.POP/03-2023 (symmetric).
     Tier: <=200 -> ±35%; 200-5000 -> ±25%; >5000 -> ±20%.
     Returns {ara_pct, arb_pct, ara_price, arb_price}. Sub-Rp50 treated as tier 1.
+
+    P4-2: the tier table and band math live in engine.exits.price_limits (the
+    single authority shared with the backtest/walk-forward paths); this is the
+    live-path delegate so both sides can never drift.
     """
-    if price <= 200:
-        pct = 0.35
-    elif price <= 5000:
-        pct = 0.25
-    else:
-        pct = 0.20
-    return {
-        "ara_pct":   pct,
-        "arb_pct":   pct,
-        "ara_price": price * (1 + pct),
-        "arb_price": price * (1 - pct),
-    }
+    from engine.exits.price_limits import ara_arb_levels
+    return ara_arb_levels(price)
 
 
 def _calc_atr_from_db(ticker: str, periods: int = 14) -> float:
@@ -284,6 +278,138 @@ def get_best_strategy_for_ticker(ticker: str) -> str:
     if row and row["best_strategy"]:
         return row["best_strategy"]
     return "Momentum Following"
+
+
+# ── Staged entries (P3-2 execution-model fix) ────────────────────────────
+# The backtest/WF convention (engine/entry_convention.py) is: decide on
+# completed-bar data, fill at the NEXT bar's open. A live signal detected on
+# the forming bar must therefore never open_trade() at that bar's price —
+# it stages here, and resolve_staged_entries() fills it at the next session's
+# open (scheduler/jobs.run_staged_entry_fills, 09:10/10:10 WIB). This is the
+# contract tests/test_entry_staging.py pins: a same-day forming-bar price can
+# never reach a fill through this path.
+
+def _ensure_staged_entries_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS staged_entries (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticker         TEXT NOT NULL,
+            strategy       TEXT,
+            signal_date    TEXT NOT NULL,
+            decision_price REAL,
+            source         TEXT,
+            status         TEXT DEFAULT 'PENDING',
+            trade_id       INTEGER,
+            note           TEXT,
+            created_at     TEXT,
+            resolved_at    TEXT
+        )
+    """)
+
+
+def stage_entry(ticker: str, decision_price: float, *, strategy: str = None,
+                source: str = None, note: str = None,
+                signal_date: str = None) -> int:
+    """Record a signal for a next-session open fill. Returns the staged row id.
+
+    decision_price is the reference the signal was detected at (the forming
+    bar's close) — kept for the audit trail, never used as a fill price.
+    """
+    conn = get_db()
+    _ensure_staged_entries_table(conn)
+    if signal_date is None:
+        signal_date = datetime.now(WIB).strftime("%Y-%m-%d")
+    now = datetime.now(WIB).strftime("%Y-%m-%d %H:%M:%S")
+    cur = conn.execute(
+        "INSERT INTO staged_entries (ticker, strategy, signal_date, decision_price, "
+        "source, note, status, created_at) VALUES (?,?,?,?,?,?,'PENDING',?)",
+        (ticker, strategy, signal_date, decision_price, source, note, now))
+    conn.commit()
+    entry_id = cur.lastrowid
+    conn.close()
+    logger.info(f"[staged_entry] {ticker} staged (id={entry_id}, signal {signal_date}, "
+                f"decision px={decision_price}, source={source}) for next-session open fill")
+    return entry_id
+
+
+def _set_staged_status(entry_id: int, status: str, *, trade_id: int = None,
+                       note: str = None):
+    conn = get_db()
+    conn.execute(
+        "UPDATE staged_entries SET status=?, trade_id=COALESCE(?, trade_id), "
+        "note=COALESCE(?, note), resolved_at=? WHERE id=?",
+        (status, trade_id, note, datetime.now(WIB).strftime("%Y-%m-%d %H:%M:%S"),
+         entry_id))
+    conn.commit()
+    conn.close()
+
+
+def resolve_staged_entries(today_str: str = None) -> list:
+    """Fill staged entries whose fill window is today, at today's bar OPEN.
+
+    The fill price is the open of the bar AFTER the signal bar — the price
+    every walk-forward strategy fills at (entry_convention.py). At fill time
+    that bar is still provisional (is_final=0); its open was fixed by the
+    session's first print, which is what a market-on-open order transacts at.
+
+    Window semantics: a staged entry fills only during the ticker's FIRST
+    session after signal_date. If today's bar isn't published yet the entry
+    stays PENDING for a later same-day retry; once any full session has passed
+    unfilled (a bar strictly between signal_date and today), the window is
+    gone and the entry EXPIRED — filling at a later session's open would be
+    the L-2 retrospective-price defect again, just by a day.
+    """
+    if today_str is None:
+        today_str = datetime.now(WIB).strftime("%Y-%m-%d")
+    conn = get_db()
+    _ensure_staged_entries_table(conn)
+    rows = conn.execute(
+        "SELECT * FROM staged_entries WHERE status='PENDING' AND signal_date<? "
+        "ORDER BY id ASC", (today_str,)).fetchall()
+    conn.close()
+    if not rows:
+        return []
+
+    results = []
+    for row in rows:
+        entry = dict(row)
+        ticker = entry["ticker"]
+        # Window/expiry checks run on the ticker's own bar history — handles
+        # weekends, holidays and suspension gaps without a calendar table.
+        conn = get_db()
+        n_between = conn.execute(
+            "SELECT COUNT(*) FROM ohlcv WHERE ticker=? AND date>? AND date<?",
+            (ticker, entry["signal_date"], today_str)).fetchone()[0]
+        today_bar = conn.execute(
+            "SELECT open FROM ohlcv WHERE ticker=? AND date=?",
+            (ticker, today_str)).fetchone()
+        conn.close()
+        if n_between > 0:
+            _set_staged_status(entry["id"], "EXPIRED",
+                               note="next-session window passed unfilled")
+            results.append({**entry, "status": "EXPIRED",
+                            "note": "next-session window passed unfilled"})
+            continue
+        if today_bar is None or today_bar[0] is None:
+            results.append({**entry, "status": "PENDING",
+                            "note": "today's bar not published yet; retry later"})
+            continue
+        fill_price = float(today_bar[0])
+        # open_trade owns every entry guard (DD breaker, max_open, duplicate,
+        # cooldown, ARA/ARB caps, sizing); its error dict becomes a skip.
+        result = open_trade(ticker, fill_price, strategy=entry["strategy"],
+                            notify=False)
+        if "error" in result:
+            _set_staged_status(entry["id"], "SKIPPED", note=result["error"])
+            results.append({**entry, "status": "SKIPPED", "note": result["error"]})
+        else:
+            _set_staged_status(entry["id"], "FILLED", trade_id=result["id"],
+                               note=f"filled at next-session open {fill_price}")
+            results.append({**entry, "status": "FILLED", "trade_id": result["id"],
+                            "fill_price": fill_price})
+            logger.info(f"[staged_entry] {ticker} FILLED (staged id={entry['id']} "
+                        f"-> trade {result['id']}) @ {fill_price} (next-session open)")
+    return results
 
 
 def open_trade(ticker: str, entry_price: float, strategy: str = None,
