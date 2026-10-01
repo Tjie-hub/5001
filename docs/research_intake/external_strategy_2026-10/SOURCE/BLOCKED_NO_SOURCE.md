@@ -41,3 +41,12 @@ rules with quote/timestamp references, parameter ambiguity list as open question
 performance treated as unverified marketing, data-requirements check against
 `data/walkforward.db`, overlap check against HYPOTHESIS_REGISTRY/FAILURE_REGISTRY families.
 Phase B stays gated behind P1 (research fence cutover) per brief §3 and TODO.md sequencing.
+
+---
+
+## UNBLOCKED — 2026-10-01 (superseding note; the record above is kept unchanged)
+
+Source supplied the same day: 5 US quant-strategy transcripts (`SOURCE/YT_*.md`) and 23 IDX
+retail-strategy transcripts (`SOURCE/retail_idx/YT_*.md`), all verbatim via NotebookLM. Shortlists:
+`CANDIDATES.md`, `RETAIL_IDX_SURVEY.md`. Owner chose R1 (BSJP); Phase A spec: `SPEC.md`.
+Phase B remains gated behind P1.
