@@ -2136,6 +2136,56 @@ push", on the checker review `P-M/broad_search/CHECKER_REVIEW_2026-09-29.md`.
 
 ---
 
+### D-066 · NR7_BULL retired from SHADOW after the P4 evidence-honesty corrections — every stratum negative and the former headline was not phantom-fill-inflated
+**Status:** DECIDED · **Date:** 2026-10-01 · **Type:** Registry lifecycle (owner decision) ·
+**Approval authority:** Owner decision 2026-10-01, ratifying the proposal
+`P-M/priors/D-066_PROPOSAL_NR7_RETIRE_2026-09-30.md` (read, cited, left untouched) per the planner's
+recommendation recorded in `HANDOFF_P4_2026-10-01.md` §"Owner decisions — 2026-10-01" item 2.
+
+**A · What changed.** `registry/edge_registry.yaml` NR7_BULL v2 `status: SHADOW` → `RETIRED` with an
+appended changelog sentence (the D-029 shape: status change + changelog; the entry's provenance fields
+are untouched). v1 remains SUPERSEDED and byte-preserved.
+
+**B · Evidence.** D-029 (2026-08-19) had demoted v1 for failing the Evidence Model's C3/E5+X3 capital
+bar but left SHADOW as a tracking slot. P4 closed the remaining hope:
+- **P4-1** (as-of-entry-date ADV gating, `fix/p4-evidence-honesty-on-p3`): the study's two local
+  passes (T2 chronological retention, T3 BULL stratum) were look-ahead artifacts; corrected they flip
+  PASS → FAIL (T1 +0.099% → −1.150%/trade, N 1337 → 899).
+- **P4-6** (liquidity-scaled costs, layered): T1 −1.298%/trade.
+- **P4-2** (ARA/ARB fillability, same branch): T1 **−1.262%**/trade (N 899 unchanged), BULL −0.390%,
+  BEAR −1.549% — and, decisively, the correction is *small and slightly positive-ward* for NR7, i.e.
+  the old headline was **not** propped up by unfillable phantom exits; it was already negative
+  honestly. Nothing argues for restoring even shadow tracking.
+
+**C · Engineering consequence (the D-029 lesson re-applied).** A naive status flip would have made
+`registry_governance("NR7 Breakout")` return `None` (= UNREGISTERED) — the sole state where the
+D-031 Option C legacy `wf_edge` fallback is licensed — re-exposing a retired strategy to live
+selection, the exact hole D-029 documented and closed. Executed as the smallest safe change instead:
+lifecycle-state records are now collected at load (`lifecycle` key), `registry_governance()` /
+`admission_path()` return a **RETIRED** sentinel for registered-but-terminal strategies (same
+T7 contract as SHADOW: exclude outright, never fall back), `engine/admission.py` maps it to a
+hard non-admission, and `startup_summary()` reports "1 retired". The `("NR7_BULL", 2)` entry was
+removed from `_LIFECYCLE_DEBT`: a lifecycle state is skipped before the debt check runs, so the
+grandfather was unreachable dead code (removal is the allowlist's allowed shrink direction).
+`tests/test_registry_lifecycle.py::test_nr7_breakout_excluded_from_live_selection_after_demotion`
+(D-029's production canary) passes unchanged on the real registry against a positive legacy
+`wf_edge` row — exclusion holds under RETIRED.
+
+**D · Directed follow-ups (flagged, not actioned here).** The D-066 proposal records three
+live-surface inconsistencies that now contradict a RETIRED entry and need their own pass:
+`'NR7 Breakout'` still in `_REGIME_STRATEGY_MAP` (scanner dispatch) and not in `_DEFAULT_DISABLED`;
+the phase5 regime-band watch job alerting via `approved_universe("NR7 Breakout")`; and the stale
+"one approved edge" Telegram copy in `engine/phase5_watch.py` / `scheduler/scanner.py` comments.
+The registry sentinel keeps all of them from opening anything, but the alerts and framing should be
+cleaned up deliberately. `CLAUDE.md` (FROZEN) invariant #10's row naming NR7_BULL as the sole
+lifecycle-debt exception is now stale — amending it is the Owner's call.
+
+**Files:** this entry · `registry/edge_registry.yaml` · `engine/registry_loader.py` ·
+`engine/admission.py` · `tests/test_registry_lifecycle.py` · proposal cited (not edited) ·
+`HANDOFF_P4_2026-10-01.md` · branch `gov/d066-retire-nr7-bull`.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
