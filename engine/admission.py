@@ -61,7 +61,7 @@ class AdmissionVerdict:
     admitted: bool
     stage: str
     reason: str
-    registry_state: str                  # APPROVED | SHADOW | UNREGISTERED
+    registry_state: str                  # APPROVED | SHADOW | RETIRED | UNREGISTERED
     rule_id: str
     wf_expectancy_pct: Optional[float] = None
     wf_n_trades: Optional[int] = None
@@ -102,6 +102,8 @@ def _registry_state(strategy: str, ticker: str) -> tuple[str, bool]:
         return "UNREGISTERED", False
     if gov == "SHADOW":
         return "SHADOW", False
+    if gov == "RETIRED":
+        return "RETIRED", False
     return "APPROVED", (ticker in gov)
 
 
@@ -230,6 +232,12 @@ def evaluate(conn, ticker: str, strategy: str, *, disabled: frozenset[str] | set
         # T7 invariant: SHADOW can never reach live execution via any fallback.
         return verdict(False, STAGE_REGISTRY,
                        "registry-governed but not APPROVED (SHADOW)")
+    if state == "RETIRED":
+        # D-066: same T7 contract — a RETIRED strategy is registered and
+        # excluded outright; treating it as UNREGISTERED would let the
+        # D-031 Option C legacy fallback re-admit it on a stale wf_edge row.
+        return verdict(False, STAGE_REGISTRY,
+                       "registry-governed but RETIRED (D-066)")
     if state == "APPROVED" and not in_universe:
         return verdict(False, STAGE_REGISTRY,
                        "APPROVED but ticker is outside the frozen universe")
