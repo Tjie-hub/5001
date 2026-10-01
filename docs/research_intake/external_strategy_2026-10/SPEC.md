@@ -186,3 +186,91 @@ outcomes).
 - No `docs/research_programs/P-M/**` file is touched; this is not a P-M hypothesis.
 - If the family fails, it is filed in `FAILURE_REGISTRY` with all 8 cells — including the ones
   that looked best.
+
+## 11. Phase-A follow-ups (2026-10-01)
+
+Research closure of §9-Q1 and §9-Q2 (brief `ZCODE_BRIEF_PUSH_PR_RECONCILE_2026-10-01.md` §5;
+Q3–Q5 were already adopted at the SPEC's frozen defaults). Nothing in §0–§10 is edited by this
+section; no forward return was computed; no Rule Card opened; nothing under
+`docs/research_programs/P-M/**` was touched.
+
+### 11.1 Q1 — §2 literature verified; IDX/ASEAN search
+
+Both [M] citations were **opened** (not search-snippet-matched) and upgrade to **[V]**:
+
+| §2 citation | Verified record | What was read |
+|---|---|---|
+| Berkman, Koch, Tuttle & Zhang (2012) | "Paying Attention: Overnight Returns and the Hidden Cost of Buying at the Open", *JFQA* **47(4)** (August 2012), pp. 715–741, DOI `10.1017/S0022109012000270` | Cambridge Core abstract, verbatim: "a strong tendency for positive returns during the overnight period followed by reversals during the trading day … concentrated among stocks that have recently attracted the attention of retail investors … more pronounced for stocks that are difficult to value and costly to arbitrage … The additional implicit transaction costs for retail traders who buy high-attention stocks near the open frequently exceed the effective half spread." The SPEC's one-line claim stands. |
+| Lou, Polk & Skouras (2019) | "A tug of war: Overnight versus intraday expected returns", *JFE* **134(1)** (2019), pp. 192–213, DOI `10.1016/j.jfineco.2019.03.011` | RePEc/IDEAS abstract: "strong overnight and intraday firm-level return continuation along with an offsetting cross-period reversal"; across 14 strategies "profits are either earned entirely overnight … or entirely intraday, typically with profits of opposite signs." Consistent with the SPEC's use. |
+
+URLs (opened 2026-10-01):
+<https://www.cambridge.org/core/journals/journal-of-financial-and-quantitative-analysis/article/paying-attention-overnight-returns-and-the-hidden-cost-of-buying-at-the-open/F9AAD159B512C651F09D5D52011D88E0>
+· <https://ideas.repec.org/a/eee/jfinec/v134y2019i1p192-213.html>
+
+**IDX-/ASEAN-specific overnight-return or limit-hit studies: none admissible located.** The
+sweep surfaced only Indonesian student/regional-venue items — each Q1-grade under
+`LITERATURE_RESEARCH_STANDARD`, located via search snippets and **not opened** (recorded for
+completeness, used for nothing): UNDIP DJOM article citing Berkman
+(<https://ejournal3.undip.ac.id/index.php/djom/article/download/13203/12761>), UGM thesis on
+overnight momentum
+(<https://etd.repository.ugm.ac.id/home/detail_pencarian_downloadfiles/1507341>), IISTE JEDS
+"overnight momentum" Indonesian-market study
+(<https://iiste.org/Journals/index.php/JEDS/article/viewFile/42436/43703>), Hasanuddin 2024
+thesis (<https://repository.unhas.ac.id/>), ResearchGate "Determinants of Momentum Strategy and
+Return in Short Time Horizon: Case in Indonesian Stock Market"
+(<https://www.researchgate.net/publication/324155700>). The only Indonesia-specific
+**auto-rejection** study remains the in-repo LC-PM-0010 (Ma'rifah et al., Q1-Nominal).
+**Verdict: Tier N stands** (§2/§5 unchanged).
+
+### 11.2 Q2 — ARA/ARB regimes in force, 2021-07 → today
+
+Regular-board equities only (special-monitoring board and IPO-first-day 2× bands are out of
+scope, as in `ARB_REGIME_TABLE_v1`'s scope note). Tier table means: Rp50–≤Rp200 → 35%,
+>Rp200–≤Rp5,000 → 25%, >Rp5,000 → 20% (minimum share price Rp50 throughout, until R5).
+
+| # | Sessions | ARA (up) | ARB (down) | Legal basis |
+|---|---|---|---|---|
+| R1′ | 2021-07-05 → 2023-06-02 | tiered 35/25/20 | flat **−10%** all tiers | Pandemic-era asymmetric policy: −7% from 2020-03-13 (OJK FSR No. 04-2020), restored to −10% effective 2020-06-02 (Detik; BEI Annual Report 2020). In force, unchanged, across the whole SPEC window start. |
+| R2 | 2023-06-05 → 2023-09-01 | tiered 35/25/20 | flat **−15%** | Kep-00055/BEI/03-2023 (issued 2023-03-30), staged normalization Tahap I (IDX siaran pers 1893 "Normalisasi Ketentuan Relaksasi Masa Pandemi"; Kontan; Bareksa). |
+| R3 | 2023-09-04 → 2025-04-07 | tiered 35/25/20 | **symmetric** −35/−25/−20 | Same decree, Tahap II (Kontan 2023-08-31 "berlaku pada 4 September 2023"). |
+| R4 | 2025-04-08 → 2026-09-25 | tiered 35/25/20 | flat **−15%** | Peraturan II-A amendment (decree number per in-repo `ARB_REGIME_TABLE_v1`: Kep-00003/BEI/04-2025 — not independently confirmed in this sweep); official IDX press release (EN/ID) opened. |
+| **R5** | **2026-09-28 → 2026-12-31 (in force today)** | Rp1–10: **+Rp1 nominal**; >Rp10: tiered 35/25/20 | Rp1–10: **−Rp1 nominal**; >Rp10: flat **−15%** | **Kep-00136/BEI/09-2026 + Kep-00137/BEI/09-2026** (Perubahan Kedua atas Peraturan II-A; II-O DINFRA), issued 2026-09-21, effective 2026-09-28, PR **083/BEI.SPR/09-2026** — issuer document, opened and read verbatim. Minimum price Rp50 → Rp1. |
+| R6 | 2027-01-01 → (announced) | unchanged | **symmetric** tiered restored (>Rp10); Rp1–10 stays Rp1/Rp1 | Same PR 083/BEI.SPR/09-2026 ("mulai berlaku 1 Januari 2027"). Announced, not yet in force. |
+
+Sources (opened unless marked): IDX siaran pers 2704
+<https://www.idx.co.id/id/berita/siaran-pers/2704> (R5/R6, primary, verbatim); IDX press
+release on the 2025 ARB change <https://www.idx.co.id/en/news/press-release/2352> (R4; ID
+version at siaran-pers/2352); consolidated II-A decree text whose header reads
+Kep-00136/BEI/09-2026
+<https://www.idx.co.id/Media/y0vjxqur/signed_peraturan_ii_a_perdagangan_efek_bersifat_ekuitas.pdf>
+(PDF — located, not parsed this session); Kontan
+<https://investasi.kontan.co.id/news/bei-pastikan-auto-rejection-simetris-berlaku-pada-4-september-2023>
+and Bareksa
+<https://www.bareksa.com/berita/saham/2023-08-31/bei-aturan-baru-batasan-persentase-auto-rejection-simetris-berlaku-mulai-4-september-2023>
+(R2/R3, secondary); IDX siaran pers 1893
+<https://www.idx.co.id/id/berita/siaran-pers/1893> (R2/R3 title located; page bot-walled);
+Detik 2020-06-02
+<https://finance.detik.com/bursa-dan-valas/d-4932313/bei-ubah-batas-auto-rejection-bawah-10-mulai-hari-ini>
+and OJK FSR 04-2020
+<https://www.ojk.go.id/id/data-dan-statistik/financial-stability-review/Documents/OJK%20FSR%20%20No.%2004-2020.pdf>
+and BEI AR 2020 <https://idx.co.id/media/9969/2020.pdf> (pre-window COVID history, secondary).
+
+In-repo corroboration: `docs/research_programs/P-M/reference/ARB_REGIME_TABLE_v1.json`
+(behavioural session-exact boundaries R2→R3; R4 bounded 2025-03-18 < switch ≤ 2025-04-08).
+
+**Consequences for Phase B (recorded; no decision taken here):**
+
+1. **ARA side (§3's entry-unfillable test): the tier table 35/25/20 is valid for the entire
+   local snapshot (2021-07-05 → 2026-07-29).** Every regime kept ARA tiered above Rp10, and the
+   minimum price was Rp50 until 2026-09-28, so no in-window name can fall into R5's Rp1–10
+   nominal band. §9-Q2's default (use `price_limits.py`'s tier table for the ARA side) is
+   therefore exact on current data, not an approximation.
+2. **ARB side (E1's ARB-locked open; E2's SL floor): `price_limits.py`'s symmetric table is
+   wrong outside 2023-09-04 → 2025-04-07.** The Rule Card must date-stamp ARB: −10%
+   (2021-07-05 → 2023-06-02), −15% (2023-06-05 → 2023-09-01), symmetric tiered (2023-09-04 →
+   2025-04-07), −15% (2025-04-08 → snapshot end 2026-07-29).
+3. **R5/R6 start after the snapshot's last bar (2026-07-29)** — no effect on Phase B with
+   current data; revisit only if the research fence is ever refreshed past 2026-09-28.
+4. `ARB_REGIME_TABLE_v1` (2026-09-14) records R4 as open-ended and knows nothing of R5/R6 — it
+   is stale by one regime and should be regenerated before any D-2 primary-verification close
+   (P-M scope; not touched in this follow-up).
