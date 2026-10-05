@@ -61,7 +61,7 @@ _Hours, not days. No research judgement required. Do this first._
       provider has its own suite (`tests/agent_firm/providers/test_zai_provider.py`). The two
       auto-token files re-collected clean in the 2026-10-01 full run.
 
-- [ ] **P0-4. Track or delete the 5 untracked test files** — 283 test files on disk, **278 tracked**.
+- [x] **P0-4. Track or delete the 5 untracked test files** — 283 test files on disk, **278 tracked**.
       CI checks out only tracked files, so these have **never run in CI**:
       `tests/test_news_filter.py` (2 of the cached failures), `tests/test_filter_exploration.py`,
       `tests/agent_firm/providers/test_quota_{hydration_edge_cases,scenarios,state_persistence}.py`.
