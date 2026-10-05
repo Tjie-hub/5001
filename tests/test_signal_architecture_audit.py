@@ -315,14 +315,25 @@ class TestForwardTestBoundary:
         assert "self.resolver.next_open(sig[\"ticker\"], sig[\"signal_date\"])" in src
 
     def test_live_forward_test_data_has_no_same_bar_entries(self):
-        """Data-level check against the production DB: every closed shadow
-        trade entered strictly after its signal date. Skipped when the DB is
-        absent (CI)."""
+        """Data-level check against real forward-test data: every closed
+        shadow trade entered strictly after its signal date.
+
+        Integration check -- the ordinary suite must never touch the repo's
+        data/ directory (tests/conftest.py::_isolate_db_path), so this runs
+        only against an explicitly provided database file:
+            IDX_LIVE_WF_DB=/path/to/walkforward.db pytest -k same_bar_entries
+        Point it at a COPY of the production DB if one is handy: the
+        immutable=1 read below never takes a write lock or creates
+        -wal/-shm sidecars, but it also cannot see rows still sitting in a
+        hot WAL."""
         import os, sqlite3
-        db = "data/walkforward.db"
+        db = os.environ.get("IDX_LIVE_WF_DB", "")
+        if not db:
+            pytest.skip("integration check: set IDX_LIVE_WF_DB=<walkforward.db> "
+                        "to run against real forward-test data")
         if not os.path.exists(db):
-            pytest.skip("production DB not present")
-        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=30)
+            pytest.skip(f"IDX_LIVE_WF_DB does not exist: {db}")
+        conn = sqlite3.connect(f"file:{db}?mode=ro&immutable=1", uri=True, timeout=30)
         try:
             bad, total = conn.execute(
                 "SELECT SUM(CASE WHEN entry_date <= signal_date THEN 1 ELSE 0 END),"
