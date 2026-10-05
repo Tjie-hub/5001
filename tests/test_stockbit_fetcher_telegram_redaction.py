@@ -7,7 +7,18 @@ passed through redact_secrets() first.
 """
 from unittest.mock import patch
 
+import pytest
+
 import stockbit_fetcher as sf
+import utils.telegram as tg
+
+
+@pytest.fixture(autouse=True)
+def _no_global_off(tmp_path, monkeypatch):
+    """Hermetic vs the production kill file: logs/TELEGRAM_OFF really exists
+    on the live box (owner blackout 2026-10-05), but these tests exercise the
+    send path itself, with the switch off."""
+    monkeypatch.setattr(tg, "_OFF_FILE", str(tmp_path / "TELEGRAM_OFF"))
 
 
 def _sent_text(monkeypatch, msg, secret_env=None):

@@ -24,8 +24,10 @@ if [ "$rc" -ne 0 ]; then
     # Global outbound blackout (owner-ordered 2026-10-05): while
     # logs/TELEGRAM_OFF exists, cron failure alerts are skipped too — the
     # python senders check the same file (utils.telegram.is_off). The failure
-    # itself still lands in the job log and the rc below.
-    if [ -f "$DIR/logs/TELEGRAM_OFF" ]; then
+    # itself still lands in the job log and the rc below. Follows this
+    # wrapper's own LOG_DIR (CRON_WRAP_LOG_DIR override included), which is
+    # the repo logs/ dir everywhere outside tests.
+    if [ -f "$LOG_DIR/TELEGRAM_OFF" ]; then
         echo "[$(date '+%F %T')] ALERT SKIPPED (telegram globally OFF) for $JOB" >> "$LOG"
         exit "$rc"
     fi

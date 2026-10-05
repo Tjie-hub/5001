@@ -432,6 +432,14 @@ class TestSendTelegramRedaction:
     implementation.
     """
 
+    @pytest.fixture(autouse=True)
+    def _no_global_off(self, tmp_path, monkeypatch):
+        """Hermetic vs the production kill file: logs/TELEGRAM_OFF really
+        exists on the live box (owner blackout 2026-10-05); these tests
+        exercise the send path itself, with the switch off."""
+        import utils.telegram as tg
+        monkeypatch.setattr(tg, "_OFF_FILE", str(tmp_path / "TELEGRAM_OFF"))
+
     def _sent_text(self, monkeypatch, msg, secret_env=None):
         monkeypatch.setattr(at, "TELEGRAM_TOKEN", "tok123")
         monkeypatch.setattr(at, "TELEGRAM_CHAT_ID", "chat456")
