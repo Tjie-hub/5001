@@ -187,3 +187,55 @@ def deflated_sharpe_ratio(values, n_trials: int, sr_trials_std: float) -> dict:
     dsr = probabilistic_sharpe_ratio(values, sr_benchmark=sr_star)
     return {"dsr": float(dsr), "sr": sharpe(values), "sr_benchmark": float(sr_star),
             "n_trials": int(n_trials), "sr_trials_std": float(sr_trials_std)}
+
+
+def pbo_cscv(matrix, n_splits: int = 16) -> dict:
+    """Probability of Backtest Overfitting via combinatorially symmetric cross-validation
+    (Bailey, Borwein, Lopez de Prado & Zhu 2015).
+
+    `matrix` is T x N: per-period returns of N trial configurations measured over the
+    SAME T periods (e.g. parameter variants of one strategy). Rows are cut into
+    `n_splits` (even) contiguous blocks; for every choice of half the blocks as
+    in-sample, the in-sample-best trial (by Sharpe) is ranked out-of-sample. PBO is the
+    share of splits where that winner lands at or below the out-of-sample median
+    (logit <= 0). ~0.5 = selection is no better than chance; near 0 = the winner persists.
+
+    Deterministic (no sampling). Sharpe per split is computed from per-block sums, so the
+    C(S, S/2) combinations stay cheap."""
+    import itertools
+
+    m = np.asarray(matrix, dtype=float)
+    if m.ndim != 2 or m.shape[1] < 2:
+        raise ValueError("pbo_cscv needs a T x N matrix with N >= 2 trials")
+    if n_splits < 2 or n_splits % 2:
+        raise ValueError("n_splits must be an even number >= 2")
+    t, n = m.shape
+    if t < n_splits * 2:
+        raise ValueError("need at least 2 rows per split")
+    m = m[: (t // n_splits) * n_splits]          # equal-sized blocks (drop the remainder)
+    blocks = m.reshape(n_splits, -1, n)
+    cnt = blocks.shape[1]
+    bsum = blocks.sum(axis=1)                    # S x N
+    bsq = (blocks ** 2).sum(axis=1)
+
+    def _sr(idx):
+        k = cnt * len(idx)
+        s, q = bsum[list(idx)].sum(axis=0), bsq[list(idx)].sum(axis=0)
+        mean = s / k
+        var = np.maximum((q - k * mean ** 2) / (k - 1), 0.0)
+        sd = np.sqrt(var)
+        return np.where(sd > 0, mean / np.where(sd > 0, sd, 1.0), 0.0)
+
+    logits = []
+    for is_idx in itertools.combinations(range(n_splits), n_splits // 2):
+        oos_idx = [b for b in range(n_splits) if b not in is_idx]
+        is_sr, oos_sr = _sr(is_idx), _sr(oos_idx)
+        best = int(np.argmax(is_sr))
+        v = oos_sr[best]
+        rank = (oos_sr < v).sum() + 0.5 * ((oos_sr == v).sum() - 1) + 1   # 1..N, ties averaged
+        w = rank / (n + 1)
+        logits.append(math.log(w / (1.0 - w)))
+    logits = np.asarray(logits)
+    return {"pbo": float((logits <= 0).mean()), "logit_median": float(np.median(logits)),
+            "n_combinations": int(logits.size), "n_trials": int(n), "n_splits": int(n_splits),
+            "rows_used": int(m.shape[0])}

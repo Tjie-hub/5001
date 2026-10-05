@@ -6,7 +6,8 @@ from research.gatekeeper import config as cfg
 
 def test_load_default_config_has_frozen_values():
     c = cfg.load_config()
-    assert c.version == 2                        # v2: hierarchical family (Phase D)
+    assert c.version == 3                        # v3: + PBO/CSCV stage (v2: hierarchical family)
+    assert c.pbo["watch_at"] == 0.25 and c.pbo["fail_at"] == 0.50
     # primary partition only; vol/liq are declarable sub-cells added per-strategy
     assert c.multiplicity["family"]["regimes"] == ["BULL", "BEAR", "SIDEWAYS"]
     assert c.promotion_bar_pct == 0.50          # = nr7_study THRESHOLDS.min_net_exp

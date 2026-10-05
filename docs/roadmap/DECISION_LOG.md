@@ -2136,6 +2136,32 @@ push", on the checker review `P-M/broad_search/CHECKER_REVIEW_2026-09-29.md`.
 
 ---
 
+### D-065 · Gatekeeper gate config v3: Stage 9 PBO/CSCV implemented — closes a framework-vs-code gap
+**Status:** RECORDED · **Date:** 2026-10-05 · **Type:** Methodology (pre-registered gate change) +
+engineering · **Approval authority:** Owner instruction 2026-10-05, "fix all", on the gap list from the
+literature comparison (gap 2: "PBO/CSCV stage; threshold literature default").
+
+- **Gap found.** [[RESEARCH_VALIDATION_FRAMEWORK]] §1 states PBO via CSCV "must be applied", but
+  `research/gatekeeper/stages.py` ran eight stages without it. The framework promised a check the code
+  never ran (same class as the §5 corrections: a canonical claim contradicted by the repository).
+- **Change.** `statistics.pbo_cscv()` (Bailey, Borwein, Lopez de Prado & Zhu 2015; deterministic,
+  per-block sums over C(S,S/2) splits) and **Stage 9 `pbo`** before FT eligibility. Thresholds in the
+  hashed config: `n_splits 16`, **WATCH at PBO >= 0.25, FAIL at PBO >= 0.50** (overfit more likely
+  than not). `gate_config.yaml` version 2 -> **3**: a new config_hash and a new decision lineage;
+  no existing gate decision is touched (append-only).
+- **Posture: no matrix -> WATCH, never PASS.** CSCV needs a common-period trial matrix (e.g.
+  parameter variants). The current scan family is regime cells, which trade in different months, so
+  for those candidates Stage 9 returns WATCH: nothing reaches PROMOTE without the overfitting check the
+  framework makes mandatory. A strategy that wants PROMOTE must supply `trial_returns` (T x N).
+- **Consequence.** Under v3 a candidate identical to the v2 "clean strong" fixture is WATCHLIST unless
+  it carries a trial matrix. The gatekeeper has never issued a PROMOTE, so no live promotion changes.
+- **Tests.** statistics (noise -> PBO ~0.5, persistent edge -> ~0, determinism, input checks), stage
+  banding incl. the no-matrix WATCH, pipeline PROMOTE-with-matrix / WATCHLIST-without; suite 3463 pass.
+  Two pre-existing failures (`tests/test_routes_telegram_redaction.py`) come from the live
+  `logs/TELEGRAM_OFF` kill file (commit `12e8978`), not from this change.
+- **RD-4 note.** This implements the third leg of "FDR and DSR and PBO" but does not close rationale
+  debt RD-4 (why the conjunction); only the original decider can.
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

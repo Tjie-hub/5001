@@ -30,6 +30,7 @@ class GateConfig:
     deflated_sharpe: dict
     walk_forward: dict
     out_of_sample: dict
+    pbo: dict
     forward_test_rule: dict
     seed: int
     source_path: str = field(default="", compare=False)
@@ -51,6 +52,7 @@ def load_config(path: str = None) -> GateConfig:
         deflated_sharpe=raw["deflated_sharpe"],
         walk_forward=raw["walk_forward"],
         out_of_sample=raw["out_of_sample"],
+        pbo=raw["pbo"],
         forward_test_rule=raw["forward_test_rule"],
         seed=raw["seed"],
         source_path=path,

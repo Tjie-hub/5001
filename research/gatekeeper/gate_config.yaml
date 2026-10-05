@@ -4,7 +4,9 @@
 # consistent with today's discipline. Never edit silently after a candidate is
 # evaluated against it — bump `version` (that changes config_hash and starts a new
 # decision lineage).
-version: 2                     # v2: hierarchical family (Phase D). v1 had flat
+version: 3                     # v3 (2026-10-05): + Stage 9 PBO/CSCV, mandatory per
+                               # RESEARCH_VALIDATION_FRAMEWORK but previously unimplemented.
+                               # v2: hierarchical family (Phase D). v1 had flat
                                # vol/liq placeholders that never carried trades and
                                # inflated the Stage-3 multiplicity denominator (7→3).
 promotion_bar_pct: 0.50        # = nr7_study THRESHOLDS.min_net_exp  (Stage 2/6/7 bar)
@@ -35,6 +37,10 @@ walk_forward:
 out_of_sample:
   holdout_months: 6            # reserved BEFORE the WF windows (distinct segment)
   min_retention: 0.50          # = THRESHOLDS.t2_min_retention       (Stage 7)
+pbo:                           # Stage 9 — Bailey et al. 2015 CSCV over common-period trials
+  n_splits: 16                 # S (even): C(16,8) = 12,870 IS/OOS splits
+  watch_at: 0.25               # PBO >= 0.25 -> WATCH
+  fail_at: 0.50                # PBO >= 0.50 -> FAIL (overfit more likely than not)
 forward_test_rule:             # = phase5_tracker.RULE (frozen; attached on PROMOTE)
   min_n: 15
   go_exp: 0.50

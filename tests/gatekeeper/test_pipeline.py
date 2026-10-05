@@ -37,22 +37,38 @@ def _trades_with_net(net_values, regime="BULL", ticker="AAA"):
     return out
 
 
-def _candidate(net_values, scan_sharpes, regime="BULL"):
+def _persistent_trials(seed=0):
+    """Common-period trial family where trial 0 carries a real, persistent edge (PBO ~0)."""
+    m = np.random.default_rng(seed).normal(0.0, 1.0, (200, 12))
+    m[:, 0] += 0.8
+    return {"labels": [f"p{i}" for i in range(12)], "matrix": m.tolist()}
+
+
+def _candidate(net_values, scan_sharpes, regime="BULL", trial_returns=None):
     trades = _trades_with_net(net_values, regime=regime)
     return cand.assemble_candidate(
         strategy_fn="NR7 Breakout", trades=trades,
         scan_family=[ScanCell(f"c{i}", s, 50) for i, s in enumerate(scan_sharpes)],
         wf={"consistency_pct": 75, "pooled_oos_exp": 1.2, "n_windows": 16},
         oos={"retention": 0.8, "late_exp": 1.0, "late_n": 200},
-        target_regime=regime, strategy_config_hash="nr7cfg")
+        target_regime=regime, strategy_config_hash="nr7cfg", trial_returns=trial_returns)
 
 
 def test_run_gate_promotes_a_clean_strong_candidate(tmp_path):
     net = _net_exact(3.0, 1.0, 400)
-    d = pipeline.run_gate(_candidate(net, [0.05, 0.06, 0.07]),
+    d = pipeline.run_gate(_candidate(net, [0.05, 0.06, 0.07], trial_returns=_persistent_trials()),
                           CFG, db_path=str(tmp_path / "g.db"))
     assert d.final_state == FinalState.PROMOTE
     assert d.forward_test_rule["min_n"] == 15          # frozen rule attached
+
+
+def test_run_gate_without_trial_matrix_cannot_promote(tmp_path):
+    # Config v3: PBO is mandatory. The same strong candidate with no common-period trial
+    # family (regime cells only) stops at WATCHLIST on Stage 9 instead of PROMOTE.
+    net = _net_exact(3.0, 1.0, 400)
+    d = pipeline.run_gate(_candidate(net, [0.05, 0.06, 0.07]), CFG, db_path=str(tmp_path / "g.db"))
+    assert d.final_state == FinalState.WATCHLIST
+    assert {r.stage: r.verdict for r in d.stage_results}["pbo"] == "WATCH"
 
 
 def test_run_gate_watchlists_nr7_representative_candidate(tmp_path):
