@@ -107,3 +107,9 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # opened_utc). Runs after the 09:30 regime recorder. Was installed live since
 # d73db17 but missing here until 2026-09-30 (installed/deploy drift).
 35 9 * * * cd $D && $W fwd_fade_recorder venv/bin/python3 docs/research_programs/P-M/forward_fade/run_recorder.py
+
+# FWD-PM-BANK-001 forward test (HYP-PM-0014, family P-M Price-Reversal {R1,R2}),
+# opened 2026-10-05 (D-066). Appends a big-4 bank 2-ATR climax-low event to
+# docs/research_programs/P-M/forward_bank/ledger.json only when its 10-session
+# window closes with every leg present; read-only against the DB; refuses back-fill.
+40 9 * * * cd $D && $W fwd_bank_recorder venv/bin/python3 docs/research_programs/P-M/forward_bank/run_recorder.py

@@ -12,7 +12,7 @@ approves all three parts; the texts apply verbatim.
      split that resets multiplicity, which PG-3/PG-6/R7.5 forbid. Widening is allowed by formal
      amendment (D-028) and costs R1 nothing it already has.
    - Consequence: the family's registered count goes 1 -> 2 and both members are judged with that count.
-2. **Register HYP-PM-0014** per [[PROTOCOL_DRAFT]] (freeze to PROTOCOL.md, sha256 recorded at approval).
+2. **Register HYP-PM-0014** per [[PROTOCOL]] (frozen) (freeze to PROTOCOL.md, sha256 recorded at approval).
 3. **Open FWD-PM-BANK-001**: write `run_recorder.py` + tests, add one cron line after the 16:15 EOD
    write (like FWD-PM-FADE-001 at 09:35), record from the registration timestamp, no back-fill.
 

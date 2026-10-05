@@ -2162,6 +2162,23 @@ literature comparison (gap 2: "PBO/CSCV stage; threshold literature default").
 - **RD-4 note.** This implements the third leg of "FDR and DSR and PBO" but does not close rationale
   debt RD-4 (why the conjunction); only the original decider can.
 
+### D-066 · P-M Price-Reversal widened {R1} -> {R1, R2}; HYP-PM-0014 registered (bank 2-ATR climax-low liquidity provision); FWD-PM-BANK-001 opened
+**Status:** RECORDED · **Date:** 2026-10-05 · **Type:** Family amendment + registration + forward-test open ·
+**Approval authority:** Owner, 2026-10-05, "Approve and push", on
+`P-M/forward_bank/OWNER_DECISION_PACKAGE_R2_BANK_2026-10-05.md` (commit `59dd6fd`).
+
+- **Family.** Price-Reversal widened by formal amendment (D-028 mechanism) to {R1, R2}. R2 = OHLCV-only
+  short-horizon *positive* reversal after a volatility climax in mega-cap liquid names. Widened rather than
+  a new family because invariant 12 scopes families by data epoch + feature space and R2 shares R1's; a new
+  family would split multiplicity (PG-3/PG-6/R7.5). Registered count 1 -> 2.
+- **HYP-PM-0014** frozen as `P-M/forward_bank/PROTOCOL.md` sha256 `2371cc48658f…` (recorder `c8e440c47adf…`,
+  SHA256SUMS.txt). Primary BBCA 10-session net excess vs EW liquid book (0.60% RT); secondary big-4 pooled.
+  GO >= +0.50% and t >= 2.0 at N >= 15 primary events or 36 months.
+- **Risks accepted (stated in the package):** BBCA selected after ~120 looks; frozen pre-2021 OOS t 2.36 is
+  below the program deflation bar 3.06 (D-064); OOS effect half the in-sample; primary read ~2029-2030.
+- **FWD-PM-BANK-001** opened `2026-10-05T16:09:16+00:00`, cron 09:40; no back-fill (the 2026-09-24/29 firings
+  are refused). The personal jurnal26 Telegram alert on the same rule is not the recorder and not evidence.
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

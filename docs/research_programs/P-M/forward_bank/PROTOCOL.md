@@ -1,7 +1,7 @@
-# FWD-PM-BANK-001 — protocol draft (frozen on Owner approval)
+# FWD-PM-BANK-001 — PROTOCOL (FROZEN)
 
-**Status:** DRAFT 2026-10-05 · becomes PROTOCOL.md (sha256-pinned) only when the Owner approves
-[[OWNER_DECISION_PACKAGE_R2_BANK_2026-10-05]]. Until then nothing is registered and nothing is counted.
+**Status:** FROZEN 2026-10-05T16:09:16+00:00 on Owner approval ("Approve and push", 2026-10-05) of
+[[OWNER_DECISION_PACKAGE_R2_BANK_2026-10-05]]. Changes only via an append-only deviation_log.md entry.
 
 ## 1. Claim (HYP-PM-0014, proposed)
 After a **2-ATR climax low** in a big-4 Indonesian bank, the next 10 sessions return **more than the
@@ -13,8 +13,10 @@ mechanism, expressed in OHLCV only).
 - Day t fires when close_t = lowest close of the last 20 sessions (t included) **and**
   close_t <= SMA20_t - 2 * ATR14_t (ATR = simple mean of true range, 14 sessions).
 - De-duplication: a firing within 10 sessions of the previous firing of the same name is the same event.
-- Entry: open of t+1. Exit: close of t+10. Prices: `ohlcv` is_final=1, issuance-adjusted
-  (`load_extended_ohlcv(issuance=True)` convention, D-064).
+- Entry: open of t+1. Exit: close of t+10. Prices: `ohlcv` is_final=1 (raw).
+- Void (not written, not scored): a window holding a session with |ret| > 35%, a split, or a
+  rights/bonus/reverse-split event (`corporate_action_events`): price steps that are not returns.
+  (Chosen instead of issuance adjustment because voiding needs no adjustment model; FADE convention.)
 
 ## 3. Endpoints
 - **Primary:** BBCA net 10-session return minus the equal-weight liquid book (ADV20 >= Rp 10 B) over the
@@ -38,5 +40,7 @@ mechanism, expressed in OHLCV only).
   its own pre-set bar, not a discovery; the forward test is what decides.
 
 ## 6. Recorder
-`run_recorder.py` (to be written on approval, same pattern as forward_fade): appends CLOSED events to
-`ledger.json` from the registration timestamp on, never back-fills; runs after the 16:15 EOD is_final write.
+`run_recorder.py` (tests: `tests/test_forward_bank_recorder.py`): appends CLOSED events to `ledger.json`
+from `opened_utc` on, never back-fills, writes a row only when every leg is present; cron 09:40 daily
+(after the 16:15 EOD is_final write of the previous session). Validated on history: reproduces the
+study's event counts exactly (BBCA 25, BBRI 32, BMRI 25, BBNI 27 since 2021-07).
