@@ -24,6 +24,23 @@ _MUTE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
                           "logs", "TELEGRAM_MUTE")
 _mute_cache = None  # (st_mtime, frozenset(tokens)) | None
 
+# ── Global outbound kill switch (owner-ordered blackout, 2026-10-05) ────────
+# While logs/TELEGRAM_OFF exists, NO outbound notification leaves this repo
+# through any sender — including the 'alert' category TELEGRAM_MUTE structurally
+# protects. The standalone python senders (stockbit_fetcher.py, auto_token.py,
+# routes/telegram.py send_telegram_reply) and the bash wrapper
+# scripts/cron_wrap.sh check the same file. Suppressed sends are still logged
+# with category + first 80 chars, so the later what-to-send curation has a full
+# record: journalctl --user -u idx-walkforward | grep 'global OFF'.
+# Restore everything: delete the file. Checked per send, no restart needed.
+_OFF_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                         "logs", "TELEGRAM_OFF")
+
+
+def is_off() -> bool:
+    """True while logs/TELEGRAM_OFF exists (total outbound blackout)."""
+    return os.path.exists(_OFF_FILE)
+
 
 def is_muted(category: str) -> bool:
     """True when `category` is listed in logs/TELEGRAM_MUTE (mtime-cached).
@@ -49,6 +66,10 @@ def is_muted(category: str) -> bool:
 
 
 def send_telegram(msg: str, category: str = "alert") -> None:
+    if is_off():
+        logger.info("[telegram] suppressed (global OFF): category=%s: %.80s",
+                    category, str(msg).replace("\n", " "))
+        return
     token = os.environ.get("TELEGRAM_TOKEN", "")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
     if not token or not chat_id or "ISI_" in token:

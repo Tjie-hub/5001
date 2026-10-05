@@ -9,8 +9,12 @@ import utils.telegram as tg
 
 
 @pytest.fixture(autouse=True)
-def reset_state():
+def reset_state(tmp_path, monkeypatch):
     tg._last_sent = 0.0
+    # Hermetic vs the production kill file: on the live box logs/TELEGRAM_OFF
+    # really exists (owner blackout 2026-10-05) — unit tests must exercise the
+    # send path with it absent unless a test opts in explicitly below.
+    monkeypatch.setattr(tg, "_OFF_FILE", str(tmp_path / "TELEGRAM_OFF"))
     yield
     tg._last_sent = 0.0
 
@@ -126,6 +130,46 @@ def test_logs_error_when_plain_text_fallback_also_fails(monkeypatch):
         tg.send_telegram("<b>broken")
     assert mock_post.call_count == 2   # no third attempt after fallback fails
     mock_log.assert_called_once()
+
+
+# ── global outbound kill switch (owner blackout 2026-10-05) ──────────────────
+
+def test_global_off_suppresses_even_alert_category(monkeypatch, tmp_path):
+    """logs/TELEGRAM_OFF existing silences EVERY category — the 'alert'
+    immunity that TELEGRAM_MUTE guarantees does not survive the kill switch."""
+    (tmp_path / "TELEGRAM_OFF").touch()
+    assert tg.is_off() is True
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tok123")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "chat456")
+    with patch("utils.telegram.requests.post") as mock_post, \
+         patch("utils.telegram.logger.info") as mock_log:
+        tg.send_telegram("blackout", category="alert")
+    mock_post.assert_not_called()
+    assert any("global OFF" in str(c) for c in mock_log.call_args_list)
+
+
+def test_global_off_absent_sends_normally(monkeypatch, tmp_path):
+    """No logs/TELEGRAM_OFF → normal send path (fixture already pointed
+    _OFF_FILE at this empty tmp_path)."""
+    assert tg.is_off() is False
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tok123")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "chat456")
+    with patch("utils.telegram.requests.post") as mock_post:
+        tg.send_telegram("hello again")
+    mock_post.assert_called_once()
+
+
+def test_global_off_removed_restores_sends(monkeypatch, tmp_path):
+    """Deleting the file restores sends immediately — no restart, no cache."""
+    off = tmp_path / "TELEGRAM_OFF"
+    off.touch()
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tok123")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "chat456")
+    with patch("utils.telegram.requests.post") as mock_post:
+        tg.send_telegram("silenced")
+        off.unlink()
+        tg.send_telegram("restored")
+    mock_post.assert_called_once()  # only the second call went out
 
 
 # ── secret redaction (RC1 fix R-4) ──────────────────────────────────────────

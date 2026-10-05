@@ -21,6 +21,14 @@ rc=$?
 echo "[$(date '+%F %T')] EXIT $JOB rc=$rc" >> "$LOG"
 
 if [ "$rc" -ne 0 ]; then
+    # Global outbound blackout (owner-ordered 2026-10-05): while
+    # logs/TELEGRAM_OFF exists, cron failure alerts are skipped too — the
+    # python senders check the same file (utils.telegram.is_off). The failure
+    # itself still lands in the job log and the rc below.
+    if [ -f "$DIR/logs/TELEGRAM_OFF" ]; then
+        echo "[$(date '+%F %T')] ALERT SKIPPED (telegram globally OFF) for $JOB" >> "$LOG"
+        exit "$rc"
+    fi
     ENV_FILE="${CRON_WRAP_ENV:-$DIR/.env}"
     TOKEN=$(grep -E '^TELEGRAM_TOKEN=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2-)
     CHAT=$(grep -E '^TELEGRAM_CHAT_ID=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2-)

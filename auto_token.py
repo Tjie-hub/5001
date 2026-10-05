@@ -57,6 +57,12 @@ def log(msg):
 
 
 def send_telegram(msg):
+    # Global outbound kill switch (owner blackout 2026-10-05) — same
+    # logs/TELEGRAM_OFF file the other senders check; see utils.telegram.
+    from utils.telegram import is_off
+    if is_off():
+        log("[telegram] suppressed (global OFF)")
+        return
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         log(
             "Telegram not configured (set TELEGRAM_TOKEN and TELEGRAM_CHAT_ID env vars)"

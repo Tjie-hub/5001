@@ -95,6 +95,12 @@ def log(msg):
 
 
 def send_telegram(msg, category="alert"):
+    # Global outbound kill switch (owner blackout 2026-10-05) — same
+    # logs/TELEGRAM_OFF file the service senders check; see utils.telegram.
+    from utils.telegram import is_muted, is_off
+    if is_off():
+        log("[telegram] suppressed (global OFF)")
+        return
     token = os.environ.get("TELEGRAM_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
@@ -102,7 +108,6 @@ def send_telegram(msg, category="alert"):
         return
     # Same temporary report-noise mute as utils.telegram.send_telegram (this
     # module keeps its own sender for cron use); 'alert' can never be muted.
-    from utils.telegram import is_muted
     if is_muted(category):
         log(f"[telegram] muted (category={category})")
         return
