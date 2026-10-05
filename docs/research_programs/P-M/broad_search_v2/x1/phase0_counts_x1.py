@@ -33,9 +33,10 @@ DATA = HERE / "data"
 SPLIT_DATE = pd.Timestamp("2021-07-05")     # pre-declared halves (X1 brief)
 BRIEF_SPLIT_START = pd.Timestamp("2010-05-01")  # brief's discovery start (EIDO-anchored)
 ADV_MIN = 5e9                               # D-065/brief: adv20 >= Rp 5bn
-BAR_N_CENSUS = 515                          # W0 recount (RECOUNT_W0_2026-10-05.md)
-BAR_N_WITH_X1 = 515 + 6                     # + this screen's 6 arms
+BAR_N_CENSUS = 555                          # W0 recount + REVIEW_R1 1 additions (245+20+20)
+BAR_N_WITH_X1 = 555 + 6                     # + this screen's 6 arms
 out = {"params": {"issuance": True, "adv_min": ADV_MIN, "split_date": str(SPLIT_DATE),
+                  "tick_max_frac": 0.005,
                   "db": "local walkforward.db (snapshot .zst NOT present on this host)",
                   "beta_warmup_min_pairs": 120, "beta_rolling": 250,
                   "max_us_sessions_in_gap": 3}}
@@ -60,7 +61,9 @@ _spec = importlib.util.spec_from_file_location(
 _barm = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_barm)
 out["bar"] = {"at_recorded_census_276": round(_barm.e_max_abs_z(276), 4),
-              "at_w0_recount_521": round(_barm.e_max_abs_z(BAR_N_WITH_X1), 4)}
+              "at_w0_recount_521": round(_barm.e_max_abs_z(521), 4),
+              "at_w0_plus_r1_additions_555": round(_barm.e_max_abs_z(BAR_N_CENSUS), 4),
+              "at_plus_x1_arms_561": round(_barm.e_max_abs_z(BAR_N_WITH_X1), 4)}
 
 
 def _nth_sun_vec(years, mm, n):
@@ -122,21 +125,29 @@ def main():
         # ------------------------------------------- unconditional outcome series
         tl = tix.get("TLKM")
         liquid = (A20 >= ADV_MIN) & (V > 0) & (O > 0) & (C > 0)
-        # VALID-OPEN restriction (predeclared 2026-10-05 after the open-quality
-        # table): open ∉ {close, prev_close} — a stale open print makes open->close
-        # partly an overnight return, i.e. not the capturable leg. PRIMARY outcome
-        # uses valid-open members only; the unrestricted book is kept as a
-        # secondary disclosure.
-        valid = liquid & (O != C) & (O != PC)
-        r_oc_v = np.where(valid, C / O - 1.0, np.nan)
-        wsum_v = np.nansum(np.where(valid, W60, 0.0), axis=1)
+        # TICK-ELIGIBILITY (REVIEW_R1 2.3, replaces the rejected valid-open filter):
+        # ex-ante PIT rule computed at close(d) — a name joins the day-D book only
+        # if tick(close_d)/close_d <= 0.5% (IDX tick schedule). Removes discreteness
+        # noise without looking at day-D prints. The ALL-ROWS estimate is the
+        # co-equal lens per the review.
+        tickv = np.full_like(C, 1.0)
+        tickv = np.where(PC < 200, 1.0, tickv)
+        tickv = np.where((PC >= 200) & (PC < 500), 2.0, tickv)
+        tickv = np.where((PC >= 500) & (PC < 2000), 5.0, tickv)
+        tickv = np.where((PC >= 2000) & (PC < 5000), 10.0, tickv)
+        tickv = np.where(PC >= 5000, 25.0, tickv)
+        TICK_MAX = 0.005
+        eligible = liquid & (np.divide(tickv, np.where(PC > 0, PC, np.nan),
+                                       out=np.full_like(C, np.nan)) <= TICK_MAX)
+        r_oc_v = np.where(eligible, C / O - 1.0, np.nan)
+        wsum_v = np.nansum(np.where(eligible, W60, 0.0), axis=1)
         with np.errstate(divide="ignore", invalid="ignore"):
-            w_v = np.where(valid & (wsum_v[:, None] > 0),
+            w_v = np.where(eligible & (wsum_v[:, None] > 0),
                            np.divide(W60, np.where(wsum_v[:, None] > 0, wsum_v[:, None], 1.0)),
                            0.0)
         book_oc_v = pd.Series(np.nansum(w_v * r_oc_v, axis=1), index=cal)
-        book_n_v = pd.Series(valid.sum(axis=1), index=cal)
-        tlkm_oc_v = (pd.Series(np.where(valid[:, tl], C[:, tl] / O[:, tl] - 1.0, np.nan),
+        book_n_v = pd.Series(eligible.sum(axis=1), index=cal)
+        tlkm_oc_v = (pd.Series(np.where(eligible[:, tl], C[:, tl] / O[:, tl] - 1.0, np.nan),
                                index=cal) if tl is not None else pd.Series(dtype=float))
         liquid = (A20 >= ADV_MIN) & (V > 0) & (O > 0) & (C > 0)
         r_oc = np.where(liquid, C / O - 1.0, np.nan)
@@ -252,7 +263,7 @@ def main():
         sig_book_d_u, n_book_d_u = sigma(book_oc, None, SPLIT_DATE)
         sig_tlkm_c_u, n_tlkm_c_u = sigma(tlkm_oc, SPLIT_DATE, None)
         sig_tlkm_d_u, n_tlkm_d_u = sigma(tlkm_oc, None, SPLIT_DATE)
-        bar = out["bar"]["at_w0_recount_521"]
+        bar = out["bar"]["at_plus_x1_arms_561"]
         mde = {}
         for arm, (nm, oc, sp) in arms.items():
             s = sig_book_c if oc == "book" else sig_tlkm_c
@@ -317,9 +328,9 @@ def main():
         out.update({
             "counts": counts, "first_signal_day_per_arm": first_sig,
             "unconditional_sigma_pct": {
-                "book_open_to_close_VALID_open": {"confirmation": round(100 * sig_book_c, 3), "n": n_book_c,
+                "book_open_to_close_TICK_ELIGIBLE": {"confirmation": round(100 * sig_book_c, 3), "n": n_book_c,
                                         "discovery": round(100 * sig_book_d, 3), "n_d": n_book_d},
-                "TLKM_open_to_close_VALID_open": {"confirmation": round(100 * sig_tlkm_c, 3), "n": n_tlkm_c,
+                "TLKM_open_to_close_TICK_ELIGIBLE": {"confirmation": round(100 * sig_tlkm_c, 3), "n": n_tlkm_c,
                                         "discovery": round(100 * sig_tlkm_d, 3), "n_d": n_tlkm_d},
                 "book_open_to_close_UNRESTRICTED_secondary": {"confirmation": round(100 * sig_book_c_u, 3),
                                         "n": n_book_c_u, "discovery": round(100 * sig_book_d_u, 3), "n_d": n_book_d_u},

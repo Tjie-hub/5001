@@ -1,0 +1,123 @@
+{
+ "window": [
+  "2024-01-01",
+  "2026-07-29"
+ ],
+ "minute_store_leg": "BLOCKED on this host -- data/frozen/stockbit-flow-bars-v002/ contains only MANIFEST.json (store sha pin fa7f07b3..., 7.8 GB, window 2025-01-02..2026-04-28, built on the production host).",
+ "tick_schedule": "<200:1; 200-500:2; 500-2000:5; 2000-5000:10; >=5000:25",
+ "model_check_by_price_bucket": [
+  {
+   "bucket": "<200",
+   "n": 259260,
+   "observed_unchanged_pct": 60.77,
+   "predicted_unchanged_pct": 48.43,
+   "observed_eq_close_pct": 42.83,
+   "median_tick_pct": 1.316,
+   "median_gap_sig20_pct": 1.301
+  },
+  {
+   "bucket": "<2000",
+   "n": 119156,
+   "observed_unchanged_pct": 49.41,
+   "predicted_unchanged_pct": 29.78,
+   "observed_eq_close_pct": 21.95,
+   "median_tick_pct": 0.556,
+   "median_gap_sig20_pct": 0.919
+  },
+  {
+   "bucket": "<500",
+   "n": 110976,
+   "observed_unchanged_pct": 51.14,
+   "predicted_unchanged_pct": 30.92,
+   "observed_eq_close_pct": 23.78,
+   "median_tick_pct": 0.637,
+   "median_gap_sig20_pct": 1.079
+  },
+  {
+   "bucket": "<5000",
+   "n": 39264,
+   "observed_unchanged_pct": 43.94,
+   "predicted_unchanged_pct": 19.76,
+   "observed_eq_close_pct": 20.54,
+   "median_tick_pct": 0.348,
+   "median_gap_sig20_pct": 0.964
+  },
+  {
+   "bucket": "<inf",
+   "n": 27573,
+   "observed_unchanged_pct": 45.8,
+   "predicted_unchanged_pct": 23.74,
+   "observed_eq_close_pct": 25.04,
+   "median_tick_pct": 0.309,
+   "median_gap_sig20_pct": 0.786
+  }
+ ],
+ "model_check_all": {
+  "n": 556229,
+  "observed_unchanged_pct": 54.48,
+  "predicted_unchanged_pct": 37.7,
+  "observed_eq_close_pct": 32.1
+ },
+ "corpus_vs_yfinance": [
+  {
+   "ticker": "ADRO",
+   "n": 592,
+   "open_eq_yf_open_pct": 98.3,
+   "open_eq_prev_close_pct": 40.5
+  },
+  {
+   "ticker": "ANTM",
+   "n": 592,
+   "open_eq_yf_open_pct": 98.0,
+   "open_eq_prev_close_pct": 26.2
+  },
+  {
+   "ticker": "ASII",
+   "n": 592,
+   "open_eq_yf_open_pct": 97.8,
+   "open_eq_prev_close_pct": 31.6
+  },
+  {
+   "ticker": "BBCA",
+   "n": 592,
+   "open_eq_yf_open_pct": 98.3,
+   "open_eq_prev_close_pct": 20.4
+  },
+  {
+   "ticker": "BBNI",
+   "n": 592,
+   "open_eq_yf_open_pct": 98.3,
+   "open_eq_prev_close_pct": 28.0
+  },
+  {
+   "ticker": "BBRI",
+   "n": 592,
+   "open_eq_yf_open_pct": 98.1,
+   "open_eq_prev_close_pct": 21.3
+  },
+  {
+   "ticker": "BMRI",
+   "n": 592,
+   "open_eq_yf_open_pct": 98.3,
+   "open_eq_prev_close_pct": 22.5
+  },
+  {
+   "ticker": "GOTO",
+   "n": 592,
+   "open_eq_yf_open_pct": 100.0,
+   "open_eq_prev_close_pct": 64.5
+  },
+  {
+   "ticker": "TLKM",
+   "n": 592,
+   "open_eq_yf_open_pct": 98.3,
+   "open_eq_prev_close_pct": 21.6
+  },
+  {
+   "ticker": "UNTR",
+   "n": 592,
+   "open_eq_yf_open_pct": 97.8,
+   "open_eq_prev_close_pct": 33.4
+  }
+ ]
+}
