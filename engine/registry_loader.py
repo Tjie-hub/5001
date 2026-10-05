@@ -51,24 +51,10 @@ _FORWARD_BAR = {'min_n': 15, 'go_exp': 0.50}
 # Shrink-only lifecycle debt (like tests/test_research_data_fence._ROUTES_WRITE_DEBT).
 # Pre-existing APPROVED/SHADOW entries that predate R-10 enforcement. NEW violations are
 # NOT added here — they fail CI. Entries are removed as they remediate, never added.
-_LIFECYCLE_DEBT = {
-    ("NR7_BULL", 2): {
-        "reason": "DEMOTED from APPROVED to SHADOW 2026-08-19 (D-029, T7 invariant #10 "
-                  "owner decision, docs/roadmap/DECISION_LOG.md): the Evidence Model "
-                  "requires C3 (E5+X3) before capital; NR7_BULL's own worked-example "
-                  "score (K3/K4/E3-ish/C1/X2, docs/research_os/EVIDENCE_MODEL.md §8) "
-                  "concludes 'No capital'. No PROMOTE gate_decision receipt exists "
-                  "(Phase C gate=REJECT, shadow N=0) -- this entry grandfathers "
-                  "SHADOW-LOADING ONLY (visibility/tracking); it authorizes no capital, "
-                  "and SHADOW status structurally cannot produce live execution "
-                  "regardless (registry_governance()/_edge_selectable()).",
-        "remediation": "A real Phase C PROMOTE gate_decision would let this load "
-                       "cleanly without grandfathering; absent that, retire the entry "
-                       "by this deadline. Re-promotion to APPROVED additionally "
-                       "requires C3 (E5+X3) evidence, never fabricated.",
-        "deadline": "2027-01-08",
-    },
-}
+# NR7_BULL v2's entry was removed 2026-10-01 (D-066): the entry is RETIRED now, and a
+# lifecycle state is skipped before the debt check ever runs, so the grandfather was
+# unreachable dead code — removal is the allowed shrink direction.
+_LIFECYCLE_DEBT = {}
 
 _cache = None
 
@@ -117,10 +103,21 @@ def load_registry(path=None, engine_versions=None):
         raw = yaml.safe_load(f) or []
     entries, skipped = [], []
     violations, debt = [], []
+    # Lifecycle-state records (CANDIDATE/SUSPENDED/RETIRED/SUPERSEDED) are not
+    # loaded as entries — no validation, no universe — but they are collected
+    # minimally so registry_governance()/admission_path() can tell a REGISTERED
+    # but non-live strategy (sentinel, callers must exclude) from a genuinely
+    # UNREGISTERED one (None, the sole case where legacy handling is safe).
+    # D-066 lesson: without this, RETIRED is indistinguishable from "never
+    # registered" and the D-031 Option C legacy fallback re-exposes a retired
+    # strategy to live selection on any positive wf_edge row.
+    lifecycle = []
     for e in raw:
         ident = f"{e.get('id', '?')}_v{e.get('version', '?')}"
         status = e.get('status')
         if status in _LIFECYCLE:
+            lifecycle.append({'id': e.get('id'), 'version': e.get('version'),
+                              'status': status, 'strategy_fn': e.get('strategy_fn')})
             continue                       # lifecycle state, not an error
         missing = [k for k in _REQUIRED if k not in e]
         if status not in _LOADABLE or missing:
@@ -176,7 +173,8 @@ def load_registry(path=None, engine_versions=None):
                 continue                   # unverified & ungrandfathered: do not load
         entries.append(e)
     return {'entries': entries, 'skipped': skipped,
-            'violations': violations, 'debt': debt, 'hash': _registry_hash(path)}
+            'violations': violations, 'debt': debt, 'lifecycle': lifecycle,
+            'hash': _registry_hash(path)}
 
 
 def get_registry():
@@ -187,7 +185,8 @@ def get_registry():
         except Exception as ex:
             fail_open_alarm("edge_registry", f"registry load failed: {ex}", count=1)
             _cache = {'entries': [], 'skipped': [('*', str(ex))],
-                      'violations': [], 'debt': [], 'hash': 'load-failed'}
+                      'violations': [], 'debt': [], 'lifecycle': [],
+                      'hash': 'load-failed'}
     return _cache
 
 
@@ -212,15 +211,27 @@ def registry_governance(strategy_fn):
     callers MUST exclude it outright rather than fall back to an ungoverned
     path, per the T7 invariant that a SHADOW strategy can never reach live
     execution via a fallback. Returns None only when the strategy has no
-    registry entry at all — including when the registry itself failed to load
+    registry record at all — including when the registry itself failed to load
     (get_registry() then degrades to an empty entries list) — which is the
     sole case where legacy/ungoverned handling is safe.
+
+    'RETIRED' (D-066): a strategy whose every record is in a terminal
+    lifecycle state (RETIRED/SUPERSEDED — nothing loadable) gets the same
+    contract as 'SHADOW': registered, excluded outright, never a legacy
+    fallback. Treating it as UNREGISTERED would let the D-031 Option C
+    path re-admit it on a stale positive wf_edge row.
     """
     matches = [e for e in get_registry()['entries'] if e['strategy_fn'] == strategy_fn]
     for e in matches:
         if e['status'] == 'APPROVED':
             return e['universe']
-    return 'SHADOW' if matches else None
+    if matches:
+        return 'SHADOW'
+    lifec = [r for r in get_registry().get('lifecycle', [])
+             if r.get('strategy_fn') == strategy_fn]
+    if lifec:
+        return 'RETIRED'
+    return None
 
 
 def admission_path(strategy_fn):
@@ -230,6 +241,9 @@ def admission_path(strategy_fn):
     One of:
       'UNREGISTERED'    -- no registry entry at all
       'SHADOW'          -- registry-governed, not (yet) APPROVED
+      'RETIRED'         -- registered but every record is in a terminal
+                           lifecycle state (RETIRED/SUPERSEDED); excluded
+                           outright, never a legacy fallback (D-066)
       'APPROVED_DEBT'   -- APPROVED via a _LIFECYCLE_DEBT grandfather
                            exception (no clean evidence receipt)
       'APPROVED_CLEAN'  -- APPROVED with a fully valid evidence receipt
@@ -242,6 +256,9 @@ def admission_path(strategy_fn):
     r = get_registry()
     matches = [e for e in r['entries'] if e['strategy_fn'] == strategy_fn]
     if not matches:
+        if any(x.get('strategy_fn') == strategy_fn
+               for x in r.get('lifecycle', [])):
+            return 'RETIRED'
         return 'UNREGISTERED'
     approved = [e for e in matches if e['status'] == 'APPROVED']
     if not approved:
@@ -257,8 +274,10 @@ def startup_summary():
     r = get_registry()
     n_app = sum(1 for e in r['entries'] if e['status'] == 'APPROVED')
     n_sh = sum(1 for e in r['entries'] if e['status'] == 'SHADOW')
+    n_ret = sum(1 for x in r.get('lifecycle', []) if x.get('status') == 'RETIRED')
     return (f"registry @{r['hash']}: {n_app} approved, {n_sh} shadow, "
-            f"{len(r['skipped'])} skipped, {len(r.get('debt', []))} debt, "
+            f"{n_ret} retired, {len(r['skipped'])} skipped, "
+            f"{len(r.get('debt', []))} debt, "
             f"{len(r.get('violations', []))} unverified")
 
 

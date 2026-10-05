@@ -919,7 +919,7 @@ def run_premover_eod():
     from engine.premover_detector import run_scan
     from engine.circuit_breaker import check_circuit_breaker, CircuitBreakerState
     from paper_trade import (get_premover_mode, evaluate_premover_trade,
-                              open_trade, _log_premover_auto, init_paper_table)
+                             stage_entry, _log_premover_auto, init_paper_table)
     now_str = datetime.now(WIB).strftime('%H:%M')
 
     # Circuit breaker gate — block auto-trading when risk = CRITICAL
@@ -955,9 +955,15 @@ def run_premover_eod():
             ev = evaluate_premover_trade(ticker, score, pattern)
             _log_premover_auto(ticker, today, pattern, score, mode, ev)
             if mode == 'enforce' and ev['would_trade']:
-                close_price = float(s.get('close', 0))
-                if close_price > 0:
-                    open_trade(ticker, close_price, strategy=None, notify=True)
+                decision_price = float(s.get('close', 0))
+                if decision_price > 0:
+                    # P3-2: never fill at the detection bar's price (at 16:30
+                    # it may still be the provisional is_final=0 bar, and even
+                    # settled it would be a same-bar fill) — stage for the
+                    # next session's open, the validated convention.
+                    stage_entry(ticker, decision_price, strategy=None,
+                                source='premover_eod',
+                                note=f"pattern={pattern} score={score}")
             summary_rows.append({'ticker': ticker, 'score': score,
                                   'pattern': pattern, **ev})
         except Exception as exc:
@@ -968,6 +974,52 @@ def run_premover_eod():
                                   'skip_reason': f'error:{redact_and_truncate(str(exc), 80)}'})
 
     # summary_rows available for analysis; Telegram suppressed per config
+
+
+def run_staged_entry_fills():
+    """P3-2: fill staged entries at the next session's open.
+
+    Staged signals (momentum 16:00 scan, premover EOD) never open_trade() at
+    the price they were detected at — that fed the live/backtest execution
+    mismatch (TODO.md P3). This job first publishes today's provisional bar
+    (the yfinance incremental fetch — ohlcv otherwise has no bar for today
+    until the 16:00 fetch), then resolves staged entries at that bar's open,
+    the price the validated convention fills at. Two slots (09:10, 10:10):
+    the second covers a late-arriving bar; a missed window expires rather
+    than fills at a retrospective price.
+    """
+    if _holiday_skip("run_staged_entry_fills"):
+        return
+    now_str = datetime.now(WIB).strftime('%H:%M')
+    try:
+        from data.fetcher import fetch_all_incremental
+        fetch_all_incremental(category="ALL")
+    except Exception as e:
+        # Resolve still runs: already-published bars fill; the rest retry at
+        # the next slot or expire at window close.
+        logger.warning(f"[{now_str}] staged-fill fetch error: {e}")
+    try:
+        from paper_trade import resolve_staged_entries
+        results = resolve_staged_entries()
+    except Exception as e:
+        logger.warning(f"[{now_str}] staged-fill resolve error: {e}")
+        return
+    filled = [r for r in results if r.get("status") == "FILLED"]
+    if filled:
+        msg = ("📝 <b>Staged Entries Filled — next-session open</b>\n\n"
+               + "\n".join(
+                   f"🟢 <b>{r['ticker']}</b> @ Rp {r.get('fill_price'):,.0f} "
+                   f"(signal {r['signal_date']}, source {r.get('source') or 'n/a'})"
+                   for r in filled))
+        try:
+            send_telegram(msg)
+        except Exception as e:
+            logger.warning(f"[{now_str}] staged-fill notify error: {e}")
+    n_expired = sum(1 for r in results if r.get("status") == "EXPIRED")
+    n_skipped = sum(1 for r in results if r.get("status") == "SKIPPED")
+    n_pending = sum(1 for r in results if r.get("status") == "PENDING")
+    logger.info(f"[{now_str}] staged fills: {len(filled)} filled, {n_expired} expired, "
+                f"{n_skipped} skipped, {n_pending} pending")
 
 
 # run_backtest_roller moved to research/jobs.py in M3 (spec §10-M3)
