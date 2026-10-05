@@ -1,0 +1,48 @@
+{
+ "label": "RE-EXECUTION 2026-10-05 of the 2026-09-30 cross-asset POC (original artifacts never committed; see memo 04 for the original run)",
+ "generated_utc": "2026-10-05T04:02:38Z",
+ "yfinance_version": "1.7.0",
+ "auto_adjust": false,
+ "series": {
+  "TLK": {
+   "status": "OK",
+   "start": "1995-11-14",
+   "end": "2026-10-02",
+   "rows": 7771,
+   "max_gap_days": 7.0,
+   "n_gaps_gt_7d": 0
+  },
+  "USDIDR=X": {
+   "status": "OK",
+   "start": "2001-06-28",
+   "end": "2026-10-05",
+   "rows": 6381,
+   "max_gap_days": 214.0,
+   "n_gaps_gt_7d": 3
+  },
+  "^JKSE": {
+   "status": "OK",
+   "start": "1990-04-06",
+   "end": "2026-10-05",
+   "rows": 8883,
+   "max_gap_days": 12.0,
+   "n_gaps_gt_7d": 23
+  },
+  "KOL": {
+   "status": "EMPTY",
+   "rows": 0
+  },
+  "BTU": {
+   "status": "OK",
+   "start": "2017-04-03",
+   "end": "2026-10-02",
+   "rows": 2389,
+   "max_gap_days": 4.0,
+   "n_gaps_gt_7d": 0
+  },
+  "FCPO=F": {
+   "status": "EMPTY",
+   "rows": 0
+  }
+ }
+}
