@@ -1,0 +1,234 @@
+{
+ "generated_utc": "2026-10-05T05:41:51Z",
+ "source": "Yahoo Finance via yfinance (free, scriptable, no auth) -- memo 04 POC path",
+ "yfinance_version": "1.7.0",
+ "auto_adjust_core": true,
+ "host": "tjiejet / WSL Ubuntu (compute side per brief)",
+ "files": {
+  "eido.csv": {
+   "ticker": "EIDO",
+   "note": "EIDO iShares MSCI Indonesia ETF (US-listed 2010-05); adjusted close (auto_adjust=True: splits+dividends) + volume; PRIMARY signal leg",
+   "auto_adjust": true,
+   "rows": 4127,
+   "start": "2010-05-07",
+   "end": "2026-10-02",
+   "sha256": "36baffea7b8db82518b648ee59459b47cf2ba779ab6663e1eca6b88ab8b070a2"
+  },
+  "tlk.csv": {
+   "ticker": "TLK",
+   "note": "TLK Telkom Indonesia ADR (NYSE, 1995-10 IPO); adjusted close + volume; signal leg",
+   "auto_adjust": true,
+   "rows": 7771,
+   "start": "1995-11-14",
+   "end": "2026-10-02",
+   "sha256": "e831e59f75e3ef6cb6caec0078eb7580dc12a3c5ea218deb498c72fc50091d16"
+  },
+  "spy.csv": {
+   "ticker": "SPY",
+   "note": "SPDR S&P 500 ETF; adjusted close + volume; broad-US arm",
+   "auto_adjust": true,
+   "rows": 8477,
+   "start": "1993-01-29",
+   "end": "2026-10-02",
+   "sha256": "6179bb69957c441784a6881f95c30e8c9cdfa4148bfa9320bd736d7285ed30bf"
+  },
+  "usdidr.csv": {
+   "ticker": "USDIDR=X",
+   "note": "USD/IDR Yahoo FX aggregate; close; INDICATIVE, not BI JISDOR",
+   "auto_adjust": true,
+   "rows": 6381,
+   "start": "2001-06-28",
+   "end": "2026-10-05",
+   "sha256": "ce89df9dfdd32849bcdac1b4a6b3dece707683e334f511275b7459b4869442a8"
+  },
+  "jkse.csv": {
+   "ticker": "^JKSE",
+   "note": "IDX composite (^JKSE); open+close; ALIGNMENT ONLY + discovery-half IHSG benchmark open->close (corpus IHSG starts 2021-07)",
+   "auto_adjust": true,
+   "rows": 8883,
+   "start": "1990-04-06",
+   "end": "2026-10-05",
+   "sha256": "141b56d1221217f2e58b24832dc6f4058024c89de59a18c215fb9f3d7e3d45b9"
+  },
+  "tlk_raw.csv": {
+   "ticker": "TLK",
+   "note": "TLK UNADJUSTED close; ADS-ratio / validity-gate leg",
+   "auto_adjust": false,
+   "rows": 7771,
+   "start": "1995-11-14",
+   "end": "2026-10-02",
+   "sha256": "8c36c19710c3096b755db78949098ec38307f9c08a9ead25da228255f41ff098"
+  },
+  "tlkm_raw.csv": {
+   "ticker": "TLKM.JK",
+   "note": "TLKM.JK UNADJUSTED close (IDX line); ADS-ratio / validity-gate leg",
+   "auto_adjust": false,
+   "rows": 5425,
+   "start": "2004-09-28",
+   "end": "2026-10-05",
+   "sha256": "ae5af162e9bf6d4dc8bad0a78c48187f64c5cb05608fdba7361fda8ca931656e"
+  },
+  "splits.csv": {
+   "ticker": "EIDO/TLK/SPY/TLKM.JK",
+   "note": "split events as reported by Yahoo (an ADS-ratio change must appear here)",
+   "rows": 5,
+   "sha256": "afb7aa8ddb504ed54b1fea93698253dd70d9ecc2ac83b2cb9322a722152d18c9"
+  },
+  "jisdor.csv": {
+   "ticker": "JISDOR",
+   "note": "BI official USD/IDR reference fixing, daily, 2013-05-20 start. Source: the JISDOR page official Download (XLSX) export, fetched 2026-10-05 by the source-probe agent via POST of the page ASP.NET tokens (no auth, no CAPTCHA); source artifact bi_full.xlsx sha256 3aa4976cf4be75da699aee648b7907877128019e0def98991e11fa79f5643791 converted to CSV. Driver fetch_jisdor.py documents the method; its standalone postback reproduction is still being debugged (async delta returns the page, not the file) - the sha256 pins this copy.",
+   "auto_adjust": false,
+   "rows": 3236,
+   "start": "2013-05-20",
+   "end": "2026-10-02",
+   "sha256": "a06daa0c2fc0dd472659047ad4ab1398cd053c318085d2763d57e8ce65fe4b15",
+   "source_xlsx_sha256": "3aa4976cf4be75da699aee648b7907877128019e0def98991e11fa79f5643791"
+  }
+ },
+ "gap_report_gt_7d": {
+  "eido.csv": [],
+  "tlk.csv": [],
+  "spy.csv": [],
+  "usdidr.csv": [
+   {
+    "from": "2002-09-20",
+    "to": "2002-09-30",
+    "gap_days": 10
+   },
+   {
+    "from": "2003-05-01",
+    "to": "2003-12-01",
+    "gap_days": 214
+   },
+   {
+    "from": "2008-07-31",
+    "to": "2008-08-26",
+    "gap_days": 26
+   }
+  ],
+  "jkse.csv": [
+   {
+    "from": "1991-04-12",
+    "to": "1991-04-22",
+    "gap_days": 10
+   },
+   {
+    "from": "1991-12-24",
+    "to": "1992-01-02",
+    "gap_days": 9
+   },
+   {
+    "from": "1993-03-19",
+    "to": "1993-03-29",
+    "gap_days": 10
+   },
+   {
+    "from": "1996-02-16",
+    "to": "1996-02-26",
+    "gap_days": 10
+   },
+   {
+    "from": "1999-01-15",
+    "to": "1999-01-25",
+    "gap_days": 10
+   },
+   {
+    "from": "2000-12-22",
+    "to": "2001-01-02",
+    "gap_days": 11
+   },
+   {
+    "from": "2003-11-21",
+    "to": "2003-12-01",
+    "gap_days": 10
+   },
+   {
+    "from": "2005-11-01",
+    "to": "2005-11-09",
+    "gap_days": 8
+   },
+   {
+    "from": "2006-10-20",
+    "to": "2006-10-30",
+    "gap_days": 10
+   },
+   {
+    "from": "2008-09-26",
+    "to": "2008-10-06",
+    "gap_days": 10
+   },
+   {
+    "from": "2010-09-07",
+    "to": "2010-09-15",
+    "gap_days": 8
+   },
+   {
+    "from": "2011-08-26",
+    "to": "2011-09-05",
+    "gap_days": 10
+   },
+   {
+    "from": "2013-08-02",
+    "to": "2013-08-12",
+    "gap_days": 10
+   },
+   {
+    "from": "2014-07-25",
+    "to": "2014-08-04",
+    "gap_days": 10
+   },
+   {
+    "from": "2016-07-01",
+    "to": "2016-07-11",
+    "gap_days": 10
+   },
+   {
+    "from": "2017-06-22",
+    "to": "2017-07-03",
+    "gap_days": 11
+   },
+   {
+    "from": "2018-06-08",
+    "to": "2018-06-20",
+    "gap_days": 12
+   },
+   {
+    "from": "2019-05-31",
+    "to": "2019-06-10",
+    "gap_days": 10
+   },
+   {
+    "from": "2022-04-28",
+    "to": "2022-05-09",
+    "gap_days": 11
+   },
+   {
+    "from": "2023-04-18",
+    "to": "2023-04-26",
+    "gap_days": 8
+   },
+   {
+    "from": "2024-04-05",
+    "to": "2024-04-16",
+    "gap_days": 11
+   },
+   {
+    "from": "2025-03-27",
+    "to": "2025-04-08",
+    "gap_days": 12
+   },
+   {
+    "from": "2026-03-17",
+    "to": "2026-03-25",
+    "gap_days": 8
+   }
+  ]
+ },
+ "notes": [
+  "jisdor.csv added 2026-10-05 (public no-auth download verified by probe).",
+  "jisdor.csv added 2026-10-05 (public no-auth download verified by probe).",
+  "USDIDR=X is an indicative aggregate, NOT BI's JISDOR fixing (memo 04). JISDOR public-download status is recorded separately in TIMING.md/PRIORS_X.md.",
+  "Adjusted closes (auto_adjust=True) apply splits AND dividends -- total-return basis for EIDO/TLK/SPY as the brief requires. Raw closes are kept for TLK and TLKM.JK so the ADS-ratio validity gate can be run on unadjusted prices.",
+  "^JKSE is alignment only; the LW book and TLKM outcomes come from the corpus through research.rulecard.data.load_extended_ohlcv(issuance=True)."
+ ]
+}

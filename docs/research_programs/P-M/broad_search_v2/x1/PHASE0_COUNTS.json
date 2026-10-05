@@ -1,0 +1,377 @@
+{
+ "params": {
+  "issuance": true,
+  "adv_min": 5000000000.0,
+  "split_date": "2021-07-05 00:00:00",
+  "db": "local walkforward.db (snapshot .zst NOT present on this host)",
+  "beta_warmup_min_pairs": 120,
+  "beta_rolling": 250,
+  "max_us_sessions_in_gap": 3
+ },
+ "bar": {
+  "at_recorded_census_276": 3.067,
+  "at_w0_recount_521": 3.2534
+ },
+ "counts": {
+  "X1-A": {
+   "no_prev_idx_session": 0,
+   "us_holiday_no_signal": 39,
+   "fx_missing": 2,
+   "beta_warmup": 0,
+   "gap_k_gt_3": 7,
+   "signal_leg_missing": 0,
+   "outcome_missing": 2,
+   "usable": 1166,
+   "n_discovery": 0,
+   "n_discovery_brief_split_from_2010_05": 0,
+   "n_discovery_full_history": 0,
+   "n_confirmation": 1166
+  },
+  "X1-B": {
+   "no_prev_idx_session": 0,
+   "us_holiday_no_signal": 2638,
+   "fx_missing": 12,
+   "beta_warmup": 0,
+   "gap_k_gt_3": 9,
+   "signal_leg_missing": 1,
+   "outcome_missing": 502,
+   "usable": 2169,
+   "n_discovery": 2169,
+   "n_discovery_brief_split_from_2010_05": 2169,
+   "n_discovery_full_history": 2169,
+   "n_confirmation": 0
+  },
+  "X1-C": {
+   "no_prev_idx_session": 0,
+   "us_holiday_no_signal": 39,
+   "fx_missing": 2,
+   "beta_warmup": 0,
+   "gap_k_gt_3": 7,
+   "signal_leg_missing": 0,
+   "outcome_missing": 329,
+   "usable": 839,
+   "n_discovery": 0,
+   "n_discovery_brief_split_from_2010_05": 0,
+   "n_discovery_full_history": 0,
+   "n_confirmation": 839
+  },
+  "X1-D": {
+   "no_prev_idx_session": 0,
+   "us_holiday_no_signal": 156,
+   "fx_missing": 539,
+   "beta_warmup": 111,
+   "gap_k_gt_3": 14,
+   "signal_leg_missing": 0,
+   "outcome_missing": 2912,
+   "usable": 1599,
+   "n_discovery": 1599,
+   "n_discovery_brief_split_from_2010_05": 1326,
+   "n_discovery_full_history": 1599,
+   "n_confirmation": 0
+  },
+  "X1-E": {
+   "no_prev_idx_session": 0,
+   "us_holiday_no_signal": 39,
+   "fx_missing": 2,
+   "beta_warmup": 0,
+   "gap_k_gt_3": 7,
+   "signal_leg_missing": 0,
+   "outcome_missing": 2,
+   "usable": 1166,
+   "n_discovery": 0,
+   "n_discovery_brief_split_from_2010_05": 0,
+   "n_discovery_full_history": 0,
+   "n_confirmation": 1166
+  },
+  "X1-F": {
+   "no_prev_idx_session": 0,
+   "us_holiday_no_signal": 156,
+   "fx_missing": 539,
+   "beta_warmup": 111,
+   "gap_k_gt_3": 14,
+   "signal_leg_missing": 0,
+   "outcome_missing": 670,
+   "usable": 3841,
+   "n_discovery": 3841,
+   "n_discovery_brief_split_from_2010_05": 2174,
+   "n_discovery_full_history": 3841,
+   "n_confirmation": 0
+  }
+ },
+ "first_signal_day_per_arm": {
+  "X1-D": "2001-06-29 (warm-up)",
+  "X1-F": "2001-06-29 (warm-up)",
+  "X1-B": "2010-05-11",
+  "X1-A": "2021-07-05",
+  "X1-E": "2021-07-05",
+  "X1-C": "2021-07-08"
+ },
+ "unconditional_sigma_pct": {
+  "book_open_to_close_VALID_open": {
+   "confirmation": 1.47,
+   "n": 1216,
+   "discovery": 2.575,
+   "n_d": 5332
+  },
+  "TLKM_open_to_close_VALID_open": {
+   "confirmation": 1.952,
+   "n": 877,
+   "discovery": 1.975,
+   "n_d": 1663
+  },
+  "book_open_to_close_UNRESTRICTED_secondary": {
+   "confirmation": 1.292,
+   "n": 1216,
+   "discovery": 1.351,
+   "n_d": 5332
+  },
+  "TLKM_open_to_close_UNRESTRICTED_secondary": {
+   "confirmation": 1.784,
+   "n": 1213,
+   "discovery": 1.444,
+   "n_d": 4157
+  },
+  "IHSG_open_to_close": {
+   "confirmation": 0.894,
+   "n": 1216,
+   "discovery": NaN,
+   "n_d": 0,
+   "note": "IHSG from corpus (2021-07+); discovery IHSG would come from ^JKSE (Yahoo, disclosed)"
+  }
+ },
+ "mde_per_arm_bp_per_1sigma": {
+  "X1-A": {
+   "mde_confirmation_bp_per_1sigma": 14.0,
+   "mde_discovery_bp_per_1sigma": null,
+   "mde_discovery_N_used": 0
+  },
+  "X1-B": {
+   "mde_confirmation_bp_per_1sigma": null,
+   "mde_discovery_bp_per_1sigma": 17.99,
+   "mde_discovery_N_used": 2169
+  },
+  "X1-C": {
+   "mde_confirmation_bp_per_1sigma": 21.92,
+   "mde_discovery_bp_per_1sigma": null,
+   "mde_discovery_N_used": 0
+  },
+  "X1-D": {
+   "mde_confirmation_bp_per_1sigma": null,
+   "mde_discovery_bp_per_1sigma": 17.64,
+   "mde_discovery_N_used": 1326
+  },
+  "X1-E": {
+   "mde_confirmation_bp_per_1sigma": 14.0,
+   "mde_discovery_bp_per_1sigma": null,
+   "mde_discovery_N_used": 0
+  },
+  "X1-F": {
+   "mde_confirmation_bp_per_1sigma": null,
+   "mde_discovery_bp_per_1sigma": 17.97,
+   "mde_discovery_N_used": 2174
+  }
+ },
+ "open_quality_by_year": {
+  "2000": {
+   "session_rows": 197,
+   "liquid_rows": 253,
+   "open_eq_close_pct": 0.63,
+   "open_eq_prev_close_pct": 0.73,
+   "zero_volume_rows_pct": 0.32
+  },
+  "2001": {
+   "session_rows": 261,
+   "liquid_rows": 1801,
+   "open_eq_close_pct": 3.33,
+   "open_eq_prev_close_pct": 3.62,
+   "zero_volume_rows_pct": 1.68
+  },
+  "2002": {
+   "session_rows": 261,
+   "liquid_rows": 2181,
+   "open_eq_close_pct": 8.16,
+   "open_eq_prev_close_pct": 8.05,
+   "zero_volume_rows_pct": 5.18
+  },
+  "2003": {
+   "session_rows": 261,
+   "liquid_rows": 2857,
+   "open_eq_close_pct": 10.22,
+   "open_eq_prev_close_pct": 10.27,
+   "zero_volume_rows_pct": 6.25
+  },
+  "2004": {
+   "session_rows": 262,
+   "liquid_rows": 6204,
+   "open_eq_close_pct": 11.16,
+   "open_eq_prev_close_pct": 11.58,
+   "zero_volume_rows_pct": 6.57
+  },
+  "2005": {
+   "session_rows": 247,
+   "liquid_rows": 7986,
+   "open_eq_close_pct": 12.69,
+   "open_eq_prev_close_pct": 11.97,
+   "zero_volume_rows_pct": 6.45
+  },
+  "2006": {
+   "session_rows": 259,
+   "liquid_rows": 8570,
+   "open_eq_close_pct": 18.43,
+   "open_eq_prev_close_pct": 13.28,
+   "zero_volume_rows_pct": 6.45
+  },
+  "2007": {
+   "session_rows": 247,
+   "liquid_rows": 12781,
+   "open_eq_close_pct": 18.2,
+   "open_eq_prev_close_pct": 11.04,
+   "zero_volume_rows_pct": 5.15
+  },
+  "2008": {
+   "session_rows": 239,
+   "liquid_rows": 10765,
+   "open_eq_close_pct": 19.89,
+   "open_eq_prev_close_pct": 13.34,
+   "zero_volume_rows_pct": 7.31
+  },
+  "2009": {
+   "session_rows": 244,
+   "liquid_rows": 10204,
+   "open_eq_close_pct": 22.3,
+   "open_eq_prev_close_pct": 13.86,
+   "zero_volume_rows_pct": 6.67
+  },
+  "2010": {
+   "session_rows": 245,
+   "liquid_rows": 17008,
+   "open_eq_close_pct": 25.57,
+   "open_eq_prev_close_pct": 11.97,
+   "zero_volume_rows_pct": 1.45
+  },
+  "2011": {
+   "session_rows": 247,
+   "liquid_rows": 18237,
+   "open_eq_close_pct": 27.95,
+   "open_eq_prev_close_pct": 11.96,
+   "zero_volume_rows_pct": 1.57
+  },
+  "2012": {
+   "session_rows": 246,
+   "liquid_rows": 19939,
+   "open_eq_close_pct": 29.67,
+   "open_eq_prev_close_pct": 13.05,
+   "zero_volume_rows_pct": 1.66
+  },
+  "2013": {
+   "session_rows": 244,
+   "liquid_rows": 21694,
+   "open_eq_close_pct": 18.87,
+   "open_eq_prev_close_pct": 15.96,
+   "zero_volume_rows_pct": 1.81
+  },
+  "2014": {
+   "session_rows": 244,
+   "liquid_rows": 20448,
+   "open_eq_close_pct": 24.48,
+   "open_eq_prev_close_pct": 14.12,
+   "zero_volume_rows_pct": 5.91
+  },
+  "2015": {
+   "session_rows": 245,
+   "liquid_rows": 18577,
+   "open_eq_close_pct": 15.14,
+   "open_eq_prev_close_pct": 17.81,
+   "zero_volume_rows_pct": 7.67
+  },
+  "2016": {
+   "session_rows": 246,
+   "liquid_rows": 20915,
+   "open_eq_close_pct": 15.81,
+   "open_eq_prev_close_pct": 21.53,
+   "zero_volume_rows_pct": 8.14
+  },
+  "2017": {
+   "session_rows": 254,
+   "liquid_rows": 23291,
+   "open_eq_close_pct": 15.75,
+   "open_eq_prev_close_pct": 23.95,
+   "zero_volume_rows_pct": 7.17
+  },
+  "2018": {
+   "session_rows": 261,
+   "liquid_rows": 23550,
+   "open_eq_close_pct": 16.48,
+   "open_eq_prev_close_pct": 23.86,
+   "zero_volume_rows_pct": 9.23
+  },
+  "2019": {
+   "session_rows": 258,
+   "liquid_rows": 26770,
+   "open_eq_close_pct": 17.08,
+   "open_eq_prev_close_pct": 26.18,
+   "zero_volume_rows_pct": 7.58
+  },
+  "2020": {
+   "session_rows": 242,
+   "liquid_rows": 25589,
+   "open_eq_close_pct": 17.94,
+   "open_eq_prev_close_pct": 27.37,
+   "zero_volume_rows_pct": 6.12
+  },
+  "2021": {
+   "session_rows": 247,
+   "liquid_rows": 45094,
+   "open_eq_close_pct": 18.26,
+   "open_eq_prev_close_pct": 37.52,
+   "zero_volume_rows_pct": 5.27
+  },
+  "2022": {
+   "session_rows": 246,
+   "liquid_rows": 47497,
+   "open_eq_close_pct": 24.92,
+   "open_eq_prev_close_pct": 47.39,
+   "zero_volume_rows_pct": 8.04
+  },
+  "2023": {
+   "session_rows": 239,
+   "liquid_rows": 40944,
+   "open_eq_close_pct": 31.42,
+   "open_eq_prev_close_pct": 53.13,
+   "zero_volume_rows_pct": 9.22
+  },
+  "2024": {
+   "session_rows": 237,
+   "liquid_rows": 38859,
+   "open_eq_close_pct": 35.08,
+   "open_eq_prev_close_pct": 55.56,
+   "zero_volume_rows_pct": 9.93
+  },
+  "2025": {
+   "session_rows": 236,
+   "liquid_rows": 46662,
+   "open_eq_close_pct": 31.47,
+   "open_eq_prev_close_pct": 54.37,
+   "zero_volume_rows_pct": 10.96
+  },
+  "2026": {
+   "session_rows": 133,
+   "liquid_rows": 32009,
+   "open_eq_close_pct": 24.65,
+   "open_eq_prev_close_pct": 46.66,
+   "zero_volume_rows_pct": 10.33
+  }
+ },
+ "survivorship": {
+  "history_long_db": "ABSENT on this host",
+  "panel_tickers_with_pre2021_data": 541,
+  "panel_pre2021_names_last_bar_before_2026": 0,
+  "recorded_reference": "memo 07 (2026-09-30): 54 of 929 ohlcv_long names end before 2026; delisted names are purged from Yahoo, so the blind spot is structural",
+  "note": "panel-derived fallback; the recorded 54/929 line remains the brief-standard number"
+ },
+ "fx_gap": {
+  "idx_sessions_missing_fx_leg": 485,
+  "note": "USDIDR=X gaps incl. 2003-05-01..2003-12-01 (214d) kill the USD-converted JKSE leg on those sessions"
+ },
+ "panel_end": "2026-07-29"
+}
