@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parents[3]                      # docs/research_programs/P-M/cross_asset -> repo root
+ROOT = HERE.parents[4]                      # broad_search_v2/x1 -> repo root
 sys.path.insert(0, str(ROOT))
 
 DATA = HERE / "data"
