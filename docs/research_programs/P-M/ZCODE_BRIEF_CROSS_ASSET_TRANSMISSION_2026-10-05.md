@@ -1,5 +1,9 @@
 # ZCODE BRIEF — `{X}` cross-asset overnight transmission: acquire, then ONE pre-registered screen
 
+> **SCOPE SUPERSEDED 2026-10-05 by `ZCODE_BRIEF_BROAD_SEARCH_V2_2026-10-05.md`.** This file remains
+> the detailed spec of workstream **X1** inside v2. Output paths `cross_asset/` → `broad_search_v2/x1/`;
+> the bar is set by v2's W0 census reconciliation (not 276/≈3.07 as below); run only after v2's R2 GO.
+
 **Issued:** 2026-10-05 by the main session (XPS-13) at the Owner's request ("set a new finding edge on
 ZCode") · **Branch:** `research/new-order-2026-09-30` · **Host:** Windows PC `tjiejet` — repo
 `D:\IDX`, **compute and every `git commit` from WSL Ubuntu** (scripts are never committed from the
