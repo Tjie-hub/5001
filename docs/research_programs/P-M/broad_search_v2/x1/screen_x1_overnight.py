@@ -1,33 +1,26 @@
-"""X1 overnight transmission screen -- FROZEN driver rev 3 (2026-10-05, REVIEW_R2 re-freeze).
+"""X1 overnight transmission screen -- FROZEN driver rev 4 (2026-10-05, REVIEW_R2bis re-freeze).
 
-Committed FROZEN with PREDECLARATION_X1_OVERNIGHT.md rev 3 (+ .sha256) and
-pit_tests_x1.py (T1-T3). MUST NOT RUN until a REVIEW_R2*.md contains the exact
-hash-bound line (B3 guard, enforced in main()):
+Committed FROZEN with PREDECLARATION_X1_OVERNIGHT.md rev 4 (+ .sha256) and
+pit_tests_x1.py (T1-T3 + T1-SPY + T4). MUST NOT RUN until some line of some
+REVIEW_R2*.md contains the exact hash-bound line (N3 guard, enforced in main()):
   R2-DECISION: X1 GO driver_sha256=<this file's sha> predeclaration_sha256=<pre sha>
 One run after GO -> RESULT_X1_<utc>.json via research/tracking.py.
 
-REV 3 corrections (authority: REVIEW_R2_2026-10-05.md, "pre-run amendments"):
-  B1/B1b  JKSE and FX legs built explicitly by date stamp: for the signal at
-          D=cal[j], the hedge leg is close(d-1)->close(d) using values STAMPED
-          d=cal[j-1] and d-1=cal[j-2] (no stamped-D values; no raw-series
-          misalignment).
-  B2      FX direction fixed: USDIDR is IDR per USD, so
-          r_USD = (JKSE_d/JKSE_{d-1}) * (FX_{d-1}/FX_d) - 1.
-          The TLK arm now uses its proper TLKM-USD leg (corpus TLKM closes at the
-          same stamps, same FX convention) -- the rev-2 driver wrongly reused the
-          JKSE leg there.
-  B3      Guard = exact hash-bound line, shas checked against the files on disk.
-  B4      Empty-book days are NaN (weight sum 0), never 0.0; count disclosed.
-  B5      k >= 4 sessions excluded, count printed per split.
-  E1-E3   D-059 cost via committed cost_by_adv.ar_terms/ar_spread_from_terms,
-          terms ending <= d-1 (shift 2), spread floored at tick FRACTION,
-          TLKM standalone inside the guarded block, ndarray indexing.
-  E4      Current tick schedule disclosed as assumed for all dates; boundary
-          sensitivity name-days counted (tick_frac within [0.004, 0.0065]).
-  E5      Recorder ledgers' trades[].entry_date verified; low overlap reported
-          as an error, never a silent 0.
-  minor   beta/sigma windows are exactly 250 points and use the LATEST pair/rho
-          strictly before j (no silent drops).
+REV 4 changes (authority: REVIEW_R2bis_2026-10-05.md, "pre-run amendments"):
+  N1  gap_tlkm built in books() (absorption loop no longer crashes after arms).
+  N2  SPY arm = RAW compounded US-window return standardized (no beta, no hedge
+      leg) -- code aligned to the spec; rev 3 wrongly residualized it.
+  N3  guard scans ALL lines of ALL REVIEW_R2*.md; candidates without both 64-hex
+      shas ignored; full match against disk required; otherwise refuse listing
+      every candidate (fail-closed).
+  EXTRA (disclosed in HANDOFF_R2ter + predeclaration rev 4): the rev-3
+  build_signal regression target was y_map[p][1] (session count k) instead of
+  y_map[p][0] (the US return) -- beta was garbage for EIDO/TLK. Fixed here; T1-T3
+  could not catch it (invariance, not correctness).
+  Cleanups: dead beta_cache deleted; empty_a computed; E4 disclosure carries both
+  halves' boundary counts.
+REV 3 corrections (REVIEW_R2) and rev 2 items: see the docstring history in git
+and PREDECLARATION_X1_OVERNIGHT.md's amendments sections (B1-B5, E1-E5, minors).
 """
 import hashlib
 import importlib.util
@@ -133,19 +126,37 @@ def fx_idr_usd_leg(cal, jk, fx, alt_close=None):
 
 
 def build_signal(y_map, x_map, cal, beta_win=250, beta_min=120,
-                 sigma_win=250, sigma_min=120):
-    """R_D per TIMING.md: R_j = y_j - beta_{j-1} * x_j; beta from pairs with
-    session <= j-1 (latest beta_win available, expanding to beta_min);
-    standardized by the trailing sigma of the PIT R series (same windows).
-    Uses the LATEST pair strictly before j (no silent drops, minor fix).
+                 sigma_win=250, sigma_min=120, residualize=True):
+    """EIDO/TLK (residualize=True): R_j = y_j - beta_{j-1} * x_j; beta from pairs with
+    session <= j-1 (latest available window of exactly 250 points, expanding to a
+    minimum of 120); standardized by the trailing sigma of the PIT R series (same
+    windows). Uses the LATEST pair strictly before j (no silent drops, minor fix).
+
+    SPY (residualize=False, N2): R_j = y_j raw (the compounded US-window return,
+    k <= 3); standardized by the trailing sigma of the y series over sessions
+    strictly before j -- NO beta, NO hedge leg (predeclaration: "raw r_SPY
+    standardized identically").
     Returns dict j -> {R_std, k} plus exclusion counters."""
+    excluded_k = sum(1 for _, (yv, k) in y_map.items() if k > K_MAX)
+
+    if not residualize:
+        sig = {}
+        R_vals = []
+        for p in sorted(y_map):
+            yv, k = y_map[p]
+            if not np.isfinite(yv) or k == 0 or k > K_MAX:
+                continue
+            if len(R_vals) >= sigma_min:
+                lo = max(0, len(R_vals) - sigma_win)
+                sd = float(np.std(R_vals[lo:], ddof=1))
+                if sd > 0:
+                    sig[p] = {"R_std": yv / sd, "k": k}
+            R_vals.append(yv)
+        return {"signal": sig, "excluded_k_gt_max": excluded_k}
+
     pair_sessions = sorted(x_map)
-    beta_cache = {}
-    R = {}
-    excluded_k = 0
     xs_all = np.array([x_map[p] for p in pair_sessions])
     ys_all = np.array([y_map[p][0] for p in pair_sessions])
-    ks_all = {p: y_map[p][1] for p in pair_sessions}
 
     def beta_at(j):
         """beta from the latest window of pairs with session <= j-1."""
@@ -161,10 +172,9 @@ def build_signal(y_map, x_map, cal, beta_win=250, beta_min=120,
 
     sessions = sorted(set(pair_sessions) & set(y_map))
     R_sessions, R_vals = [], []
-    sigma_at = {}
-    for idx, p in enumerate(sessions):
-        b = beta_cache.get(p - 1) or beta_at(p)          # beta from pairs <= p-1
-        beta_cache[p - 1] = b
+    sig = {}
+    for p in sessions:
+        b = beta_at(p)                                   # beta from pairs <= p-1
         if b is None:
             continue
         r = y_map[p][0] - b * x_map[p]
@@ -175,15 +185,14 @@ def build_signal(y_map, x_map, cal, beta_win=250, beta_min=120,
             lo = max(0, len(R_vals) - sigma_win)
             sd = float(np.std(R_vals[lo:], ddof=1))
             if sd > 0:
-                sigma_at[p] = sd
+                sig[p] = {"R_std": r / sd, "k": y_map[p][1]}
         R_sessions.append(p)
         R_vals.append(r)
 
-    sig = {}
+    out = {}
     for j in sorted(y_map):
         yj, k = y_map[j]
         if k == 0 or k > K_MAX:
-            excluded_k += int(k > K_MAX)
             continue
         b = beta_at(j)                                   # pairs <= j-1
         sd = None
@@ -196,8 +205,8 @@ def build_signal(y_map, x_map, cal, beta_win=250, beta_min=120,
         r = yj - b * x_map[j]
         if not np.isfinite(r):
             continue
-        sig[j] = {"R_std": r / sd, "k": k}
-    return {"signal": sig, "excluded_k_gt_max": excluded_k}
+        out[j] = {"R_std": r / sd, "k": k}
+    return {"signal": out, "excluded_k_gt_max": excluded_k}
 
 
 def nw_t(y, x, lags=5):
@@ -293,13 +302,18 @@ def books(CP):
                 pd.Series(ws, index=CP["cal"]))
 
     oc_e, gap_e, wsum_e = one(eligible)
-    oc_a, gap_a, _ = one(liquid)
+    oc_a, gap_a, wsum_a = one(liquid)
     tl = CP["tix"].get("TLKM")
+    Cprev = np.vstack([np.full((1, C.shape[1]), np.nan), C[:-1]])
     oc_tlkm = pd.Series(np.where(eligible[:, tl], CP["C"][:, tl] / CP["O"][:, tl] - 1.0, np.nan),
                         index=CP["cal"])
+    gap_tlkm = pd.Series(np.where(eligible[:, tl], CP["O"][:, tl] / Cprev[:, tl] - 1.0, np.nan),
+                         index=CP["cal"])                        # N1 (REVIEW_R2bis)
     return {"oc_e": oc_e, "gap_e": gap_e, "wsum_e": wsum_e, "oc_a": oc_a, "gap_a": gap_a,
-            "oc_tlkm": oc_tlkm, "eligible": eligible, "tick_frac": tick_frac,
-            "empty_e": int((wsum_e <= 0).sum()), "empty_a": None, "tl": tl}
+            "wsum_a": wsum_a, "oc_tlkm": oc_tlkm, "gap_tlkm": gap_tlkm,
+            "eligible": eligible, "tick_frac": tick_frac,
+            "empty_e": int((wsum_e <= 0).sum()), "empty_a": int((wsum_a <= 0).sum()),
+            "tl": tl}
 
 
 def run_arm(sig_map, oc, sp, cal, k1_only=False):
@@ -342,19 +356,32 @@ def run_arm(sig_map, oc, sp, cal, k1_only=False):
             "year_by_year": yrs, "_ys": ys, "_xs": xs}
 
 
-def check_guard():
-    """B3: exact hash-bound GO line required."""
+def check_guard(directory=None, driver_sha=None, pre_sha=None):
+    """B3 guard, N3 revision (REVIEW_R2bis): scan ALL lines of ALL REVIEW_R2*.md;
+    ignore candidate lines without both 64-hex shas; accept only if some line's
+    two shas both equal the files on disk; otherwise refuse, listing every
+    candidate line and why it failed. Fail-closed."""
     import re
-    for p in sorted(HERE.parent.glob("REVIEW_R2*.md")):
-        txt = p.read_text(errors="ignore")
-        for line in txt.splitlines():
-            if "R2-DECISION: X1 GO" in line:
-                m = dict(re.findall(r"(driver_sha256|predeclaration_sha256)=([0-9a-f]{64})", line))
-                if m.get("driver_sha256") == DRIVER_SHA and m.get("predeclaration_sha256") == PRE_SHA:
-                    return p.name, line.strip()
-                return None, (f"GO line shas mismatch disk: line={line.strip()[:120]} "
-                              f"driver={DRIVER_SHA[:12]} pre={PRE_SHA[:12]}")
-    return None, "no R2-DECISION: X1 GO line found in any REVIEW_R2*.md"
+    directory = Path(directory) if directory else HERE.parent
+    driver_sha = driver_sha or DRIVER_SHA
+    pre_sha = pre_sha or PRE_SHA
+    candidates = []
+    for p in sorted(directory.glob("REVIEW_R2*.md")):
+        for ln, line in enumerate(p.read_text(errors="ignore").splitlines(), 1):
+            if "R2-DECISION: X1 GO" not in line:
+                continue
+            m = dict(re.findall(r"(driver_sha256|predeclaration_sha256)=([0-9a-f]{64})", line))
+            if len(m) != 2:
+                candidates.append(f"{p.name}:{ln} missing 64-hex shas :: {line.strip()[:140]}")
+                continue
+            okd = m.get("driver_sha256") == driver_sha
+            okp = m.get("predeclaration_sha256") == pre_sha
+            if okd and okp:
+                return (f"{p.name}:{ln}", line.strip())
+            candidates.append(f"{p.name}:{ln} driver_sha match={okd}, "
+                              f"predeclaration_sha match={okp} :: {line.strip()[:140]}")
+    reason = "; ".join(candidates) or "no R2-DECISION: X1 GO candidate line in any REVIEW_R2*.md"
+    return None, reason
 
 
 def main():
@@ -384,8 +411,11 @@ def main():
         sigmaps, excl = {}, {}
         for nm, (us, alt) in legs.items():
             ymap = us_window_returns(us, cal)
-            xmap = fx_idr_usd_leg(cal, jk, fx, alt_close=alt)             # B1/B2
-            built = build_signal(ymap, xmap, cal)                          # B5 inside
+            if nm == "SPY":
+                built = build_signal(ymap, {}, cal, residualize=False)    # N2: raw r_SPY
+            else:
+                xmap = fx_idr_usd_leg(cal, jk, fx, alt_close=alt)          # B1/B2
+                built = build_signal(ymap, xmap, cal)
             sigmaps[nm] = built["signal"]
             excl[nm] = built["excluded_k_gt_max"]
         out["excluded_k_gt_max_per_signal"] = excl                        # B5 disclosure
@@ -485,10 +515,13 @@ def main():
         # E4 disclosure: boundary sensitivity of the tick-eligibility cut
         el = B["eligible"]
         disc = np.isfinite(B["tick_frac"]) & (B["tick_frac"] > 0.004) & (B["tick_frac"] < 0.0065)
+        near = np.isfinite(B["tick_frac"]) & (B["tick_frac"] > 0.004) & (B["tick_frac"] < 0.0065) & el
         out["tick_schedule_disclosure"] = {
             "assumed": "current IDX schedule (<200:1; 200-500:2; 500-2000:5; 2000-5000:10; >=5000:25) applied to ALL dates; historical schedules not verifiable from this host (idx.co.id blocked)",
-            "discovery_name_days_near_boundary_0.004_0.0065": int(
-                sum(int(disc[j].sum()) for j in range(len(cal)) if cal[j] < SPLIT_DATE)),
+            "discovery_liquid_name_days_near_boundary_0.004_0.0065": int(
+                sum(int(near[j].sum()) for j in range(len(cal)) if cal[j] < SPLIT_DATE)),
+            "confirmation_liquid_name_days_near_boundary_0.004_0.0065": int(
+                sum(int(near[j].sum()) for j in range(len(cal)) if cal[j] >= SPLIT_DATE)),
         }
 
         # E5: recorder correlation with explicit schema check

@@ -76,9 +76,12 @@ def main():
         sigs = {}
         for nm, s in us.items():
             ymap = drv.us_window_returns(s, cal)
-            xmap = drv.fx_idr_usd_leg(cal, jk_s, fx_s,
-                                      alt_close=None if nm != "TLK" else tlkm_c)
-            sigs[nm] = drv.build_signal(ymap, xmap, cal)["signal"]
+            if nm == "SPY":
+                sigs[nm] = drv.build_signal(ymap, {}, cal, residualize=False)["signal"]  # N2
+            else:
+                xmap = drv.fx_idr_usd_leg(cal, jk_s, fx_s,
+                                          alt_close=None if nm != "TLK" else tlkm_c)
+                sigs[nm] = drv.build_signal(ymap, xmap, cal)["signal"]
         return sigs
 
     base = build_all(jk, fx, tlkm_close)
@@ -155,8 +158,49 @@ def main():
         "expected_identical": n_checks,
         "later_sessions_moved_sancount": moved_later,
         "pass": all(identical[nm] == 50 for nm in us),
+        "spy_not_residualized": moved_later["SPY"] == 0,
+        "note": "N2: SPY's R_std must not move at ALL when hedge-leg inputs (JKSE/FX/TLKM) are perturbed -- zero later-session moves proves the SPY arm is raw, not residualized",
     }
     assert out["tests"]["T1_invariance"]["pass"], "T1 FAILED"
+    assert out["tests"]["T1_invariance"]["spy_not_residualized"], "T1-SPY (N2) FAILED: SPY still moves with hedge-leg inputs"
+
+    # ------------------------------------------------------------------ T4 (guard)
+    import tempfile
+    t4 = {}
+    dsha, psha = "a" * 64, "b" * 64
+    valid_line = (f"R2-DECISION: X1 GO driver_sha256={dsha} "
+                  f"predeclaration_sha256={psha}")
+    template_line = "R2-DECISION: X1 GO driver_sha256=<sha> predeclaration_sha256=<sha>"
+
+    def write_reviews(files):
+        tmp = tempfile.mkdtemp()
+        for name, lines in files.items():
+            (Path(tmp) / name).write_text("\n".join(lines) + "\n")
+        return tmp
+
+    # (a) template-only file -> refuse
+    tmp = write_reviews({"REVIEW_R2_2026-10-05.md": ["## B3 format:", template_line]})
+    ok, why = drv.check_guard(directory=tmp, driver_sha=dsha, pre_sha=psha)
+    t4["template_only_refused"] = ok is None
+    # (b) wrong-sha line -> refuse
+    tmp = write_reviews({"REVIEW_R2bis_2026-10-05.md": [
+        valid_line.replace("a" * 64, "c" * 64)]})
+    ok, why = drv.check_guard(directory=tmp, driver_sha=dsha, pre_sha=psha)
+    t4["wrong_sha_refused"] = ok is None
+    t4["wrong_sha_reason_lists_candidate"] = bool(why) and "match=False" in why
+    # (c) template file plus a valid line in a LATER file -> accept
+    tmp = write_reviews({"REVIEW_R2_2026-10-05.md": ["## B3 format:", template_line],
+                         "REVIEW_R2bis_2026-10-05.md": ["decision:", valid_line]})
+    ok, why = drv.check_guard(directory=tmp, driver_sha=dsha, pre_sha=psha)
+    t4["template_plus_valid_later_file_accepted"] = ok is not None
+    if ok:
+        t4["accepted_from"] = ok
+    # (d) no file -> refuse
+    tmp = tempfile.mkdtemp()
+    ok, why = drv.check_guard(directory=tmp, driver_sha=dsha, pre_sha=psha)
+    t4["no_file_refused"] = ok is None
+    out["tests"]["T4_guard"] = t4
+    assert all(v for k, v in t4.items() if k.startswith(("template", "wrong", "no_"))), "T4 FAILED"
 
     # ------------------------------------------------- E4 boundary disclosure count
     liquid = (CP["A20"] >= drv.ADV_MIN) & (CP["V"] > 0) & (CP["O"] > 0) & (CP["C"] > 0)

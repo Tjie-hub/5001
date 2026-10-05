@@ -1,12 +1,48 @@
-# PREDECLARATION — X1 overnight transmission screen (6 arms) · rev 3, 2026-10-05
+# PREDECLARATION — X1 overnight transmission screen (6 arms) · rev 4, 2026-10-05
 
-**Status:** FROZEN DRAFT for REVIEW_R2-bis (committed with its `.sha256`, the re-frozen driver
+**Status:** FROZEN DRAFT for REVIEW_R2-ter (committed with its `.sha256`, the re-frozen driver
 `screen_x1_overnight.py` and the PIT tests `pit_tests_x1.py`; **no driver runs until a
-REVIEW_R2*.md contains the exact hash-bound GO line — enforced mechanically, see Guard**).
+REVIEW_R2*.md contains the exact hash-bound GO line on some line of some file — enforced
+mechanically, see Guard**).
 Detailed spec: `ZCODE_BRIEF_CROSS_ASSET_TRANSMISSION_2026-10-05.md`; timing rules `TIMING.md`
 (rev 2); counts/σ/MDE `PHASE0_COUNTS.md` (rev 2); priors `PRIORS_X.md`; A-OPEN audit
 `../A_OPEN_AUDIT_2026-10-05.md` + the reviewer's minute-bar receipt
-`../A_OPEN_MINUTE_LEG_2026-10-05.{py,json}` on `origin/research/new-order-2026-09-30`.
+`../A_OPEN_MINUTE_LEG_2026-10-05.{py,json}` (on this branch, cherry-picked from
+`origin/research/new-order-2026-09-30`).
+
+## Pre-run amendments (rev 3 → rev 4; authority: REVIEW_R2bis_2026-10-05.md)
+
+All made **before any outcome read**; the census stays 555 + 6 (bar unchanged, §Estimator).
+
+- **N1 — gap_tlkm built.** `books()` now returns `gap_tlkm` (tick-eligible TLKM,
+  `open(D)/close(d) − 1`, same construction as `oc_tlkm`); the absorption loop no longer crashes
+  after the arms print.
+- **N2 — SPY arm aligned to the spec.** SPY is now the **raw compounded US-window return,
+  standardized by the trailing σ of the y series over sessions strictly before j** (250 / min
+  120) — no β, no hedge leg. The rev-3 driver wrongly residualized SPY against JKSE-USD. The
+  spec text is unchanged; this aligns the code to it. **T1-SPY** added: perturbing JKSE_D/FX_D/
+  TLKM open(D)/close(D) leaves SPY's R_std bit-identical (50/50) and moves **zero** later SPY
+  sessions — proving the arm is raw.
+- **N3 — guard scans all lines of all files.** `check_guard` no longer stops at the first
+  candidate line (the REVIEW_R2 §2-B3 format template, which sorts before REVIEW_R2bis and
+  carries no hashes); it scans every line of every `REVIEW_R2*.md`, ignores candidates without
+  both 64-hex shas, accepts only a full match against the files on disk, and otherwise refuses
+  listing every candidate and why it failed (fail-closed). **T4** added: four guard cases
+  (template-only → refuse; wrong-sha → refuse with candidate listing; template + valid line in a
+  later file → accept; no file → refuse).
+- **BEYOND the review's list — disclosed prominently: a signal-construction bug found and fixed
+  during the N2 rewrite.** The rev-3 `build_signal` set the regression target `ys_all =
+  y_map[p][1]` — that is the session count k, **not the US return** `y_map[p][0]`. The β̂
+  regression therefore fit a near-constant target (garbage slope) for EIDO/TLK; T1–T3 could not
+  catch it (T1 is invariance, not correctness). Rev 4 sets `ys_all = y_map[p][0]`, which is what
+  the spec has always said ("OLS of the US leg on the hedge leg"). This changes the EIDO/TLK
+  signal materially and is the honest reason this rev-4 diff exceeds N1–N3.
+- **Non-blocking cleanups (REVIEW_R2bis):** dead `beta_cache` deleted; `empty_a` computed (both
+  empty-book counts disclosed); the driver's E4 disclosure now carries the confirmation-half
+  boundary count (81,816; discovery 116,119) alongside the test output.
+- Review files (`REVIEW_R2_2026-10-05.md`, `REVIEW_R2bis_2026-10-05.md`, minute-bar receipts,
+  the EOD-plan input) are cherry-picked onto this branch so the GO file exists next to the driver
+  at run time.
 
 ## Pre-run amendments (rev 2 → rev 3; authority: REVIEW_R2_2026-10-05.md)
 

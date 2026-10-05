@@ -33,9 +33,19 @@
    "later_sessions_moved_sancount": {
     "EIDO": 5920,
     "TLK": 5198,
-    "SPY": 4576
+    "SPY": 0
    },
-   "pass": true
+   "pass": true,
+   "spy_not_residualized": true,
+   "note": "N2: SPY's R_std must not move at ALL when hedge-leg inputs (JKSE/FX/TLKM) are perturbed -- zero later-session moves proves the SPY arm is raw, not residualized"
+  },
+  "T4_guard": {
+   "template_only_refused": true,
+   "wrong_sha_refused": true,
+   "wrong_sha_reason_lists_candidate": true,
+   "template_plus_valid_later_file_accepted": true,
+   "accepted_from": "REVIEW_R2bis_2026-10-05.md:2",
+   "no_file_refused": true
   }
  },
  "tick_schedule_disclosure": {
