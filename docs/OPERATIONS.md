@@ -93,6 +93,32 @@ SELECT ts, action, actor_role, resource, outcome FROM audit_events
 ORDER BY ts DESC LIMIT 20;
 ```
 
+### Known contamination: test-suite rows in production `audit_events` (2026-10-05)
+
+Running `pytest` on the production checkout (XPS-13) wrote **887 fake
+`provider_switch` rows** into production `data/walkforward.db` between
+2026-07-10 20:04:55 and 2026-10-01 05:00:23 (5–35 rows per suite run). They
+come from `tests/agent_firm/providers/test_alerts.py`, whose frozen `_RESET_A`
+timestamp appears in every row's `detail`
+(`session limit; resumes ~2026-07-10T11:20:00+00:00`). Root cause: the suite
+resolved `DB_PATH` to the real database; fixed by PR #31 (`af1ce24`), which
+pins `DB_PATH` to a scratch file and fails any run that writes under `data/`.
+
+**Owner decision 2026-10-05: the rows are kept, not deleted** — `audit_events`
+is append-only. Exclude them in any analysis of provider switches:
+
+```sql
+-- real provider switches only (excludes the test-suite contamination)
+SELECT ts, detail FROM audit_events
+WHERE action = 'provider_switch'
+  AND detail NOT LIKE '%2026-07-10T11:20:00%'
+ORDER BY ts DESC;
+```
+
+Checked and clean: `provider_events` holds no test-origin rows. Telegram was
+pinned off for tests from 2026-08-05 (`fb39846`); runs before that date are
+unverified.
+
 ## Backup & restore
 
 **Since 2026-08-15 (P2-6): these 3 jobs run on systemd `--user` timers, not cron** — source of
