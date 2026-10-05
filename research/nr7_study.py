@@ -4,7 +4,7 @@ No DB, no I/O, no scheduler imports. Every number the study reports comes from
 these functions so the methodology is unit-tested independent of a 5y backtest.
 Net P&L is always full round-trip: costs applied to BOTH legs from raw prices.
 """
-from engine.exits.costs import apply_costs
+from engine.exits.costs import apply_costs, liquidity_scaled_costs, DEFAULT_COSTS
 
 
 THRESHOLDS = {
@@ -17,14 +17,22 @@ THRESHOLDS = {
 }
 
 
-def round_trip_net_pct(raw_entry: float, raw_exit: float) -> float:
+def round_trip_net_pct(raw_entry: float, raw_exit: float, adv_value_idr: float = None) -> float:
     """Net %/trade after full round-trip costs, from RAW prices.
 
     Applies the buy leg to entry and the sell leg to exit via the single cost
     authority (engine.exits.costs), so this does not trust any upstream cost
-    handling. Long-only (BUY entry, SELL exit)."""
-    buy_fill = apply_costs(raw_entry, 'BUY')
-    sell_fill = apply_costs(raw_exit, 'SELL')
+    handling. Long-only (BUY entry, SELL exit).
+
+    adv_value_idr is optional (audit P4-6): pass a trade's 30d ADV traded
+    value to use liquidity-scaled slippage instead of the flat default -- omit
+    it (the default) to keep exactly the prior flat-cost behavior, which
+    every non-NR7 caller of this module (gatekeeper/candidate.py,
+    regime/profile.py, regime_edge_scan.py) still gets unchanged."""
+    costs = (liquidity_scaled_costs(adv_value_idr) if adv_value_idr is not None
+             else DEFAULT_COSTS)
+    buy_fill = apply_costs(raw_entry, 'BUY', costs)
+    sell_fill = apply_costs(raw_exit, 'SELL', costs)
     return (sell_fill - buy_fill) / buy_fill * 100.0
 
 
@@ -33,7 +41,8 @@ def pool(trades) -> dict:
     n = len(trades)
     if n == 0:
         return {'exp_pct': 0.0, 'n': 0, 'win_rate': 0.0}
-    nets = [round_trip_net_pct(t['raw_entry'], t['raw_exit']) for t in trades]
+    nets = [round_trip_net_pct(t['raw_entry'], t['raw_exit'], t.get('adv_value_idr'))
+            for t in trades]
     wins = sum(1 for x in nets if x > 0)
     return {'exp_pct': sum(nets) / n, 'n': n, 'win_rate': 100.0 * wins / n}
 

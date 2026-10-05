@@ -98,3 +98,7 @@ PLAN/wildcat-*.md
 # Machine-local tooling output, not research artefacts; 11 of these were committed
 # by a directory-level `git add` on 2026-09-17 and excised before push.
 .mimosa/
+
+# Dead/broken local venvs left in repo root by past sessions (blow past Mimosa's
+# 5000-file scan budget when untracked) -- always ignore these, never commit one.
+venv_broken_*/

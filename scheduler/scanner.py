@@ -599,13 +599,19 @@ def daily_signal_scan():
         try:
             import sys, os
             sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-            from paper_trade import open_trade, get_open_trades, get_config, get_backtest_best
+            from paper_trade import stage_entry, get_open_trades, get_config, get_backtest_best
 
             cfg      = get_config()
             max_open = int(cfg["max_open"])
             opened   = get_open_trades()
 
-            auto_opened = []
+            # P3-2 execution-model fix: this scan runs at 16:00 on the bar that
+            # is still provisional (is_final=0), and s["close"] is that bar's
+            # latest price. Opening here filled paper trades at a price the
+            # backtests never used — the validated convention is a fill at the
+            # NEXT session's open. Stage the signal; run_staged_entry_fills
+            # (09:10/10:10 next session) opens the trade at that open.
+            staged = []
             for s in signals_to_open:
                 if len(opened) >= max_open:
                     logger.info(f"[AutoTrade] Max posisi ({max_open}) tercapai, skip {s['ticker']}")
@@ -625,26 +631,19 @@ def daily_signal_scan():
                               f"(ret={_bt_ret:.2f}%, win={_bt_wr:.0f}%)")
                         continue
 
-                result = open_trade(s["ticker"], s["close"], notify=False)
-                if "error" in result:
-                    logger.warning(f"[AutoTrade] {s['ticker']} error: {result['error']}")
-                else:
-                    auto_opened.append(result)
-                    opened.append(result)  # update local list
-                    notif = (
-                        f"📝 <b>Auto Paper Trade Opened</b>\n\n"
-                        f"🟢 <b>{result['ticker']}</b> @ Rp {result['entry_price']:,}\n"
-                        f"   📈 TP: Rp {result['tp_price']:,}\n"
-                        f"   🛑 SL: Rp {result['sl_price']:,}\n"
-                        f"   Lot: {result['lots']} | Modal: Rp {result['capital_used']:,.0f}"
-                    )
-                    send_telegram(notif)
-                    logger.info(f"[AutoTrade] Opened: {result['ticker']} @ {result['entry_price']}")
+                stage_entry(s["ticker"], s["close"], source="daily_signal_scan")
+                staged.append(s["ticker"])
 
-            if auto_opened:
-                logger.info(f"[AutoTrade] {len(auto_opened)} trade dibuka otomatis.")
+            if staged:
+                send_telegram(
+                    f"📝 <b>Momentum Signals Staged</b>\n\n"
+                    f"⏳ {len(staged)} signal(s) staged for NEXT-SESSION OPEN fill\n"
+                    f"(no same-bar fills — P3 execution-model fix):\n"
+                    + "\n".join(f"• <b>{t}</b>" for t in staged)
+                )
+                logger.info(f"[AutoTrade] {len(staged)} signal(s) staged for next-session open fill.")
             else:
-                logger.info(f"[AutoTrade] Tidak ada trade baru dibuka.")
+                logger.info(f"[AutoTrade] Tidak ada trade baru distage.")
         except Exception as e:
             logger.warning(f"[AutoTrade] Error: {e}")
 
