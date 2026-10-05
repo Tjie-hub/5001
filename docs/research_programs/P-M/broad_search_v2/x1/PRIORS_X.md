@@ -106,6 +106,16 @@ mean-revert within a day" is verified; "sizeable deviations" is true only in the
 reads as: a weak, secondary prior — consistent with TLK being Tier 2 and with expecting any
 ADR-vs-home edge to be small and fast-decaying.
 
+**Explicit not-supported list (REVIEW_R2 §4).** The brief's claim is supported ONLY in part.
+Supported and citable for X1-C/D: (i) ADR–home deviations exist on a currency-adjusted basis;
+(ii) daily return differentials mean-revert within about a day (θ = −0.55, significant for
+essentially all pairs). NOT supported as the brief claimed, and NOT relied on by X1-C/D:
+(iii) "sizeable" deviations (published average "economically small" 4.9 bp; most pairs within a
+20–85 bp band; only the tails reach 66%/87%); (iv) the phrase "arbitrage energy" (appears nowhere
+in the paper); (v) a clean "converges quickly" reading (the paper simultaneously documents
+persistence up to five days tied to holding costs). Indonesia appears once in the working-paper's
+39-country sample; TLK itself is not mentioned anywhere.
+
 ## P0-A gate
 
 All three citations verified to exist with ≥10 years of published standing (RFS 1990; JBF 2013;

@@ -1,7 +1,9 @@
-# TIMING — calendar and signal timing contract (cross_asset / X1) · 2026-10-05
+# TIMING — calendar and signal timing contract (cross_asset / X1) · 2026-10-05 (rev 2)
 
-Companion to the X1 brief (`ZCODE_BRIEF_X1_OVERNIGHT_2026-10-05.md` §P0-C). Every rule here is
-part of the predeclaration: nothing below may be revised after outcome data is read.
+Companion to the X1 brief (`ZCODE_BRIEF_CROSS_ASSET_TRANSMISSION_2026-10-05.md` §P0-C). Every rule
+here is part of the predeclaration: nothing below may be revised after outcome data is read.
+**Rev 2 (REVIEW_R2, pre-run amendment): FX direction corrected (B2) — USDIDR=X is IDR per USD;
+hedge-leg value stamps made explicit (B1).**
 
 ## 1 · Clock facts (verified)
 
@@ -35,15 +37,21 @@ WIB day d   09:00          16:00   20:30                         03:00 | 09:00
 
 ## 3 · Construction with daily bars (the stagger, declared)
 
-- `r_JKSE,USD[close(d−1)→close(d)] = (JKSE_d / JKSE_{d−1}) · (FX_d / FX_{d−1}) − 1`, with FX bars
-  stamped d−1 and d. The FX leg's effective timestamp lags the equity legs by up to ~15 h — this
-  is the daily-FX convention; **both legs are known ≤ 08:45 WIB day D**, and the identical stagger
-  applies to every historical pair inside β̂, so the estimator is internally consistent.
+- **Hedge leg (B1/B2 — rev 2).** For the signal at IDX session D with d = previous IDX session
+  and d₋₁ = the one before it:
+  `r_JKSE,USD = (JKSE_d / JKSE_{d−1}) · (FX_{d−1} / FX_d) − 1`,
+  using **only values stamped d and d₋₁** (both strictly before D — no stamped-D value enters).
+  USDIDR=X is **IDR per USD** (17,928 on 2026-10-05), so the index level in USD is JKSE/FX and an
+  IDR **depreciation** (FX_d > FX_{d−1}) makes the USD return smaller/negative — hence the
+  inverted FX ratio relative to a naive multiply. The TLK arm's hedge leg is the **TLKM-USD** leg
+  built identically from corpus TLKM closes at the same stamps and the same FX convention.
 - `r_EIDO[US close(d−1) → US close(d)]`: consecutive adjusted US closes (EIDO/TLK/SPY CSVs).
-- **β̂_d**: rolling 250-pair OLS of the EIDO (or TLK) leg on the JKSE-USD leg, pairs ending ≤ d;
-  expanding window until 250 pairs exist (minimum 120 pairs to produce a β̂), then rolling 250.
-- **Standardization**: R standardized by the trailing-250-pair σ of R (same expanding/minimum
-  rule). SPY arm: raw r_SPY standardized identically (no hedge).
+- **β̂_d**: rolling 250-pair OLS of the US leg on the hedge leg, **pairs with session ≤ d**
+  (latest available window of exactly 250 points, expanding to a minimum of 120), never dropping
+  a day silently when the previous session lacked a pair.
+- **Standardization**: R standardized by the trailing 250-day σ of the (PIT) R series — latest
+  window of exactly 250 points, expanding to a minimum of 120. SPY arm: raw r_SPY standardized
+  identically (no hedge).
 
 ## 4 · Holiday and gap rules (predeclared)
 

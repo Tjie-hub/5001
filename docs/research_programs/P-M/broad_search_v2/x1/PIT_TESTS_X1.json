@@ -1,0 +1,46 @@
+{
+ "tests": {
+  "T3_sign_check": {
+   "depreciation_x": {
+    "2": -0.018750000000000044
+   },
+   "appreciation_x": {
+    "2": 0.01948051948051943
+   },
+   "depreciation_negative": true,
+   "appreciation_positive": true,
+   "tlkm_usd_depreciation_negative": true
+  },
+  "T2_timestamps": {
+   "sessions_checked": 14401,
+   "hedge_stamps_strictly_before_D": true,
+   "us_closes_le_0845_wib": true,
+   "note": "assertions raise on violation; x-map values re-derived by explicit stamps"
+  },
+  "T1_invariance": {
+   "sessions_perturbed": 50,
+   "seed": 42,
+   "R_std_identical_at_perturbed_session": {
+    "EIDO": 50,
+    "TLK": 50,
+    "SPY": 50
+   },
+   "expected_identical": {
+    "EIDO": 50,
+    "TLK": 50,
+    "SPY": 50
+   },
+   "later_sessions_moved_sancount": {
+    "EIDO": 5920,
+    "TLK": 5198,
+    "SPY": 4576
+   },
+   "pass": true
+  }
+ },
+ "tick_schedule_disclosure": {
+  "assumed": "current IDX schedule applied to ALL dates (historical unverifiable here)",
+  "discovery_liquid_name_days_near_boundary_0.004_0.0065": 116119,
+  "confirmation_liquid_name_days_near_boundary_0.004_0.0065": 81816
+ }
+}
