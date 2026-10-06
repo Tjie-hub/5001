@@ -2179,6 +2179,28 @@ literature comparison (gap 2: "PBO/CSCV stage; threshold literature default").
 - **FWD-PM-BANK-001** opened `2026-10-05T16:09:16+00:00`, cron 09:40; no back-fill (the 2026-09-24/29 firings
   are refused). The personal jurnal26 Telegram alert on the same rule is not the recorder and not evidence.
 
+### D-067 · P-M Price-Learning {L1} family opened; HYP-PM-0015 registered (price-learning cross-sectional ranking model); G0 frozen; G1 single run approved
+**Status:** RECORDED · **Date:** 2026-10-06 · **Type:** New family + registration + G0 freeze + G1 approval ·
+**Approval authority:** Owner, 2026-10-06, "yes, approve G0", on `P-M/ml_rank/HANDOFF_G0.md` (branch
+`research/ml-rank-2026-10` @ `f16aa9e`; PREDECLARATION.md sha256 `5d4dd3d81563…`), after planner review.
+
+- **Family.** Price-Learning opened as {L1}: fitted models combining OHLCV/volume features (no existing family
+  covers a learned combination; {T1} and {R1,R2} are fixed rules on the same data epoch). Registered count 0 -> 1.
+  Multiplicity is carried at program level: the 6 grid arms (M1 ridge x3, M2 HistGBR x3; M0 is an uncounted
+  baseline) enter the census at this filing, N 270 -> 276, which raises the bar for the NEXT gate, not this one.
+- **HYP-PM-0015.** One G1 walk-forward run: train 2001->, validation 2016-01..2021-09 (configuration chosen on
+  mean monthly rank IC), test 2021-10..latest complete month read once. PASS on test only if: net top-quintile
+  excess vs the EW base book > 0 with Newey-West t (lag 3) >= 3.06 (frozen; exact E[max|Z|] @ N=266 = 3.0558);
+  beats M0 paired t >= 2; PBO < 0.5; leave-one-year-out > 0; IHSG reported, not gating. If only M0 passes, M0 is
+  the finding. Null handling and the failure-row text are in `P-M/ml_rank/REGISTRATION_DRAFT.md` §4.
+- **Deviations acknowledged by the owner:** D-1 (beta/idiosyncratic volatility against the EW-panel market proxy,
+  because no IHSG exists before 2021-07), D-2..D-5 as declared in PREDECLARATION §13.
+- **Freeze condition (planner review).** PREDECLARATION.sha256 covers the predeclaration only; the driver and PIT
+  tests are frozen by the commit. G1 must run from `f16aa9e` with `ml_rank_model.py` byte-identical (sha256
+  `47752c25fcea…`) and record the commit and driver hash in the RESULT; any change re-opens G0.
+- **Boundaries.** Research-side only; production, ~/jurnal26 and `research/broad-search-v2-zcode` untouched;
+  G1 machine-gated on `ML_RANK_G1_APPROVED=1`.
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
