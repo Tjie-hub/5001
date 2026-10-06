@@ -18,7 +18,9 @@ decide() before touching the network. The gate owns, in order:
      logs/notify_state.json (atomic tmp+rename writes, survives restarts and
      is shared across the service and cron processes).
   4. Digest — TIER_DIGEST items append to logs/digest_buffer/<date>.jsonl;
-     the 17:45 WIB scheduler job flushes them as ONE message.
+     the 17:45 WIB scheduler job flushes them as ONE message (and a 20:45
+     late flush picks up items buffered after it, e.g. the 18:30 forward-test
+     cycle and 20:15 broker flow).
 
 Dedup records are written at decision time, not after successful delivery:
 a lost send may swallow tomorrow's identical alert until the next day/state
@@ -27,9 +29,35 @@ event is day-granular by design.
 
 Dedup keys are "<event>|<subject>"; the subject (ticker, job, provider, ...)
 partitions the day counter so one ticker's alert never mutes another's.
+
+**Shared buffer contract (external writers, e.g. jurnal26).** External apps
+append their tier-2 items into the same buffer so the owner gets one digest:
+
+    file: logs/digest_buffer/<YYYY-MM-DD WIB>.jsonl
+    line: one JSON object per line, appended with a single write() call
+          {"event": str, "ts": float (epoch seconds), "text": str,
+           "source": str (optional), "section": str (optional)}
+
+The flush accepts lines with a `source` (e.g. "jurnal26") and events that are
+NOT in EVENTS — the registry/classification gate applies to sends from this
+codebase, not to lines already in the buffer. A malformed line is skipped and
+logged, never fatal. Items are grouped by `section` when present, else by the
+event prefix (market.* → Market, report.* → Reports, …).
+
+**Flush mechanics.** Claim-then-read: live `<day>.jsonl` files are atomically
+renamed to `<day>.jsonl.sending` before reading, so an item appended during a
+flush lands in a fresh `<day>.jsonl` and can never be archived unsent. On a
+successful send the `.sending` files become `.sent`; on a failed/suppressed
+send they stay `.sending` and are picked up by the next flush (never dropped).
+The digest is split into consecutive parts under the same gated event at
+Telegram's ~3800-char limit instead of being truncated, and the `.sent`
+archive happens only after every part went out. At flush time items from
+buffer files older than 2 calendar days are NOT sent — they are archived to
+`.stale` and the message ends with one "N older items skipped" line.
 """
 
 import hashlib
+import html
 import json
 import logging
 import os
@@ -90,7 +118,7 @@ EVENTS = {
     "data.scraper_failed":                (TIER_SEND, RULE_DAILY),
     "data.ohlcv_fetch_failed":            (TIER_SEND, RULE_DAILY),
     "data.ohlcv_coverage":                (TIER_SEND, RULE_DAILY),
-    "data.ohlcv_reconcile":               (TIER_SEND, RULE_DAILY),
+    "data.ohlcv_reconcile":               (TIER_SEND, RULE_DAILY),  # review after 1 week live; demote to digest if it fires most days
     "data.pit_finality_violation":        (TIER_SEND, RULE_DAILY),
     "data.flow_fetch_failed":             (TIER_SEND, RULE_DAILY),
     "data.flow_zero_warning":             (TIER_SEND, RULE_DAILY),
@@ -124,7 +152,8 @@ EVENTS = {
     "risk.dd_breaker_reset":              (TIER_DIGEST, RULE_NONE),   # recovery is a state change
     "trade.paper_opened":                 (TIER_DIGEST, RULE_NONE),
     "screener.nr7_signal":                (TIER_DIGEST, RULE_DAILY),  # subject=ticker
-    "report.evening_digest":              (TIER_SEND, RULE_DAILY),    # the flush itself
+    "report.evening_digest":              (TIER_SEND, RULE_DAILY),    # 17:45 main flush
+    "report.late_digest":                 (TIER_SEND, RULE_DAILY),    # 20:45 late flush (D3)
 
     # ── TIER 3: log only, never sent ────────────────────────────────────────
     "report.market_health":               (TIER_LOG, RULE_NONE),
@@ -256,68 +285,202 @@ def digest_append(event: str, text: str) -> None:
         logger.warning("[notify_policy] digest append failed: %s", e)
 
 
-def flush_digest() -> Optional[bool]:
-    """Send today's (plus any unflushed older) digest items as ONE message.
+# Section label for an item: explicit `section` wins, else derived from the
+# event prefix. jurnal26 items carry their own sections (Positions, Patterns,
+# Screener, Corporate actions, Weekly).
+_SECTIONS_BY_PREFIX = (
+    ("market", "Market"), ("report", "Reports"), ("screener", "Screener"),
+    ("data", "Data"), ("risk", "Risk"), ("trade", "Trades"),
+    ("llm", "LLM"), ("bot", "Bot"), ("system", "System"),
+)
+_DEFAULT_SECTION = "Other"
+_MAX_PART_CHARS = 3800  # Telegram's hard limit is 4096
 
-    Called by the 17:45 WIB scheduler job. Returns True when a digest went
-    out, False when suppressed/failed, None when there was nothing to send.
-    The flush itself is a gated send (event=report.evening_digest,
-    once_per_day) so the global OFF file and double-runs are both honored;
-    the buffer is archived only after an actual send.
+
+def _section_for(event: Optional[str], explicit: Optional[str]) -> str:
+    if explicit:
+        return str(explicit)
+    prefix = (event or "").split(".", 1)[0]
+    for p, name in _SECTIONS_BY_PREFIX:
+        if prefix == p:
+            return name
+    return _DEFAULT_SECTION
+
+
+def _flush_title(event: str) -> str:
+    base = ("🌙 <b>Late Digest</b>" if event == "report.late_digest"
+            else "📋 <b>Evening Digest</b>")
+    return base + " — " + wib_today()
+
+
+def _parse_buffer_line(ln: str) -> Optional[dict]:
+    """Validate one shared-buffer line. Returns the item or None (malformed —
+    skipped and logged, never fatal)."""
+    try:
+        it = json.loads(ln)
+    except ValueError:
+        return None
+    if not isinstance(it, dict):
+        return None
+    text = it.get("text")
+    if not isinstance(text, str) or not text.strip():
+        return None
+    return it
+
+
+def flush_digest(event: str = "report.evening_digest") -> Optional[bool]:
+    """Send buffered tier-2 items as ONE message (split into parts at the
+    Telegram limit instead of truncated).
+
+    Called by the 17:45 WIB main flush (event=report.evening_digest, the
+    default) and the 20:45 WIB late flush (event=report.late_digest, D3 — a
+    separate once_per_day event so the late flush isn't blocked by the main
+    one). Returns True when the digest went out, False when suppressed or
+    failed, None when there was nothing to send.
+
+    Mechanics (see module docstring): claim-then-read (D1) — live
+    `<day>.jsonl` files are atomically renamed to `.sending` before reading,
+    so appends during the flush land in a fresh `<day>.jsonl`; the `.sending`
+    files become `.sent` only after EVERY part went out, and stay `.sending`
+    otherwise (picked up next flush, never dropped). Items from buffer files
+    older than 2 calendar days are archived to `.stale`, never sent (D4); the
+    message ends with one "N older items skipped" line when any were skipped.
+    Item text is html.escape()d and grouped under section headers (D2/D3).
     """
-    items = []
-    day_files = sorted(os.listdir(DIGEST_DIR)) if os.path.isdir(DIGEST_DIR) else []
-    for day_file in day_files:
-        if not day_file.endswith(".jsonl"):
-            continue
-        path = os.path.join(DIGEST_DIR, day_file)
+    if not os.path.isdir(DIGEST_DIR):
+        return None
+
+    # D1: claim first, then read. Leftover `.sending` files from a previous
+    # failed/suppressed flush are picked up here too.
+    claimed: list = []
+    for fname in sorted(os.listdir(DIGEST_DIR)):
+        path = os.path.join(DIGEST_DIR, fname)
+        if fname.endswith(".jsonl"):
+            try:
+                os.replace(path, path + ".sending")
+                claimed.append(path + ".sending")
+            except OSError as e:
+                logger.warning("[notify_policy] digest claim failed for %s: %s", path, e)
+        elif fname.endswith(".jsonl.sending"):
+            claimed.append(path)
+    if not claimed:
+        return None
+
+    today = wib_today()
+    stale_cutoff = (datetime.now(WIB) - timedelta(days=2)).date()
+    fresh: list = []        # (file_day, item)
+    stale_paths: list = []  # .sending paths whose file-day is > 2 days old
+    stale_count = 0
+    malformed = 0
+    for path in claimed:
+        fname = os.path.basename(path)
+        file_day = fname.split(".jsonl")[0]
+        is_stale = False
+        try:
+            is_stale = (datetime.strptime(file_day, "%Y-%m-%d").date()
+                        < stale_cutoff)
+        except ValueError:
+            is_stale = False  # unparsable day — keep and send, never drop
         try:
             with open(path) as fh:
                 for ln in fh:
                     ln = ln.strip()
                     if not ln:
                         continue
-                    try:
-                        items.append((day_file[:-6], json.loads(ln)))
-                    except ValueError:
+                    it = _parse_buffer_line(ln)
+                    if it is None:
+                        malformed += 1
                         continue
+                    if is_stale:
+                        stale_count += 1
+                    else:
+                        fresh.append((file_day, it))
         except OSError as e:
             logger.warning("[notify_policy] digest read failed for %s: %s", path, e)
-    if not items:
+        if is_stale:
+            stale_paths.append(path)
+
+    if malformed:
+        logger.warning("[notify_policy] digest flush skipped %d malformed "
+                       "buffer line(s)", malformed)
+
+    # D4: archive stale items immediately — they never ride in the message
+    # and never depend on the send outcome.
+    for path in stale_paths:
+        try:
+            os.replace(path, path[:-len(".sending")] + ".stale")
+        except OSError as e:
+            logger.warning("[notify_policy] stale archive failed for %s: %s", path, e)
+
+    if not fresh:
         return None
 
-    lines = []
-    total = 0
-    truncated = 0
-    for day, it in items:
-        event = it.get("event", "?")
-        text = (it.get("text") or "").strip()
-        day_prefix = "" if day == wib_today() else f"[{day}] "
-        one = f"• {day_prefix}<{event}> " + text.splitlines()[0] if text else f"• {day_prefix}<{event}> (empty)"
-        # Keep each item to its first line, ~300 chars — the digest is a
-        # headline list; full text lives in the logs.
-        if len(one) > 300:
-            one = one[:297] + "..."
-        if total + len(one) + 1 > 3800:
-            truncated += 1
-            continue
-        lines.append(one)
-        total += len(one) + 1
-    if truncated:
-        lines.append(f"… +{truncated} more items (see logs)")
-    msg = "📋 <b>Evening Digest</b> — " + wib_today() + "\n\n" + "\n".join(lines)
+    # D2: escape item text, drop the <event> token; group under section
+    # headers in first-appearance order.
+    grouped: dict = {}
+    for file_day, it in fresh:
+        text = it["text"].strip()
+        first = text.splitlines()[0] if text else "(empty)"
+        first = html.escape(first)
+        if len(first) > 300:
+            first = first[:297] + "..."
+        src = it.get("source")
+        if src and str(src) != "5001":
+            first += " <i>(" + html.escape(str(src)) + ")</i>"
+        day_prefix = "" if file_day == today else f"[{file_day}] "
+        bullet = f"• {day_prefix}{first}"
+        sec = _section_for(it.get("event"), it.get("section"))
+        grouped.setdefault(sec, []).append(bullet)
 
+    # Pack section blocks into parts at the ~3800-char limit; a section split
+    # across parts re-emits its header at the start of the next part.
+    chunks: list = []
+    cur: list = []
+    cur_len = 0
+    for sec, bullets in grouped.items():
+        need_header = True
+        for b in bullets:
+            piece = (f"<b>{sec}</b>\n" if need_header else "") + b
+            if cur_len + len(piece) + 1 > _MAX_PART_CHARS and cur:
+                chunks.append(cur)
+                cur, cur_len = [], 0
+                piece = f"<b>{sec}</b>\n" + b  # header repeats on the new part
+            cur.append(piece)
+            cur_len += len(piece) + 1
+            need_header = False
+    if cur:
+        chunks.append(cur)
+
+    n_parts = len(chunks)
+    title = _flush_title(event)
     from utils.telegram import send_telegram
-    sent = send_telegram(msg, event="report.evening_digest")
-    if sent:
-        for day_file in os.listdir(DIGEST_DIR):
-            if day_file.endswith(".jsonl"):
+    sent_all = True
+    for i, chunk in enumerate(chunks):
+        msg = title if n_parts == 1 else f"{title} ({i + 1}/{n_parts})"
+        msg += "\n\n" + "\n".join(chunk)
+        if i == n_parts - 1 and stale_count:
+            msg += (f"\n\n… {stale_count} older items skipped "
+                    f"(see logs/digest_buffer)")
+        # Same gated event for every part; the per-part subject keeps
+        # once_per_day from swallowing parts 2..n.
+        if not send_telegram(msg, event=event, subject=f"part{i + 1}"):
+            sent_all = False
+            break  # claimed .sending files stay for the next flush
+
+    if sent_all:
+        for path in claimed:
+            if path.endswith(".jsonl.sending") and os.path.exists(path):
                 try:
-                    os.replace(os.path.join(DIGEST_DIR, day_file),
-                               os.path.join(DIGEST_DIR, day_file + ".sent"))
+                    os.replace(path, path[:-len(".sending")] + ".sent")
                 except OSError as e:
-                    logger.warning("[notify_policy] digest archive failed: %s", e)
-    return sent
+                    logger.warning("[notify_policy] digest archive failed for %s: %s", path, e)
+    return sent_all
+
+
+def flush_late_digest() -> Optional[bool]:
+    """20:45 WIB late flush — same machinery, separate gated event (D3) so it
+    runs after the 17:45 main flush on the same day."""
+    return flush_digest(event="report.late_digest")
 
 
 # ── The gate ─────────────────────────────────────────────────────────────────
@@ -332,14 +495,14 @@ def decide(event: Optional[str], subject: Optional[str] = None,
                              send now.
       ("suppress", reason) — do nothing (the gate already logged the line).
 
-    Side effects: dedup record written when a send is allowed; digest item
-    appended for tier-2 events; every decision logged with the message head.
-    """
-    if os.path.exists(OFF_FILE):
-        logger.info("[telegram] suppressed (global OFF): %.80s",
-                    str(msg).replace("\n", " "))
-        return _DECISION_SUPPRESS, "global OFF"
+    Side effects: dedup record written when allowed; digest item appended for
+    tier-2 events; every decision logged with the message head.
 
+    The global OFF file blocks actual SENDS (tier-1) and the digest flush —
+    but tier-2 items are still buffered under their dedup rules while it
+    exists, so the digest resumes cleanly (≤2-day items) when the blackout is
+    lifted; older backlog is archived stale at flush time (D4).
+    """
     if not event or event not in EVENTS:
         logger.warning("[notify_policy] UNCLASSIFIED send suppressed "
                        "(register it in utils/notify_policy.EVENTS): %.80s",
@@ -372,10 +535,17 @@ def decide(event: Optional[str], subject: Optional[str] = None,
         _save_state(state_all)
 
     if tier == TIER_DIGEST:
+        # Buffering continues while TELEGRAM_OFF exists (dedup already
+        # applied above) — the digest resumes when the blackout is lifted.
         digest_append(event, str(msg))
         logger.info("[telegram] digest-buffered (event=%s, %s): %.80s",
                     event, reason, str(msg).replace("\n", " "))
         return _DECISION_DIGEST, "tier2 digest"
+
+    if os.path.exists(OFF_FILE):
+        logger.info("[telegram] suppressed (global OFF): %.80s",
+                    str(msg).replace("\n", " "))
+        return _DECISION_SUPPRESS, "global OFF"
 
     # TIER_SEND
     logger.info("[telegram] send allowed (event=%s, %s): %.80s",

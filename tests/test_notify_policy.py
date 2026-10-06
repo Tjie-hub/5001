@@ -4,6 +4,8 @@ the evening digest buffer + flush, and the global TELEGRAM_OFF blackout.
 """
 import json
 import os
+import re
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -20,10 +22,10 @@ def hermetic(tmp_path, monkeypatch):
     monkeypatch.setattr(np, "OFF_FILE", str(tmp_path / "TELEGRAM_OFF"))
     sent = []
 
-    def fake_send(msg, event=None, **kw):
+    def fake_send(msg, event=None, subject=None, state=None, **kw):
         # Mimic the real muscle's contract: the sender runs the gate itself
         # (OFF, classification, dedup) and returns False when suppressed.
-        action, _ = np.decide(event, msg=msg)
+        action, _ = np.decide(event, subject=subject, state=state, msg=msg)
         if action != "send":
             return False
         sent.append((event, msg))
@@ -169,16 +171,242 @@ def test_flush_with_empty_buffer_returns_none(hermetic):
     assert hermetic == []
 
 
-def test_flush_suppressed_by_off_keeps_buffer(hermetic, tmp_path):
+def test_flush_suppressed_by_off_keeps_claimed_items(hermetic, tmp_path):
+    """Under the global OFF the flush is suppressed AFTER claiming — the
+    claimed .sending files are kept (never dropped) for the next flush."""
     np.decide("report.eod_trade_plan", msg="plan")
     (tmp_path / "TELEGRAM_OFF").touch()
     assert np.flush_digest() is False
     assert hermetic == []
-    assert list((tmp_path / "digest_buffer").glob("*.jsonl"))
+    buf = tmp_path / "digest_buffer"
+    assert list(buf.glob("*.jsonl.sending"))
+    assert not list(buf.glob("*.jsonl.sent"))
 
 
-def test_flush_send_failure_keeps_buffer(hermetic, tmp_path, monkeypatch):
+def test_flush_send_failure_keeps_claimed_items(hermetic, tmp_path, monkeypatch):
     np.decide("report.eod_trade_plan", msg="plan")
     monkeypatch.setattr(tg, "send_telegram", lambda msg, event=None, **kw: False)
     assert np.flush_digest() is False
+    assert list((tmp_path / "digest_buffer").glob("*.jsonl.sending"))
+
+
+# ── follow-up brief 2026-10-06: D1–D4, late flush, shared buffer ────────────
+
+def _append_line(tmp_path, day, obj):
+    """Simulate an external writer (cron process / jurnal26) appending a line."""
+    buf = tmp_path / "digest_buffer"
+    buf.mkdir(exist_ok=True)
+    with open(buf / f"{day}.jsonl", "a") as fh:
+        fh.write(json.dumps(obj, ensure_ascii=False) + "\n")
+
+
+def test_d1_item_appended_during_flush_is_not_lost(hermetic, tmp_path):
+    """D1: claim-then-read. An item a cron process appends while the flush is
+    sending goes to a fresh .jsonl and is sent by the NEXT flush."""
+    day = np.wib_today()
+    _append_line(tmp_path, day, {"event": "report.eod_trade_plan",
+                                 "ts": 1.0, "text": "first item"})
+
+    fired = {"n": 0}
+
+    def sneaky_cron_append(msg, event=None, **kw):
+        # fires between the claim and the archive — like a cron appending now
+        if fired["n"] == 0:
+            fired["n"] += 1
+            _append_line(tmp_path, day, {"event": "report.forward_test",
+                                         "ts": 2.0, "text": "late arrival"})
+        hermetic.append((event, msg))
+        return True
+
+    tg.send_telegram = sneaky_cron_append  # fixture already swapped it; restore is monkeypatch's job
+    # call through the module indirection flush uses
+    assert np.flush_digest() is True
+    buf = tmp_path / "digest_buffer"
+    live = list(buf.glob("*.jsonl"))
+    assert len(live) == 1, "mid-flush append must stay in a live file"
+    sent_text = hermetic[0][1]
+    assert "first item" in sent_text and "late arrival" not in sent_text
+    # next flush picks the late arrival up
+    hermetic.clear()
+    assert np.flush_digest() is True
+    assert "late arrival" in hermetic[0][1]
+    assert not list(buf.glob("*.jsonl"))
+
+
+def test_d2_digest_message_is_html_safe(hermetic, tmp_path):
+    """D2: item text is html.escape()d; the raw <event> token is gone."""
+    day = np.wib_today()
+    _append_line(tmp_path, day, {
+        "event": "market.ihsg_technical", "ts": 1.0,
+        "text": "<b>IHSG</b> broke 6200 & support <market.ihsg_technical>"})
+    assert np.flush_digest() is True
+    msg = hermetic[0][1]
+    assert "<b>Evening Digest</b>" in msg          # intentional tags survive
+    assert "&lt;b&gt;IHSG&lt;/b&gt;" in msg        # item tags escaped
+    assert "&amp;" in msg and "&lt;market.ihsg_technical&gt;" in msg
+    # no unescaped '<' outside the tags the flush emits on purpose
+    leftover = re.sub(r"</?(b|i)>", "", msg)
+    assert "<" not in leftover and ">" not in leftover
+
+
+def test_d2_offenders_html_escaped(hermetic, tmp_path):
+    day = np.wib_today()
+    _append_line(tmp_path, day, {"event": "report.eod_trade_plan", "ts": 1.0,
+                                 "text": "a < b and c > d"})
+    np.flush_digest()
+    leftover = re.sub(r"</?(b|i)>", "", hermetic[0][1])
+    assert "<" not in leftover
+
+
+def test_d3_late_flush_is_not_blocked_by_the_main_flush(hermetic, tmp_path):
+    """D3 (chosen: separate event report.late_digest, once_per_day)."""
+    _append_line(tmp_path, np.wib_today(),
+                 {"event": "report.forward_test", "ts": 1.0, "text": "evening item"})
+    assert np.flush_digest(event="report.evening_digest") is True
+    assert hermetic[0][0] == "report.evening_digest"
+    _append_line(tmp_path, np.wib_today(),
+                 {"event": "report.forward_test", "ts": 2.0, "text": "fwd cycle item"})
+    assert np.flush_late_digest() is True          # 20:45 flush still allowed
+    assert hermetic[1][0] == "report.late_digest"
+    assert "fwd cycle item" in hermetic[1][1]
+    assert "Evening" in hermetic[0][1] and "Late Digest" in hermetic[1][1]
+    assert np.EVENTS["report.late_digest"][0] == np.TIER_SEND
+
+
+def test_late_flush_silent_when_buffer_empty(hermetic):
+    assert np.flush_late_digest() is None
+    assert hermetic == []
+
+
+def test_external_source_lines_accepted_and_sectioned(hermetic, tmp_path):
+    """jurnal26 lines: unregistered event + source + own section."""
+    day = np.wib_today()
+    _append_line(tmp_path, day, {
+        "event": "jurnal.positions", "ts": 1.0, "source": "jurnal26",
+        "section": "Positions", "text": "BBCA closed +2.1%"})
+    _append_line(tmp_path, day, {
+        "event": "jurnal.weekly", "ts": 2.0, "source": "jurnal26",
+        "section": "Weekly", "text": "weekly journal summary"})
+    assert np.flush_digest() is True
+    msg = hermetic[0][1]
+    assert "<b>Positions</b>" in msg and "BBCA closed +2.1%" in msg
+    assert "<b>Weekly</b>" in msg
+    assert "(jurnal26)" in msg
+    # unregistered event did NOT block the line (gate doesn't apply to buffer)
+
+
+def test_section_grouping_by_event_prefix(hermetic, tmp_path):
+    day = np.wib_today()
+    _append_line(tmp_path, day, {"event": "market.ihsg_technical", "ts": 1.0,
+                                 "text": "IHSG label change"})
+    _append_line(tmp_path, day, {"event": "report.eod_trade_plan", "ts": 2.0,
+                                 "text": "3 BUY candidates"})
+    _append_line(tmp_path, day, {"event": "weird.nope", "ts": 3.0,
+                                 "text": "unknown prefix item"})
+    np.flush_digest()
+    msg = hermetic[0][1]
+    assert msg.index("<b>Market</b>") < msg.index("IHSG label change")
+    assert msg.index("<b>Reports</b>") < msg.index("3 BUY candidates")
+    assert msg.index("<b>Other</b>") < msg.index("unknown prefix item")
+    assert msg.index("<b>Market</b>") < msg.index("<b>Reports</b>") < msg.index("<b>Other</b>")
+
+
+def test_d4_items_older_than_two_days_are_stale_skipped(hermetic, tmp_path):
+    today = datetime.now(np.WIB).date()
+    old_day = (today - timedelta(days=3)).strftime("%Y-%m-%d")
+    edge_day = (today - timedelta(days=2)).strftime("%Y-%m-%d")
+    _append_line(tmp_path, old_day, {"event": "report.eod_trade_plan",
+                                     "ts": 1.0, "text": "ancient item"})
+    _append_line(tmp_path, edge_day, {"event": "report.eod_trade_plan",
+                                      "ts": 2.0, "text": "two-day item"})
+    _append_line(tmp_path, np.wib_today(), {"event": "report.eod_trade_plan",
+                                            "ts": 3.0, "text": "fresh item"})
+    buf = tmp_path / "digest_buffer"
+    assert np.flush_digest() is True
+    msg = hermetic[0][1]
+    assert "fresh item" in msg and "two-day item" in msg
+    assert "ancient item" not in msg
+    assert "1 older items skipped (see logs/digest_buffer)" in msg
+    assert list(buf.glob(f"{old_day}.jsonl.stale"))
+    assert not list(buf.glob(f"{old_day}.jsonl"))           # live file gone
+    assert not list(buf.glob(f"{old_day}.jsonl.sending"))   # claimed file archived
+
+
+def test_d4_only_stale_items_no_send(hermetic, tmp_path):
+    old_day = (datetime.now(np.WIB).date() - timedelta(days=5)).strftime("%Y-%m-%d")
+    _append_line(tmp_path, old_day, {"event": "report.eod_trade_plan",
+                                     "ts": 1.0, "text": "ancient"})
+    assert np.flush_digest() is None       # nothing fresh → nothing sent
+    assert hermetic == []
+    assert list((tmp_path / "digest_buffer").glob("*.jsonl.stale"))
+
+
+def test_multi_part_split_when_over_limit(hermetic, tmp_path):
+    day = np.wib_today()
+    for i in range(30):
+        _append_line(tmp_path, day, {
+            "event": "report.eod_trade_plan", "ts": float(i),
+            "text": f"item {i:02d} " + "x" * 180})
+    total_chars = sum(len(t) for t in ("x" * 188,) * 30)
+    assert total_chars > 3800
+    assert np.flush_digest() is True
+    assert len(hermetic) >= 2                       # consecutive parts
+    assert all(e == "report.evening_digest" for e, _ in hermetic)
+    assert any("(1/2)" in m for _, m in hermetic)
+    assert any("(2/2)" in m for _, m in hermetic)
+    joined = "\n".join(m for _, m in hermetic)
+    assert "item 00 " in joined and "item 29 " in joined  # nothing truncated
+    assert not list((tmp_path / "digest_buffer").glob("*.jsonl.sending"))
+    assert list((tmp_path / "digest_buffer").glob("*.jsonl.sent"))
+
+
+def test_multi_part_failure_keeps_everything(hermetic, tmp_path, monkeypatch):
+    day = np.wib_today()
+    for i in range(30):
+        _append_line(tmp_path, day, {
+            "event": "report.eod_trade_plan", "ts": float(i),
+            "text": f"item {i:02d} " + "y" * 180})
+    calls = {"n": 0}
+
+    def flaky(msg, event=None, **kw):
+        calls["n"] += 1
+        return calls["n"] == 1          # part 1 ok, part 2 fails
+    monkeypatch.setattr(tg, "send_telegram", flaky)
+    assert np.flush_digest() is False
+    buf = tmp_path / "digest_buffer"
+    assert list(buf.glob("*.jsonl.sending"))     # nothing archived
+    assert not list(buf.glob("*.jsonl.sent"))
+
+
+def test_malformed_buffer_line_skipped_never_fatal(hermetic, tmp_path, caplog):
+    day = np.wib_today()
+    buf = tmp_path / "digest_buffer"
+    buf.mkdir(exist_ok=True)
+    with open(buf / f"{day}.jsonl", "a") as fh:
+        fh.write("{not json at all\n")
+        fh.write(json.dumps({"ts": 1.0, "text": "missing event is fine",
+                             "source": "jurnal26"}) + "\n")
+        fh.write(json.dumps({"event": "no.text"} ) + "\n")   # no text → malformed
+    assert np.flush_digest() is True
+    msg = hermetic[0][1]
+    assert "missing event is fine" in msg
+    assert "no.text" not in msg
+    assert any("malformed" in r.message for r in caplog.records)
+
+
+def test_tier2_items_still_buffer_while_global_off(hermetic, tmp_path):
+    """D4 model: OFF blocks sends, not digest buffering — the digest resumes
+    cleanly (≤2-day items) when the blackout is lifted."""
+    (tmp_path / "TELEGRAM_OFF").touch()
+    action, _ = np.decide("report.eod_trade_plan", msg="plan under blackout")
+    assert action == "digest"
     assert list((tmp_path / "digest_buffer").glob("*.jsonl"))
+    # dedup still applies while OFF: an unchanged on_change state is not buffered
+    n_before = len(list((tmp_path / "digest_buffer").glob("*.jsonl")))
+    action, reason = np.decide("market.ihsg_technical", state="DOWNTREND",
+                               msg="IHSG under blackout")
+    assert action == "digest"
+    action, reason = np.decide("market.ihsg_technical", state="DOWNTREND",
+                               msg="IHSG under blackout (repeat scan)")
+    assert action == "suppress" and "on_change" in reason
+    assert len(list((tmp_path / "digest_buffer").glob("*.jsonl"))) == n_before

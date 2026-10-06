@@ -415,10 +415,19 @@ def start_scheduler():
     # (utils.notify_policy.flush_digest); silently no-ops when the buffer is
     # empty, and the flush send itself is gated (global OFF + once_per_day).
     # Every day, not market days only: tier-2 items can land on weekends.
-    from utils.notify_policy import flush_digest
+    from utils.notify_policy import flush_digest, flush_late_digest
     _add_job(scheduler, flush_digest, CronTrigger(
         hour=17, minute=45, timezone=WIB),
         id="notify_evening_digest", name="Evening Notify Digest 17:45")
+
+    # Late digest flush — 20:45 WIB (follow-up brief 2026-10-06, §2). Picks up
+    # tier-2 items buffered after the 17:45 flush (forward-test cycle 18:30,
+    # broker flow 20:15) so they arrive the same evening. Separate gated event
+    # (report.late_digest, once_per_day) so it isn't blocked by the main flush;
+    # sends nothing when the buffer is empty.
+    _add_job(scheduler, flush_late_digest, CronTrigger(
+        hour=20, minute=45, timezone=WIB),
+        id="notify_late_digest", name="Late Notify Digest 20:45")
 
     # Forward-test SHADOW cycle — 18:30 WIB (after 16:00 close, 16:05 flow fetch,
     # 18:00 VPIN batch). Ingests today's scheduled_signals into the ft model and

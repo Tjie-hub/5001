@@ -85,8 +85,10 @@ def test_registry_loader_announce_is_classified():
     assert 'telegram_fn(msg, event="system.registry_announce")' in src
 
 
-def test_digest_flush_job_registered_at_17_45():
+def test_digest_flush_jobs_registered():
+    """17:45 main flush + 20:45 late flush (follow-up brief 2026-10-06)."""
     src = (REPO_ROOT / "scheduler" / "__init__.py").read_text()
-    assert "notify_evening_digest" in src
-    assert "flush_digest" in src
+    assert "notify_evening_digest" in src and "flush_digest" in src
     assert "hour=17, minute=45" in src
+    assert "notify_late_digest" in src and "flush_late_digest" in src
+    assert "hour=20, minute=45" in src
