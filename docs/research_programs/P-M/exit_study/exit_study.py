@@ -13,6 +13,15 @@ Everything numeric is fixed by PREDECLARATION.md (the sha256 sidecar covers this
 file, the predeclaration and the PIT test file). Constants marked FROZEN must not
 change after the freeze — a change is a new, disclosed, re-frozen run.
 
+G0-bis re-freeze 2026-10-06 (planner review, BEFORE any outcome was read; the
+one authorized re-freeze): the E-SN level logic now matches jurnal26 exactly —
+server.py::_levels with w=5/tol=0.04 and watchlist._sniper. Pivots widened to
+5 bars each side (confirmation lag 5); pivot highs and lows POOLED into one
+ascending list and grouped at 4% anchored on each group's lowest price; support
+= the highest-MEAN group below the close; target = the MIN of the lowest-mean
+group above the close with a <= zone-top fallback to the 52-week high. See the
+dated note in PREDECLARATION §3.
+
 Research-side only: numpy/pandas + research.rulecard.data + research.tracking +
 data.db read-only. No ~/jurnal26 code is imported; the sniper rules are
 re-implemented from the brief's text.
@@ -50,9 +59,9 @@ ERA_SPLIT = "2021-10"           # signal month >= this is E2; E1 is 2001-01..202
 ERA_END = "2026-09"             # brief: eras end at 2026-09; later signals excluded (counted)
 WATCH = 20                      # sessions a limit order is watched (setup window)
 MAX_HOLD = 60                   # sessions any arm may hold; also the fill lock
-PIVOT_HALF = 2                  # 5-bar pivots: 2 bars each side
+PIVOT_HALF = 5                  # 11-bar pivots: 5 bars each side (jurnal26 w=5; G0-bis)
 PIVOT_WINDOW = 250              # pivots over the last PIVOT_WINDOW bars
-MERGE_PCT = 0.04                # pivot merged within 4% of the zone's first pivot
+MERGE_PCT = 0.04                # pooled pivots: joins a group iff p <= group[0]*(1+4%) (jurnal26 tol)
 ZONE_TOP_ATR_FLOOR = 0.5        # zone top = min(max(zmax, zlow + 0.5*ATR), close)
 STOP_ATR = 0.75                 # stop = zone low - 0.75*ATR
 SETUP_PROX = 0.10               # setup when close within 10% above the zone top
@@ -125,9 +134,11 @@ def stock_indicators(O, H, L, C, V):
 
 
 def pivot_flags_1d(x):
-    """5-bar pivots: strict versus the bars BEFORE (left strict), non-strict to
-    the right, so a plateau counts once — at its first bar. Confirmed only at
-    index+PIVOT_HALF (a pivot needs its right side to exist)."""
+    """Pivots with PIVOT_HALF bars each side, matching jurnal26
+    server.py::_levels (w=5): strict versus the bars BEFORE (left strict),
+    non-strict to the right (H[i] == max of the window), so a plateau counts
+    once — at its first bar. Confirmed only at index+PIVOT_HALF (a pivot needs
+    its right side to exist)."""
     pl = np.zeros(len(x), dtype=bool)
     h = PIVOT_HALF
     if len(x) < 2 * h + 1:
@@ -140,47 +151,50 @@ def pivot_flags_1d(x):
     return pl
 
 
-def zones_from_pivots(idx, vals):
-    """Chronological merge: a pivot joins the already-formed zone whose FIRST
-    pivot it is within MERGE_PCT of (nearest first-pivot on a tie), else opens a
-    new zone."""
-    zones = []
-    for i, v in zip(idx, vals):
-        best, best_d = None, None
-        for z in zones:
-            d = abs(v - z["first_val"]) / z["first_val"]
-            if d <= MERGE_PCT and (best_d is None or d < best_d):
-                best, best_d = z, d
-        if best is None:
-            zones.append({"first_val": float(v), "members": [(int(i), float(v))]})
+def groups_from_pivots(values):
+    """jurnal26 _levels grouping (G0-bis): pool every confirmed pivot value
+    (highs AND lows together), sort ascending, group sequentially — a pivot
+    joins the current group iff p <= group[0] * (1 + MERGE_PCT), where
+    group[0] is the group's LOWEST price (the anchor; the chain does not
+    slide), else it starts a new group. Each group -> (mean, count, min, max)."""
+    groups = []
+    for p in sorted(values):
+        if groups and p <= groups[-1][0] * (1.0 + MERGE_PCT):
+            groups[-1].append(float(p))
         else:
-            best["members"].append((int(i), float(v)))
-    return zones
+            groups.append([float(p)])
+    return [{"mean": sum(g) / len(g), "count": len(g), "min": g[0], "max": g[-1]}
+            for g in groups]
 
 
 def zone_context(L, H, I, k):
     """Confirmed pivots in the window [k-PIVOT_WINDOW+1, k-PIVOT_HALF] (only
-    bars up to k-PIVOT_HALF count: a pivot is knowable 2 sessions after it
-    forms), clustered into support (lows) and resistance (highs) zones. Pivot
-    flags come from the per-stock indicator cache (computed once)."""
+    bars up to k count: a pivot is knowable PIVOT_HALF sessions after it
+    forms), POOLED — pivot highs and pivot lows in ONE ascending list — and
+    grouped per jurnal26 _levels (tol=4% anchored on each group's lowest
+    price). Pivot flags come from the per-stock indicator cache (computed
+    once); L/H are kept for signature parity, the cached pivot values are
+    used."""
     j = k - PIVOT_WINDOW + 1
     top = k - PIVOT_HALF
     a = np.searchsorted(I["lo_idx"], j, side="left")
     b = np.searchsorted(I["lo_idx"], top, side="right")
-    los = I["lo_idx"][a:b]
+    vals = list(I["lo_vals"][a:b])
     a = np.searchsorted(I["hi_idx"], j, side="left")
     b = np.searchsorted(I["hi_idx"], top, side="right")
-    his = I["hi_idx"][a:b]
-    return (zones_from_pivots(los, L[los]) if len(los) else [],
-            zones_from_pivots(his, H[his]) if len(his) else [])
+    vals += list(I["hi_vals"][a:b])
+    return groups_from_pivots(vals) if vals else []
 
 
 # ── Sniper setup detection (PIT) ──────────────────────────────────────────────
 
 def sniper_signal_at(k, O, H, L, C, I):
-    """The sniper setup for one stock on day k, or None. Trend filter, zone
-    merge, bounds, stop and target per the brief; every level uses only bars
-    <= k (pivots via the 2-session confirmation lag)."""
+    """The sniper setup for one stock on day k, or None. Trend filter per the
+    brief; levels per jurnal26 (G0-bis): pooled pivot groups, support = the
+    highest-mean group below the close, target = the min of the lowest-mean
+    group above the close with a <= zone-top fallback to the 52-week high.
+    Every level uses only bars <= k (pivots via the 5-session confirmation
+    lag)."""
     atr, ma20, ma50, ma200, ma200p = (I["atr14"], I["ma20"], I["ma50"],
                                       I["ma200"], I["ma200_prev20"])
     if not all(np.isfinite(x) and x > 0 for x in (C[k], atr[k])):
@@ -191,23 +205,23 @@ def sniper_signal_at(k, O, H, L, C, I):
         return None
     if C[k] > ma20[k] + TREND_MA20_K * atr[k]:
         return None
-    sup, res = zone_context(L, H, I, k)
-    sup = [z for z in sup if max(v for _, v in z["members"]) < C[k]]
-    if not sup:
+    groups = zone_context(L, H, I, k)
+    below = [g for g in groups if g["mean"] < C[k]]
+    if not below:
         return None
-    z = max(sup, key=lambda zz: max(v for _, v in zz["members"]))
-    zlow = min(v for _, v in z["members"])
-    zmax = max(v for _, v in z["members"])
+    z = max(below, key=lambda g: g["mean"])
+    zlow, zmax = z["min"], z["max"]
     ztop = min(max(zmax, zlow + ZONE_TOP_ATR_FLOOR * atr[k]), C[k])
     if not (ztop > 0 and ztop <= C[k] <= ztop * (1.0 + SETUP_PROX) + 1e-9):
         return None
-    above = [z2 for z2 in res if min(v for _, v in z2["members"]) > C[k]]
+    above = [g for g in groups if g["mean"] > C[k]]
     if above:
-        z2 = min(above, key=lambda zz: min(v for _, v in zz["members"]))
-        target = min(v for _, v in z2["members"])
+        target = min(above, key=lambda g: g["mean"])["min"]
     else:
         target = float(I["hi250"][k])
-    if not np.isfinite(target):
+    if not np.isfinite(target) or target <= ztop:
+        target = float(I["hi250"][k])   # jurnal26 _sniper: a target at/below the
+    if not np.isfinite(target):         # zone top degenerates to the 52w high
         return None
     return {"zone_low": float(zlow), "zone_top": float(ztop),
             "stop": float(zlow - STOP_ATR * atr[k]), "target": float(target),
@@ -215,13 +229,14 @@ def sniper_signal_at(k, O, H, L, C, I):
 
 
 def resistance_target_at(k, H, L, C, I, ref_px):
-    """Nearest resistance-zone low above ref_px (same pivot machinery), else the
-    52-week high. Used for E-BRK, whose target anchors on the signal close."""
-    _, res = zone_context(L, H, I, k)
-    above = [z for z in res if min(v for _, v in z["members"]) > ref_px]
+    """The min of the pooled group with the lowest mean above ref_px (the same
+    G0-bis machinery as the E-SN target; no zone-top guard — E-BRK's frozen
+    definition is otherwise unchanged), else the 52-week high. Used for E-BRK,
+    whose target anchors on the signal close."""
+    groups = zone_context(L, H, I, k)
+    above = [g for g in groups if g["mean"] > ref_px]
     if above:
-        z = min(above, key=lambda zz: min(v for _, v in zz["members"]))
-        t = min(v for _, v in z["members"])
+        t = min(above, key=lambda g: g["mean"])["min"]
     else:
         t = float(I["hi250"][k])
     return float(t) if np.isfinite(t) else None

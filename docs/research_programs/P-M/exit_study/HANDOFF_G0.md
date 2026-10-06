@@ -1,5 +1,9 @@
 # HANDOFF_G0 — exit & position-management practice study (owner's sniper entry)
 
+> **§1 and §3 below are the HISTORICAL G0 freeze — superseded by the G0-bis re-freeze in §8
+> (2026-10-06, planner review, before any outcome was read). The operative freeze table and
+> census are in §8. The §6 G1 runbook is unchanged.**
+
 **Date:** 2026-10-06 · **Branch:** `research/exit-study-2026-10` (from
 `origin/research/new-order-2026-09-30` @ 062999d) · **Executor:** ZCode, per
 `ZCODE_BRIEF_EXIT_POSITION_STUDY_2026-10-06.md` (551dc99). **G0 is complete: predeclaration,
@@ -96,3 +100,51 @@ engines ≈ 10–20 min total.** The recommendation rule (both-eras, t ≥ 2, DD
   untouched; no service restarts; `logs/TELEGRAM_OFF` untouched; other research branches
   (`research/ml-rank-2026-10`, `research/broad-search-v2-zcode`) untouched.
 - Read-only data throughout; no secrets printed.
+
+## 8. G0-bis re-freeze (2026-10-06, planner review — BEFORE any outcome was read)
+
+The planner review authorized ONE disclosed re-freeze before G1; no outcome has ever been read
+(the G0 census is counts-only; `run_g1()` has never been executed and stays gated). Change: the
+E-SN level logic now matches jurnal26 exactly — `server.py::_levels` (w=5, tol=0.04) and
+`watchlist._sniper`. The four changes are listed in PREDECLARATION §3's dated G0-bis note:
+11-bar pivots with a **5-session** confirmation lag; pivot highs AND lows **pooled** into one
+ascending list grouped at 4% anchored on each group's lowest price; **support = the
+highest-mean group below the close**; **target = the min of the lowest-mean group above the
+close**, with a `target ≤ zone-top → 52-week high` guard. Everything else is as frozen (arms,
+mechanics, costs, recommendation rule, C-1..C-10). E-BRK inherits the pooled target machinery
+anchored on the signal close (no zone-top guard); its frozen definition is otherwise unchanged.
+
+**Operative freeze (supersedes §1's table):**
+
+| artifact | sha256 |
+|---|---|
+| `PREDECLARATION.md` | `2207597f8d97a40b3a81473e3d212e1d8c9961db9d06630dbf1230f71d643a6f` |
+| `exit_study.py` (driver) | `5a05df009e6559fd5476af826b9779d2016355386b9c8a548f7694998af37df6` |
+| `test_pit_exit_study.py` (PIT tests) | `4fe464c40b4dc46a4ce626bc50c5e52fb33867d803ac6b61da1ce80e6953d652` |
+
+- PIT tests: **25/25 PASS** (new vs G0: 5-session pivot lag, pooled-group chaining anchored on
+  the group's lowest price, highs+lows pooling, the jurnal26 support/target selection with the
+  zone-top fallback; the setup truncation identity re-verified under the new machinery).
+  Architecture boundary tests: **3/3 PASS**.
+- Census regenerated — counts only, `census_kind` unchanged — run at git HEAD 8437dc2 with the
+  G0-bis working-tree code that this commit freezes (same runbook/env as §6's inputs):
+
+| owner screen (ADV20 ≥ Rp 10bn) | E1 | E2 | total |
+|---|---|---|---|
+| E-SN setups set | 54,359 | 29,416 | 83,775 |
+| E-SN fills | **2,232** | **1,415** | **3,647** |
+| — expired / superseded / while-locked | 42 / 4,553 / 47,532 | 24 / 2,079 / 25,898 | 66 / 6,632 / 73,430 |
+| — out-of-window (post-2026-09, counted) | 0 | 75 | 75 |
+| E-RND matches | 2,232 | 1,415 | 3,647 (unmatched 0) |
+| E-BRK signals | 3,129 | 2,012 | 5,141 |
+
+Counters reconcile exactly per era (setups = fills + expired + superseded + while-locked).
+**E-BRK signal counts are IDENTICAL to G0** — expected: the E-BRK signal rule (close above the
+20-day high + liquidity + lock) uses no zones; only its recorded resistance targets change.
+Parity universe (top-150 ADV60): 83,672 setups → 3,631 fills, E-RND 3,631/3,631 — in
+`CENSUS_G0.json`. Fingerprint at run time `f42275e3…` (max_date 2026-10-06, 1,101,826 rows) —
+**+6 rows vs the G0 fingerprint** (the live DB grows as bars finalize; disclosed per
+PREDECLARATION §2; expect further drift at G1). Fill rate ≈ 4.35%.
+
+- The G1 gate is unchanged: `EXIT_STUDY_G1_APPROVED=1` + the §6 runbook. **G1 remains NOT
+  run.** The executor stops here, as before.

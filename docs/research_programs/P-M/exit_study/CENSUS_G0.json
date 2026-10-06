@@ -1,6 +1,6 @@
 {
- "generated_utc": "2026-10-06T10:09:58.764697+00:00",
- "git_commit": "062999d64401984bcda1a7dcf5cb6ff601aa4a88",
+ "generated_utc": "2026-10-06T12:25:56.439827+00:00",
+ "git_commit": "8437dc27af9117698688012153f05c20ee87bbea",
  "census_kind": "setup_and_fill_counts_only_no_returns",
  "eras": {
   "E1": "signals 2001-01..2021-09",
@@ -14,40 +14,40 @@
  },
  "dataset_fingerprint": {
   "max_date": "2026-10-06",
-  "total_rows": 1101820,
-  "sha256": "58d35b97b2c973574692e63aacd65045a4bbd504d4055ec3a393364bcfe0017c"
+  "total_rows": 1101826,
+  "sha256": "f42275e34cb4525d3101fdf3effb14674b7192627db7b6a77a2bac9c5da5e73e"
  },
  "owner_adv20_10bn": {
   "eras": {
    "E1": {
-    "E_SN_setups": 55713,
-    "E_SN_fills": 2221,
-    "E_SN_expired": 54,
-    "E_SN_superseded": 6663,
-    "E_SN_setup_while_locked": 46775,
-    "E_RND_matches": 2221,
+    "E_SN_setups": 54359,
+    "E_SN_fills": 2232,
+    "E_SN_expired": 42,
+    "E_SN_superseded": 4553,
+    "E_SN_setup_while_locked": 47532,
+    "E_RND_matches": 2232,
     "E_BRK_signals": 3129,
     "sniper_fills_by_year": {
-     "2002": 14,
-     "2003": 23,
-     "2004": 42,
-     "2005": 72,
-     "2006": 77,
+     "2002": 12,
+     "2003": 21,
+     "2004": 41,
+     "2005": 70,
+     "2006": 81,
      "2007": 127,
      "2008": 42,
-     "2009": 74,
-     "2010": 162,
-     "2012": 163,
-     "2013": 130,
-     "2014": 147,
-     "2016": 154,
-     "2019": 135,
-     "2020": 114,
-     "2018": 113,
-     "2021": 264,
-     "2017": 148,
-     "2015": 78,
-     "2011": 136,
+     "2009": 76,
+     "2010": 165,
+     "2011": 139,
+     "2012": 157,
+     "2013": 132,
+     "2014": 150,
+     "2016": 160,
+     "2019": 133,
+     "2020": 117,
+     "2018": 111,
+     "2021": 267,
+     "2017": 149,
+     "2015": 76,
      "2001": 6
     },
     "brk_signals_by_year": {
@@ -75,20 +75,20 @@
     }
    },
    "E2": {
-    "E_SN_setups": 29962,
-    "E_SN_fills": 1419,
-    "E_SN_expired": 26,
-    "E_SN_superseded": 3102,
-    "E_SN_setup_while_locked": 25415,
-    "E_RND_matches": 1419,
+    "E_SN_setups": 29416,
+    "E_SN_fills": 1415,
+    "E_SN_expired": 24,
+    "E_SN_superseded": 2079,
+    "E_SN_setup_while_locked": 25898,
+    "E_RND_matches": 1415,
     "E_BRK_signals": 2012,
     "sniper_fills_by_year": {
-     "2025": 347,
-     "2026": 284,
-     "2022": 291,
+     "2025": 351,
+     "2026": 271,
+     "2022": 288,
      "2021": 104,
-     "2023": 183,
-     "2024": 210
+     "2023": 184,
+     "2024": 217
     },
     "brk_signals_by_year": {
      "2025": 447,
@@ -98,50 +98,50 @@
      "2024": 321,
      "2021": 103
     },
-    "E_SN_out_of_window": 77
+    "E_SN_out_of_window": 75
    }
   },
   "whole": {
-   "E_SN_setups_total": 85675,
-   "E_SN_fills_total": 3640,
+   "E_SN_setups_total": 83775,
+   "E_SN_fills_total": 3647,
    "E_SN_stocks_with_fill": 516,
    "E_BRK_signals_total": 5141,
    "E_BRK_stocks_with_signal": 550,
-   "E_RND_matches_total": 3640,
+   "E_RND_matches_total": 3647,
    "E_RND_unmatched": 0
   }
  },
  "parity_top150_adv60": {
   "eras": {
    "E1": {
-    "E_SN_setups": 55695,
-    "E_SN_fills": 2220,
-    "E_SN_expired": 54,
-    "E_SN_superseded": 6662,
-    "E_SN_setup_while_locked": 46759,
-    "E_RND_matches": 2220,
+    "E_SN_setups": 54339,
+    "E_SN_fills": 2231,
+    "E_SN_expired": 42,
+    "E_SN_superseded": 4553,
+    "E_SN_setup_while_locked": 47513,
+    "E_RND_matches": 2231,
     "E_BRK_signals": 3128,
     "sniper_fills_by_year": {
-     "2002": 14,
-     "2003": 23,
-     "2004": 42,
-     "2005": 72,
-     "2006": 77,
+     "2002": 12,
+     "2003": 21,
+     "2004": 41,
+     "2005": 70,
+     "2006": 81,
      "2007": 127,
      "2008": 42,
-     "2009": 74,
-     "2010": 162,
-     "2012": 163,
-     "2013": 130,
-     "2014": 147,
-     "2016": 154,
-     "2019": 135,
-     "2020": 114,
-     "2018": 113,
-     "2021": 263,
-     "2017": 148,
-     "2015": 78,
-     "2011": 136,
+     "2009": 76,
+     "2010": 165,
+     "2011": 139,
+     "2012": 157,
+     "2013": 132,
+     "2014": 150,
+     "2016": 160,
+     "2019": 133,
+     "2020": 117,
+     "2018": 111,
+     "2021": 266,
+     "2017": 149,
+     "2015": 76,
      "2001": 6
     },
     "brk_signals_by_year": {
@@ -169,20 +169,20 @@
     }
    },
    "E2": {
-    "E_SN_setups": 29871,
-    "E_SN_fills": 1405,
-    "E_SN_expired": 24,
-    "E_SN_superseded": 3088,
-    "E_SN_setup_while_locked": 25354,
-    "E_RND_matches": 1405,
+    "E_SN_setups": 29333,
+    "E_SN_fills": 1400,
+    "E_SN_expired": 22,
+    "E_SN_superseded": 2072,
+    "E_SN_setup_while_locked": 25839,
+    "E_RND_matches": 1400,
     "E_BRK_signals": 1999,
     "sniper_fills_by_year": {
-     "2025": 346,
-     "2026": 273,
-     "2022": 290,
+     "2025": 350,
+     "2026": 260,
+     "2022": 286,
      "2021": 104,
-     "2023": 182,
-     "2024": 210
+     "2023": 183,
+     "2024": 217
     },
     "brk_signals_by_year": {
      "2025": 446,
@@ -192,16 +192,16 @@
      "2024": 321,
      "2021": 102
     },
-    "E_SN_out_of_window": 76
+    "E_SN_out_of_window": 72
    }
   },
   "whole": {
-   "E_SN_setups_total": 85566,
-   "E_SN_fills_total": 3625,
-   "E_SN_stocks_with_fill": 504,
+   "E_SN_setups_total": 83672,
+   "E_SN_fills_total": 3631,
+   "E_SN_stocks_with_fill": 502,
    "E_BRK_signals_total": 5127,
    "E_BRK_stocks_with_signal": 538,
-   "E_RND_matches_total": 3625,
+   "E_RND_matches_total": 3631,
    "E_RND_unmatched": 0
   }
  }

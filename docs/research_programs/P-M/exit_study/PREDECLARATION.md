@@ -1,6 +1,7 @@
 # PREDECLARATION — exit & position-management practice study on the owner's sniper entry
 
 **Status:** frozen before any outcome is read · **Date:** 2026-10-06 ·
+**G0-bis re-freeze:** 2026-10-06 (planner review, before any outcome read — see §3) ·
 **Authority:** brief `ZCODE_BRIEF_EXIT_POSITION_STUDY_2026-10-06.md` (fix/telegram-curation @ 551dc99).
 **Branch:** `research/exit-study-2026-10` from `origin/research/new-order-2026-09-30` (062999d).
 **This is a PRACTICE STUDY, not a hypothesis registration**: exploratory, consumes no family slot,
@@ -32,7 +33,35 @@ entry edge; this study is decision support for the owner's own trading, not an e
 - **Eras (by signal month):** E1 = 2001-01..2021-09 (discovery), E2 = 2021-10..2026-09
   (confirmation). Both are read in the one G1 run; the recommendation rule requires both.
 
-## 3. E-SN, the sniper population (frozen; re-implemented from the brief — no ~/jurnal26 import)
+## 3. E-SN, the sniper population (frozen; re-implemented — no ~/jurnal26 import)
+
+> **G0-bis re-freeze (2026-10-06, planner review, BEFORE any outcome was read — the one
+> authorized re-freeze).** The level rules below are superseded so the E-SN levels match
+> jurnal26 exactly (`server.py::_levels` with w=5, tol=0.04; `watchlist._sniper`). Four changes:
+>
+> 1. **Pivots:** 11-bar pivots — 5 bars each side: `H[i] == max(H[i−5..i+5])` and
+>    `H[i] > max(H[i−5..i−1])`, lows mirrored — knowable only **5 sessions after forming**
+>    (confirmation lag was 2). Window = the last 250 bars before the signal day
+>    (confirmed pivots in [s−249, s−5]; left-strict / right-non-strict comparison unchanged,
+>    so a plateau still counts once, at its first bar).
+> 2. **Zones:** pivot highs AND pivot lows are pooled into ONE list, sorted by price
+>    ascending, and grouped: a pivot joins the current group iff p ≤ group[0] × 1.04,
+>    where group[0] is the group's lowest price (the anchor — the chain does not slide),
+>    else it starts a new group. Each group gives (mean, count, min, max). A group may
+>    mix pivot highs and pivot lows.
+> 3. **Support zone:** the pooled group with the **highest mean below the close** (mean-based
+>    membership and ranking). Zone low = group min; zone max = group max; **zone top =
+>    min(max(zone max, zone low + 0.5·ATR14), C[s])**; **stop = zone low − 0.75·ATR14**
+>    (formulas unchanged, now computed on group stats).
+> 4. **Target:** the **min** of the pooled group with the **lowest mean above the close**;
+>    none → the 52-week high; **if target ≤ zone top → the 52-week high** (new guard).
+>    E-BRK's resistance target, built on the same pivot machinery, inherits the pooled-group
+>    selection anchored on the signal close; its frozen definition is otherwise unchanged
+>    (no zone-top guard — its zone top is the entry itself).
+>
+> Everything else stays as frozen (arms, mechanics, costs, recommendation rule, C-1..C-10).
+> The re-frozen artifacts are covered by the regenerated sha256 sidecar; `CENSUS_G0.json` was
+> regenerated (counts only) under this code, at git HEAD 8437dc2 (the G0 commit).
 
 Indicators per stock, all causal (min_periods = full window): MA20/MA50/MA200 = simple means of
 close; **ATR14 = 14-session simple mean of TR**, TR = max(H−L, |H−C_prev|, |L−C_prev|);
@@ -40,16 +69,18 @@ close; **ATR14 = 14-session simple mean of TR**, TR = max(H−L, |H−C_prev|, |
 
 - **Trend filter on day s:** C > MA50 > MA200; MA200 rising over 20 sessions
   (MA200[s] > MA200[s−20]); C ≤ MA20 + 2·ATR14.
-- **Pivots:** 5-bar pivots (2 bars each side) over the window [s−249, s−2]. Left neighbors
-  strict (`<`), right neighbors non-strict (`≤`) — **a plateau counts once, at its first bar**.
-  A pivot is **knowable only 2 sessions after it forms** (its right side must exist) — the
-  confirmation lag is enforced and PIT-tested.
-- **Zones:** pivots merged chronologically; a pivot joins the first-formed zone whose FIRST
-  pivot it is within 4% of (ties → the nearest first-pivot in percentage distance), else opens a
-  new zone. Zone construction uses only the pivots in the day's window.
-- **Support zone:** among zones whose max pivot < C[s], the one with the highest max. Zone low =
-  min member; zone max = max member; **zone top = min(max(zone max, zone low + 0.5·ATR14), C[s])**.
-- **Stop:** zone low − 0.75·ATR14. **Target:** the resistance zone (pivot-high zones built the
+- **Pivots:** [G0 original — superseded by G0-bis note above] 5-bar pivots (2 bars each side)
+  over the window [s−249, s−2]. Left neighbors strict (`<`), right neighbors non-strict (`≤`) —
+  **a plateau counts once, at its first bar**. A pivot is **knowable only 2 sessions after it
+  forms** (its right side must exist) — the confirmation lag is enforced and PIT-tested.
+- **Zones:** [G0 original — superseded by G0-bis note above] pivots merged chronologically; a
+  pivot joins the first-formed zone whose FIRST pivot it is within 4% of (ties → the nearest
+  first-pivot in percentage distance), else opens a new zone. Zone construction uses only the
+  pivots in the day's window.
+- **Support zone:** [G0 original — superseded by G0-bis note above] among zones whose max
+  pivot < C[s], the one with the highest max. Zone low = min member; zone max = max member;
+  **zone top = min(max(zone max, zone low + 0.5·ATR14), C[s])**.
+  **Stop:** zone low − 0.75·ATR14. **Target:** the resistance zone (pivot-high zones built the
   same way) whose min pivot > C[s] is nearest — the target is that zone's min; none → the
   52-week high.
 - **Setup set on day s:** trend filter holds ∧ support zone exists ∧ C[s] ∈ [zone top,
@@ -164,8 +195,10 @@ No P/L, no returns, no performance numbers of any kind are computed at G0.
 
 ## 11. PIT tests (G0 gate; read no outcomes)
 
-`test_pit_exit_study.py`, 24 tests on synthetic data only: pivot confirmation lag and
-plateau-once; zone merge and tie-breaking; **setup truncation identity** (levels at day k
+`test_pit_exit_study.py`, 25 tests on synthetic data only: pivot **5-session** confirmation
+lag and plateau-once; **pooled pivot grouping** (4% chain anchored on each group's lowest
+price, highs and lows together) and the jurnal26 support/target selection with the
+zone-top fallback; **setup truncation identity** (levels at day k
 bit-identical on the truncated panel, sampled across a synthetic 420-bar panel, ≥3 setups
 exercised); limit/stop/target fill mechanics with gap rules; the stop-first precedence; X0/X3/
 X4/X5 exit mechanics incl. the trail's strictly-past closes; P1/P2/P3/P4 leg rules; cost and R

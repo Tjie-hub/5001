@@ -49,39 +49,101 @@ def mk_panel(dict_of_arrays, n_days):
     return P
 
 
-# ── pivot / zone PIT ──────────────────────────────────────────────────────────
+# ── pivot / group PIT (jurnal26 parity, G0-bis) ───────────────────────────────
 
-def test_pivot_confirmed_only_after_two_sessions():
-    """A pivot at bar i must NOT be visible at s = i or s = i+1; visible at i+2."""
-    x = np.array([5.0, 4.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
+def test_pivot_confirmed_only_after_five_sessions():
+    """A pivot at bar i needs its 5 right-side bars (jurnal26 w=5): NOT visible
+    at s < i+5; visible from s = i+5."""
+    x = np.array([9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
     flags = E.pivot_flags_1d(x)
-    assert flags[2]                       # the V-bottom
-    for s in (2, 3):
+    assert flags[6]                       # the V-bottom
+    for s in range(6, 11):
         j_top = s - E.PIVOT_HALF
         visible = [i for i in np.where(flags)[0] if i <= j_top]
-        assert 2 not in visible, f"pivot leaked at s={s}"
-    s = 4
-    assert 2 in [i for i in np.where(flags)[0] if i <= s - E.PIVOT_HALF]
+        assert 6 not in visible, f"pivot leaked at s={s}"
+    s = 11
+    assert 6 in [i for i in np.where(flags)[0] if i <= s - E.PIVOT_HALF]
 
 
 def test_plateau_counts_once():
-    x = np.array([5.0, 4.0, 4.0, 3.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])
+    x = np.array([9.0, 9.0, 9.0, 9.0, 9.0, 5.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
     flags = E.pivot_flags_1d(x)
-    assert flags[3] and not flags[4]      # first bar of the plateau only
+    assert flags[5] and not flags[6]      # first bar of the plateau only
 
 
-def test_zone_merge_within_4pct_of_first_pivot():
-    zones = E.zones_from_pivots([0, 5, 10, 15], [100.0, 102.0, 110.0, 108.0])
-    assert len(zones) == 2
-    assert [m[0] for m in zones[0]["members"]] == [0, 5]     # 102 within 4% of 100
-    assert [m[0] for m in zones[1]["members"]] == [10, 15]
+def test_groups_pooled_sorted_chained_on_lowest_price():
+    """jurnal26 _levels grouping: an ascending pool; a pivot joins the current
+    group iff p <= group[0] * 1.04 (anchored on the group's LOWEST price — the
+    chain does not slide), else it opens a new group."""
+    g = E.groups_from_pivots([104.1, 100.0, 103.9, 108.0, 102.0])
+    assert len(g) == 2
+    assert g[0] == {"mean": (100.0 + 102.0 + 103.9) / 3, "count": 3,
+                    "min": 100.0, "max": 103.9}
+    # 104.1 > 100*1.04 opens a new group; 108.0 <= 104.1*1.04 joins it
+    assert g[1] == {"mean": (104.1 + 108.0) / 2, "count": 2,
+                    "min": 104.1, "max": 108.0}
 
 
-def test_zone_tie_joins_nearest_first_pivot():
-    # 103 is within 4% of both 100 (3%) and 105 (1.9%) -> joins 105's zone
-    zones = E.zones_from_pivots([0, 1, 2], [100.0, 105.0, 103.0])
-    assert len(zones) == 2
-    assert zones[1]["members"][0][0] == 1 and zones[1]["members"][1][0] == 2
+def test_zone_context_pools_highs_and_lows_into_one_group():
+    """A pivot high and a pivot low within 4% land in ONE pooled group (the
+    old logic kept support and resistance zones apart)."""
+    n = 40
+    L = np.full(n, 100.0)
+    H = np.full(n, 100.0)
+    I = {"lo_idx": np.array([10]), "lo_vals": np.array([100.0]),
+         "hi_idx": np.array([20]), "hi_vals": np.array([101.0])}
+    groups = E.zone_context(L, H, I, 30)
+    assert len(groups) == 1
+    assert groups[0]["count"] == 2
+    assert groups[0]["min"] == 100.0 and groups[0]["max"] == 101.0
+    assert groups[0]["mean"] == pytest.approx(100.5)
+
+
+def test_sniper_support_target_selection_matches_jurnal26(monkeypatch):
+    """G0-bis selection: support = the highest-MEAN pooled group below the
+    close (not the highest max); target = the MIN of the lowest-mean group
+    above the close; a target at/below the zone top falls back to the 52-week
+    high (jurnal26 watchlist._sniper)."""
+    n = 300
+    c = np.linspace(80.0, 120.0, n)
+    o = np.concatenate([[c[0]], c[:-1]])
+    h = o + 1.0
+    lo = o - 1.0                      # TR = 2 exactly -> ATR14 = 2
+    v = np.full(n, 2.0e8)
+    I = E.stock_indicators(o, h, lo, c, v)
+    k = 280
+    last = float(c[k])
+    assert I["atr14"][k] == pytest.approx(2.0)
+
+    def groups_far(L_, H_, I_, k_):
+        return [{"mean": last - 20.0, "count": 2, "min": last - 22.0, "max": last - 18.0},
+                {"mean": last - 2.0,  "count": 2, "min": last - 3.0,  "max": last - 1.0},
+                {"mean": last + 15.0, "count": 2, "min": last + 12.0, "max": last + 18.0}]
+
+    monkeypatch.setattr(E, "zone_context", groups_far)
+    sig = E.sniper_signal_at(k, o, h, lo, c, I)
+    # support = the C-2 group (highest MEAN below), not the deeper C-20 group
+    assert sig["zone_low"] == pytest.approx(last - 3.0)
+    assert sig["zone_top"] == pytest.approx(last - 1.0)   # min(max(zmax, zlow+ATR), C)
+    assert sig["stop"] == pytest.approx(last - 3.0 - 1.5)
+    assert sig["target"] == pytest.approx(last + 12.0)    # min of the lowest-mean above group
+
+    # degenerate: the above group's MIN sits at/below the zone top -> 52-week high
+    def groups_low(L_, H_, I_, k_):
+        return [{"mean": last - 2.0,  "count": 2, "min": last - 3.0, "max": last - 1.0},
+                {"mean": last + 15.0, "count": 2, "min": last - 2.0, "max": last + 18.0}]
+
+    monkeypatch.setattr(E, "zone_context", groups_low)
+    sig = E.sniper_signal_at(k, o, h, lo, c, I)
+    assert sig["target"] == pytest.approx(I["hi250"][k])
+
+    # nothing above the close -> the 52-week high
+    def groups_none(L_, H_, I_, k_):
+        return [{"mean": last - 2.0, "count": 2, "min": last - 3.0, "max": last - 1.0}]
+
+    monkeypatch.setattr(E, "zone_context", groups_none)
+    sig = E.sniper_signal_at(k, o, h, lo, c, I)
+    assert sig["target"] == pytest.approx(I["hi250"][k])
 
 
 def test_sniper_signal_truncation_identity():
