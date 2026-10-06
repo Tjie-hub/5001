@@ -2201,6 +2201,26 @@ literature comparison (gap 2: "PBO/CSCV stage; threshold literature default").
 - **Boundaries.** Research-side only; production, ~/jurnal26 and `research/broad-search-v2-zcode` untouched;
   G1 machine-gated on `ML_RANK_G1_APPROVED=1`.
 
+### D-068 · HYP-PM-0015 G1 NULL — FAILED (F2); Price-Learning {L1} question closed
+**Status:** RECORDED · **Date:** 2026-10-06 · **Type:** Result filing (predeclared null handling) ·
+**Approval authority:** Owner, 2026-10-06, "yes, file it", after planner review of `P-M/ml_rank/VERDICT.md`
+(commit `e3127dd`).
+
+- **Run.** One G1 run, `run_id 167749f2791f…`, git `f4a84df`, driver sha256 `47752c25fcea…` and PREDECLARATION
+  sha256 `5d4dd3d81563…` verified before and at run time (the D-067 freeze condition holds). Test 2021-10..2026-09,
+  60 months, read once.
+- **Result (net top-quintile excess vs the EW base book, Newey-West t lag 3; bar 3.06):** M0 +0.45%/mo t 1.20;
+  M1 ridge a10 +0.20% t 0.42; M2 HistGBR d3 +0.81% t 1.71 -> condition 1 fails for all. Beats-M0: M1 t -0.59, M2
+  t 0.78 -> condition 2 fails. PBO 0.51 -> condition 3 fails. Leave-one-year-out passes for M0 and M2 only. 2025
+  negative for all three. Rank IC positive (t 4.4-4.8) without converting into top-quintile net excess.
+- **Filing.** HYP-PM-0015 -> **FAILED (F2)**, FAILURE_REGISTRY **FAIL-PM-0015**. The "only M0 passes" clause is not
+  triggered (M0 fails condition 1). Price-Learning {L1} keeps its slot count 1 (X8) and the question closes at G1;
+  any new price-learning work is a new registration by formal amendment and inherits this multiplicity.
+- **Disclosures accepted:** +87 final rows for 2026-10-05 between G0 and G1 (post-cutoff, cannot enter any
+  feature, label or book return); one benign log-of-zero warning on suspended names (excluded by rule).
+- **Reading for the program:** price/volume-only learning reproduces "low volatility + momentum" and does not
+  clear the bar; the volatility-exclusion overlay (FWD-PM-VOLEX-001) remains the live price-based test.
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
