@@ -1,5 +1,11 @@
 """Tests for engine.job_status — the Production Status Registry (Phase 1)."""
 import sqlite3
+import time
+from datetime import datetime, timedelta
+
+import pytz
+
+WIB = pytz.timezone("Asia/Jakarta")
 
 
 def test_ensure_job_status_table_creates_schema(tmp_path):
@@ -363,12 +369,14 @@ def test_get_jobs_since_returns_all_statuses_from_cutoff(tmp_path):
 
 
 def test_get_running_jobs_returns_only_running_status(tmp_path):
+    """Live running rows only — success rows never appear, and (2026-10-06)
+    orphaned running rows are classified out; see the orphan tests below."""
     from engine.job_status import get_running_jobs
 
     db_path = str(tmp_path / "test.db")
     _seed_row(db_path, job_name="job_a", status="running",
-              started_at="2026-08-01 09:00:00", completed_at=None)
-    _seed_row(db_path, job_name="job_b", status="success", started_at="2026-08-01 09:00:00")
+              started_at=_wib_now_str(), completed_at=None)
+    _seed_row(db_path, job_name="job_b", status="success", started_at=_wib_now_str())
 
     running = get_running_jobs(db_path=db_path)
     assert {r["job_name"] for r in running} == {"job_a"}
@@ -387,11 +395,117 @@ def test_get_running_jobs_newest_first(tmp_path):
     from engine.job_status import get_running_jobs
 
     db_path = str(tmp_path / "test.db")
-    _seed_row(db_path, job_name="job_a", status="running", started_at="2026-08-01 09:00:00")
-    _seed_row(db_path, job_name="job_b", status="running", started_at="2026-08-02 09:00:00")
+    now = datetime.now(WIB)
+    _seed_row(db_path, job_name="job_a", status="running",
+              started_at=now.strftime("%Y-%m-%d %H:%M:%S"))
+    _seed_row(db_path, job_name="job_b", status="running",
+              started_at=(now + timedelta(seconds=1)).strftime("%Y-%m-%d %H:%M:%S"))
 
     running = get_running_jobs(db_path=db_path)
     assert [r["job_name"] for r in running] == ["job_b", "job_a"]
+
+
+# ── orphan classification (frontend-trim brief, 2026-10-06) ─────────────────
+
+
+def _wib_now_str(offset_seconds: int = 0) -> str:
+    return (datetime.now(WIB) + timedelta(seconds=offset_seconds)).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def test_running_row_from_before_process_start_is_orphaned(tmp_path):
+    """A running row that predates the current process was left by a dead
+    process — classified orphaned on read, and the row itself is untouched."""
+    from engine.job_status import get_orphaned_running_jobs, get_running_jobs
+
+    db_path = str(tmp_path / "test.db")
+    _seed_row(db_path, job_name="stale_job", status="running",
+              started_at="2026-08-01 09:00:00", completed_at=None)
+
+    assert [r["job_name"] for r in get_running_jobs(db_path=db_path)] == []
+    orphaned = get_orphaned_running_jobs(db_path=db_path)
+    assert [r["job_name"] for r in orphaned] == ["stale_job"]
+    assert orphaned[0]["status"] == "running"
+    assert orphaned[0]["completed_at"] is None
+
+
+def test_fresh_running_row_counts_as_running(tmp_path):
+    """A row started after the current process began is live, not orphaned."""
+    from engine.job_status import get_orphaned_running_jobs, get_running_jobs
+
+    db_path = str(tmp_path / "test.db")
+    _seed_row(db_path, job_name="live_job", status="running",
+              started_at=_wib_now_str(), completed_at=None)
+
+    assert [r["job_name"] for r in get_running_jobs(db_path=db_path)] == ["live_job"]
+    assert get_orphaned_running_jobs(db_path=db_path) == []
+
+
+def test_orphan_primary_rule_beats_age_fallback(tmp_path, monkeypatch):
+    """Process start available: a row older than the process is orphaned even
+    when its age is under the 6 h fallback threshold."""
+    import engine.job_status as js
+
+    db_path = str(tmp_path / "test.db")
+    # The process (allegedly) started 1 h ago; the row started 2 h ago.
+    monkeypatch.setattr(js, "process_start_epoch", lambda: time.time() - 3600)
+    _seed_row(db_path, job_name="mid_age_stray", status="running",
+              started_at=_wib_now_str(-2 * 3600), completed_at=None)
+
+    assert js.get_running_jobs(db_path=db_path) == []
+    assert [r["job_name"] for r in js.get_orphaned_running_jobs(db_path=db_path)] == [
+        "mid_age_stray"]
+    # And a row started after that process start stays live.
+    _seed_row(db_path, job_name="post_start", status="running",
+              started_at=_wib_now_str(-60), completed_at=None)
+    assert [r["job_name"] for r in js.get_running_jobs(db_path=db_path)] == ["post_start"]
+
+
+def test_orphan_age_fallback_when_process_start_unavailable(tmp_path, monkeypatch):
+    """No /proc → 6 h age rule: 7 h old is orphaned, 5 h old is live."""
+    import engine.job_status as js
+
+    db_path = str(tmp_path / "test.db")
+    monkeypatch.setattr(js, "process_start_epoch", lambda: None)
+    _seed_row(db_path, job_name="old_stray", status="running",
+              started_at=_wib_now_str(-7 * 3600), completed_at=None)
+    _seed_row(db_path, job_name="recent_stray", status="running",
+              started_at=_wib_now_str(-5 * 3600), completed_at=None)
+
+    assert [r["job_name"] for r in js.get_running_jobs(db_path=db_path)] == ["recent_stray"]
+    assert [r["job_name"] for r in js.get_orphaned_running_jobs(db_path=db_path)] == [
+        "old_stray"]
+
+
+def test_orphan_classification_never_touches_the_ledger(tmp_path):
+    """Read-only guarantee: partitioning running rows must not UPDATE or
+    DELETE anything in job_execution_log — row-for-row identical before/after."""
+    import sqlite3
+
+    from engine.job_status import (
+        get_orphaned_running_jobs,
+        get_running_jobs,
+        get_status_summary,
+    )
+
+    db_path = str(tmp_path / "test.db")
+    _seed_row(db_path, job_name="live_job", status="running",
+              started_at=_wib_now_str(), completed_at=None)
+    _seed_row(db_path, job_name="stale_job", status="running",
+              started_at="2026-08-01 09:00:00", completed_at=None)
+    _seed_row(db_path, job_name="done_job", status="success")
+
+    def _snapshot():
+        conn = sqlite3.connect(db_path)
+        rows = conn.execute(
+            "SELECT * FROM job_execution_log ORDER BY id").fetchall()
+        conn.close()
+        return rows
+
+    before = _snapshot()
+    get_running_jobs(db_path=db_path)
+    get_orphaned_running_jobs(db_path=db_path)
+    get_status_summary(db_path=db_path)
+    assert _snapshot() == before
 
 
 def test_get_recent_jobs_respects_limit(tmp_path):
@@ -451,6 +565,8 @@ def test_get_recent_jobs_job_name_filter_respects_limit(tmp_path):
 
 
 def test_get_status_summary_counts_by_status(tmp_path):
+    """success/failed/skipped count as before; a LIVE running row counts under
+    'running' (2026-10-06 orphan split added the sixth key)."""
     from engine.job_status import get_status_summary
 
     db_path = str(tmp_path / "test.db")
@@ -458,10 +574,27 @@ def test_get_status_summary_counts_by_status(tmp_path):
     _seed_row(db_path, job_name="job_b", status="success")
     _seed_row(db_path, job_name="job_c", status="failed")
     _seed_row(db_path, job_name="job_d", status="skipped")
-    _seed_row(db_path, job_name="job_e", status="running")
+    _seed_row(db_path, job_name="job_e", status="running",
+              started_at=_wib_now_str(), completed_at=None)
 
     summary = get_status_summary(db_path=db_path)
-    assert summary == {"total": 5, "success": 2, "failed": 1, "skipped": 1, "running": 1}
+    assert summary == {"total": 5, "success": 2, "failed": 1, "skipped": 1,
+                       "running": 1, "orphaned": 0}
+
+
+def test_get_status_summary_classifies_orphaned_running(tmp_path):
+    """A running row from before the process start moves from 'running' to
+    'orphaned'; total is unchanged — it still counts every row."""
+    from engine.job_status import get_status_summary
+
+    db_path = str(tmp_path / "test.db")
+    _seed_row(db_path, job_name="job_a", status="success")
+    _seed_row(db_path, job_name="job_e", status="running",
+              started_at="2026-08-01 09:00:00", completed_at=None)
+
+    summary = get_status_summary(db_path=db_path)
+    assert summary == {"total": 2, "success": 1, "failed": 0, "skipped": 0,
+                       "running": 0, "orphaned": 1}
 
 
 def test_get_status_summary_empty_db_all_zero(tmp_path):
@@ -469,4 +602,5 @@ def test_get_status_summary_empty_db_all_zero(tmp_path):
 
     db_path = str(tmp_path / "test.db")
     summary = get_status_summary(db_path=db_path)
-    assert summary == {"total": 0, "success": 0, "failed": 0, "skipped": 0, "running": 0}
+    assert summary == {"total": 0, "success": 0, "failed": 0, "skipped": 0,
+                       "running": 0, "orphaned": 0}

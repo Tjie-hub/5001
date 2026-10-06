@@ -96,7 +96,10 @@ class TestMetricsJobs:
         resp = client.get("/api/v1/metrics/jobs")
         assert resp.status_code == 200
         data = resp.get_json()["data"]
-        assert data == {"total": 2, "success": 1, "failed": 1, "skipped": 0, "running": 0}
+        # 2026-10-06 orphan split: 'running' counts live runs only, 'orphaned'
+        # counts restart strays (zero here — no running rows seeded).
+        assert data == {"total": 2, "success": 1, "failed": 1, "skipped": 0,
+                        "running": 0, "orphaned": 0}
 
 
 class TestMetricsEngine:

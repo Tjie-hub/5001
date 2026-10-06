@@ -11,8 +11,12 @@ same long-lived blueprint object and register duplicate routes.
 """
 import sqlite3
 import uuid
+from datetime import datetime
 
+import pytz
 import pytest
+
+WIB = pytz.timezone("Asia/Jakarta")
 
 
 def _seed(db_path, **overrides):
@@ -63,7 +67,10 @@ def client(tmp_path, monkeypatch):
 class TestJobsRunning:
     def test_returns_running_jobs(self, client):
         c, db = client
-        _seed(db, job_name="job_a", status="running", completed_at=None)
+        # started "now" → after the test process started → live (2026-10-06
+        # orphan rule); the old default date would now classify as orphaned.
+        _seed(db, job_name="job_a", status="running", completed_at=None,
+              started_at=datetime.now(WIB).strftime("%Y-%m-%d %H:%M:%S"))
         _seed(db, job_name="job_b", status="success")
 
         resp = c.get("/api/v1/status/jobs/running")
@@ -71,6 +78,21 @@ class TestJobsRunning:
         data = resp.get_json()["data"]
         assert [j["job_name"] for j in data["running"]] == ["job_a"]
         assert data["count"] == 1
+        assert data["orphaned_count"] == 0
+
+    def test_orphaned_restart_strays_counted_not_listed(self, client):
+        """A running row predating the process start is not listed as running;
+        only its count is reported (read-only classification, 2026-10-06)."""
+        c, db = client
+        _seed(db, job_name="stray", status="running", completed_at=None,
+              started_at="2026-08-01 09:00:00")
+
+        resp = c.get("/api/v1/status/jobs/running")
+        assert resp.status_code == 200
+        data = resp.get_json()["data"]
+        assert data["running"] == []
+        assert data["count"] == 0
+        assert data["orphaned_count"] == 1
 
     def test_empty_when_none_running(self, client):
         c, db = client
@@ -81,12 +103,14 @@ class TestJobsRunning:
         data = resp.get_json()["data"]
         assert data["running"] == []
         assert data["count"] == 0
+        assert data["orphaned_count"] == 0
 
     def test_empty_database(self, client):
         c, _ = client
         resp = c.get("/api/v1/status/jobs/running")
         assert resp.status_code == 200
-        assert resp.get_json()["data"] == {"running": [], "count": 0}
+        assert resp.get_json()["data"] == {
+            "running": [], "count": 0, "orphaned_count": 0}
 
 
 class TestJobsLatest:
@@ -202,12 +226,29 @@ class TestSummary:
         _seed(db, job_name="job_a", status="success")
         _seed(db, job_name="job_b", status="failed")
         _seed(db, job_name="job_c", status="skipped")
-        _seed(db, job_name="job_d", status="running", completed_at=None)
+        _seed(db, job_name="job_d", status="running", completed_at=None,
+              started_at=datetime.now(WIB).strftime("%Y-%m-%d %H:%M:%S"))
 
         resp = c.get("/api/v1/status/summary")
         assert resp.status_code == 200
         assert resp.get_json()["data"] == {
-            "total": 4, "success": 1, "failed": 1, "skipped": 1, "running": 1,
+            "total": 4, "success": 1, "failed": 1, "skipped": 1,
+            "running": 1, "orphaned": 0,
+        }
+
+    def test_counts_orphaned_running_separately(self, client):
+        """Running rows from before the process start count under 'orphaned'
+        (2026-10-06); total still counts every row."""
+        c, db = client
+        _seed(db, job_name="job_a", status="success")
+        _seed(db, job_name="job_d", status="running", completed_at=None,
+              started_at="2026-08-01 09:00:00")
+
+        resp = c.get("/api/v1/status/summary")
+        assert resp.status_code == 200
+        assert resp.get_json()["data"] == {
+            "total": 2, "success": 1, "failed": 0, "skipped": 0,
+            "running": 0, "orphaned": 1,
         }
 
     def test_empty_database_all_zero(self, client):
@@ -215,7 +256,8 @@ class TestSummary:
         resp = c.get("/api/v1/status/summary")
         assert resp.status_code == 200
         assert resp.get_json()["data"] == {
-            "total": 0, "success": 0, "failed": 0, "skipped": 0, "running": 0,
+            "total": 0, "success": 0, "failed": 0, "skipped": 0,
+            "running": 0, "orphaned": 0,
         }
 
 

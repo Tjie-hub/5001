@@ -28,10 +28,17 @@ def _public(row: dict) -> dict:
 
 @api_v1_bp.route("/status/jobs/running", methods=["GET"])
 def status_jobs_running():
-    """Jobs currently executing (status='running'), newest first."""
+    """Jobs currently executing (status='running'), newest first.
+
+    Rows orphaned by a process restart (append-only ledger: started before
+    the current process, no finalized row) are NOT listed here; only their
+    count is reported under orphaned_count. Read-only classification — the
+    job_execution_log table is never rewritten.
+    """
     rows = job_status.get_running_jobs(db_path=config.DB_PATH)
     running = [_public(r) for r in rows]
-    return ok({"running": running, "count": len(running)})
+    orphaned = job_status.get_orphaned_running_jobs(db_path=config.DB_PATH)
+    return ok({"running": running, "count": len(running), "orphaned_count": len(orphaned)})
 
 
 @api_v1_bp.route("/status/jobs/latest", methods=["GET"])
@@ -78,5 +85,9 @@ def status_jobs_history():
 
 @api_v1_bp.route("/status/summary", methods=["GET"])
 def status_summary():
-    """Aggregate counts: total/success/failed/skipped/running."""
+    """Aggregate counts: total/success/failed/skipped/running/orphaned.
+
+    'running' counts only live runs; rows orphaned by a process restart are
+    counted under 'orphaned' (the append-only ledger is never rewritten).
+    """
     return ok(job_status.get_status_summary(db_path=config.DB_PATH))
