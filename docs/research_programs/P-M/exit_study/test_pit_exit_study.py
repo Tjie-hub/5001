@@ -15,6 +15,7 @@ Run:  pytest docs/research_programs/P-M/exit_study/test_pit_exit_study.py -v
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -49,13 +50,13 @@ def mk_panel(dict_of_arrays, n_days):
     return P
 
 
-# ── pivot / group PIT (jurnal26 parity, G0-bis) ───────────────────────────────
+# ── pivot / group PIT (jurnal26 parity, G0-bis + G0-ter) ──────────────────────
 
 def test_pivot_confirmed_only_after_five_sessions():
     """A pivot at bar i needs its 5 right-side bars (jurnal26 w=5): NOT visible
     at s < i+5; visible from s = i+5."""
     x = np.array([9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
-    flags = E.pivot_flags_1d(x)
+    flags = E.pivot_flags_1d(x, "low")
     assert flags[6]                       # the V-bottom
     for s in range(6, 11):
         j_top = s - E.PIVOT_HALF
@@ -67,8 +68,162 @@ def test_pivot_confirmed_only_after_five_sessions():
 
 def test_plateau_counts_once():
     x = np.array([9.0, 9.0, 9.0, 9.0, 9.0, 5.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
-    flags = E.pivot_flags_1d(x)
+    flags = E.pivot_flags_1d(x, "low")
     assert flags[5] and not flags[6]      # first bar of the plateau only
+
+
+def test_clean_peak_is_high_pivot_and_clean_trough_is_low():
+    """G0-ter bug 1 regression: the detector was direction-blind — H was run
+    through the trough predicate, so a clean PEAK was never a pivot high."""
+    n = 21
+    H = np.full(n, 10.0)
+    H[10] = 20.0                            # a clean peak in the highs
+    assert E.pivot_flags_1d(H, "high")[10]
+    assert not E.pivot_flags_1d(H, "low")[10]
+    L = np.full(n, 10.0)
+    L[10] = 5.0                             # a clean trough in the lows
+    assert E.pivot_flags_1d(L, "low")[10]
+    assert not E.pivot_flags_1d(L, "high")[10]
+
+
+def test_full_window_neighbors_block_pivots():
+    """G0-ter bug 2 regression: ALL PIVOT_HALF bars each side are compared —
+    a lower low 3 bars to the left blocks a low pivot; a higher high 4 bars to
+    the right blocks a high pivot (the G0-bis detector only compared i-1/i-h
+    and i+1/i+2 and would have flagged both)."""
+    n = 25
+    L = np.full(n, 10.0)
+    L[12] = 5.0
+    L[9] = 4.9                              # 3 bars left of the candidate
+    lo = E.pivot_flags_1d(L, "low")
+    assert not lo[12]                       # blocked by the lower low at i-3
+    assert lo[9]                            # the true pivot low is at 9
+    H = np.full(n, 10.0)
+    H[12] = 20.0
+    H[16] = 20.1                            # 4 bars right of the candidate
+    hi = E.pivot_flags_1d(H, "high")
+    assert not hi[12]                       # blocked by the higher high at i+4
+    assert hi[16]                           # the true pivot high is at 16
+
+
+# ── jurnal26 reference transcription (G0-ter parity) ─────────────────────────
+
+def _jurnal_levels(hi, lo, w=5, tol=0.04):
+    """Transcribed from ~/jurnal26/server.py::_levels (as of 2026-10-06) — the
+    reference the G0-ter parity tests assert against. Same loops, same
+    comparisons; the ONLY deviation is no display rounding (jurnal26 rounds
+    its tuples for the UI; the study computes unrounded)."""
+    piv = []
+    for i in range(w, len(hi) - w):
+        if hi[i] == max(hi[i - w:i + w + 1]) and hi[i] > max(hi[i - w:i]):
+            piv.append(float(hi[i]))
+        if lo[i] == min(lo[i - w:i + w + 1]) and lo[i] < min(lo[i - w:i]):
+            piv.append(float(lo[i]))
+    piv.sort()
+    groups = []
+    for p in piv:
+        if groups and p <= groups[-1][0] * (1 + tol):
+            groups[-1].append(p)
+        else:
+            groups.append([p])
+    return [(sum(g) / len(g), len(g), min(g), max(g)) for g in groups]
+
+
+def _jurnal_sniper_levels(hi, lo, close, atr, hi52):
+    """Transcribed jurnal26 selection (server.py::_technicals support/resistance
+    + watchlist._sniper) on _jurnal_levels groups: support = the highest-mean
+    group below the close; zone low = group min; zone top = min(max(group max,
+    low + 0.5*ATR), close); stop = low - 0.75*ATR; target = the MIN of the
+    lowest-mean group above the close, else the 52-week high; if target <=
+    zone top -> the 52-week high. Returns (zone_low, zone_top, stop, target)
+    or None when no support exists."""
+    groups = _jurnal_levels(hi, lo)
+    support = [g for g in groups if g[0] < close]
+    if not support:
+        return None
+    z = max(support, key=lambda g: g[0])
+    zlo, zmax = z[2], z[3]
+    ztop = min(max(zmax, zlo + 0.5 * atr), close)
+    above = [g for g in groups if g[0] > close]
+    tgt = min(above, key=lambda g: g[0])[2] if above else hi52
+    if tgt <= ztop:
+        tgt = hi52
+    return (zlo, ztop, zlo - 0.75 * atr, tgt)
+
+
+def _assert_jurnal_parity(O, H, L, C, k, I):
+    """One (ticker, day) parity check: wherever sniper_signal_at produces a
+    setup, its zone low / zone top / stop / target equal the transcribed
+    jurnal26 reference computed on the same 255-bar window (250-bar level
+    window + the 5 left-context bars the reference loop needs to cover pivots
+    [k-249, k-5], exactly the driver's confirmed-pivot index window)."""
+    ref = _jurnal_sniper_levels(H[k - 254:k + 1], L[k - 254:k + 1],
+                                float(C[k]), float(I["atr14"][k]), float(I["hi250"][k]))
+    sig = E.sniper_signal_at(k, O, H, L, C, I)
+    if ref is None:
+        assert sig is None, (k,)
+        return False
+    if sig is None:
+        return False                        # trend/band rejected: no levels to compare
+    assert ((sig["zone_low"], sig["zone_top"], sig["stop"], sig["target"]) == ref), (k,)
+    return True
+
+
+def test_parity_jurnal26_reference_synthetic():
+    """The transcribed jurnal26 reference and sniper_signal_at agree on all
+    four levels wherever a setup exists, across 200 seeded random panels
+    (>= 30 setup points exercised or the test fails as vacuous)."""
+    compared = 0
+    for seed in range(200):
+        rng = np.random.default_rng(seed)
+        n = 480
+        drift = np.concatenate([np.full(240, -0.004), np.full(n - 240, 0.003)])
+        c = 100 * np.exp(np.cumsum(rng.normal(drift, 0.02)))
+        o = c * (1 + rng.normal(0, 0.005, n))
+        h = np.maximum(o, c) * (1 + np.abs(rng.normal(0, 0.008, n)))
+        lo = np.minimum(o, c) * (1 - np.abs(rng.normal(0, 0.008, n)))
+        v = np.full(n, 5.0e8)
+        I = E.stock_indicators(o, h, lo, c, v)
+        for k in range(300, n - 3):
+            if _assert_jurnal_parity(o, h, lo, c, k, I):
+                compared += 1
+    assert compared >= 30, f"only {compared} parity comparisons; test is vacuous"
+
+
+def test_parity_jurnal26_reference_real_corpus():
+    """The same parity assertion on 30 sampled real-corpus signal points
+    (read-only panel; no returns read). Skipped unless the census-runbook env
+    (EXIT_STUDY_HIST_PKL / EXIT_STUDY_SPLITS_PKL / DB_PATH) is set."""
+    if not (os.getenv("EXIT_STUDY_HIST_PKL") and os.getenv("EXIT_STUDY_SPLITS_PKL")
+            and os.getenv("DB_PATH")):
+        pytest.skip("needs EXIT_STUDY_*_PKL + DB_PATH env (census runbook)")
+    P = E.load_panel()
+    rng = np.random.default_rng(20261007)
+    tickers = list(P["close"].columns)
+    I_cache = {}
+    arrs = {}
+    compared = attempted = 0
+    while compared < 30 and attempted < 6000:
+        attempted += 1
+        tk = tickers[int(rng.integers(0, len(tickers)))]
+        if tk not in arrs:
+            arrs[tk] = tuple(P[f][tk].values.astype(float)
+                             for f in ("open", "high", "low", "close", "volume"))
+        O, H, L, C, V = arrs[tk]
+        k = int(rng.integers(300, len(H) - 3))
+        # exact parity needs a NaN-free 255-bar window on both arrays (Python
+        # max() and numpy disagree around NaN); NaN-adjacent days are simply
+        # not sampled, which cannot create a false PASS.
+        if not (np.isfinite(H[k - 254:k + 1]).all() and np.isfinite(L[k - 254:k + 1]).all()):
+            continue
+        if tk not in I_cache:
+            I_cache[tk] = E.stock_indicators(O, H, L, C, V)
+        I = I_cache[tk]
+        if not (np.isfinite(I["atr14"][k]) and np.isfinite(I["hi250"][k])):
+            continue
+        if _assert_jurnal_parity(O, H, L, C, k, I):
+            compared += 1
+    assert compared == 30, f"only {compared} parity comparisons in {attempted} attempts"
 
 
 def test_groups_pooled_sorted_chained_on_lowest_price():

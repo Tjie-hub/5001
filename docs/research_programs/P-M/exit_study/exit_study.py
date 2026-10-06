@@ -22,6 +22,18 @@ ascending list and grouped at 4% anchored on each group's lowest price; support
 group above the close with a <= zone-top fallback to the 52-week high. See the
 dated note in PREDECLARATION §3.
 
+G0-ter re-freeze 2026-10-06 (planner review, still BEFORE any outcome was
+read): the G0-bis pivot DETECTOR carried two latent defects, both present
+since G0 — it was direction-blind (pivot_flags_1d(H) flagged local MINIMA of
+the highs, never peaks) and compared only the i-1/i-h left and i+1/i+2 right
+neighbors instead of the full PIVOT_HALF-bar windows. Fixed to jurnal26
+semantics exactly: one helper with a high/low mode over full 11-bar windows
+(pivot high: H[i] == max(H[i-5..i+5]) and H[i] > max(H[i-5..i-1]); lows
+mirrored); a pivot is still knowable only 5 sessions after forming. An
+in-test transcription of jurnal26's _levels + _sniper selection is asserted
+identical to sniper_signal_at (synthetic panels + real corpus, read-only).
+See the dated G0-ter note in PREDECLARATION §3.
+
 Research-side only: numpy/pandas + research.rulecard.data + research.tracking +
 data.db read-only. No ~/jurnal26 code is imported; the sniper rules are
 re-implemented from the brief's text.
@@ -123,8 +135,8 @@ def stock_indicators(O, H, L, C, V):
         hi250 = pd.Series(H).rolling(PIVOT_WINDOW, min_periods=PIVOT_WINDOW).max().values
     ma200_prev = np.full(n, np.nan)
     ma200_prev[20:] = ma200[:n - 20]        # MA200 rising over 20 sessions
-    lo_flags = pivot_flags_1d(L)
-    hi_flags = pivot_flags_1d(H)
+    lo_flags = pivot_flags_1d(L, "low")
+    hi_flags = pivot_flags_1d(H, "high")
     lo_idx = np.where(lo_flags)[0]
     hi_idx = np.where(hi_flags)[0]
     return {"ma20": ma20, "ma50": ma50, "ma200": ma200, "ma200_prev20": ma200_prev,
@@ -133,21 +145,31 @@ def stock_indicators(O, H, L, C, V):
             "hi_idx": hi_idx, "hi_vals": H[hi_idx]}
 
 
-def pivot_flags_1d(x):
-    """Pivots with PIVOT_HALF bars each side, matching jurnal26
-    server.py::_levels (w=5): strict versus the bars BEFORE (left strict),
-    non-strict to the right (H[i] == max of the window), so a plateau counts
-    once — at its first bar. Confirmed only at index+PIVOT_HALF (a pivot needs
-    its right side to exist)."""
+def pivot_flags_1d(x, mode):
+    """Pivot detection matching jurnal26 server.py::_levels (w=5) exactly
+    (G0-ter). mode='high': H[i] == max(H[i-PIVOT_HALF..i+PIVOT_HALF]) AND
+    H[i] > max(H[i-PIVOT_HALF..i-1]) — left strict, right non-strict, so a
+    plateau counts once, at its first bar. mode='low' is the mirror with min.
+    The FULL window is compared on both sides (the G0-bis version compared
+    only the i-1/i-h left and i+1/i+2 right neighbors, and before G0-ter the
+    same direction-blind predicate was applied to both H and L). A pivot is
+    knowable only PIVOT_HALF sessions after it forms (its right side must
+    exist: the loop is over i in [h, n-h-1])."""
     pl = np.zeros(len(x), dtype=bool)
     h = PIVOT_HALF
-    if len(x) < 2 * h + 1:
-        return pl
     n = len(x)
-    c = x[h:n - h]
-    left = (c < x[h - 1:n - h - 1]) & (c < x[0:n - 2 * h])
-    right = (c <= x[h + 1:n - h + 1]) & (c <= x[h + 2:n - h + 2])
-    pl[h:n - h] = left & right
+    if n < 2 * h + 1:
+        return pl
+    idx = np.arange(h, n - h)
+    c = x[idx]
+    full = np.stack([x[idx + off] for off in range(-h, h + 1)])   # all 2h+1 bars
+    left = np.stack([x[idx + off] for off in range(-h, 0)])       # the h bars before i
+    if mode == "high":
+        pl[idx] = (c == full.max(axis=0)) & (c > left.max(axis=0))
+    elif mode == "low":
+        pl[idx] = (c == full.min(axis=0)) & (c < left.min(axis=0))
+    else:
+        raise ValueError("mode must be 'high' or 'low'")
     return pl
 
 

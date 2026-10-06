@@ -1,8 +1,9 @@
 # HANDOFF_G0 — exit & position-management practice study (owner's sniper entry)
 
-> **§1 and §3 below are the HISTORICAL G0 freeze — superseded by the G0-bis re-freeze in §8
-> (2026-10-06, planner review, before any outcome was read). The operative freeze table and
-> census are in §8. The §6 G1 runbook is unchanged.**
+> **§1 and §3 below are the HISTORICAL G0 freeze; §8 is the historical G0-bis re-freeze —
+> both superseded by the G0-ter re-freeze in §9 (2026-10-06, planner review, before any
+> outcome was read). The operative freeze table and census are in §9. The §6 G1 runbook is
+> unchanged.**
 
 **Date:** 2026-10-06 · **Branch:** `research/exit-study-2026-10` (from
 `origin/research/new-order-2026-09-30` @ 062999d) · **Executor:** ZCode, per
@@ -145,6 +146,57 @@ Parity universe (top-150 ADV60): 83,672 setups → 3,631 fills, E-RND 3,631/3,63
 `CENSUS_G0.json`. Fingerprint at run time `f42275e3…` (max_date 2026-10-06, 1,101,826 rows) —
 **+6 rows vs the G0 fingerprint** (the live DB grows as bars finalize; disclosed per
 PREDECLARATION §2; expect further drift at G1). Fill rate ≈ 4.35%.
+
+- The G1 gate is unchanged: `EXIT_STUDY_G1_APPROVED=1` + the §6 runbook. **G1 remains NOT
+  run.** The executor stops here, as before.
+
+## 9. G0-ter re-freeze (2026-10-06, planner review — still BEFORE any outcome was read)
+
+The planner review found **two defects in the pivot detector itself, both latent since G0**
+(neither the G0 nor the G0-bis tests caught them):
+
+1. `pivot_flags_1d` was **direction-blind**: the same predicate ran on both arrays, so
+   `pivot_flags_1d(H)` flagged local *minima* of the highs — a clean peak was never a pivot
+   high, and the pooled groups contained troughs of both arrays.
+2. It compared only the `i−1`/`i−PIVOT_HALF` left and `i+1`/`i+2` right neighbors — **not
+   the full PIVOT_HALF-bar windows** (that slicing was only complete back when
+   PIVOT_HALF was 2).
+
+Fixed to jurnal26 `server.py::_levels` (w=5) exactly: one helper with a high/low mode over
+full 11-bar windows — pivot high at i ⟺ `H[i] == max(H[i−5..i+5])` ∧ `H[i] > max(H[i−5..i−1])`,
+lows mirrored; a pivot is still knowable only 5 sessions after forming. Grouping, selection
+and everything else are as re-frozen at G0-bis.
+
+**Operative freeze (supersedes §8's table):**
+
+| artifact | sha256 |
+|---|---|
+| `PREDECLARATION.md` | `d722e0f118f7984e701c27f09e80f5a950e289253b355c5692ff937e01ef40c0` |
+| `exit_study.py` (driver) | `2c4f0c928f73b41ae7e1465d723f355c299f0306d4160eaa175e331f22f9fab3` |
+| `test_pit_exit_study.py` (PIT tests) | `516072cdff4a6c04fb080c7450d3564e03b5b70b3f8aa2e112870898be2da7d5` |
+
+- PIT tests: **29/29 PASS** (with the census-runbook env: 32/32 incl. 3/3 architecture
+  boundary). New: the two G0-ter regressions (clean peak/trough direction; full-window
+  blocking at i−3/i+4) and the **jurnal26 parity gate** — `_levels` + `_sniper` transcribed
+  into the test file (only deviation: no display rounding) and asserted IDENTICAL to
+  `sniper_signal_at` on zone low/top/stop/target, exact equality, on 200 seeded synthetic
+  panels and 30 sampled real-corpus signal points (read-only; skipped without env).
+- Census regenerated — counts only, at git HEAD cabee25 with the G0-ter working-tree code
+  this commit freezes; fingerprint identical to the G0-bis run (`f42275e3…`, 1,101,826
+  rows — the DB did not change between runs):
+
+| owner screen (ADV20 ≥ Rp 10bn) | E1 | E2 | total |
+|---|---|---|---|
+| E-SN setups set | 55,905 | 30,298 | 86,203 |
+| E-SN fills | **2,253** | **1,429** | **3,682** |
+| — expired / superseded / while-locked | 50 / 4,919 / 48,683 | 29 / 1,841 / 26,999 | 79 / 6,760 / 75,682 |
+| — out-of-window (post-2026-09, counted) | 0 | 76 | 76 |
+| E-RND matches | 2,253 | 1,429 | 3,682 (unmatched 0) |
+| E-BRK signals | 3,129 | 2,012 | 5,141 |
+
+Counters reconcile exactly per era. Parity universe: 86,107 setups → 3,666 fills, E-RND
+3,666/3,666. Fill rate ≈ 4.27%. **E-BRK signal counts are identical across G0 / G0-bis /
+G0-ter (5,141)** — expected invariance: the E-BRK signal rule uses no zones.
 
 - The G1 gate is unchanged: `EXIT_STUDY_G1_APPROVED=1` + the §6 runbook. **G1 remains NOT
   run.** The executor stops here, as before.

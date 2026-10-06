@@ -2,6 +2,7 @@
 
 **Status:** frozen before any outcome is read · **Date:** 2026-10-06 ·
 **G0-bis re-freeze:** 2026-10-06 (planner review, before any outcome read — see §3) ·
+**G0-ter re-freeze:** 2026-10-06 (planner review, still before any outcome read — see §3) ·
 **Authority:** brief `ZCODE_BRIEF_EXIT_POSITION_STUDY_2026-10-06.md` (fix/telegram-curation @ 551dc99).
 **Branch:** `research/exit-study-2026-10` from `origin/research/new-order-2026-09-30` (062999d).
 **This is a PRACTICE STUDY, not a hypothesis registration**: exploratory, consumes no family slot,
@@ -34,6 +35,29 @@ entry edge; this study is decision support for the owner's own trading, not an e
   (confirmation). Both are read in the one G1 run; the recommendation rule requires both.
 
 ## 3. E-SN, the sniper population (frozen; re-implemented — no ~/jurnal26 import)
+
+> **G0-ter re-freeze (2026-10-06, planner review, still BEFORE any outcome was read — the
+> second and final authorized re-freeze).** The planner review found two defects in the pivot
+> DETECTOR, both latent since G0 and not caught by the G0 tests: (1) `pivot_flags_1d` was
+> direction-blind — the same predicate was applied to both arrays, so `pivot_flags_1d(H)`
+> flagged local **minima** of the highs and a clean peak was never a pivot high (pooled groups
+> contained troughs of both arrays); (2) it compared only the i−1 and i−PIVOT_HALF left and the
+> i+1 and i+2 right neighbors — the full PIVOT_HALF-bar windows on both sides were not
+> compared (complete only back when PIVOT_HALF was 2). Fixed to match jurnal26
+> `server.py::_levels` (w=5) exactly, as ONE helper with a high/low mode over full 11-bar
+> windows: **pivot high at i ⟺ H[i] == max(H[i−5..i+5]) ∧ H[i] > max(H[i−5..i−1]); pivot low
+> mirrored with min.** A pivot remains knowable only **5 sessions after forming**; the
+> confirmation-lag, window, grouping, support/zone/stop/target selection and everything else
+> are as re-frozen at G0-bis. New tests pin both bugs (a clean peak IS a high pivot and NOT a
+> low pivot, a clean trough the reverse; a lower low at i−3 blocks a low pivot and a higher
+> high at i+4 blocks a high pivot) and add a **parity gate**: a transcription of jurnal26's
+> `_levels` + `_sniper` selection lives in the test file as the reference, asserted IDENTICAL
+> (zone low, zone top, stop, target — exact equality) to `sniper_signal_at` on 200 seeded
+> synthetic panels and on 30 sampled real-corpus signal points (read-only, no returns read;
+> skipped without the census-runbook env). `CENSUS_G0.json` was regenerated (counts only)
+> under this fix at git HEAD cabee25.
+>
+> Everything else stays as frozen (arms, mechanics, costs, recommendation rule, C-1..C-10).
 
 > **G0-bis re-freeze (2026-10-06, planner review, BEFORE any outcome was read — the one
 > authorized re-freeze).** The level rules below are superseded so the E-SN levels match
@@ -195,10 +219,16 @@ No P/L, no returns, no performance numbers of any kind are computed at G0.
 
 ## 11. PIT tests (G0 gate; read no outcomes)
 
-`test_pit_exit_study.py`, 25 tests on synthetic data only: pivot **5-session** confirmation
-lag and plateau-once; **pooled pivot grouping** (4% chain anchored on each group's lowest
-price, highs and lows together) and the jurnal26 support/target selection with the
-zone-top fallback; **setup truncation identity** (levels at day k
+`test_pit_exit_study.py`, 29 tests (28 synthetic-only, plus one real-corpus parity test
+that needs the census-runbook env and skips otherwise; it reads bars, never outcomes): pivot
+**5-session** confirmation lag and plateau-once; **pivot direction** (a clean peak is a high
+pivot, a clean trough a low one) and **full-window blocking** (a lower low at i−3 / a higher
+high at i+4 kills the candidate — the G0-ter regressions); **jurnal26 parity** — a
+transcription of `server.py::_levels` (w=5, tol=0.04, no display rounding) + the `_sniper`
+selection is asserted identical to `sniper_signal_at` on 200 seeded synthetic panels and 30
+sampled real-corpus signal points (read-only); **pooled pivot grouping** (4% chain anchored on
+each group's lowest price, highs and lows together) and the jurnal26 support/target selection
+with the zone-top fallback; **setup truncation identity** (levels at day k
 bit-identical on the truncated panel, sampled across a synthetic 420-bar panel, ≥3 setups
 exercised); limit/stop/target fill mechanics with gap rules; the stop-first precedence; X0/X3/
 X4/X5 exit mechanics incl. the trail's strictly-past closes; P1/P2/P3/P4 leg rules; cost and R
