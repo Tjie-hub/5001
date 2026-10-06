@@ -65,7 +65,7 @@ describe('Phase 6 P6-44 — landmarks and headings', () => {
 })
 
 describe('Phase 4 P4-03 §4 — the frozen sidebar', () => {
-  it('lists all seven workspaces in the frozen order', () => {
+  it('lists all five workspaces in the frozen order', () => {
     renderApp('/decision')
 
     const sidebar = screen.getByRole('navigation', { name: 'Workspaces' })
@@ -89,10 +89,13 @@ describe('Phase 4 P4-03 §4 — the frozen sidebar', () => {
   })
 
   it('marks the active workspace with more than colour (P6-45)', () => {
-    renderApp('/watchlist')
+    // Frontend freeze 2026-10-06: this test used to render /watchlist; the
+    // Watchlist workspace is retired, so the active-marker contract is now
+    // exercised on Market.
+    renderApp('/market')
 
     const sidebar = screen.getByRole('navigation', { name: 'Workspaces' })
-    const active = within(sidebar).getByRole('link', { name: /Watchlist/ })
+    const active = within(sidebar).getByRole('link', { name: /Market/ })
 
     expect(active).toHaveAttribute('aria-current', 'page')
   })

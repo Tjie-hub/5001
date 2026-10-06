@@ -13,6 +13,18 @@
   {% block head %}{% endblock %}
 </head>
 <body>
+<!-- Frontend freeze (owner-directed 2026-10-06): one thin banner on every
+     legacy page pointing at jurnal26 (port 5004). The link target is built
+     from the current hostname — no hardcoded IP. -->
+<div class="frozen-banner">5001 frontend is frozen. Portfolio, watchlist and daily research:
+  <a href="#" id="jurnal26-link"><strong>jurnal26 :5004</strong></a>
+</div>
+<script>
+  (function () {
+    var a = document.getElementById('jurnal26-link');
+    if (a) a.href = 'http://' + window.location.hostname + ':5004/';
+  })();
+</script>
 <header class="topbar">
   <div class="brand">
     <div class="brand-name"><span class="brand-mark">◆</span> IDX <span class="brand-mark">Suite</span></div>
@@ -35,7 +47,6 @@
     <span class="nav-group">
       <a data-nav href="/screener">Screener</a>
       <a data-nav href="/#brokerflow">Broker Flow</a>
-      <a data-nav href="/portfolio">Portfolio</a>
       <a data-nav href="/intelligence">Intelligence</a>
       <a data-nav href="/#audit">Audit</a>
     </span>

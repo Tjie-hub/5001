@@ -27,6 +27,7 @@ import { GlobalHeader } from './global-header'
 import { GlobalSidebar } from './global-sidebar'
 import { StatusFooter } from './status-footer'
 import { BottomNavigation } from './bottom-navigation'
+import { FrozenBanner } from './frozen-banner'
 import { WorkspaceLoadingPlaceholder } from './loading-shell'
 import { BREAKPOINTS, useMediaQuery } from './use-media-query'
 import { cx } from '@utils/cx'
@@ -110,6 +111,13 @@ export function AppShell() {
       <a className={cx(styles['skipLink'])} href={`#${MAIN_ID}`}>
         Skip to workspace content
       </a>
+
+      {/*
+        Frontend freeze (owner-directed 2026-10-06): one thin line at the top
+        of every workspace pointing at jurnal26 (port 5004). Rendered from the
+        shell so no route can omit it.
+      */}
+      <FrozenBanner />
 
       <div className={cx(styles['header'])}>
         <GlobalHeader

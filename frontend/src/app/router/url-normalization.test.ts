@@ -30,6 +30,10 @@ describe('Phase 4 P4-13 §12 — trailing slash', () => {
   })
 
   it('strips a trailing slash from a workspace route', () => {
+    expect(normalizePathname('/decision/')).toBe('/decision')
+  })
+
+  it('strips a trailing slash from a frozen retirement route (frontend freeze 2026-10-06)', () => {
     expect(normalizePathname('/portfolio/')).toBe('/portfolio')
   })
 
@@ -45,6 +49,10 @@ describe('combined normalization', () => {
 })
 
 describe('non-resource routes are left alone', () => {
+  // '/portfolio' and '/watchlist' are the frozen retirement paths of the
+  // removed workspaces (2026-10-06): they stay routable — they resolve to the
+  // frozen-workspace banner page — so normalization must keep leaving them
+  // untouched.
   it.each(['/', '/decision', '/portfolio', '/watchlist', '/market', '/search', '/settings'])(
     'leaves %s unchanged',
     (path) => {

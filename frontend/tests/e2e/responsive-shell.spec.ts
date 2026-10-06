@@ -88,12 +88,12 @@ test.describe('Phase 4 P4-03 §14 — Mobile', () => {
     await expect(page.getByRole('button', { name: /show workspace navigation/i })).toBeVisible()
   })
 
-  test('drawer exposes all seven workspaces and Escape closes it', async ({ page }) => {
+  test('drawer exposes all five workspaces and Escape closes it', async ({ page }) => {
     await page.goto('/decision')
 
     await page.getByRole('button', { name: /all workspaces/i }).click()
     const sidebar = page.getByRole('navigation', { name: 'Workspaces' })
-    await expect(sidebar.getByRole('link')).toHaveCount(7)
+    await expect(sidebar.getByRole('link')).toHaveCount(5)
 
     await page.keyboard.press('Escape')
     await expect(page.getByRole('button', { name: /show workspace navigation/i })).toBeVisible()
@@ -111,7 +111,7 @@ test.describe('Phase 4 P4-03 §14 — Mobile', () => {
 })
 
 test.describe('Phase 4 NP-14 — hierarchy is identical across devices', () => {
-  test('the same seven workspaces, same order, same routes', async ({ page }) => {
+  test('the same five workspaces, same order, same routes', async ({ page }) => {
     await page.setViewportSize(VIEWPORTS.desktop)
     await page.goto('/decision')
     const desktop = await workspaceHrefs(page)
@@ -122,10 +122,10 @@ test.describe('Phase 4 NP-14 — hierarchy is identical across devices', () => {
     const mobile = await workspaceHrefs(page)
 
     expect(mobile).toEqual(desktop)
+    // Frontend freeze 2026-10-06: portfolio, intelligence and watchlist were
+    // removed from the workspace registry — the five remaining workspaces only.
     expect(desktop).toEqual([
       '/decision',
-      '/portfolio',
-      '/watchlist',
       '/ticker',
       '/market',
       '/search',

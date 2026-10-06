@@ -10,6 +10,11 @@
  *   Phase 4 NP-05       navigation is deterministic
  *   Phase 4 NP-07       every screen has a recovery path
  *   ADR-001 §3          Resource State is owned by the URL / Router
+ *
+ * Frontend freeze 2026-10-06: the ADR-006 §5 interim-fix block (which asserted
+ * /portfolio fell through to the not-found page) was superseded — the three
+ * frozen paths now resolve to the FrozenWorkspacePage banner page. The
+ * expectations below were changed to that contract, not deleted.
  */
 import { describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
@@ -18,19 +23,19 @@ import { renderApp } from '../../tests/render-app'
 import { WORKSPACES } from './workspaces'
 
 describe('Phase 4 Appendix B — deep links resolve to their workspace', () => {
-  // ADR-006 §5 interim fix (2026-08-20): 'portfolio' is excluded here because
-  // its SPA <Route> was deliberately removed -- see the dedicated describe
-  // block below. It remains a full member of WORKSPACES (workspaces.ts is
-  // unchanged); only its SPA route registration is affected.
-  it.each(
-    WORKSPACES.filter((w) => w.id !== 'portfolio').map((w) => [w.navPath, w.label] as const),
-  )('renders %s as the %s workspace', async (path, label) => {
-    renderApp(path)
+  // Frontend freeze 2026-10-06: the original filter (w.id !== 'portfolio') is
+  // gone with the retired workspaces — every remaining registry entry owns a
+  // live route.
+  it.each(WORKSPACES.map((w) => [w.navPath, w.label] as const))(
+    'renders %s as the %s workspace',
+    async (path, label) => {
+      renderApp(path)
 
-    expect(
-      await screen.findByRole('heading', { level: 1, name: new RegExp(label) }),
-    ).toBeVisible()
-  })
+      expect(
+        await screen.findByRole('heading', { level: 1, name: new RegExp(label) }),
+      ).toBeVisible()
+    },
+  )
 
   it('resolves / to the primary operational workspace (UI-001)', async () => {
     renderApp('/')
@@ -40,27 +45,43 @@ describe('Phase 4 Appendix B — deep links resolve to their workspace', () => {
   })
 })
 
-describe('ADR-006 §5 — /portfolio SPA route removed (interim fix, 2026-08-20)', () => {
-  it('does not render the empty Portfolio workspace shell at /portfolio', async () => {
-    renderApp('/portfolio')
+describe('Frontend freeze 2026-10-06 — frozen paths resolve to the banner page', () => {
+  it.each([
+    ['/portfolio', 'Portfolio'],
+    ['/intelligence', 'Investment Intelligence'],
+    ['/watchlist', 'Watchlist'],
+  ] as const)('renders the frozen-workspace page at %s, not a 404', async (path, retired) => {
+    renderApp(path)
 
-    expect(await screen.findByRole('heading', { level: 1, name: /page not found/i })).toBeVisible()
-    expect(screen.queryByRole('heading', { level: 1, name: /^Portfolio$/ })).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /workspace frozen/i })).toBeVisible()
+    // Scoped to the page copy — the freeze banner also names the workspaces.
+    expect(screen.getByText(new RegExp(`The ${retired} workspace was removed`))).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 1, name: /page not found/i })).not.toBeInTheDocument()
   })
 
-  it('still lists Portfolio in the sidebar (workspaces.ts is unchanged) but its link leads to the not-found recovery page, not a crash', async () => {
-    const user = userEvent.setup()
-    renderApp('/decision')
+  it('carries the freeze banner pointing at jurnal26 :5004', async () => {
+    renderApp('/watchlist')
 
-    const sidebar = screen.getByRole('navigation', { name: 'Workspaces' })
-    const portfolioLink = within(sidebar).getByRole('link', { name: /Portfolio/ })
-    expect(portfolioLink).toBeInTheDocument()
+    const banner = await screen.findByTestId('frozen-banner')
+    expect(banner).toHaveTextContent('5001 frontend is frozen')
+    const link = within(banner).getByRole('link', { name: /jurnal26 :5004/ })
+    expect(link).toHaveAttribute('href', 'http://localhost:5004/')
+  })
 
-    await user.click(portfolioLink)
+  it('shows the stopped-at note on /portfolio', async () => {
+    renderApp('/portfolio')
 
-    expect(await screen.findByRole('heading', { level: 1, name: /page not found/i })).toBeVisible()
-    expect(window.location.pathname).toBe('/portfolio')
-    expect(screen.getByRole('navigation', { name: 'Workspaces' })).toBeInTheDocument()
+    expect(
+      await screen.findByText(/stopped at 2026-04-14 and is no longer maintained/),
+    ).toBeInTheDocument()
+  })
+
+  it('does not resurrect the removed workspaces behind their old paths', async () => {
+    renderApp('/watchlist')
+
+    await screen.findByRole('heading', { level: 1, name: /workspace frozen/i })
+    // The retired candidate-list UI must not render behind its old URL.
+    expect(screen.queryByRole('heading', { level: 1, name: /^Watchlist$/ })).not.toBeInTheDocument()
   })
 })
 
@@ -91,10 +112,13 @@ describe('Phase 4 P4-13 §12 — URL normalization', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/ticker/BBCA'))
   })
 
-  it('strips a trailing slash', async () => {
+  it('strips a trailing slash, including on a frozen path', async () => {
     renderApp('/portfolio/')
 
     await waitFor(() => expect(window.location.pathname).toBe('/portfolio'))
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /workspace frozen/i }),
+    ).toBeVisible()
   })
 
   it('preserves query parameters while normalizing the path', async () => {
@@ -133,7 +157,7 @@ describe('Phase 4 NP-05 — navigation is deterministic', () => {
     await user.click(within(sidebar).getByRole('link', { name: /Market/ }))
     expect(window.location.pathname).toBe('/market')
 
-    await user.click(within(sidebar).getByRole('link', { name: /Watchlist/ }))
+    await user.click(within(sidebar).getByRole('link', { name: /Search/ }))
     await user.click(within(sidebar).getByRole('link', { name: /Market/ }))
     expect(window.location.pathname).toBe('/market')
   })

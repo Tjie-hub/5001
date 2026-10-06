@@ -1,8 +1,9 @@
 /**
  * Workspace registry — Phase 9 Workstream B (B2, B3).
  *
- * Single source of truth for the workspaces. The router and the sidebar
- * both read from here, so navigation and routing cannot drift apart.
+ * Single source of truth for which workspaces exist, what they are called, and
+ * in what order they appear in Global Navigation. Both the router (B2) and the
+ * sidebar (B3) read from here, so navigation and routing cannot drift apart.
  *
  * Authority:
  *   Phase 4 P4-02 §3   flat workspaces, no nesting, no subordination
@@ -13,10 +14,20 @@
  *   Phase 4 NP-03      every workspace directly reachable from global nav
  *
  * This file is frozen architecture expressed as data. Adding a workspace
- * requires an ADR (Phase 4 P4-16 §14) — not an edit here. The one
- * exception to date is 'intelligence' (consolidation 2026-09-03),
- * user-directed at the application level; see its entry comment and
- * docs/INTEGRATION_CONSOLIDATION_MAP_2026-09-03.md.
+ * requires an ADR (Phase 4 P4-16 §14) — not an edit here. Two dated exceptions
+ * to date, both user-directed at the application level:
+ *
+ *   - 'intelligence' (consolidation 2026-09-03): absorbed the external
+ *     Investment Dashboard (ex-port 5003); see its entry comment and
+ *     docs/INTEGRATION_CONSOLIDATION_MAP_2026-09-03.md.
+ *   - Frontend freeze (owner-directed 2026-10-06): the 5001 frontend is
+ *     frozen; the portfolio, intelligence and watchlist workspaces were
+ *     removed because they duplicate or mis-state the jurnal26 ledger.
+ *     The jurnal26 app (port 5004) is the live investment journal, watchlist
+ *     and daily-research surface. The retirement paths ('/portfolio',
+ *     '/intelligence', '/watchlist') stay registered — they resolve to the
+ *     frozen-workspace banner page so old bookmarks still work. See
+ *     docs/INTEGRATION_CONSOLIDATION_MAP_2026-10-06.md.
  */
 
 /** Canonical route paths (Phase 4 Appendix B). */
@@ -33,15 +44,7 @@ export const ROUTE_PATHS = {
   settings: '/settings',
 } as const
 
-export type WorkspaceId =
-  | 'decision'
-  | 'portfolio'
-  | 'intelligence'
-  | 'watchlist'
-  | 'ticker'
-  | 'market'
-  | 'search'
-  | 'settings'
+export type WorkspaceId = 'decision' | 'ticker' | 'market' | 'search' | 'settings'
 
 export interface Workspace {
   readonly id: WorkspaceId
@@ -60,6 +63,10 @@ export interface Workspace {
  * The order reflects operational priority, not dependency — Decision Center
  * first because it is the primary operational workspace (UI-001), Settings
  * last because it is configuration rather than analysis.
+ *
+ * Frontend freeze 2026-10-06: 'portfolio', 'intelligence' and 'watchlist'
+ * were removed from this registry (owner-directed; see the header note).
+ * Their routes remain registered as frozen-workspace banner pages.
  */
 export const WORKSPACES: readonly Workspace[] = [
   {
@@ -68,32 +75,6 @@ export const WORKSPACES: readonly Workspace[] = [
     responsibility: 'Decide',
     navPath: ROUTE_PATHS.decision,
     purpose: 'Evaluate, prioritise and act on investment recommendations.',
-  },
-  {
-    id: 'portfolio',
-    label: 'Portfolio',
-    responsibility: 'Evaluate',
-    navPath: ROUTE_PATHS.portfolio,
-    purpose: 'Assess portfolio quality, risk exposure, allocation and capacity.',
-  },
-  {
-    // Consolidation 2026-09-03 (user-directed, supersedes the frozen-seven
-    // ADR gate for this one addition): the intelligence layer the external
-    // Investment Dashboard (ex-port 5003) used to provide, composed inside
-    // the OS from the canonical portfolio + existing read models. See
-    // docs/INTEGRATION_CONSOLIDATION_MAP_2026-09-03.md.
-    id: 'intelligence',
-    label: 'Investment Intelligence',
-    responsibility: 'Synthesize',
-    navPath: ROUTE_PATHS.intelligence,
-    purpose: 'Synthesize the canonical portfolio with signals, risk and decisions.',
-  },
-  {
-    id: 'watchlist',
-    label: 'Watchlist',
-    responsibility: 'Observe',
-    navPath: ROUTE_PATHS.watchlist,
-    purpose: 'Track candidate evolution ahead of investigation or decision.',
   },
   {
     id: 'ticker',
@@ -139,9 +120,7 @@ export function getWorkspace(id: WorkspaceId): Workspace {
  * Sidebar groups, separated exactly as Phase 4 P4-03 §4 draws them:
  *
  *   Decision Center
- *   Portfolio
  *   ────────────────
- *   Watchlist
  *   Ticker
  *   Market
  *   Search
@@ -149,15 +128,14 @@ export function getWorkspace(id: WorkspaceId): Workspace {
  *   Settings
  *
  * The separators are visual grouping only. They introduce no hierarchy —
- * P4-02 §3 keeps all seven workspaces at the same level.
+ * P4-02 §3 keeps all workspaces at the same level.
+ *
+ * Frontend freeze 2026-10-06: the first group's Portfolio / Investment
+ * Intelligence entries and the second group's Watchlist entry were removed
+ * with their workspaces; the group boundaries are otherwise unchanged.
  */
 export const WORKSPACE_GROUPS: readonly (readonly Workspace[])[] = [
-  [getWorkspace('decision'), getWorkspace('portfolio'), getWorkspace('intelligence')],
-  [
-    getWorkspace('watchlist'),
-    getWorkspace('ticker'),
-    getWorkspace('market'),
-    getWorkspace('search'),
-  ],
+  [getWorkspace('decision')],
+  [getWorkspace('ticker'), getWorkspace('market'), getWorkspace('search')],
   [getWorkspace('settings')],
 ] as const

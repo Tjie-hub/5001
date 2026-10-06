@@ -1,0 +1,36 @@
+/**
+ * Frozen workspace page styles — owner-directed 2026-10-06.
+ */
+
+.container {
+  max-width: 40rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 600;
+}
+
+.message {
+  margin: 0.5rem 0 0;
+  color: var(--shell-text-muted);
+}
+
+.note {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+  background: var(--shell-surface);
+  color: var(--shell-text);
+}
+
+.link {
+  color: var(--shell-text);
+  text-decoration: underline;
+}
+
+.link:hover {
+  color: var(--shell-text-strong);
+}
