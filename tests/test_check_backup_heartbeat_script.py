@@ -19,7 +19,7 @@ def _touch(path, dt):
 
 def test_all_fresh_does_not_alarm(tmp_path, monkeypatch):
     alarms = []
-    monkeypatch.setattr(chk, "send_telegram", lambda m: alarms.append(m))
+    monkeypatch.setattr(chk, "send_telegram", lambda m, **kw: alarms.append(m))
     backup_log = str(tmp_path / "cron_db_backup.log")
     research_log = str(tmp_path / "cron_db_backup_research.log")
     drill_log = str(tmp_path / "cron_db_restore_drill.log")
@@ -43,7 +43,7 @@ def test_default_checks_cover_all_three_backup_jobs():
 
 def test_stale_backup_alarms(tmp_path, monkeypatch):
     alarms = []
-    monkeypatch.setattr(chk, "send_telegram", lambda m: alarms.append(m))
+    monkeypatch.setattr(chk, "send_telegram", lambda m, **kw: alarms.append(m))
     backup_log = str(tmp_path / "cron_db_backup.log")
     now = datetime.now(timezone.utc)
     _touch(backup_log, now - timedelta(hours=40))  # > 26h threshold
@@ -55,7 +55,7 @@ def test_stale_backup_alarms(tmp_path, monkeypatch):
 
 def test_missing_restore_drill_log_alarms(tmp_path, monkeypatch):
     alarms = []
-    monkeypatch.setattr(chk, "send_telegram", lambda m: alarms.append(m))
+    monkeypatch.setattr(chk, "send_telegram", lambda m, **kw: alarms.append(m))
     drill_log = str(tmp_path / "never_ran.log")  # never created
     rc = chk.check(checks=[("weekly restore drill", drill_log, 8 * 24 * 60)],
                     now=datetime.now(timezone.utc))
@@ -67,7 +67,7 @@ def test_missing_restore_drill_log_alarms(tmp_path, monkeypatch):
 def test_each_stale_job_alarms_separately(tmp_path, monkeypatch):
     """Both jobs stale -> two distinct alarms, not one combined/silent one."""
     alarms = []
-    monkeypatch.setattr(chk, "send_telegram", lambda m: alarms.append(m))
+    monkeypatch.setattr(chk, "send_telegram", lambda m, **kw: alarms.append(m))
     backup_log = str(tmp_path / "cron_db_backup.log")
     drill_log = str(tmp_path / "cron_db_restore_drill.log")
     now = datetime.now(timezone.utc)
@@ -82,7 +82,7 @@ def test_each_stale_job_alarms_separately(tmp_path, monkeypatch):
 
 def test_alert_failure_does_not_crash_the_check(tmp_path, monkeypatch):
     monkeypatch.setattr(chk, "send_telegram",
-                        lambda m: (_ for _ in ()).throw(RuntimeError("down")))
+                        lambda m, **kw: (_ for _ in ()).throw(RuntimeError("down")))
     backup_log = str(tmp_path / "cron_db_backup.log")
     now = datetime.now(timezone.utc)
     _touch(backup_log, now - timedelta(hours=40))

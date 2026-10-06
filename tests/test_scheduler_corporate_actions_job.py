@@ -23,7 +23,7 @@ def test_no_token_aborts_without_raising(monkeypatch):
     called = MagicMock()
     monkeypatch.setattr("stockbit_corporate_actions.run_and_persist_corporate_actions", called)
     alerts = []
-    monkeypatch.setattr(jobs, "send_telegram", lambda text: alerts.append(text))
+    monkeypatch.setattr(jobs, "send_telegram", lambda text, **kw: alerts.append(text))
 
     jobs.run_corporate_actions_fetch()  # must not raise
 
@@ -46,7 +46,7 @@ def test_success_calls_run_and_persist_for_every_ticker(monkeypatch):
 
     monkeypatch.setattr("stockbit_corporate_actions.run_and_persist_corporate_actions", _fake)
     alerts = []
-    monkeypatch.setattr(jobs, "send_telegram", lambda text: alerts.append(text))
+    monkeypatch.setattr(jobs, "send_telegram", lambda text, **kw: alerts.append(text))
 
     jobs.run_corporate_actions_fetch()
 
@@ -70,7 +70,7 @@ def test_one_ticker_failure_does_not_block_the_rest(monkeypatch):
 
     monkeypatch.setattr("stockbit_corporate_actions.run_and_persist_corporate_actions", _fake)
     alerts = []
-    monkeypatch.setattr(jobs, "send_telegram", lambda text: alerts.append(text))
+    monkeypatch.setattr(jobs, "send_telegram", lambda text, **kw: alerts.append(text))
 
     jobs.run_corporate_actions_fetch()  # must not raise
 
@@ -89,6 +89,6 @@ def test_all_tickers_failing_never_raises(monkeypatch):
         raise RuntimeError("boom")
 
     monkeypatch.setattr("stockbit_corporate_actions.run_and_persist_corporate_actions", _fail)
-    monkeypatch.setattr(jobs, "send_telegram", lambda text: None)
+    monkeypatch.setattr(jobs, "send_telegram", lambda text, **kw: None)
 
     jobs.run_corporate_actions_fetch()  # must complete without raising

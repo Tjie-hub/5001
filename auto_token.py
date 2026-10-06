@@ -56,28 +56,32 @@ def log(msg):
         f.write(line + "\n")
 
 
-def send_telegram(msg):
-    # Global outbound kill switch (owner blackout 2026-10-05) — same
-    # logs/TELEGRAM_OFF file the other senders check; see utils.telegram.
-    from utils.telegram import is_off
-    if is_off():
-        log("[telegram] suppressed (global OFF)")
-        return
+def send_telegram(msg, event=None, subject=None, state=None):
+    # Curation policy gate (2026-10-06): tier + dedup + global TELEGRAM_OFF,
+    # one brain in utils.notify_policy. Kept as a separate muscle so this
+    # cron script's own log sees suppressions.
+    from utils.notify_policy import decide
+    action, reason = decide(event, subject=subject, state=state, msg=msg)
+    if action != "send":
+        log(f"[telegram] {action} ({reason})")
+        return False
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         log(
             "Telegram not configured (set TELEGRAM_TOKEN and TELEGRAM_CHAT_ID env vars)"
         )
-        return
+        return False
     msg = redact_secrets(msg)  # RC1-C2 — same shared rule as utils.telegram.send_telegram
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-        requests.post(
+        resp = requests.post(
             url,
             json={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "HTML"},
             timeout=10,
         )
+        return bool(resp.ok)
     except Exception as e:
         log(f"Telegram send failed: {e}")
+        return False
 
 
 def verify_token(token):
@@ -348,7 +352,7 @@ def auto_refresh():
             "⚠️ <b>Auto Token GAGAL</b>\n"
             "Session belum ada. Login dulu via CRD:\n"
             "<code>python3 auto_token.py --login</code>"
-        )
+        , event="data.token_refresh_failed")
         return None
 
     log("Auto refresh started (headless)")
@@ -640,13 +644,13 @@ def main():
         # auto-retried — a failure here is more likely a hard failure, bad
         # password/CAPTCHA, where blind retries risk tripping bot detection)
         log("Trying credential login as fallback...")
-        send_telegram("⚠️ <b>Auto Token</b>: session expired, mencoba credential login...")
+        send_telegram("⚠️ <b>Auto Token</b>: session expired, mencoba credential login...", event="data.token_refresh_progress")
 
         token = credential_login()
         if token and verify_token(token):
             _write_token_atomic(token)
             log("✅ Credential login berhasil — token saved")
-            send_telegram("✅ <b>Auto Token</b>: credential login berhasil, token diperbarui.")
+            send_telegram("✅ <b>Auto Token</b>: credential login berhasil, token diperbarui.", event="data.token_refresh_ok")
             cleanup_zombies()
             return
 
@@ -665,7 +669,7 @@ def main():
             "4. <code>echo 'TOKEN' > ~/.stockbit_token</code>\n\n"
             "Atau re-login:\n"
             "<code>python3 auto_token.py --login</code>"
-        )
+        , event="data.token_refresh_failed")
         cleanup_zombies()
         sys.exit(1)
 

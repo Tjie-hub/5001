@@ -97,7 +97,7 @@ def main() -> int:
     msg = "\n".join(lines)
     print(msg)
     try:
-        send_telegram(msg)
+        send_telegram(msg, event="system.provisional_bars")
     except Exception as e:  # alerting must not mask the finding
         print(f"[warn] telegram alert failed: {e}")
     return 1

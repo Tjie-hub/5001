@@ -94,30 +94,34 @@ def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
 
-def send_telegram(msg, category="alert"):
-    # Global outbound kill switch (owner blackout 2026-10-05) — same
-    # logs/TELEGRAM_OFF file the service senders check; see utils.telegram.
-    from utils.telegram import is_muted, is_off
-    if is_off():
-        log("[telegram] suppressed (global OFF)")
-        return
+def send_telegram(msg, event=None, subject=None, state=None, category="alert"):
+    # Curation policy gate (2026-10-06): tier + dedup + global TELEGRAM_OFF,
+    # one brain in utils.notify_policy. Kept as a separate muscle so cron logs
+    # see suppression via this module's log().
+    from utils.notify_policy import decide
+    action, reason = decide(event, subject=subject, state=state, msg=msg)
+    if action != "send":
+        log(f"[telegram] {action} ({reason})")
+        return False
     token = os.environ.get("TELEGRAM_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
         log("Telegram not configured")
-        return
+        return False
     # Same temporary report-noise mute as utils.telegram.send_telegram (this
     # module keeps its own sender for cron use); 'alert' can never be muted.
+    from utils.telegram import is_muted
     if is_muted(category):
         log(f"[telegram] muted (category={category})")
-        return
+        return False
     msg = redact_secrets(msg)  # RC1-C2 — same shared rule as utils.telegram.send_telegram
     try:
-        requests.post(
+        resp = requests.post(
             f"https://api.telegram.org/bot{token}/sendMessage",
             json={"chat_id": chat_id, "text": msg, "parse_mode": "HTML"},
             timeout=10,
         )
+        return bool(resp.ok)
     except Exception as e:
         log(f"Telegram send failed: {e}")
 
@@ -948,14 +952,14 @@ def run_flow(token, tickers, date=None):
             f"Sukses: {success}/{len(tickers)} tickers\n"
             f"Waktu: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             category="flow_fetch_done",
-        )
+         event="report.flow_fetch_done")
     else:
         send_telegram(
             f"⚠️ <b>Flow & Broker Fetch SELESAI (ada gagal)</b>\n"
             f"Sukses: {success}/{len(tickers)} tickers\n"
             f"Gagal: {len(tickers) - success} tickers\n"
             f"Waktu: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        )
+        , event="data.flow_partial")
 
 def _run_flow_cmd(args):
     """Handle 'flow' subcommand with --token and --cat support."""
@@ -987,7 +991,7 @@ def _run_flow_cmd(args):
     token = ensure_valid_token(manual_token)
     if not token:
         log("ERROR: Could not obtain a valid token")
-        send_telegram("❌ <b>Flow Fetch GAGAL</b>\nToken tidak ditemukan/expired. Auto-login juga gagal.")
+        send_telegram("❌ <b>Flow Fetch GAGAL</b>\nToken tidak ditemukan/expired. Auto-login juga gagal.", event="data.token_expired", subject="flow_cron")
         sys.exit(1)
 
     label = category or ("custom" if args else "ALL")

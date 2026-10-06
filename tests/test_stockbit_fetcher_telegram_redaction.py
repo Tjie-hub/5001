@@ -10,15 +10,17 @@ from unittest.mock import patch
 import pytest
 
 import stockbit_fetcher as sf
-import utils.telegram as tg
+import utils.notify_policy as np
 
 
 @pytest.fixture(autouse=True)
-def _no_global_off(tmp_path, monkeypatch):
-    """Hermetic vs the production kill file: logs/TELEGRAM_OFF really exists
-    on the live box (owner blackout 2026-10-05), but these tests exercise the
-    send path itself, with the switch off."""
-    monkeypatch.setattr(tg, "_OFF_FILE", str(tmp_path / "TELEGRAM_OFF"))
+def _hermetic_gate(tmp_path, monkeypatch):
+    """Hermetic vs the production box: logs/TELEGRAM_OFF really exists there
+    (owner blackout 2026-10-05) and gate state must not touch real files.
+    These tests exercise the send path itself, with the switch off."""
+    monkeypatch.setattr(np, "OFF_FILE", str(tmp_path / "TELEGRAM_OFF"))
+    monkeypatch.setattr(np, "STATE_FILE", str(tmp_path / "notify_state.json"))
+    monkeypatch.setattr(np, "DIGEST_DIR", str(tmp_path / "digest_buffer"))
 
 
 def _sent_text(monkeypatch, msg, secret_env=None):
@@ -27,7 +29,7 @@ def _sent_text(monkeypatch, msg, secret_env=None):
     for k, v in (secret_env or {}).items():
         monkeypatch.setenv(k, v)
     with patch("stockbit_fetcher.requests.post") as mock_post:
-        sf.send_telegram(msg)
+        sf.send_telegram(msg, event="system.test_probe")
     if not mock_post.call_args:
         return None
     return mock_post.call_args.kwargs["json"]["text"]

@@ -152,7 +152,7 @@ async def test_all_providers_persisted_held_fires_all_down(events_db, monkeypatc
     from engine.agent_firm.providers import alerts
     alerts.reset_state()
     sent = []
-    monkeypatch.setattr(alerts, "send_telegram", lambda msg: sent.append(msg))
+    monkeypatch.setattr(alerts, "send_telegram", lambda msg, **kw: sent.append(msg))
 
     now = datetime(2026, 7, 21, 12, 0, tzinfo=timezone.utc)
     monkeypatch.setattr(router_mod, "_now", lambda: now)

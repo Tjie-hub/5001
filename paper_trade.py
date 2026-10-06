@@ -461,7 +461,7 @@ def open_trade(ticker: str, entry_price: float, strategy: str = None,
                 f"   🛑 SL: Rp {sl_price:,.0f}\n"
                 f"   Lot: {lots} | Capital: Rp {capital_used:,.0f}\n"
                 f"   Strategy: {strategy}"
-            )
+            , event="trade.paper_opened", subject=ticker)
         except Exception:
             pass
 
@@ -525,7 +525,7 @@ def close_trade(trade_id: int, exit_price: float, exit_reason: str = "MANUAL", n
                 f"   Entry: Rp {trade['entry_price']:,.0f}\n"
                 f"   P&L: Rp {pnl_rp:,} ({pnl_pct:+.2f}%)\n"
                 f"   Reason: {exit_reason}"
-            )
+            , event="trade.paper_closed", subject=trade["ticker"])
         except Exception:
             pass
 
@@ -656,7 +656,7 @@ def check_dd_circuit_breaker(send_alert: bool = True) -> dict:
                     f"Current: Rp {dd['current']:,.0f}\n"
                     f"Closed trades (30d): {dd['n_trades']}\n"
                     f"New entries blocked. Auto-reset on DD ≤ {recover:.1f}%."
-                )
+                , event="risk.dd_breaker_activated")
             except Exception as e:
                 logger.warning(f"[circuit_breaker] telegram error: {e}")
     elif currently_blocked and dd["dd_pct"] <= recover:
@@ -671,7 +671,7 @@ def check_dd_circuit_breaker(send_alert: bool = True) -> dict:
                     f"DD recovered to -{dd['dd_pct']:.2f}% (≤ {recover:.1f}%).\n"
                     f"Equity: Rp {dd['current']:,.0f}\n"
                     f"New entries re-enabled."
-                )
+                , event="risk.dd_breaker_reset")
             except Exception as e:
                 logger.warning(f"[circuit_breaker] telegram error: {e}")
 

@@ -77,7 +77,7 @@ def check(checks=DEFAULT_CHECKS, now=None):
                f"all -- check `crontab -l` and whether the systemd user "
                f"session/cron daemon is up.")
         try:
-            send_telegram(msg)
+            send_telegram(msg, event="system.backup_dead")
         except Exception:
             pass  # cron log still captures the print below
         print(msg)

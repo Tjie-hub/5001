@@ -31,7 +31,7 @@ def check(path=DEFAULT_PATH, stale_after_min=15):
            f"APScheduler/app may be dead; trades/reports NOT running. "
            f"Restart via ./start.sh.")
     try:
-        send_telegram(msg)
+        send_telegram(msg, event="system.scheduler_dead")
     except Exception:
         pass  # cron log still captures the print below
     print(msg)

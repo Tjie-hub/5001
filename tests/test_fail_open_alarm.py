@@ -20,7 +20,7 @@ def test_alarm_logs_warning(caplog):
 
 def test_alarm_notifies_via_telegram_best_effort(monkeypatch):
     sent = []
-    monkeypatch.setattr(fa, "send_telegram", lambda m: sent.append(m))
+    monkeypatch.setattr(fa, "send_telegram", lambda m, **kw: sent.append(m))
     fa.fail_open_alarm("agent_firm_enforce", "3 degraded", count=3, notify=True)
     assert len(sent) == 1
     assert "agent_firm_enforce" in sent[0]

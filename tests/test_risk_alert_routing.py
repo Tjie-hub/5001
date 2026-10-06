@@ -36,7 +36,7 @@ def test_critical_tier_sends_immediate_telegram():
     db, conn = _make_db()
     sent = []
     with patch('engine.risk_alert.DB_PATH', db), \
-         patch('engine.risk_alert.send_telegram', side_effect=lambda m: sent.append(m)):
+         patch('engine.risk_alert.send_telegram', side_effect=lambda m, **kw: sent.append(m)):
         route_risk_alert(conn, _risk('CRITICAL', 90), '2026-06-05', '09:00')
     conn.close(); os.unlink(db)
 
@@ -49,7 +49,7 @@ def test_red_tier_queues_but_does_not_send_immediately():
     db, conn = _make_db()
     sent = []
     with patch('engine.risk_alert.DB_PATH', db), \
-         patch('engine.risk_alert.send_telegram', side_effect=lambda m: sent.append(m)):
+         patch('engine.risk_alert.send_telegram', side_effect=lambda m, **kw: sent.append(m)):
         route_risk_alert(conn, _risk('RED', 78), '2026-06-05', '09:00')
     conn.close(); os.unlink(db)
 
@@ -61,7 +61,7 @@ def test_orange_tier_does_not_send_immediately():
     db, conn = _make_db()
     sent = []
     with patch('engine.risk_alert.DB_PATH', db), \
-         patch('engine.risk_alert.send_telegram', side_effect=lambda m: sent.append(m)):
+         patch('engine.risk_alert.send_telegram', side_effect=lambda m, **kw: sent.append(m)):
         route_risk_alert(conn, _risk('ORANGE', 60), '2026-06-05', '09:00')
     conn.close(); os.unlink(db)
 
@@ -73,7 +73,7 @@ def test_green_tier_does_not_send_or_log():
     db, conn = _make_db()
     sent = []
     with patch('engine.risk_alert.DB_PATH', db), \
-         patch('engine.risk_alert.send_telegram', side_effect=lambda m: sent.append(m)):
+         patch('engine.risk_alert.send_telegram', side_effect=lambda m, **kw: sent.append(m)):
         route_risk_alert(conn, _risk('GREEN', 15), '2026-06-05', '09:00')
     # Check nothing was logged either
     try:

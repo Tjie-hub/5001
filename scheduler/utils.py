@@ -95,6 +95,6 @@ def fetch_latest():
             f"🔴 <b>OHLCV Fetch GAGAL</b>\n\n"
             f"<b>{len(tickers)} tickers</b> @ {now_str}\n"
             f"<code>{redact_and_truncate(str(e), 150)}</code>"
-        )
+        , event="data.ohlcv_fetch_failed")
 
 # _load_ohlcv_bulk moved to data/loaders.py in M2 (re-exported above).

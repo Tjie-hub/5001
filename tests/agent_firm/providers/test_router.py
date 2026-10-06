@@ -216,7 +216,7 @@ def frozen_now(monkeypatch):
 def _quiet_alerts(monkeypatch):
     from engine.agent_firm.providers import alerts
     alerts.reset_state()
-    monkeypatch.setattr(alerts, "send_telegram", lambda msg: None)
+    monkeypatch.setattr(alerts, "send_telegram", lambda msg, **kw: None)
     yield
     alerts.reset_state()
 
@@ -338,7 +338,7 @@ async def test_provider_status_snapshot_explains_unavailability(frozen_now):
 async def test_restored_after_hold_emits_restored_alert(frozen_now, monkeypatch):
     from engine.agent_firm.providers import alerts
     sent = []
-    monkeypatch.setattr(alerts, "send_telegram", lambda msg: sent.append(msg))
+    monkeypatch.setattr(alerts, "send_telegram", lambda msg, **kw: sent.append(msg))
     reset = _T0 + timedelta(hours=2)
     p1 = _fake_provider("claude", generate_error=ProviderSessionLimit("limit", reset_time=reset))
     p2 = _fake_provider("zai")
@@ -362,7 +362,7 @@ async def test_burst_failure_does_not_fire_all_down_alert(frozen_now, monkeypatc
     is in a lasting unavailable state (quota hold / OPEN circuit)."""
     from engine.agent_firm.providers import alerts
     sent = []
-    monkeypatch.setattr(alerts, "send_telegram", lambda msg: sent.append(msg))
+    monkeypatch.setattr(alerts, "send_telegram", lambda msg, **kw: sent.append(msg))
     # Both fail once (transient), but their circuits stay CLOSED below threshold.
     p1 = _fake_provider("claude", generate_error=ProviderUnavailable("burst fail"))
     p2 = _fake_provider("zai", generate_error=ProviderUnavailable("burst fail"))
@@ -383,7 +383,7 @@ async def test_all_down_alert_fires_when_every_provider_quota_held(frozen_now, m
     """When both providers are genuinely out (quota-held), the page must fire."""
     from engine.agent_firm.providers import alerts
     sent = []
-    monkeypatch.setattr(alerts, "send_telegram", lambda msg: sent.append(msg))
+    monkeypatch.setattr(alerts, "send_telegram", lambda msg, **kw: sent.append(msg))
     reset = _T0 + timedelta(hours=2)
     p1 = _fake_provider("claude", generate_error=ProviderSessionLimit("limit", reset_time=reset))
     p2 = _fake_provider("zai", generate_error=ProviderSessionLimit("limit", reset_time=reset))
@@ -399,7 +399,7 @@ async def test_all_down_alert_fires_when_every_circuit_open(frozen_now, monkeypa
     that's also a real outage worth paging."""
     from engine.agent_firm.providers import alerts
     sent = []
-    monkeypatch.setattr(alerts, "send_telegram", lambda msg: sent.append(msg))
+    monkeypatch.setattr(alerts, "send_telegram", lambda msg, **kw: sent.append(msg))
     # Pre-open both circuits so provider_status() reports both unavailable.
     b1 = CircuitBreaker(failure_threshold=1, cooldown_s=999)
     b1.record_failure()

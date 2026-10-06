@@ -302,7 +302,7 @@ def test_total_refresh_failure_with_no_safe_fallback_exits_nonzero_and_alerts(
     monkeypatch.setattr(at, "RETRY_BACKOFF_BASE_S", 0)
 
     alerts = []
-    monkeypatch.setattr(at, "send_telegram", lambda msg: alerts.append(msg))
+    monkeypatch.setattr(at, "send_telegram", lambda msg, **kw: alerts.append(msg))
 
     with pytest.raises(SystemExit) as exc:
         at.main()
@@ -433,12 +433,14 @@ class TestSendTelegramRedaction:
     """
 
     @pytest.fixture(autouse=True)
-    def _no_global_off(self, tmp_path, monkeypatch):
-        """Hermetic vs the production kill file: logs/TELEGRAM_OFF really
-        exists on the live box (owner blackout 2026-10-05); these tests
-        exercise the send path itself, with the switch off."""
-        import utils.telegram as tg
-        monkeypatch.setattr(tg, "_OFF_FILE", str(tmp_path / "TELEGRAM_OFF"))
+    def _hermetic_gate(self, tmp_path, monkeypatch):
+        """Hermetic vs the production box: logs/TELEGRAM_OFF really exists
+        there (owner blackout 2026-10-05); gate state must not touch real
+        files. These tests exercise the send path with the switch off."""
+        import utils.notify_policy as np
+        monkeypatch.setattr(np, "OFF_FILE", str(tmp_path / "TELEGRAM_OFF"))
+        monkeypatch.setattr(np, "STATE_FILE", str(tmp_path / "notify_state.json"))
+        monkeypatch.setattr(np, "DIGEST_DIR", str(tmp_path / "digest_buffer"))
 
     def _sent_text(self, monkeypatch, msg, secret_env=None):
         monkeypatch.setattr(at, "TELEGRAM_TOKEN", "tok123")
@@ -446,7 +448,7 @@ class TestSendTelegramRedaction:
         for k, v in (secret_env or {}).items():
             monkeypatch.setenv(k, v)
         with patch("auto_token.requests.post") as mock_post:
-            _real_send_telegram(msg)
+            _real_send_telegram(msg, event="system.test_probe")
         if not mock_post.call_args:
             return None
         return mock_post.call_args.kwargs["json"]["text"]

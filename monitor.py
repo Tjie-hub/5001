@@ -584,7 +584,7 @@ def check_all_open_trades():
                     except Exception as e:
                         logger.error(f"[monitor] close_trade failed: {e}")
                     if result.get('message'):
-                        send_telegram(result['message'])
+                        send_telegram(result['message'], event="trade.position_alert", subject=trade["ticker"])
                         try:
                             log_trade_alert(trade['ticker'], trade['id'], result['reason'], result['message'])
                         except Exception:
@@ -631,7 +631,7 @@ def check_all_open_trades():
                     )
                 except Exception:
                     pass
-                send_telegram(alert['message'])
+                send_telegram(alert['message'], event="trade.position_alert", subject=f"{alert['ticker']}:{alert['alert_type']}")
                 total_alerts += 1
         except Exception:
             # P1-4: an unhandled exception evaluating/closing/alerting on one
@@ -649,7 +649,7 @@ def check_all_open_trades():
                     f"⚠️ Monitor error on {trade.get('ticker')} "
                     f"(trade id={trade.get('id')}): exception during this "
                     f"tick's evaluation, will retry next cycle. See logs."
-                )
+                , event="trade.monitor_error", subject=trade.get("ticker", "?"))
             except Exception:
                 pass
 

@@ -272,6 +272,6 @@ def announce_registry(telegram_fn=None):
         except Exception:
             return
     try:
-        telegram_fn(msg)
+        telegram_fn(msg, event="system.registry_announce")
     except Exception as ex:
         logger.debug("registry announce telegram failed: %s", ex)

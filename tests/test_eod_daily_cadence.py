@@ -41,7 +41,7 @@ def _run(monkeypatch, tmp_path, *, cands, firm_side_effect):
                         lambda conn, date_str: ("BULL", 72.0))
     monkeypatch.setattr("engine.trade_plan.get_vpin_gate", lambda conn, date_str: None)
     monkeypatch.setattr("config.edge_mode", lambda: "off")
-    monkeypatch.setattr(jobs_mod, "send_telegram", lambda msg: None)
+    monkeypatch.setattr(jobs_mod, "send_telegram", lambda msg, **kw: None)
 
     mock_firm = MagicMock()
     mock_firm.evaluate_staged = MagicMock(side_effect=firm_side_effect)
