@@ -311,34 +311,105 @@ def test_section_grouping_by_event_prefix(hermetic, tmp_path):
     assert msg.index("<b>Market</b>") < msg.index("<b>Reports</b>") < msg.index("<b>Other</b>")
 
 
-def test_d4_items_older_than_two_days_are_stale_skipped(hermetic, tmp_path):
-    today = datetime.now(np.WIB).date()
-    old_day = (today - timedelta(days=3)).strftime("%Y-%m-%d")
-    edge_day = (today - timedelta(days=2)).strftime("%Y-%m-%d")
-    _append_line(tmp_path, old_day, {"event": "report.eod_trade_plan",
-                                     "ts": 1.0, "text": "ancient item"})
-    _append_line(tmp_path, edge_day, {"event": "report.eod_trade_plan",
-                                      "ts": 2.0, "text": "two-day item"})
-    _append_line(tmp_path, np.wib_today(), {"event": "report.eod_trade_plan",
-                                            "ts": 3.0, "text": "fresh item"})
+def _set_flush_today(monkeypatch, today):
+    """Pin flush_digest's notion of 'today' so D4 trading-day tests are
+    deterministic (no dependence on the weekday the suite runs on). Same
+    contract as the real wib_today(): a 'YYYY-MM-DD' string."""
+    monkeypatch.setattr(np, "wib_today", lambda: today.isoformat())
+
+
+def test_d4_items_older_than_two_trading_days_are_stale_skipped(hermetic, tmp_path, monkeypatch):
+    """D4 (amended 2026-10-06): stale = more than 2 IDX trading days old.
+    Wed 2026-09-30 → Mon 2026-10-05 is Thu+Fri+Mon = 3 trading days → stale;
+    Fri 2026-10-02 → Mon 2026-10-05 is 1 trading day → kept."""
+    from datetime import date
+    _set_flush_today(monkeypatch, date(2026, 10, 5))
+    _append_line(tmp_path, "2026-09-30", {"event": "report.eod_trade_plan",
+                                          "ts": 1.0, "text": "ancient item"})
+    _append_line(tmp_path, "2026-10-02", {"event": "report.eod_trade_plan",
+                                          "ts": 2.0, "text": "friday item"})
+    _append_line(tmp_path, "2026-10-05", {"event": "report.eod_trade_plan",
+                                          "ts": 3.0, "text": "fresh item"})
     buf = tmp_path / "digest_buffer"
     assert np.flush_digest() is True
     msg = hermetic[0][1]
-    assert "fresh item" in msg and "two-day item" in msg
+    assert "fresh item" in msg and "friday item" in msg
     assert "ancient item" not in msg
     assert "1 older items skipped (see logs/digest_buffer)" in msg
-    assert list(buf.glob(f"{old_day}.jsonl.stale"))
-    assert not list(buf.glob(f"{old_day}.jsonl"))           # live file gone
-    assert not list(buf.glob(f"{old_day}.jsonl.sending"))   # claimed file archived
+    assert list(buf.glob("2026-09-30.jsonl.stale"))
+    assert not list(buf.glob("2026-09-30.jsonl"))           # live file gone
+    assert not list(buf.glob("2026-09-30.jsonl.sending"))   # claimed file archived
 
 
-def test_d4_only_stale_items_no_send(hermetic, tmp_path):
-    old_day = (datetime.now(np.WIB).date() - timedelta(days=5)).strftime("%Y-%m-%d")
-    _append_line(tmp_path, old_day, {"event": "report.eod_trade_plan",
-                                     "ts": 1.0, "text": "ancient"})
+def test_d4_only_stale_items_no_send(hermetic, tmp_path, monkeypatch):
+    from datetime import date
+    _set_flush_today(monkeypatch, date(2026, 10, 5))
+    _append_line(tmp_path, "2026-09-24", {"event": "report.eod_trade_plan",
+                                          "ts": 1.0, "text": "ancient"})
     assert np.flush_digest() is None       # nothing fresh → nothing sent
     assert hermetic == []
     assert list((tmp_path / "digest_buffer").glob("*.jsonl.stale"))
+
+
+def test_d4_friday_flush_failure_survives_monday(hermetic, tmp_path, monkeypatch):
+    """The case the calendar-day rule got wrong (its M3/J1 complaint): an item
+    written Friday whose flush fails must be sent by Monday's flush — a
+    Friday→Monday gap is 1 trading day, not stale."""
+    from datetime import date
+    _set_flush_today(monkeypatch, date(2026, 10, 5))
+    _append_line(tmp_path, "2026-10-02", {"event": "report.eod_trade_plan",
+                                          "ts": 1.0, "text": "friday evening plan"})
+    assert np.flush_digest() is True
+    assert "friday evening plan" in hermetic[0][1]
+    assert "older items skipped" not in hermetic[0][1]
+
+
+def test_d4_three_trading_days_back_is_skipped(hermetic, tmp_path, monkeypatch):
+    from datetime import date
+    _set_flush_today(monkeypatch, date(2026, 10, 5))
+    # Thu 10-01 → Mon 10-05: Fri, Mon = 2 trading days → kept, right on the edge.
+    _append_line(tmp_path, "2026-10-01", {"event": "report.eod_trade_plan",
+                                          "ts": 1.0, "text": "thursday item"})
+    # Wed 09-30 → Mon 10-05: Thu, Fri, Mon = 3 trading days → stale.
+    _append_line(tmp_path, "2026-09-30", {"event": "report.eod_trade_plan",
+                                          "ts": 2.0, "text": "wednesday item"})
+    assert np.flush_digest() is True
+    msg = hermetic[0][1]
+    assert "thursday item" in msg
+    assert "wednesday item" not in msg
+    assert "1 older items skipped" in msg
+
+
+def test_d4_holiday_inside_window_is_not_counted(hermetic, tmp_path, monkeypatch):
+    """Natal 2026: Thu 12-24 (Cuti Bersama) and Fri 12-25 (Natal) are IDX
+    holidays. An item from Wed 12-23 reaches Mon 12-28 across only 1 trading
+    day (Mon) → kept, where a naive calendar-day rule would see 5 days."""
+    from datetime import date
+    _set_flush_today(monkeypatch, date(2026, 12, 28))
+    _append_line(tmp_path, "2026-12-23", {"event": "report.eod_trade_plan",
+                                          "ts": 1.0, "text": "pre-holiday item"})
+    assert np.flush_digest() is True
+    assert "pre-holiday item" in hermetic[0][1]
+    assert "older items skipped" not in hermetic[0][1]
+
+
+def test_d4_calendar_fallback_when_calendar_unreadable(hermetic, tmp_path, monkeypatch):
+    """engine.calendar_filter unavailable → fall back to 2 CALENDAR days: the
+    Friday item is then 3 calendar days old on Monday and is dropped (the old
+    behaviour), while same-day items still go out."""
+    import sys
+    from datetime import date
+    _set_flush_today(monkeypatch, date(2026, 10, 5))
+    monkeypatch.setitem(sys.modules, "engine.calendar_filter", None)
+    _append_line(tmp_path, "2026-10-02", {"event": "report.eod_trade_plan",
+                                          "ts": 1.0, "text": "friday item"})
+    _append_line(tmp_path, "2026-10-05", {"event": "report.eod_trade_plan",
+                                          "ts": 2.0, "text": "fresh item"})
+    assert np.flush_digest() is True
+    msg = hermetic[0][1]
+    assert "fresh item" in msg
+    assert "friday item" not in msg
+    assert "1 older items skipped" in msg
 
 
 def test_multi_part_split_when_over_limit(hermetic, tmp_path):

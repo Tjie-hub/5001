@@ -51,9 +51,13 @@ successful send the `.sending` files become `.sent`; on a failed/suppressed
 send they stay `.sending` and are picked up by the next flush (never dropped).
 The digest is split into consecutive parts under the same gated event at
 Telegram's ~3800-char limit instead of being truncated, and the `.sent`
-archive happens only after every part went out. At flush time items from
-buffer files older than 2 calendar days are NOT sent — they are archived to
-`.stale` and the message ends with one "N older items skipped" line.
+archive happens only after every part went out. At flush time items whose
+file-day is more than 2 IDX trading days before today are NOT sent — they are
+archived to `.stale` and the message ends with one "N older items skipped"
+line. Trading days = weekends plus the IDX holiday list in
+engine/calendar_filter.py; if the calendar can't be read, the rule falls back
+to 2 calendar days. (D4, amended 2026-10-06: was 2 calendar days, which
+dropped a Friday item whose flush failed on Monday.)
 """
 
 import hashlib
@@ -313,6 +317,59 @@ def _flush_title(event: str) -> str:
     return base + " — " + wib_today()
 
 
+# Stale-skip threshold in trading/calendar days (D4).
+_STALE_DAYS = 2
+
+
+def _idx_trading_days_between(start_day, end_day) -> Optional[int]:
+    """Count IDX trading days d with start_day < d <= end_day — weekends plus
+    the holiday list in engine/calendar_filter.py. Returns None when the
+    calendar can't be read (import or computation failure), which switches the
+    stale rule to its calendar-day fallback."""
+    try:
+        from engine.calendar_filter import is_trading_day
+
+        gap = 0
+        day = start_day
+        while day < end_day:
+            day += timedelta(days=1)
+            if is_trading_day(day)[0]:
+                gap += 1
+        return gap
+    except Exception:  # calendar unavailable — never fail a flush over this
+        logger.warning("[notify_policy] IDX calendar unavailable; digest "
+                       "stale rule falls back to calendar days", exc_info=True)
+        return None
+
+
+def _is_stale_day(file_day: str, today) -> bool:
+    """True when the buffer file's day is more than _STALE_DAYS IDX trading
+    days before `today` (D4, amended 2026-10-06 — was 2 calendar days, which
+    dropped a Friday item whose flush failed on Monday; a Friday→Monday gap
+    is only 1 trading day).
+
+    `today` is whatever wib_today() returns — a 'YYYY-MM-DD' string — or a
+    date, so tests can pin either shape. An unparsable or future file-day is
+    never stale (keep and send, never drop). Calendar-day fallback when the
+    holiday calendar can't be read.
+    """
+    try:
+        day = datetime.strptime(file_day, "%Y-%m-%d").date()
+    except ValueError:
+        return False
+    if isinstance(today, str):
+        try:
+            today = datetime.strptime(today, "%Y-%m-%d").date()
+        except ValueError:
+            return False
+    if day >= today:
+        return False
+    gap = _idx_trading_days_between(day, today)
+    if gap is None:
+        gap = (today - day).days
+    return gap > _STALE_DAYS
+
+
 def _parse_buffer_line(ln: str) -> Optional[dict]:
     """Validate one shared-buffer line. Returns the item or None (malformed —
     skipped and logged, never fatal)."""
@@ -342,10 +399,13 @@ def flush_digest(event: str = "report.evening_digest") -> Optional[bool]:
     `<day>.jsonl` files are atomically renamed to `.sending` before reading,
     so appends during the flush land in a fresh `<day>.jsonl`; the `.sending`
     files become `.sent` only after EVERY part went out, and stay `.sending`
-    otherwise (picked up next flush, never dropped). Items from buffer files
-    older than 2 calendar days are archived to `.stale`, never sent (D4); the
-    message ends with one "N older items skipped" line when any were skipped.
-    Item text is html.escape()d and grouped under section headers (D2/D3).
+    otherwise (picked up next flush, never dropped). Items whose file-day is
+    more than 2 IDX trading days before today are archived to `.stale`, never
+    sent (D4, amended 2026-10-06 — was 2 calendar days, which dropped a Friday
+    item whose flush failed on Monday); calendar-day fallback when the holiday
+    calendar can't be read. The message ends with one "N older items skipped"
+    line when any were skipped. Item text is html.escape()d and grouped under
+    section headers (D2/D3).
     """
     if not os.path.isdir(DIGEST_DIR):
         return None
@@ -367,20 +427,14 @@ def flush_digest(event: str = "report.evening_digest") -> Optional[bool]:
         return None
 
     today = wib_today()
-    stale_cutoff = (datetime.now(WIB) - timedelta(days=2)).date()
     fresh: list = []        # (file_day, item)
-    stale_paths: list = []  # .sending paths whose file-day is > 2 days old
+    stale_paths: list = []  # .sending paths whose file-day is > 2 trading days old
     stale_count = 0
     malformed = 0
     for path in claimed:
         fname = os.path.basename(path)
         file_day = fname.split(".jsonl")[0]
-        is_stale = False
-        try:
-            is_stale = (datetime.strptime(file_day, "%Y-%m-%d").date()
-                        < stale_cutoff)
-        except ValueError:
-            is_stale = False  # unparsable day — keep and send, never drop
+        is_stale = _is_stale_day(file_day, today)
         try:
             with open(path) as fh:
                 for ln in fh:
