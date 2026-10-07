@@ -164,3 +164,40 @@ now would make every job fail. In the handoff, deliver:
 - Registries and DECISION_LOG are append-only. The only new text is D-069 as given.
 - Don't edit frozen research files.
 - Read-only on all databases. Never print secrets.
+
+## Amendment 2026-10-07 (after ZCode's stop at merge 3/5)
+
+Planner error: the dry-run merged curation straight into `e7ddd8c`, not on top of merges 1–2. A
+composed replay (1→2→3→4→5, in a throwaway worktree) shows the **complete** conflict set. All of it
+is in merge 3; **merges 4 and 5 are clean on top of a resolved merge 3**. Rules for the three files
+not covered above:
+
+**5. `.gitignore`: union.** Take the `ebe7c3e` (P0-5) block. It's a superset: it adds
+`Claude outputs/` and `atr_plan/` to curation's `.fuse_hidden*` and `data/ajaib_raw/`. Check that
+every curation pattern is present once, and don't duplicate any.
+
+**6. `deploy/crontab`: union, both blocks verbatim.**
+- The J1–J5 block (from owner-todo-jobs) goes first, then the `FWD-PM-BANK-001` recorder block
+  (from curation; it's already live in the installed crontab at 09:40).
+- J2 stays in the *file*. It's only left out of the install block, per the cron section.
+- `test_cron_contract.py` must pass.
+
+**7. `TODO.md` (status notes, not a governance record).** For each conflicting item (P0-2, P0-3,
+P0-4, P0-5, P2-3):
+- Keep the `ebe7c3e` (P0/P1 ground-truth) text.
+- Mark it `[x]` if either side has it `[x]`.
+- Then append curation's dated "2026-10-01 (XPS-13)" sentences **verbatim** beneath it, as an
+  indented `_Also recorded on fix/telegram-curation (2026-10-01, XPS-13):_` note.
+- Drop curation's superseded pre-closure prose (the "[ ]" task descriptions). Nothing else is
+  rewritten.
+- P0-5 closes: `atr_plan/` and `Claude outputs/` are gitignored by the P0-5 decision. They stay
+  untracked on disk.
+
+**Merge-3 tip:** use `origin/fix/telegram-curation` as pushed (it now also carries the two brief
+commits `64cdd1f` and `04d412b`, docs only). Keep your merges 1–2 (`f085c21`, `ebe7c3e`); don't
+redo them.
+
+**If DECISION_LOG conflicts again at merge 4** (D-067 / D-068 next to the D-069 append), rule 2
+applies: keep the entries verbatim, in number order, with D-069 last.
+
+Rule 4 still stands: anything outside these files → STOP and report.
