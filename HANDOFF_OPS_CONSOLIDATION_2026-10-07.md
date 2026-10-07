@@ -174,8 +174,14 @@ list (not deleted); `items` keeps exactly 23 Oct, 28 Oct, 31 Oct.
 
 ## 5. The owner's switch procedure (for the next 5001 restart)
 
-State checked read-only in the production tree (`~/10 Projects/idx-walkforward-5001`, currently on
-`fix/telegram-curation` @ `3322795`, service `idx-walkforward.service` running):
+State checked read-only in the production tree (`~/10 Projects/idx-walkforward-5001`, on
+`fix/telegram-curation`, service `idx-walkforward.service` running):
+
+> **Addendum (same day, after the push):** the production HEAD moved again during execution —
+> `3322795` → `eba109b` (a docs-only commit by the owner's session, descendant of `3322795`).
+> Every claim below was re-verified against `eba109b`: same five modified files, all ride along;
+> the 101 tip additions still have zero collisions with the production disk. The conclusions are
+> unchanged; only the HEAD hash cited above is stale.
 
 - **Tracked files with uncommitted edits:** the five brief docs (`ZCODE_BRIEF_P0_P1…`,
   `ZCODE_BRIEF_P3…`, `ZCODE_BRIEF_P4…`, `ZCODE_NOTE_MIMOSA…`,
