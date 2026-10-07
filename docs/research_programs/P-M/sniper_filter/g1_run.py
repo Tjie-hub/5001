@@ -125,6 +125,16 @@ def run_pipeline(df: pd.DataFrame, first_pos: dict, val_mask: pd.Series,
                 for c in CONFIGS}
     sel_val = {c: sel_full[c][val_mask] for c in CONFIGS}
     sel_test = {c: sel_full[c][test_mask] for c in CONFIGS}
+    # Revision 2 V2: per-configuration fallback-tier usage
+    tier_counts = {}
+    for c in CONFIGS:
+        t = SF.select_tiers(scores[c], df["pos"], df["fill_pos"])
+        tier_counts[c] = {
+            "window": int((t == SF.SELECT_TIER_WINDOW).sum()),
+            "all_known": int((t == SF.SELECT_TIER_ALL_KNOWN).sum()),
+            "unselected": int((t == SF.SELECT_TIER_UNSELECTED).sum()),
+            "unscored": int(scores[c].isna().sum()),
+        }
 
     # M1 C choice on validation mean R of selected setups (frozen rule)
     val_choice = {}
@@ -316,6 +326,7 @@ def run_pipeline(df: pd.DataFrame, first_pos: dict, val_mask: pd.Series,
         "paired_vs_M0_nw_t_all_configs": paired,
         "year_by_year": year_table,
         "feature_quintile_spreads": quintiles,
+        "selection_tier_counts": tier_counts,
         "bars": {"primary": {"n": SF.CENSUS_N_PRIMARY, "bar": SF.BAR_PRIMARY},
                  "secondary": {"n": SF.CENSUS_N_SECONDARY, "bar": SF.BAR_SECONDARY}},
         "synthetic": synth,

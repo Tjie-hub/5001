@@ -48,12 +48,14 @@ M2_PARAMS = dict(max_depth=3, learning_rate=0.1, max_iter=200,
 FEATURES = ("zone_touches", "planned_rr", "zone_width_atr", "zone_stop_atr",
             "close_ma20_atr", "close_ma50_atr", "ma200_slope", "park60",
             "ret126", "mkt_above_ma200")
-# R8 (Revision 1): the census depth is UNRESOLVED — hardening carries 276
-# (~3.06), the unratified recount (broad_search_v2 RECOUNT_W0 + CENSUS_NOTE)
-# carries 561 (bar 3.2745). The PRIMARY pass bar freezes at the stricter count:
-CENSUS_BASE_PRIMARY = 561            # unratified recount (RECOUNT_W0/CENSUS_NOTE)
-CENSUS_N_PRIMARY = CENSUS_BASE_PRIMARY + 4   # 565; exact E[max|Z|] = BAR_PRIMARY
-BAR_PRIMARY = 3.2765                 # frozen; exact emax_abs_z(565) = 3.2765 (561 -> 3.2745 reproduced)
+# R8 (Revision 1) + V1 (Revision 2, owner ruling "sniper 3.29"): the census
+# depth is resolved at the COMPLETE count — the 561 recount plus the three
+# items it missed (HYP-PM-0015's 6 configurations, the BOS/trendline study's
+# 8, the exit study's 20 at its upper bound) = 595; breakdown in
+# DECISION_DRAFT_CENSUS_RATIFICATION_2026-10-07.md (@ 2937488, expected D-071).
+CENSUS_BASE_PRIMARY = 595            # the complete census (ratification draft)
+CENSUS_N_PRIMARY = CENSUS_BASE_PRIMARY + 4   # 599; exact E[max|Z|] = BAR_PRIMARY
+BAR_PRIMARY = 3.2931                 # exact emax_abs_z(599) = 3.2931 (assert vs computed)
 CENSUS_N_SECONDARY = 280             # hardening count (D-070 context)
 BAR_SECONDARY = 3.07                 # exact E[max|Z|] @ 280 = 3.0713 (secondary line)
 # R6 (Revision 1): the G1 fingerprint gate runs against this READ-ONLY SNAPSHOT
@@ -240,15 +242,20 @@ def m0_score(ft: pd.DataFrame) -> pd.Series:
     return s
 
 
-def select_mask(score: pd.Series, pos: pd.Series, fill_pos: pd.Series) -> pd.Series:
-    """The frozen selection rule: score >= the 60th percentile of the scores of
-    the setups in the trailing RANK_WINDOW sessions strictly before s whose
-    fill was already known (fill bar index < p(s) — Revision 1 R5); < 5 prior
-    scored setups -> the percentile over ALL known prior scored setups; none ->
-    not selected (PREDECLARATION §5). Call ONCE per configuration on the FULL
-    score series (every scored setup, 2016 onward) and index into val/test/PBO
-    afterwards — never on a split subset (Revision 1 R1: subset windows start
-    cold and violate §5)."""
+SELECT_TIER_WINDOW = 0        # trailing-250 known-fill window (the primary rule)
+SELECT_TIER_ALL_KNOWN = 1     # fallback: ALL prior known-fill setups (any count >= 1)
+SELECT_TIER_UNSELECTED = -1   # no known prior scored setup at all
+
+
+def _select_with_tier(score: pd.Series, pos: pd.Series, fill_pos: pd.Series):
+    """The frozen selection rule + the tier used at each setup (Revision 2 V2:
+    the old final fallback over ALL prior scored setups — fills known or not —
+    reintroduced the R5 leak and is DELETED). Tier chain:
+      1. SELECT_TIER_WINDOW      score >= q60 of the trailing-250 known-fill scores;
+      2. SELECT_TIER_ALL_KNOWN   < 5 known in-window -> q60 of ALL prior known-fill
+                                 scores (any count >= 1);
+      3. SELECT_TIER_UNSELECTED  no known prior scored setup -> not selected.
+    """
     order = pd.DataFrame({"score": score, "pos": pos, "fill": fill_pos}) \
         .dropna(subset=["score"])
     order = order.sort_values("pos", kind="mergesort")
@@ -256,19 +263,35 @@ def select_mask(score: pd.Series, pos: pd.Series, fill_pos: pd.Series) -> pd.Ser
     posv = order["pos"].values.astype(np.int64)
     fillv = order["fill"].values.astype(np.int64)
     out = pd.Series(False, index=score.index)
+    tier = pd.Series(SELECT_TIER_UNSELECTED, index=score.index, dtype=int)
     for i in range(len(order)):
         p = posv[i]
         m = (posv >= p - RANK_WINDOW) & (posv < p) & (fillv < p)
         prior = arr[m]
-        if len(prior) < SELECT_MIN_PRIOR:
-            mk = posv < p
-            prior = arr[mk & (fillv < p)]
-            if len(prior) < SELECT_MIN_PRIOR:
-                prior = arr[mk]          # declared fallback: all prior scored
-        if len(prior) == 0:
+        if len(prior) >= SELECT_MIN_PRIOR:
+            tier[order.index[i]] = SELECT_TIER_WINDOW
+            out[order.index[i]] = arr[i] >= np.quantile(prior, SELECT_QUANTILE)
             continue
-        out[order.index[i]] = arr[i] >= np.quantile(prior, SELECT_QUANTILE)
-    return out
+        mk = (posv < p) & (fillv < p)
+        prior = arr[mk]
+        if len(prior) >= 1:
+            tier[order.index[i]] = SELECT_TIER_ALL_KNOWN
+            out[order.index[i]] = arr[i] >= np.quantile(prior, SELECT_QUANTILE)
+        # else: tier stays UNSELECTED
+    return out, tier
+
+
+def select_mask(score: pd.Series, pos: pd.Series, fill_pos: pd.Series) -> pd.Series:
+    """The frozen selection rule (see _select_with_tier for the tier chain).
+    Call ONCE per configuration on the FULL score series (every scored setup,
+    2016 onward) and index into val/test/PBO afterwards — never on a split
+    subset (Revision 1 R1: subset windows start cold and violate §5)."""
+    return _select_with_tier(score, pos, fill_pos)[0]
+
+
+def select_tiers(score: pd.Series, pos: pd.Series, fill_pos: pd.Series) -> pd.Series:
+    """Which fallback tier each setup used (census/G1 reporting; Revision 2 V2)."""
+    return _select_with_tier(score, pos, fill_pos)[1]
 
 
 def era_of(month: str) -> str:
@@ -327,6 +350,18 @@ def census_g0() -> dict:
         kinds[ev["kind"]] = kinds.get(ev["kind"], 0) + 1
     ft = feature_table(P, I_by_stock, pop, mkt, mkt_ma200)
     ft = add_ranks(ft)
+    # Revision 2 V2: selection-fallback tier usage (counts only). M0 is
+    # scoreable WITHOUT outcomes (it needs only the ranks), so its tier
+    # distribution is reported here; the learned configurations' tiers are
+    # reported in the G1 RESULT (they need fitted models).
+    m0 = m0_score(ft)
+    tiers_m0 = select_tiers(m0, ft["pos"], ft["fill_pos"])
+    tier_counts_m0 = {
+        "window": int((tiers_m0 == SELECT_TIER_WINDOW).sum()),
+        "all_known": int((tiers_m0 == SELECT_TIER_ALL_KNOWN).sum()),
+        "unselected": int((tiers_m0 == SELECT_TIER_UNSELECTED).sum()),
+        "unscored_m0": int(m0.isna().sum()),
+    }
     # rank-fallback counts: the raw value is used where the rank would be
     # undefined (no prior KNOWN setup in the window, or a NaN own value) — C-2
     fb = {}
@@ -361,6 +396,9 @@ def census_g0() -> dict:
         "n_setups_total_events": kinds.get("setup", 0) + kinds.get("setup_while_locked", 0),
         "feature_nan_counts": {f: int(ft[f].isna().sum()) for f in FEATURES},
         "rank_fallback_counts": fb,
+        "selection_tier_counts_m0": tier_counts_m0,
+        "selection_tiers_note": "M0 tiers (outcome-free); learned configs' tiers "
+                                "are reported in the G1 RESULT (Revision 2 V2)",
         "census_n_primary": CENSUS_N_PRIMARY,
         "census_n_secondary": CENSUS_N_SECONDARY,
         "configurations": 4,

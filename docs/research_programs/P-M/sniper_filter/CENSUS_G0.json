@@ -74,11 +74,18 @@
   "ret126": 1,
   "mkt_above_ma200": 1
  },
- "census_n_primary": 565,
+ "selection_tier_counts_m0": {
+  "window": 3676,
+  "all_known": 5,
+  "unselected": 1,
+  "unscored_m0": 0
+ },
+ "selection_tiers_note": "M0 tiers (outcome-free); learned configs' tiers are reported in the G1 RESULT (Revision 2 V2)",
+ "census_n_primary": 599,
  "census_n_secondary": 280,
  "configurations": 4,
- "bar_primary_exact": 3.2765,
- "bar_primary_frozen": 3.2765,
+ "bar_primary_exact": 3.2931,
+ "bar_primary_frozen": 3.2931,
  "bar_secondary_exact": 3.0713,
  "bar_secondary_frozen": 3.07,
  "gates": {
@@ -86,6 +93,6 @@
   "g1": "SNIPER_FILTER_G1_APPROVED=1 required"
  },
  "seed": 20261007,
- "generated_utc": "2026-10-07T08:19:53.787716+00:00",
- "runtime_minutes": 3.0
+ "generated_utc": "2026-10-07T08:50:04.230918+00:00",
+ "runtime_minutes": 3.1
 }

@@ -1,5 +1,32 @@
 # HANDOFF_G0 — sniper setup filter (HYP-PM-0016 draft): G0 frozen, STOP
 
+**Revision 2 (2026-10-07): Revision 1 (`b3dd0bc`) ACCEPTED on R1–R7; two owner-ordered changes
+applied per `ZCODE_BRIEF_SNIPER_G0_REVISION2_2026-10-07.md` (@ 5f8798a), re-frozen with a new
+sidecar, recorded in `PREDECLARATION.md` §12. Still read NO outcomes; still gated on
+`SNIPER_FILTER_G1_APPROVED=1`; STOP for the owner's G1 approval.**
+
+## Revision 2: what changed
+
+- **V1 — the primary bar is the COMPLETE census (owner ruling "sniper 3.29").**
+  `CENSUS_BASE_PRIMARY` 561 → **595** (the 561 recount plus the three items it missed:
+  HYP-PM-0015's 6 configurations, the BOS/trendline study's 8, the exit study's 20 at its upper
+  bound — breakdown in `DECISION_DRAFT_CENSUS_RATIFICATION_2026-10-07.md`, @ 2937488, expected
+  D-071). `CENSUS_N_PRIMARY` = **599**; `BAR_PRIMARY` = **3.2931**, computed by the frozen
+  `emax_abs_z` and test-asserted to equal `round(emax_abs_z(599), 4)`. The secondary line is
+  unchanged (280 → 3.07, report-only, can never pass).
+- **V2 — the last fill-status leak closed.** Revision 1's `select_mask` kept a final fallback
+  over all prior scored setups regardless of fill status — reintroducing the R5 leak. Deleted:
+  the chain is now (1) trailing-250 known-fill window → (2) all prior known-fill setups
+  (any count ≥ 1) → (3) not selected. `select_tiers` reports which tier each setup used; the
+  census reports M0's tier distribution (outcome-free) and the G1 RESULT reports each
+  configuration's. New tests: all-late predecessors → unselected (the deleted leak would have
+  selected); single known prior → the all-known tier.
+- Tests: **18 (all pass)**. Census re-run (counts only) and the synthetic dry run re-executed
+  under Revision 2. **Superseded Revision-1 sidecar:** `PREDECLARATION.sha256` @ `b3dd0bc`,
+  file sha256 `18550eb7615a816392346a4114acf6160be1258b8b46d5a4e1d4d1918a9696fc`.
+
+---
+
 **Revision 1 (2026-10-07): G0 was NOT approved as originally frozen (planner review of
 `72b4bd5`). The fixes below (R1–R8, per `ZCODE_BRIEF_SNIPER_G0_REVISION_2026-10-07.md` +
 owner ruling `560522a`) are applied in place, re-frozen with a new sidecar, and recorded in

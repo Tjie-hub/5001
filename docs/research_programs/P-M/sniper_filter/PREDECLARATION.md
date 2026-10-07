@@ -83,9 +83,12 @@ value stays NaN. ADV is the population floor, so it is not a feature.
 Take a setup if its score is in the **top 40%** of the scores of the filled E-SN setups in the
 **trailing 250 sessions before s whose fill was already known by s** (the §3 reference set; the
 threshold is the 60th percentile of those prior scores). If fewer than 5 prior scored setups are
-known in the window, the threshold falls back to the 60th percentile over ALL known scored setups
-with setup day strictly before s (declared). If no prior scored setup exists at all, the setup is
-not selected (counted). **R1: the mask is computed ONCE per configuration on the FULL score
+known in the window, the threshold falls back to the 60th percentile over ALL prior KNOWN scored
+setups (any count ≥ 1). If no known prior scored setup exists at all, the setup is NOT selected
+(counted). **(Revision 2 V2: the previous final fallback over all prior scored setups regardless
+of fill status is DELETED — it reintroduced the R5 leak; a setup whose fill comes after s can
+never enter any fallback tier.)** The tier used at each setup is reported (census: M0's tier
+distribution, outcome-free; G1 RESULT: per configuration). **R1: the mask is computed ONCE per configuration on the FULL score
 series (every scored setup, 2016 onward) and then indexed into validation, test and PBO — never
 on a split subset, whose trailing windows would start cold and violate this section.** PIT-tested
 (mutation + full-series-equality tests).
@@ -106,12 +109,15 @@ on a split subset, whose trailing windows would start cold and violate this sect
 ## 7. Pass bar (fixed now; evaluated on TEST only; as amended by Revision 1 R8 + owner ruling 560522a)
 
 1. **Selected minus all filled:** mean R difference > 0, computed as the monthly mean difference
-   with a **Newey-West t (lag 3) ≥ the PRIMARY deflation bar 3.2765** (R8, owner-ruled: census
-   N = 561 + 4 configurations = **565**, exact `emax_abs_z(565)` = 3.2765; the stricter count
-   governs by default). The 280-count bar (**3.07**, exact 3.0713 — the hardening D-070-context
-   count) is a **secondary reporting line only and can never pass a configuration** (owner
-   ruling 560522a); the RESULT reports `would_pass_under_secondary_bar_report_only` beside each
-   verdict. Ratifying the 561 census in DECISION_LOG is a separate owner filing.
+   with a **Newey-West t (lag 3) ≥ the PRIMARY deflation bar 3.2931** (Revision 2 V1, owner
+   ruling "sniper 3.29": the COMPLETE census — N = 595 + 4 configurations = **599**, exact
+   `emax_abs_z(599)` = 3.2931. The 595 base = the 561 recount plus the three items it missed:
+   HYP-PM-0015's 6, the BOS/trendline study's 8, and the exit study's 20 at its upper bound;
+   breakdown in `DECISION_DRAFT_CENSUS_RATIFICATION_2026-10-07.md`, @ 2937488, expected D-071).
+   The 280-count bar (**3.07**, exact 3.0713 — the hardening D-070-context count) is a
+   **secondary reporting line only and can never pass a configuration**; the RESULT reports
+   `would_pass_under_secondary_bar_report_only` beside each verdict. Ratifying the census in
+   DECISION_LOG is a separate owner filing.
 2. **The selected setups' own mean net R > 0.**
 3. **Both halves:** the difference is > 0 in 2021-10..2023-12 AND in 2024-01..end (each half > 0).
 4. **"Learning adds value" (the validation-chosen M1 and M2 only):** paired monthly t ≥ 2 vs M0
@@ -136,11 +142,10 @@ diagnostics); and the headline (condition-1/2 numbers) recomputed with fill-bar 
 ## 8. Governance (draft, do not file)
 
 - **Family:** Price-Learning **{L1}** (D-067). HYP-PM-0016 is a new member and inherits the {L1}
-  multiplicity. **Census (R8):** the depth is unresolved — hardening carries 276 (D-070 context;
-  D-070 adds no trials), the unratified recount (`broad_search_v2/recount/RECOUNT_W0` +
-  `CENSUS_NOTE`) carries 561. **The primary pass bar freezes at the stricter count: 561 + 4 =
-  565 → 3.2765**; the 280-count bar (3.07) is the secondary line. Ratifying the 561 census is a
-  separate owner filing (not this study's act).
+  multiplicity. **Census (V1):** the primary count is the COMPLETE census **595 + 4 = 599 →
+  bar 3.2931** (the ratification breakdown: `DECISION_DRAFT_CENSUS_RATIFICATION_2026-10-07.md`,
+  @ 2937488); the 280-count bar (3.07) is the secondary report-only line. Ratifying the census
+  in DECISION_LOG is a separate owner filing (not this study's act).
 - **Why HYP-PM-0016 is admitted at all: D-070** (§Decision 2) — the last admitted price-feature
   study, because it filters an existing owner entry rule and its pre-registered baseline is a risk
   measure (low volatility).
@@ -174,7 +179,7 @@ check, on synthetic panels and hand-built trades. Run:
 | C-5 | **(superseded by Revision 1 R7)** feature 10 is `mkt_above_ma200` — the equal-weight market index cumulated from the owner-screen universe's mean daily close-to-close return (no IHSG dependence; full history) |
 | C-6 | monthly aggregations (the Newey-West series, the halves, PBO matrix, year-by-year) key on the SETUP month (`tr["month"]`, the signal month — identical to the exit study's era keying) |
 | C-7 | the pinned panel ends 2026-10-06; test period = 2021-10..latest complete setup on that panel |
-| C-8 | **(superseded by Revision 1 R8)** primary census N = 565 (561 + 4), bar 3.2765; the 280 count (3.07) is the secondary report-only line |
+| C-8 | **(superseded by Revision 2 V1)** primary census N = 599 (595 + 4), bar 3.2931; the 280 count (3.07) is the secondary report-only line |
 
 Nothing else deviates from the brief. Any change to the frozen files after approval is a new,
 disclosed, re-frozen run.
@@ -201,7 +206,7 @@ G0 sidecar is `PREDECLARATION.sha256` @ `72b4bd5`, file sha256
   condition 5 is one grid-level PBO; the VERDICT copies the flags.
 - **R4 — the "also report" list implemented.** Year-by-year table per configuration, per-feature
   R-quintile spreads (validation and test separately), the no-fill-bar robustness row, win rate.
-  Proven on a synthetic dry run (`RESULT_SYNTHETIC_20261007T082258Z.json`, fake R — no real
+  Proven on a synthetic dry run (`RESULT_SYNTHETIC_20261007T085317Z.json`, fake R — no real
   outcome touched).
 - **R5 — fill-aware, strictly-earlier reference sets.** Ranks and thresholds now use setups with
   setup pos < p(s) AND fill bar index < p(s) (a fill watched for 20 sessions is not knowable at s
@@ -227,3 +232,31 @@ G0 sidecar is `PREDECLARATION.sha256` @ `72b4bd5`, file sha256
 Census re-run under the R5 reference-set definition (counts only — the filled-setup count is
 unchanged at 3,682; the per-feature fallback/NaN counts are refreshed). Tests: 17 (all pass).
 **Still gated on `SNIPER_FILTER_G1_APPROVED=1`; STOP for approval.**
+
+## 12. Revision 2 (2026-10-07, disclosed pre-approval revision — planner review of Revision 1 `b3dd0bc`, owner rulings "sniper 3.29")
+
+**Status: R1–R7 of Revision 1 accepted; two changes ordered, then re-freeze and STOP. Not a
+re-run; no outcome touched.** **The superseded Revision-1 sidecar is `PREDECLARATION.sha256` @
+`b3dd0bc`, file sha256 `18550eb7615a816392346a4114acf6160be1258b8b46d5a4e1d4d1918a9696fc`**
+(git history).
+
+- **V1 — primary bar = the complete census.** `CENSUS_BASE_PRIMARY` 561 → **595**: the 561
+  recount plus the three items it missed (HYP-PM-0015's 6 configurations, the BOS/trendline
+  study's 8, the exit study's 20 at its upper bound) — breakdown in
+  `DECISION_DRAFT_CENSUS_RATIFICATION_2026-10-07.md` (@ 2937488 on `ops/hardening-2026-07-10`,
+  expected to file as D-071). `CENSUS_N_PRIMARY` = **599**; `BAR_PRIMARY` = **3.2931** —
+  computed by the frozen `emax_abs_z` and asserted in the tests to equal
+  `round(emax_abs_z(599), 4)` ("compute it, don't type it"). Secondary line unchanged
+  (280 → 3.07, report-only, can never pass). §7, §8 and C-8 updated.
+- **V2 — the last fill-status leak closed.** The Revision-1 `select_mask` kept a final fallback
+  over ALL prior scored setups regardless of fill status — reintroducing exactly the R5 leak.
+  Deleted. The fallback chain is now: (1) the trailing-250 known-fill window; (2) if that has
+  < 5, ALL prior known-fill setups (any count ≥ 1); (3) if none, the setup is not selected
+  (counted). §5 amended. New tests: a probe whose only predecessors all fill after it is NOT
+  selected (the deleted leak would have selected it), and a single known prior selects via the
+  all-known tier. **Tier reporting added:** `select_tiers` exposes which tier each setup used;
+  the census reports the M0 tier distribution (outcome-free) and the G1 RESULT reports each
+  configuration's.
+- Census re-run (counts only) and the synthetic dry run re-executed under Revision 2. Tests:
+  **18 (all pass)**. **Still gated on `SNIPER_FILTER_G1_APPROVED=1`; STOP for the owner's G1
+  approval.**

@@ -239,8 +239,16 @@ def test_selection_60pct_arithmetic_and_fallbacks():
     scores, pos, fill = _score_frame([float(i) for i in range(10)],
                                      list(range(1000, 1010)))
     sel = SF.select_mask(scores, pos, fill)
+    tiers = SF.select_tiers(scores, pos, fill)
     assert bool(sel.iloc[0]) is False             # no priors at all -> not selected
-    assert bool(sel.iloc[1]) is True              # 1.0 >= quantile([0.0], .6) = 0.0
+    # iloc[1] (pos 1001): its only predecessor fills AT 1001 — the probe's own
+    # day — so it is NOT a known prior (V2): unselected, not leaked in
+    assert bool(sel.iloc[1]) is False
+    assert tiers.iloc[1] == SF.SELECT_TIER_UNSELECTED
+    # iloc[2] (pos 1002): one KNOWN prior (pos 1000, filled 1001 < 1002) ->
+    # tier 2 (all-known), threshold q60([0.0]) = 0.0 -> selected
+    assert bool(sel.iloc[2]) is True
+    assert tiers.iloc[2] == SF.SELECT_TIER_ALL_KNOWN
     assert bool(sel.iloc[-1]) == (9.0 >= np.quantile(np.arange(9.0), 0.60))
     # fallback: 4 prior setups (< 5) -> threshold over ALL prior setups
     scores3, pos3, fill3 = _score_frame([1.0, 2.0, 3.0, 4.0, 5.0],
@@ -267,6 +275,39 @@ def test_selection_excludes_late_filling_setups_from_the_threshold():
     # threshold to q60([1,2,3,4,5,9]) = 4.0 -> NOT selected: the bug is real
     assert np.quantile([1.0, 2.0, 3.0, 4.0, 5.0, 9.0], 0.60) == pytest.approx(4.0)
     assert (3.7 >= 4.0) is False
+
+
+def test_selection_late_filling_prior_never_enters_any_fallback():
+    """V2: the old final fallback (all prior scored setups, fills known or
+    not) is deleted. (a) with ALL priors filling after s the probe is not
+    selected at all; (b) with exactly one known prior, tier 2 (all-known)
+    is used and the late filler never sets the threshold."""
+    # (a) three priors, ALL fill after the probe (probe at 90, fills at 91):
+    scores, pos, fill = _score_frame([1.0, 2.0, 9.0],
+                                     [50, 60, 70],
+                                     fills=[95, 96, 97])
+    scores.loc[(0, 90)] = 3.7
+    pos.loc[(0, 90)] = 90
+    fill.loc[(0, 90)] = 91
+    sel = SF.select_mask(scores, pos, fill)
+    tiers = SF.select_tiers(scores, pos, fill)
+    assert bool(sel.loc[(0, 90)]) is False          # no KNOWN prior at all
+    assert tiers.loc[(0, 90)] == SF.SELECT_TIER_UNSELECTED
+    # (b) one KNOWN prior (score 1.0, fills 51 < 90) + two late fillers:
+    scores2, pos2, fill2 = _score_frame([1.0, 2.0, 9.0],
+                                        [50, 60, 70],
+                                        fills=[51, 96, 97])
+    scores2.loc[(0, 90)] = 3.7
+    pos2.loc[(0, 90)] = 90
+    fill2.loc[(0, 90)] = 91
+    sel2 = SF.select_mask(scores2, pos2, fill2)
+    tiers2 = SF.select_tiers(scores2, pos2, fill2)
+    assert bool(sel2.loc[(0, 90)]) is True          # 3.7 >= q60([1.0]) = 1.0
+    assert tiers2.loc[(0, 90)] == SF.SELECT_TIER_ALL_KNOWN
+    # the threshold came from the KNOWN prior only: the late 9.0 (q60([1,2,9])
+    # = 2.0 would select anything >= 2.0; the late 2.0 variant would give 2.0
+    # too — none of them can set the tier-2 threshold here
+    assert np.quantile([1.0], 0.60) == 1.0
 
 
 def test_selection_identical_on_full_series_and_split_subset():
@@ -321,13 +362,15 @@ def test_emax_abs_z_reproduces_the_repo_values_and_the_frozen_bars():
     assert SF.emax_abs_z(252, steps=200_000) == pytest.approx(3.0395, abs=5e-4)
     assert SF.emax_abs_z(266, steps=200_000) == pytest.approx(3.0558, abs=5e-4)
     assert SF.emax_abs_z(270, steps=200_000) == pytest.approx(3.0603, abs=5e-4)
-    # R8 + owner ruling 560522a: the PRIMARY bar is the stricter census
-    # (561 + 4 = 565); the exact 561 value reproduces the recount's 3.2745
+    # R8 + V1 (Revision 2, owner ruling "sniper 3.29"): the PRIMARY bar is the
+    # COMPLETE census (595 + 4 = 599); the exact 561 value reproduces the
+    # recount's 3.2745
     assert SF.emax_abs_z(561, steps=200_000) == pytest.approx(3.2745, abs=5e-4)
-    assert SF.CENSUS_N_PRIMARY == 565
-    assert SF.BAR_PRIMARY == 3.2765
-    assert SF.emax_abs_z(SF.CENSUS_N_PRIMARY, steps=200_000) == pytest.approx(
-        SF.BAR_PRIMARY, abs=5e-4)
+    assert SF.CENSUS_BASE_PRIMARY == 595 and SF.CENSUS_N_PRIMARY == 599
+    # the frozen constant must equal the COMPUTED exact integral (V1: "compute
+    # it, don't type it")
+    assert SF.BAR_PRIMARY == round(SF.emax_abs_z(SF.CENSUS_N_PRIMARY), 4)
+    assert SF.BAR_PRIMARY == 3.2931
     # the secondary line is report-only and can never pass a configuration
     assert SF.CENSUS_N_SECONDARY == 280
     assert SF.emax_abs_z(280, steps=200_000) == pytest.approx(3.0713, abs=5e-4)

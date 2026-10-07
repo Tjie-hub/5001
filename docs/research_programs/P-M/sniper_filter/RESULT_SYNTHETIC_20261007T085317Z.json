@@ -18,7 +18,7 @@
    "pass_conditions": {
     "c1_nw_t_ge_bar_primary": false,
     "c1_nw_t_value": 0.3142570806245393,
-    "c1_bar_primary": 3.2765,
+    "c1_bar_primary": 3.2931,
     "c1_bar_secondary_line": {
      "bar": 3.07,
      "would_pass": false
@@ -48,7 +48,7 @@
    "pass_conditions": {
     "c1_nw_t_ge_bar_primary": false,
     "c1_nw_t_value": 0.6011136866241795,
-    "c1_bar_primary": 3.2765,
+    "c1_bar_primary": 3.2931,
     "c1_bar_secondary_line": {
      "bar": 3.07,
      "would_pass": false
@@ -80,7 +80,7 @@
    "pass_conditions": {
     "c1_nw_t_ge_bar_primary": false,
     "c1_nw_t_value": -1.269586457627016,
-    "c1_bar_primary": 3.2765,
+    "c1_bar_primary": 3.2931,
     "c1_bar_secondary_line": {
      "bar": 3.07,
      "would_pass": false
@@ -112,7 +112,7 @@
    "pass_conditions": {
     "c1_nw_t_ge_bar_primary": false,
     "c1_nw_t_value": -0.43543908882407745,
-    "c1_bar_primary": 3.2765,
+    "c1_bar_primary": 3.2931,
     "c1_bar_secondary_line": {
      "bar": 3.07,
      "would_pass": false
@@ -1013,10 +1013,36 @@
    }
   }
  },
+ "selection_tier_counts": {
+  "M0": {
+   "window": 63,
+   "all_known": 4,
+   "unselected": 57,
+   "unscored": 56
+  },
+  "M1a": {
+   "window": 63,
+   "all_known": 4,
+   "unselected": 57,
+   "unscored": 56
+  },
+  "M1b": {
+   "window": 63,
+   "all_known": 4,
+   "unselected": 57,
+   "unscored": 56
+  },
+  "M2": {
+   "window": 63,
+   "all_known": 4,
+   "unselected": 57,
+   "unscored": 56
+  }
+ },
  "bars": {
   "primary": {
-   "n": 565,
-   "bar": 3.2765
+   "n": 599,
+   "bar": 3.2931
   },
   "secondary": {
    "n": 280,
@@ -1030,8 +1056,8 @@
  "dataset_fingerprint": null,
  "g1_fingerprint": "f42275e34cb4525d3101fdf3effb14674b7192627db7b6a77a2bac9c5da5e73e",
  "snapshot_path": "/home/tjiesar/scratch/sniper_filter_g1/walkforward_snapshot_2026-10-07.db",
- "generated_utc": "2026-10-07T08:23:03.729043+00:00",
- "runtime_seconds": 5.4,
+ "generated_utc": "2026-10-07T08:53:26.561425+00:00",
+ "runtime_seconds": 9.1,
  "gates": {
   "env": "SYNTHETIC dry run \u2014 no real outcome touched",
   "single_run": false
