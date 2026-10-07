@@ -159,3 +159,71 @@ The hardening corpus uses **N = 276, bar ≈ 3.06** (D-064, D-067). But v2's `re
 - In this task, and in Task 1's HANDOFF_G0, report minimum detectable effects and the frozen bar
   **under both**, and say which one the predeclaration freezes.
 - Recommend which is correct, with reasons. **Don't** file anything, and don't pick silently.
+
+---
+
+## Amendment 2: class O, opening-auction order imbalance (owner-approved 2026-10-07)
+
+**Mechanism to state:** IDX opens with a pre-opening call auction (08:45–08:59). When orders at
+the open are imbalanced, liquidity providers fade the imbalance, so the price reverses after the
+open. This is a liquidity-provision mechanism, not a breakout pattern.
+
+**Prior evidence to cite:**
+- an early Pacific-Basin study of Indonesian intraday volatility (*Price volatility of Indonesian
+  stocks*, PBFJ 1995) found reversals dominate continuations at the open and close
+- the US opening-range-breakout literature finds the opposite (momentum): Zarattini–Aziz–Barbon on
+  ORB, and Gao–Han–Li–Zhou on intraday momentum
+- an independent 2026 replication of ORB found it gross-positive but **net zero**
+
+State which of these applies to IDX, and why.
+
+**Data:** the minute-bar store `data/frozen/stockbit-flow-bars-v002/` (frozen, sha256
+`fa7f07b3…`, 2025-01-02 → 2026-04-28, 77.6M rows, on the production host only), plus the live
+`stockbit_flow_bars` in production `walkforward.db` for 2026-04-28 onward.
+
+Columns: `bar_time`, `price` (the last trade in the minute, not an OHLC bar), `buy_lot` /
+`sell_lot` / `buy_freq` / `sell_freq` / `net_value` / `delta`.
+
+- **Check first:** whether the lot and frequency columns are **cumulative within the day**. A quick
+  look suggests so. If they are, derive per-minute flow by differencing.
+- **Pre-open auction data:** say whether the auction's indicative price or imbalance exists anywhere
+  (the store starts at 09:00). If it doesn't, the imbalance proxy is the first-minute (09:00) signed
+  flow and the open-vs-previous-close gap.
+
+**Contamination disclosure (planner, 2026-10-07):** the planner has already read **descriptive**
+statistics on the frozen 2025-01 → 2026-04 IDX30 sample:
+- the per-15-minute volatility profile
+- the share of days whose high or low is set in the first 15 minutes (high 46.7%, low 33.8%,
+  either 75.6%)
+- the first-15-minute share of the day's range (median 41%)
+
+Those are not directional opening-move → later-return statistics, but the high-vs-low asymmetry
+is weakly directional. So:
+- treat **2025-01 → 2026-04-28 as SEEN** for class O
+- any later O test's confirmation sample is **2026-04-28 → onward** (live DB)
+- say how many sessions that gives today, and when it would reach a usable n
+
+**Report for O (feasibility only; no outcomes):**
+- **Counts:** sessions and ticker-days per universe (IDX30, LQ45, ADV20 ≥ Rp 10 bn) in the seen
+  window and the clean window.
+- **Imbalance proxy:** its definition, and the share of ticker-days where it can be computed.
+  Inputs (first-minute flow, gap) must be known by 09:01 at the latest.
+- **Power:** from pre-09:15 volatility only, i.e. the minute returns before the decision minute.
+  Give the smallest detectable mean reversal over 09:15 → 10:00 and 09:15 → close, at the bar,
+  under both censuses (276 / 561), with independent n and with n clustered by date.
+- **Cost reality:** IDX round-trip fees and tax of about 0.4%, plus the tick size relative to price
+  (0.3–1.3% on mid-priced names). Give the share of IDX30 / LQ45 ticker-days where one tick is
+  ≤ 0.2% of price.
+  - State plainly whether any intraday effect could beat costs.
+  - **The preferred framing is execution timing:** the owner's existing entries (sniper limits,
+    EOD-plan buys) choosing *when* in the first hour to execute, at no extra round trip. Follow X1's
+    overlay logic, while noting that X1 itself came back NULL.
+- **Prior coverage:** crypto ORB (port 5002, separate market, not counted); broad_search_v2
+  A-OPEN; the D-059 cost model; any `intraday` / `MTF` studies in the registries.
+- **A D-070 mechanism D-entry draft** (D-0xx) if O passes the above.
+
+**No outcomes:** no price after the decision minute (09:15 by default; declare it) may be used,
+for any ticker-day, in either window. Volatility comes only from minutes before the decision
+minute.
+
+Add O to `COMBINED_RANKING.md` next to classes A–N.
