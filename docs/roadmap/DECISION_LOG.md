@@ -2229,6 +2229,48 @@ literature comparison (gap 2: "PBO/CSCV stage; threshold literature default").
 - **FWD-PM-BANK-001** opened `2026-10-05T16:09:16+00:00`, cron 09:40; no back-fill (the 2026-09-24/29 firings
   are refused). The personal jurnal26 Telegram alert on the same rule is not the recorder and not evidence.
 
+### D-067 · P-M Price-Learning {L1} family opened; HYP-PM-0015 registered (price-learning cross-sectional ranking model); G0 frozen; G1 single run approved
+**Status:** RECORDED · **Date:** 2026-10-06 · **Type:** New family + registration + G0 freeze + G1 approval ·
+**Approval authority:** Owner, 2026-10-06, "yes, approve G0", on `P-M/ml_rank/HANDOFF_G0.md` (branch
+`research/ml-rank-2026-10` @ `f16aa9e`; PREDECLARATION.md sha256 `5d4dd3d81563…`), after planner review.
+
+- **Family.** Price-Learning opened as {L1}: fitted models combining OHLCV/volume features (no existing family
+  covers a learned combination; {T1} and {R1,R2} are fixed rules on the same data epoch). Registered count 0 -> 1.
+  Multiplicity is carried at program level: the 6 grid arms (M1 ridge x3, M2 HistGBR x3; M0 is an uncounted
+  baseline) enter the census at this filing, N 270 -> 276, which raises the bar for the NEXT gate, not this one.
+- **HYP-PM-0015.** One G1 walk-forward run: train 2001->, validation 2016-01..2021-09 (configuration chosen on
+  mean monthly rank IC), test 2021-10..latest complete month read once. PASS on test only if: net top-quintile
+  excess vs the EW base book > 0 with Newey-West t (lag 3) >= 3.06 (frozen; exact E[max|Z|] @ N=266 = 3.0558);
+  beats M0 paired t >= 2; PBO < 0.5; leave-one-year-out > 0; IHSG reported, not gating. If only M0 passes, M0 is
+  the finding. Null handling and the failure-row text are in `P-M/ml_rank/REGISTRATION_DRAFT.md` §4.
+- **Deviations acknowledged by the owner:** D-1 (beta/idiosyncratic volatility against the EW-panel market proxy,
+  because no IHSG exists before 2021-07), D-2..D-5 as declared in PREDECLARATION §13.
+- **Freeze condition (planner review).** PREDECLARATION.sha256 covers the predeclaration only; the driver and PIT
+  tests are frozen by the commit. G1 must run from `f16aa9e` with `ml_rank_model.py` byte-identical (sha256
+  `47752c25fcea…`) and record the commit and driver hash in the RESULT; any change re-opens G0.
+- **Boundaries.** Research-side only; production, ~/jurnal26 and `research/broad-search-v2-zcode` untouched;
+  G1 machine-gated on `ML_RANK_G1_APPROVED=1`.
+
+### D-068 · HYP-PM-0015 G1 NULL — FAILED (F2); Price-Learning {L1} question closed
+**Status:** RECORDED · **Date:** 2026-10-06 · **Type:** Result filing (predeclared null handling) ·
+**Approval authority:** Owner, 2026-10-06, "yes, file it", after planner review of `P-M/ml_rank/VERDICT.md`
+(commit `e3127dd`).
+
+- **Run.** One G1 run, `run_id 167749f2791f…`, git `f4a84df`, driver sha256 `47752c25fcea…` and PREDECLARATION
+  sha256 `5d4dd3d81563…` verified before and at run time (the D-067 freeze condition holds). Test 2021-10..2026-09,
+  60 months, read once.
+- **Result (net top-quintile excess vs the EW base book, Newey-West t lag 3; bar 3.06):** M0 +0.45%/mo t 1.20;
+  M1 ridge a10 +0.20% t 0.42; M2 HistGBR d3 +0.81% t 1.71 -> condition 1 fails for all. Beats-M0: M1 t -0.59, M2
+  t 0.78 -> condition 2 fails. PBO 0.51 -> condition 3 fails. Leave-one-year-out passes for M0 and M2 only. 2025
+  negative for all three. Rank IC positive (t 4.4-4.8) without converting into top-quintile net excess.
+- **Filing.** HYP-PM-0015 -> **FAILED (F2)**, FAILURE_REGISTRY **FAIL-PM-0015**. The "only M0 passes" clause is not
+  triggered (M0 fails condition 1). Price-Learning {L1} keeps its slot count 1 (X8) and the question closes at G1;
+  any new price-learning work is a new registration by formal amendment and inherits this multiplicity.
+- **Disclosures accepted:** +87 final rows for 2026-10-05 between G0 and G1 (post-cutoff, cannot enter any
+  feature, label or book return); one benign log-of-zero warning on suspended names (excluded by rule).
+- **Reading for the program:** price/volume-only learning reproduces "low volatility + momentum" and does not
+  clear the bar; the volatility-exclusion overlay (FWD-PM-VOLEX-001) remains the live price-based test.
+
 ### D-069 · Decision-number collision recorded: D-066 was assigned twice (2026-10-07)
 Two different decisions were filed as D-066 on separate branches and met at the 2026-10-07
 consolidation merge:
