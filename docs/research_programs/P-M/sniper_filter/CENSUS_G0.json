@@ -1,0 +1,88 @@
+{
+ "dataset_fingerprint": {
+  "max_date": "2026-10-06",
+  "total_rows": 1101826,
+  "sha256": "f42275e34cb4525d3101fdf3effb14674b7192627db7b6a77a2bac9c5da5e73e"
+ },
+ "g1_fingerprint": "f42275e34cb4525d3101fdf3effb14674b7192627db7b6a77a2bac9c5da5e73e",
+ "fingerprint_matches_g1fix": true,
+ "panel_pin": "2026-10-06",
+ "n_filled_setups": 3682,
+ "n_filled_by_era": {
+  "E1": 2253,
+  "E2": 1429
+ },
+ "n_filled_by_year": {
+  "2001": 5,
+  "2002": 14,
+  "2003": 24,
+  "2004": 42,
+  "2005": 73,
+  "2006": 80,
+  "2007": 128,
+  "2008": 42,
+  "2009": 82,
+  "2010": 161,
+  "2011": 140,
+  "2012": 162,
+  "2013": 135,
+  "2014": 152,
+  "2015": 79,
+  "2016": 153,
+  "2017": 156,
+  "2018": 113,
+  "2019": 131,
+  "2020": 121,
+  "2021": 360,
+  "2022": 296,
+  "2023": 187,
+  "2024": 222,
+  "2025": 343,
+  "2026": 281
+ },
+ "events": {
+  "setup": 86203,
+  "fill": 3682,
+  "setup_while_locked": 75682,
+  "superseded": 6760,
+  "out_of_window": 76,
+  "expired": 79
+ },
+ "n_setups_total_events": 161885,
+ "feature_nan_counts": {
+  "zone_touches": 0,
+  "planned_rr": 0,
+  "zone_width_atr": 0,
+  "zone_stop_atr": 0,
+  "close_ma20_atr": 0,
+  "close_ma50_atr": 0,
+  "ma200_slope": 0,
+  "park60": 0,
+  "ret126": 0,
+  "ihsg_above_ma200": 0
+ },
+ "rank_fallback_counts": {
+  "zone_touches": 1,
+  "planned_rr": 1,
+  "zone_width_atr": 1,
+  "zone_stop_atr": 1,
+  "close_ma20_atr": 1,
+  "close_ma50_atr": 1,
+  "ma200_slope": 1,
+  "park60": 1,
+  "ret126": 1,
+  "ihsg_above_ma200": 1
+ },
+ "census_n": 280,
+ "census_base": 276,
+ "configurations": 4,
+ "deflection_bar_exact": 3.0713,
+ "deflection_bar_frozen": 3.07,
+ "gates": {
+  "g0": "counts only; no outcome computed",
+  "g1": "SNIPER_FILTER_G1_APPROVED=1 required"
+ },
+ "seed": 20261007,
+ "generated_utc": "2026-10-07T06:33:07.074503+00:00",
+ "runtime_minutes": 2.9
+}
