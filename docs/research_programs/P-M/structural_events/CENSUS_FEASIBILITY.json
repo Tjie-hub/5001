@@ -1,0 +1,534 @@
+{
+ "generated_utc": "2026-10-07T06:45:28.316737Z",
+ "rule": "NO post-event price read; every price query filters date < decision_date",
+ "decision_date_convention": {
+  "A_tenderoffer": "tender_start",
+  "C_rightissue": "rightissue_cumdate",
+  "D_dividend": "dividend_cumdate",
+  "E_stocksplit": "stocksplit_cumdate",
+  "E_bonus": "stocksplit_cumdate",
+  "E_stock_reverse": "stocksplit_cumdate",
+  "F_warrant": "wrant_trading_from"
+ },
+ "adv_min": 10000000000.0,
+ "t_bar": 3.06,
+ "vol_window": 60,
+ "classes": {
+  "A_tenderoffer": {
+   "n_total": 165,
+   "n_decision_date_parsed": 165,
+   "n_missing_decision_date": 0,
+   "date_coverage_pct": 100.0,
+   "per_year_decision_date": {
+    "2015": 2,
+    "2016": 4,
+    "2017": 8,
+    "2018": 3,
+    "2019": 5,
+    "2020": 7,
+    "2021": 18,
+    "2022": 15,
+    "2023": 10,
+    "2024": 26,
+    "2025": 28,
+    "2026": 39
+   },
+   "n_multi_event_tickers": 19,
+   "max_events_one_ticker": 5,
+   "n_with_60_pre_bars": 126,
+   "frac_with_60_pre_bars_pct": 76.4,
+   "n_liquid_total_2009": 23,
+   "n_liquid_by_era": {
+    "E1_2009_2021_09": 1,
+    "E2_2021_10_2026": 22
+   },
+   "pre_event_vol60_median_daily": 0.03828,
+   "pre_event_vol60_iqr_daily": [
+    0.01443,
+    0.06077
+   ],
+   "mde_independent": {
+    "h5_independent_pct": 5.461,
+    "h10_independent_pct": 7.723,
+    "h20_independent_pct": 10.923
+   },
+   "mde_month_clustered": {
+    "h5_monthclustered_pct": 2.966,
+    "h10_monthclustered_pct": 4.194,
+    "h20_monthclustered_pct": 5.931
+   },
+   "n_distinct_event_months": 78
+  },
+  "C_rightissue": {
+   "n_total": 321,
+   "n_decision_date_parsed": 321,
+   "n_missing_decision_date": 0,
+   "date_coverage_pct": 100.0,
+   "per_year_decision_date": {
+    "2010": 2,
+    "2013": 1,
+    "2014": 4,
+    "2015": 21,
+    "2016": 31,
+    "2017": 31,
+    "2018": 28,
+    "2019": 21,
+    "2020": 17,
+    "2021": 39,
+    "2022": 45,
+    "2023": 23,
+    "2024": 14,
+    "2025": 15,
+    "2026": 29
+   },
+   "n_multi_event_tickers": 68,
+   "max_events_one_ticker": 8,
+   "n_with_60_pre_bars": 145,
+   "frac_with_60_pre_bars_pct": 45.2,
+   "n_liquid_total_2009": 61,
+   "n_liquid_by_era": {
+    "E1_2009_2021_09": 4,
+    "E2_2021_10_2026": 57
+   },
+   "pre_event_vol60_median_daily": 0.03518,
+   "pre_event_vol60_iqr_daily": [
+    0.02389,
+    0.05821
+   ],
+   "mde_independent": {
+    "h5_independent_pct": 3.082,
+    "h10_independent_pct": 4.359,
+    "h20_independent_pct": 6.164
+   },
+   "mde_month_clustered": {
+    "h5_monthclustered_pct": 2.264,
+    "h10_monthclustered_pct": 3.202,
+    "h20_monthclustered_pct": 4.529
+   },
+   "n_distinct_event_months": 113
+  },
+  "D_dividend": {
+   "n_total": 4763,
+   "n_decision_date_parsed": 4763,
+   "n_missing_decision_date": 0,
+   "date_coverage_pct": 100.0,
+   "per_year_decision_date": {
+    "2009": 111,
+    "2010": 145,
+    "2011": 171,
+    "2012": 171,
+    "2013": 193,
+    "2014": 206,
+    "2015": 221,
+    "2016": 219,
+    "2017": 261,
+    "2018": 264,
+    "2019": 262,
+    "2020": 237,
+    "2021": 272,
+    "2022": 351,
+    "2023": 396,
+    "2024": 426,
+    "2025": 447,
+    "2026": 410
+   },
+   "n_multi_event_tickers": 530,
+   "max_events_one_ticker": 24,
+   "n_with_60_pre_bars": 2060,
+   "frac_with_60_pre_bars_pct": 43.3,
+   "n_liquid_total_2009": 574,
+   "n_liquid_by_era": {
+    "E1_2009_2021_09": 14,
+    "E2_2021_10_2026": 560
+   },
+   "pre_event_vol60_median_daily": 0.0236,
+   "pre_event_vol60_iqr_daily": [
+    0.01642,
+    0.03418
+   ],
+   "mde_independent": {
+    "h5_independent_pct": 0.674,
+    "h10_independent_pct": 0.953,
+    "h20_independent_pct": 1.348
+   },
+   "mde_month_clustered": {
+    "h5_monthclustered_pct": 1.151,
+    "h10_monthclustered_pct": 1.627,
+    "h20_monthclustered_pct": 2.301
+   },
+   "n_distinct_event_months": 197
+  },
+  "E_stocksplit": {
+   "n_total": 194,
+   "n_decision_date_parsed": 194,
+   "n_missing_decision_date": 0,
+   "date_coverage_pct": 100.0,
+   "per_year_decision_date": {
+    "2009": 2,
+    "2010": 3,
+    "2011": 9,
+    "2012": 13,
+    "2013": 10,
+    "2014": 4,
+    "2015": 14,
+    "2016": 24,
+    "2017": 22,
+    "2018": 11,
+    "2019": 14,
+    "2020": 5,
+    "2021": 11,
+    "2022": 11,
+    "2023": 13,
+    "2024": 16,
+    "2025": 6,
+    "2026": 6
+   },
+   "n_multi_event_tickers": 18,
+   "max_events_one_ticker": 2,
+   "n_with_60_pre_bars": 56,
+   "frac_with_60_pre_bars_pct": 28.9,
+   "n_liquid_total_2009": 20,
+   "n_liquid_by_era": {
+    "E1_2009_2021_09": 0,
+    "E2_2021_10_2026": 20
+   },
+   "pre_event_vol60_median_daily": 0.0295,
+   "pre_event_vol60_iqr_daily": [
+    0.02078,
+    0.04391
+   ],
+   "mde_independent": {
+    "h5_independent_pct": 4.514,
+    "h10_independent_pct": 6.384,
+    "h20_independent_pct": 9.029
+   },
+   "mde_month_clustered": {
+    "h5_monthclustered_pct": 1.891,
+    "h10_monthclustered_pct": 2.674,
+    "h20_monthclustered_pct": 3.782
+   },
+   "n_distinct_event_months": 114
+  },
+  "E_bonus": {
+   "n_total": 82,
+   "n_decision_date_parsed": 82,
+   "n_missing_decision_date": 0,
+   "date_coverage_pct": 100.0,
+   "per_year_decision_date": {
+    "2009": 1,
+    "2010": 4,
+    "2011": 3,
+    "2012": 3,
+    "2013": 6,
+    "2014": 4,
+    "2015": 5,
+    "2016": 2,
+    "2017": 4,
+    "2018": 5,
+    "2019": 2,
+    "2020": 1,
+    "2021": 5,
+    "2022": 7,
+    "2023": 8,
+    "2024": 9,
+    "2025": 6,
+    "2026": 7
+   },
+   "n_multi_event_tickers": 18,
+   "max_events_one_ticker": 4,
+   "n_with_60_pre_bars": 39,
+   "frac_with_60_pre_bars_pct": 47.6,
+   "n_liquid_total_2009": 7,
+   "n_liquid_by_era": {
+    "E1_2009_2021_09": 0,
+    "E2_2021_10_2026": 7
+   },
+   "pre_event_vol60_median_daily": 0.03667,
+   "pre_event_vol60_iqr_daily": [
+    0.02261,
+    0.05008
+   ],
+   "mde_independent": {
+    "h5_independent_pct": 9.485,
+    "h10_independent_pct": 13.413,
+    "h20_independent_pct": 18.97
+   },
+   "mde_month_clustered": {
+    "h5_monthclustered_pct": 3.267,
+    "h10_monthclustered_pct": 4.62,
+    "h20_monthclustered_pct": 6.534
+   },
+   "n_distinct_event_months": 59
+  },
+  "E_stock_reverse": {
+   "n_total": 19,
+   "n_decision_date_parsed": 19,
+   "n_missing_decision_date": 0,
+   "date_coverage_pct": 100.0,
+   "per_year_decision_date": {
+    "2009": 1,
+    "2010": 3,
+    "2011": 2,
+    "2012": 1,
+    "2014": 1,
+    "2015": 2,
+    "2017": 2,
+    "2018": 3,
+    "2020": 2,
+    "2022": 1,
+    "2024": 1
+   },
+   "n_multi_event_tickers": 1,
+   "max_events_one_ticker": 2,
+   "n_with_60_pre_bars": 2,
+   "frac_with_60_pre_bars_pct": 10.5,
+   "n_liquid_total_2009": 0,
+   "n_liquid_by_era": {
+    "E1_2009_2021_09": 0,
+    "E2_2021_10_2026": 0
+   },
+   "pre_event_vol60_median_daily": 0.03056,
+   "pre_event_vol60_iqr_daily": [
+    0.01528,
+    0.04584
+   ],
+   "mde_independent": {
+    "h5_independent_pct": null,
+    "h10_independent_pct": null,
+    "h20_independent_pct": null
+   },
+   "mde_month_clustered": {
+    "h5_monthclustered_pct": 4.798,
+    "h10_monthclustered_pct": 6.785,
+    "h20_monthclustered_pct": 9.595
+   },
+   "n_distinct_event_months": 19
+  },
+  "F_warrant": {
+   "n_total": 148,
+   "n_decision_date_parsed": 148,
+   "n_missing_decision_date": 0,
+   "date_coverage_pct": 100.0,
+   "per_year_decision_date": {
+    "2016": 1,
+    "2017": 3,
+    "2018": 4,
+    "2019": 2,
+    "2020": 14,
+    "2021": 22,
+    "2022": 31,
+    "2023": 47,
+    "2024": 15,
+    "2025": 5,
+    "2026": 4
+   },
+   "n_multi_event_tickers": 3,
+   "max_events_one_ticker": 2,
+   "n_with_60_pre_bars": 19,
+   "frac_with_60_pre_bars_pct": 12.8,
+   "n_liquid_total_2009": 4,
+   "n_liquid_by_era": {
+    "E1_2009_2021_09": 0,
+    "E2_2021_10_2026": 4
+   },
+   "pre_event_vol60_median_daily": 0.03916,
+   "pre_event_vol60_iqr_daily": [
+    0.02612,
+    0.07738
+   ],
+   "mde_independent": {
+    "h5_independent_pct": 13.398,
+    "h10_independent_pct": 18.947,
+    "h20_independent_pct": 26.795
+   },
+   "mde_month_clustered": {
+    "h5_monthclustered_pct": 3.403,
+    "h10_monthclustered_pct": 4.813,
+    "h20_monthclustered_pct": 6.806
+   },
+   "n_distinct_event_months": 62
+  }
+ },
+ "idx80": {
+  "n_periods": 8,
+  "n_reconstitution_events": 7,
+  "periods": [
+   {
+    "period": "P0",
+    "effective_from": "2025-01-02",
+    "effective_to": "2025-02-02",
+    "left_censored": 1
+   },
+   {
+    "period": "P1",
+    "effective_from": "2025-02-03",
+    "effective_to": "2025-04-30",
+    "left_censored": 0
+   },
+   {
+    "period": "P2",
+    "effective_from": "2025-05-02",
+    "effective_to": "2025-07-31",
+    "left_censored": 0
+   },
+   {
+    "period": "P3",
+    "effective_from": "2025-08-01",
+    "effective_to": "2025-11-02",
+    "left_censored": 0
+   },
+   {
+    "period": "P4",
+    "effective_from": "2025-11-03",
+    "effective_to": "2026-02-01",
+    "left_censored": 0
+   },
+   {
+    "period": "P5",
+    "effective_from": "2026-02-02",
+    "effective_to": "2026-05-03",
+    "left_censored": 0
+   },
+   {
+    "period": "P6",
+    "effective_from": "2026-05-04",
+    "effective_to": "2026-08-02",
+    "left_censored": 0
+   },
+   {
+    "period": "P7",
+    "effective_from": "2026-08-03",
+    "effective_to": null,
+    "left_censored": 0
+   }
+  ],
+  "membership_status_counts": {
+   "MEMBER": 640
+  },
+  "changes_per_period": {
+   "P1": {
+    "effective_from": "2025-02-03",
+    "left_censored": 0,
+    "added": 3,
+    "removed": 3,
+    "added_tickers": [
+     "LSIP",
+     "SSIA",
+     "TAPG"
+    ],
+    "removed_tickers": [
+     "BUKA",
+     "MPMX",
+     "SMDR"
+    ]
+   },
+   "P2": {
+    "effective_from": "2025-05-02",
+    "left_censored": 0,
+    "added": 2,
+    "removed": 2,
+    "added_tickers": [
+     "BUKA",
+     "DSNG"
+    ],
+    "removed_tickers": [
+     "BMTR",
+     "MIDI"
+    ]
+   },
+   "P3": {
+    "effective_from": "2025-08-01",
+    "left_censored": 0,
+    "added": 3,
+    "removed": 3,
+    "added_tickers": [
+     "AADI",
+     "PTRO",
+     "RAJA"
+    ],
+    "removed_tickers": [
+     "GGRM",
+     "GJTL",
+     "NISP"
+    ]
+   },
+   "P4": {
+    "effective_from": "2025-11-03",
+    "left_censored": 0,
+    "added": 7,
+    "removed": 7,
+    "added_tickers": [
+     "BUMI",
+     "DSSA",
+     "KIJA",
+     "KPIG",
+     "PNBN",
+     "RATU",
+     "WIFI"
+    ],
+    "removed_tickers": [
+     "AUTO",
+     "BFIN",
+     "BNGA",
+     "BRIS",
+     "MNCN",
+     "SRTG",
+     "TKIM"
+    ]
+   },
+   "P5": {
+    "effective_from": "2026-02-02",
+    "left_censored": 0,
+    "added": 3,
+    "removed": 3,
+    "added_tickers": [
+     "BREN",
+     "CUAN",
+     "HRTA"
+    ],
+    "removed_tickers": [
+     "AVIA",
+     "LSIP",
+     "PNBN"
+    ]
+   },
+   "P6": {
+    "effective_from": "2026-05-04",
+    "left_censored": 0,
+    "added": 5,
+    "removed": 5,
+    "added_tickers": [
+     "BKSL",
+     "CBDK",
+     "DEWA",
+     "GGRM",
+     "TPIA"
+    ],
+    "removed_tickers": [
+     "BREN",
+     "BTPS",
+     "DSSA",
+     "MTEL",
+     "NCKL"
+    ]
+   },
+   "P7": {
+    "effective_from": "2026-08-03",
+    "left_censored": 0,
+    "added": 3,
+    "removed": 3,
+    "added_tickers": [
+     "BFIN",
+     "LSIP",
+     "NCKL"
+    ],
+    "removed_tickers": [
+     "INTP",
+     "PANI",
+     "SIDO"
+    ]
+   }
+  },
+  "pit_note": "announcement dates are not stored; the period notes cite the BEI announcement documents (e.g. Peng-00012/BEI.POP/01-2025, announced 22 Jan 2025 for effective 2025-02-03) \u2014 reconstitution announcements land about a week before the effective date; P0 is left-censored to the window start (a baseline snapshot, not a reconstitution event)"
+ }
+}
