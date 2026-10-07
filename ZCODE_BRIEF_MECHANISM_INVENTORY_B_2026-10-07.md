@@ -90,3 +90,72 @@ Push and STOP. No registration, no D-entry filing, no G0.
 - **Records and logs:** no edits to registries, DECISION_LOG or frozen files. `logs/TELEGRAM_OFF`
   stays. Never print secrets.
 - **Code:** research-side only. If you add code under `research/`, run the boundary and fence tests.
+
+---
+
+## Amendment 2026-10-07: prior work found, a new class N added, census flag
+
+The owner asked: "have we considered global conditions (war worsening → energy/commodity stocks) and
+seasonal effects (holidays)?"
+
+### 1. Read broad search v2 first; don't redo its probes
+
+`origin/research/broad-search-v2-zcode` (never merged into hardening) already did this work in
+`docs/research_programs/P-M/broad_search_v2/`. Read W1_INVENTORY, W2_SOURCE_PROBES and
+W3_SCREEN_SKETCHES before anything else. Cite them; don't re-derive them.
+
+| Class | What v2 already found |
+|---|---|
+| G | **FTSE: yes** (notices API, no auth). **MSCI: no** (registration-gated). IX1 was sketched as a *forward recorder* because its history is too short |
+| H | lock-up dates are **blocked**: no free structured source; they live in the prospectus PDFs behind the IDX wall |
+| I | already sketched as **TS1**: 359 events, 2022-04 onward only, expected to be underpowered |
+| K | **CAL1** turn-of-month is underpowered at the bar unless pooled into one arm (N about 2,400, minimum detectable about 21 bp/day). **CAL2** pre-holiday has N about 250, minimum detectable ≥ 40–50 bp; underpowered alone. The IDX holiday calendar can't be fetched from idx.co.id; it can be derived from corpus session gaps plus timeanddate |
+| X1 | the US overnight session → IDX already **ran: FAIL (null)**, t −0.30 |
+| X2 | commodity overnight → sector: **coal and CPO have no free source**. Gold, oil, gas and copper do (yfinance, 2000 onward) |
+
+For G, H, I and K, add only what v2 doesn't have:
+- the D-070 mechanism paragraph
+- the liquid-universe counts, using the hardening DB
+- a final rank
+
+### 2. New class N: global commodity and geopolitical conditions → IDX exporter sectors
+
+**Mechanisms to state:**
+- **(a) Cash-flow pass-through with slow diffusion.** Commodity prices drive the earnings of IDX
+  exporters (coal, oil and gas, gold, nickel, CPO), and local investors under-react over weeks, not
+  overnight. X2 tested the overnight version; this class is the weekly/monthly one.
+- **(b) Geopolitical-risk premium.** In war or escalation regimes, energy and gold names act as a
+  hedge, while importers and consumer names carry the risk.
+
+**Designs to assess (feasibility only):**
+- **N1.** A pooled sector tilt. The trailing 4–12-week commodity return (gold, oil, gas, copper,
+  nickel proxy) sets the weight of the matching IDX sector book at the next monthly rebalance.
+- **N2.** A regime overlay. A geopolitical-risk index decides whether energy and gold names are
+  over- or under-weighted.
+  - Scope the Caldara–Iacoviello GPR index: free, monthly, back to 1985, published with a lag.
+    **State its PIT lag.**
+  - Alternatively, an oil-volatility regime.
+
+**Report for N:**
+- the sector-to-commodity mapping, using `ticker_sector` (Energy 51 names, Basic Materials 79) at the
+  industry level
+- how many liquid names map to each commodity, per year
+- the number of independent rebalance dates
+- power from pre-formation volatility only
+- coal/CPO coverage: the BTU equity proxy starts only in 2017-04; name any free coal-index alternative
+  (e.g. the Newcastle API2 history) and its effort
+- prior coverage: `factor_zoo`, broad_search v1/v2 W1 (X2), and the D-062 correlation with VOLEX
+  (energy names are high-volatility)
+
+**No outcomes:** no sector or stock returns after any formation date. You may download commodity and
+GPR series (a public, no-auth one-time probe is allowed for N only, and is logged), because those
+series are the signal, not the outcome.
+
+### 3. Census and deflation bar: owner decision needed
+
+The hardening corpus uses **N = 276, bar ≈ 3.06** (D-064, D-067). But v2's `recount/RECOUNT_W0` and
+`CENSUS_NOTE.md` give **N = 561, bar 3.2745**. That figure is drafted, not ratified.
+
+- In this task, and in Task 1's HANDOFF_G0, report minimum detectable effects and the frozen bar
+  **under both**, and say which one the predeclaration freezes.
+- Recommend which is correct, with reasons. **Don't** file anything, and don't pick silently.
