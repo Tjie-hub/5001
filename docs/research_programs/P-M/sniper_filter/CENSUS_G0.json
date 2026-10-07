@@ -6,6 +6,7 @@
  },
  "g1_fingerprint": "f42275e34cb4525d3101fdf3effb14674b7192627db7b6a77a2bac9c5da5e73e",
  "fingerprint_matches_g1fix": true,
+ "snapshot_path": "/home/tjiesar/scratch/sniper_filter_g1/walkforward_snapshot_2026-10-07.db",
  "panel_pin": "2026-10-06",
  "n_filled_setups": 3682,
  "n_filled_by_era": {
@@ -59,7 +60,7 @@
   "ma200_slope": 0,
   "park60": 0,
   "ret126": 0,
-  "ihsg_above_ma200": 0
+  "mkt_above_ma200": 0
  },
  "rank_fallback_counts": {
   "zone_touches": 1,
@@ -71,18 +72,20 @@
   "ma200_slope": 1,
   "park60": 1,
   "ret126": 1,
-  "ihsg_above_ma200": 1
+  "mkt_above_ma200": 1
  },
- "census_n": 280,
- "census_base": 276,
+ "census_n_primary": 565,
+ "census_n_secondary": 280,
  "configurations": 4,
- "deflection_bar_exact": 3.0713,
- "deflection_bar_frozen": 3.07,
+ "bar_primary_exact": 3.2765,
+ "bar_primary_frozen": 3.2765,
+ "bar_secondary_exact": 3.0713,
+ "bar_secondary_frozen": 3.07,
  "gates": {
   "g0": "counts only; no outcome computed",
   "g1": "SNIPER_FILTER_G1_APPROVED=1 required"
  },
  "seed": 20261007,
- "generated_utc": "2026-10-07T06:33:07.074503+00:00",
- "runtime_minutes": 2.9
+ "generated_utc": "2026-10-07T08:19:53.787716+00:00",
+ "runtime_minutes": 3.0
 }

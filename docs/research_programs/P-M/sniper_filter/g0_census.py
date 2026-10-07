@@ -29,10 +29,13 @@ def main() -> None:
     print("WROTE", path.name)
     print("fingerprint:", out["dataset_fingerprint"]["sha256"][:16],
           "| matches G1FIX:", out["fingerprint_matches_g1fix"])
+    print("snapshot sha256 OK; snapshot fingerprint verified")
     print("filled setups:", out["n_filled_setups"], "| by era:", out["n_filled_by_era"])
     print("events:", out["events"])
-    print("census N:", out["census_n"], "| exact bar:",
-          out["deflection_bar_exact"], "-> frozen", out["deflection_bar_frozen"])
+    print("census N (primary/secondary):", out["census_n_primary"], "/",
+          out["census_n_secondary"],
+          "| exact bars:", out["bar_primary_exact"], "/", out["bar_secondary_exact"],
+          "-> frozen", out["bar_primary_frozen"], "/", out["bar_secondary_frozen"])
 
 
 if __name__ == "__main__":

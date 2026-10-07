@@ -51,13 +51,16 @@ Raw definitions (ATR = the signal's `atr` = ATR14 at s; MA20/MA50/MA200 from the
 | 7 | `ma200_slope` | (ma200[s] − ma200[s−20]) / atr |
 | 8 | `park60` | Parkinson-60 range volatility, the VOLEX measure: `sqrt( mean_60( ln(H/L)^2 ) / (4·ln 2) )` over the 60 sessions ending s (the forward_exclusion PROTOCOL §universe signal formula) |
 | 9 | `ret126` | C[s]/C[s−126] − 1 |
-| 10 | `ihsg_above_ma200` | 1.0 if IHSG close at s > its 200-session MA at s, else 0.0; **where the corpus has no IHSG bar at s (pre-2021-07) the raw value is 0.0** (declared fallback; the D-1-style limitation is disclosed — the feature is degenerate for early E1) |
+| 10 | `mkt_above_ma200` | **(Revision 1 R7 — replaces the IHSG feature, which has no corpus bar before 2021-07 and was constant for all of training):** 1.0 if the equal-weight market index at s is above its 200-session MA at s, else 0.0. The index = the daily mean close-to-close return of the owner-screen-eligible universe, cumulated from 1.0 — point in time, full history |
 
-**Cross-sectional rank:** each raw feature becomes a percentile rank among ALL filled E-SN setups
-whose setup day falls in the **trailing 250 sessions before s** (positional window
-[p(s)−250, p(s)−1] on the panel index; strictly before s — no same-day or future setups).
-Percentile = (#{prior values < x} + 0.5·#{== x}) / n_prior, computed on the prior values that are
-defined. **Fallback (declared):** where the rank is undefined — no prior setup in the window, or
+**Cross-sectional rank (reference set as amended by Revision 1 R5):** each raw feature becomes a
+percentile rank among the filled E-SN setups whose **setup day falls in the trailing 250 sessions
+before s AND whose fill bar index is < p(s)** — strictly earlier DAYS (never the same day), and
+only setups whose fill had already happened by s (a fill is watched for 20 sessions, so a
+setup's filled/unfilled status at s′ < s is not knowable at s until the fill occurs; the fill
+index is the trade's `t1`, known by the close of s′+1 at the latest). Percentile =
+(#{prior values < x} + 0.5·#{== x}) / n_prior, on the prior values that are defined.
+**Fallback (declared):** where the rank is undefined — no prior known setup in the window, or
 the setup's own raw value is undefined — the **raw value** is used instead of the rank; a NaN raw
 value stays NaN. ADV is the population floor, so it is not a feature.
 
@@ -75,14 +78,17 @@ value stays NaN. ADV is the population floor, so it is not a feature.
   handling; no imputation).
 - SEED = 20261007.
 
-## 5. Selection rule (frozen; identical for every model)
+## 5. Selection rule (frozen; identical for every model; computed per Revision 1 R1)
 
 Take a setup if its score is in the **top 40%** of the scores of the filled E-SN setups in the
-**trailing 250 sessions before s** (same positional window as §3; the threshold is the 60th
-percentile of those prior scores, strictly before s — PIT-tested). If fewer than 5 prior setups
-have scores in the window, the threshold falls back to the 60th percentile over ALL scored setups
+**trailing 250 sessions before s whose fill was already known by s** (the §3 reference set; the
+threshold is the 60th percentile of those prior scores). If fewer than 5 prior scored setups are
+known in the window, the threshold falls back to the 60th percentile over ALL known scored setups
 with setup day strictly before s (declared). If no prior scored setup exists at all, the setup is
-not selected (counted).
+not selected (counted). **R1: the mask is computed ONCE per configuration on the FULL score
+series (every scored setup, 2016 onward) and then indexed into validation, test and PBO — never
+on a split subset, whose trailing windows would start cold and violate this section.** PIT-tested
+(mutation + full-series-equality tests).
 
 ## 6. Splits, refit and embargo (frozen)
 
@@ -97,30 +103,44 @@ not selected (counted).
 - Scores, thresholds and predictions at any setup s use only information available at s plus
   models fit under the embargo rule — PIT-tested (a)/(b)/(c).
 
-## 7. Pass bar (fixed now; evaluated on TEST only)
+## 7. Pass bar (fixed now; evaluated on TEST only; as amended by Revision 1 R8 + owner ruling 560522a)
 
 1. **Selected minus all filled:** mean R difference > 0, computed as the monthly mean difference
-   with a **Newey-West t (lag 3) ≥ the deflation bar 3.07** (frozen: exact E[max|Z|] at the new
-   census N = 276 + 4 configurations = **280** is 3.0713; N=279 under the D-067 M0-uncounted
-   convention gives 3.0702 — both round to **3.07**; the stricter reading governs).
+   with a **Newey-West t (lag 3) ≥ the PRIMARY deflation bar 3.2765** (R8, owner-ruled: census
+   N = 561 + 4 configurations = **565**, exact `emax_abs_z(565)` = 3.2765; the stricter count
+   governs by default). The 280-count bar (**3.07**, exact 3.0713 — the hardening D-070-context
+   count) is a **secondary reporting line only and can never pass a configuration** (owner
+   ruling 560522a); the RESULT reports `would_pass_under_secondary_bar_report_only` beside each
+   verdict. Ratifying the 561 census in DECISION_LOG is a separate owner filing.
 2. **The selected setups' own mean net R > 0.**
-3. **Both halves:** the difference is > 0 in 2021-10..2023-12 AND in 2024-01..end.
-4. **"Learning adds value" (M1/M2 only):** paired monthly t ≥ 2 vs M0 (selected-vs-selected
-   monthly mean R). Otherwise M0's result is the finding.
-5. **PBO < 0.5** over the grid via `research/statistics.py::pbo_cscv(matrix, n_splits=16)`, where
-   the matrix is the 4 configurations' monthly selected-mean-R series over the TRAIN+VAL months.
+3. **Both halves:** the difference is > 0 in 2021-10..2023-12 AND in 2024-01..end (each half > 0).
+4. **"Learning adds value" (the validation-chosen M1 and M2 only):** paired monthly t ≥ 2 vs M0
+   (selected-vs-selected monthly mean R). The unchosen M1 is reported but cannot pass.
+   Otherwise M0's result is the finding.
+5. **PBO < 0.5**, one grid-level value applied to every configuration, via
+   `research/statistics.py::pbo_cscv`. **(Revision 1 R2:)** the matrix is the 4 configurations'
+   monthly selected-mean-R over the **VALIDATION months only** (2016-01..2021-09, where all four
+   have out-of-sample scores); months where any configuration has no selection are dropped and
+   the drop count recorded; `n_splits` is frozen at 16 (≥ 2 rows per split at ~69 months; the
+   runner lowers it only for degenerate synthetic runs); no NaN may remain (asserted).
 
-**Also reported:** n selected; win rate; the year-by-year table (mandatory); R-quintile spreads
-per feature (univariate diagnostics); and the headline recomputed with fill-bar exits
+The five conditions are **computed booleans in the RESULT** (`pass_conditions` + `passes` per
+configuration — Revision 1 R3); the VERDICT copies them, it does not re-judge them.
+
+**Also reported (mandatory, Revision 1 R4):** n selected; win rate; the year-by-year table per
+configuration (2016 → latest: n all, n selected, mean R selected, mean R all); per-feature
+R-quintile spreads on the validation and test periods reported separately (univariate
+diagnostics); and the headline (condition-1/2 numbers) recomputed with fill-bar exits
 (hold == 0) dropped, as a robustness row.
 
 ## 8. Governance (draft, do not file)
 
 - **Family:** Price-Learning **{L1}** (D-067). HYP-PM-0016 is a new member and inherits the {L1}
-  multiplicity. **Census: 276 + 4 configurations = 280** (D-070 adds no trials). Note: D-067's
-  convention excluded the M0 baseline from the census; this brief's literal "276 + the number of
-  configurations" counts all four listed configurations. The bar is 3.07 either way; the owner
-  resolves the convention at filing.
+  multiplicity. **Census (R8):** the depth is unresolved — hardening carries 276 (D-070 context;
+  D-070 adds no trials), the unratified recount (`broad_search_v2/recount/RECOUNT_W0` +
+  `CENSUS_NOTE`) carries 561. **The primary pass bar freezes at the stricter count: 561 + 4 =
+  565 → 3.2765**; the 280-count bar (3.07) is the secondary line. Ratifying the 561 census is a
+  separate owner filing (not this study's act).
 - **Why HYP-PM-0016 is admitted at all: D-070** (§Decision 2) — the last admitted price-feature
   study, because it filters an existing owner entry rule and its pre-registered baseline is a risk
   measure (low volatility).
@@ -151,10 +171,59 @@ check, on synthetic panels and hand-built trades. Run:
 | C-2 | rank fallback to the raw value only when the window has no prior setup or the own raw value is undefined; NaN stays NaN |
 | C-3 | M0 excludes setups with an undefined rank component (counted in the RESULT); M1 imputes NaN with the train-window median; M2 uses NaN natively |
 | C-4 | M1 probabilities from `predict_proba`; M2 from `predict_proba`; M0 is its declared rank mean |
-| C-5 | `ihsg_above_ma200` uses the DB IHSG series only (no proxy); pre-2021-07 → 0.0 (declared) |
+| C-5 | **(superseded by Revision 1 R7)** feature 10 is `mkt_above_ma200` — the equal-weight market index cumulated from the owner-screen universe's mean daily close-to-close return (no IHSG dependence; full history) |
 | C-6 | monthly aggregations (the Newey-West series, the halves, PBO matrix, year-by-year) key on the SETUP month (`tr["month"]`, the signal month — identical to the exit study's era keying) |
 | C-7 | the pinned panel ends 2026-10-06; test period = 2021-10..latest complete setup on that panel |
-| C-8 | census N = 280 counts all 4 listed configurations (stricter bar governs; D-067's M0-uncounted convention noted) |
+| C-8 | **(superseded by Revision 1 R8)** primary census N = 565 (561 + 4), bar 3.2765; the 280 count (3.07) is the secondary report-only line |
 
 Nothing else deviates from the brief. Any change to the frozen files after approval is a new,
 disclosed, re-frozen run.
+
+## 11. Revision 1 (2026-10-07, disclosed pre-approval revision — planner review of G0 `72b4bd5`)
+
+**Status: NOT APPROVED as originally frozen; still read no outcomes.** The planner found the G1
+runner defective (unreadable or discretion-opening) and ordered fixes in place on this branch, a
+new sidecar, and this record. This is not a re-run and no outcome was touched. **The superseded
+G0 sidecar is `PREDECLARATION.sha256` @ `72b4bd5`, file sha256
+`fafaf4c97abfb8db3edc9aea6cf94657716752eb1d2d0f7e74cd776e2bbbcf89`** (kept in git history).
+
+- **R1 — full-series selection.** `select_mask` was being called on split subsets, so every
+  subset's trailing-250 windows started cold (the first test months got no validation history).
+  Fixed: the mask is computed once per configuration on the FULL score series and indexed into
+  val/test/PBO (§5). New test: full-series vs subset selections differ exactly as the cold-window
+  bug predicts, and the pipeline uses the full-series value.
+- **R2 — PBO matrix.** The old TRAIN+VAL matrix was ~180 all-NaN rows (scores exist only for
+  prediction years ≥ 2016) — PBO meaningless. Fixed (§7.5): validation-months matrix only, months
+  with no selection dropped and counted, `n_splits` frozen at 16 (≥ 2 rows/split), NaN asserted
+  away before the call.
+- **R3 — computed pass flags.** The RESULT now carries per-configuration booleans for conditions
+  1–5 and `passes`; condition 4 uses the validation-chosen M1 only; h1/h2 must each be > 0;
+  condition 5 is one grid-level PBO; the VERDICT copies the flags.
+- **R4 — the "also report" list implemented.** Year-by-year table per configuration, per-feature
+  R-quintile spreads (validation and test separately), the no-fill-bar robustness row, win rate.
+  Proven on a synthetic dry run (`RESULT_SYNTHETIC_20261007T082258Z.json`, fake R — no real
+  outcome touched).
+- **R5 — fill-aware, strictly-earlier reference sets.** Ranks and thresholds now use setups with
+  setup pos < p(s) AND fill bar index < p(s) (a fill watched for 20 sessions is not knowable at s
+  until it happens; same-day setups no longer rank against each other in row order). New tests:
+  a late-filling setup is excluded from a prior day's rank and threshold (the naive threshold
+  would flip the selection); same-day setups get identical reference sets under both row orders.
+- **R6 — the fingerprint gate runs BEFORE any outcome and cannot drift.** A read-only SQLite
+  backup snapshot of the DB was taken into the scratch area (outside the repo):
+  `/home/tjiesar/scratch/sniper_filter_g1/walkforward_snapshot_2026-10-07.db`, file sha256
+  `c42c151e4a825f622349e42891b0083c5579f6816228e1452d9c5869de68d177`, whose dataset fingerprint
+  equals **`f42275e3…` exactly** (max_date 2026-10-06, 1,101,826 rows — the backup captured
+  G1FIX's data state). Both hashes are frozen in `sniper_filter.py` and verified (SystemExit)
+  before any outcome is computed.
+- **R7 — feature 10 replaced.** `ihsg_above_ma200` (constant 0.0 for all of training — no IHSG
+  bar before 2021-07) is replaced by `mkt_above_ma200`: the equal-weight market index built from
+  the panel (mean daily close-to-close return of the owner-screen universe, cumulated), 1.0 if
+  above its 200-session MA at s. Feature count stays 10; the truncation test covers it.
+- **R8 — the deflation bar, owner-ruled.** Primary pass bar: census **N = 561 + 4 = 565**, exact
+  `emax_abs_z` = **3.2765** (561 → 3.2745 reproduced from the recount). The 280-count bar (3.07)
+  is a secondary report-only line that can never pass a configuration (**owner ruling 560522a**).
+  Ratifying the 561 census in DECISION_LOG is a separate owner filing.
+
+Census re-run under the R5 reference-set definition (counts only — the filled-setup count is
+unchanged at 3,682; the per-feature fallback/NaN counts are refreshed). Tests: 17 (all pass).
+**Still gated on `SNIPER_FILTER_G1_APPROVED=1`; STOP for approval.**

@@ -1,5 +1,57 @@
 # HANDOFF_G0 — sniper setup filter (HYP-PM-0016 draft): G0 frozen, STOP
 
+**Revision 1 (2026-10-07): G0 was NOT approved as originally frozen (planner review of
+`72b4bd5`). The fixes below (R1–R8, per `ZCODE_BRIEF_SNIPER_G0_REVISION_2026-10-07.md` +
+owner ruling `560522a`) are applied in place, re-frozen with a new sidecar, and recorded in
+`PREDECLARATION.md` §11. Still read NO outcomes; still gated on
+`SNIPER_FILTER_G1_APPROVED=1`; STOP for approval.**
+
+## Revision 1: what changed
+
+- **R1 selection on the full series:** the selection mask is computed ONCE per configuration on
+  every scored setup (2016 onward) and indexed into validation/test/PBO — the old per-subset
+  calls started every subset's trailing-250 windows cold (the first test months fell back or went
+  unselected). PIT test added (full-series vs subset).
+- **R2 PBO on validation months only:** the old matrix was ~180 all-NaN rows (scores exist only
+  for prediction years ≥ 2016) — meaningless PBO. Now: the 4 configurations' monthly
+  selected-mean-R over 2016-01..2021-09, months without selections dropped and counted,
+  `n_splits` 16 (≥2 rows/split), NaN asserted away. §7.5 amended.
+- **R3 computed pass flags:** the RESULT carries per-configuration booleans for conditions 1–5
+  and `passes`; condition 4 uses the validation-chosen M1 only (the unchosen M1 is reported,
+  cannot pass); h1/h2 each > 0; PBO is one grid-level value; the VERDICT copies the flags.
+- **R4 "also report" implemented (was mandatory, was missing):** year-by-year table per
+  configuration, per-feature R-quintile spreads (validation/test separately), the no-fill-bar
+  robustness row, win rate. Proven by a synthetic dry run with fake R
+  (`RESULT_SYNTHETIC_20261007T082258Z.json` — schema proof only; the real panel was not touched).
+- **R5 fill-aware reference sets:** ranks and thresholds use setups with setup pos < p(s) AND
+  fill index < p(s) (a fill watched 20 sessions isn't knowable at s until it happens); same-day
+  setups no longer rank against each other in row order. Two new tests: late-filling exclusion
+  (the naive threshold would flip a selection) and same-day order-independence. Census re-run
+  under the new definition: **3,682 filled setups unchanged** (E1 2,253 / E2 1,429), fingerprint
+  still `f42275e3…` exactly; per-feature fallback counts refreshed in `CENSUS_G0.json`.
+- **R6 fingerprint gate before outcomes, drift-proof:** a read-only SQLite backup snapshot of the
+  production DB lives at `/home/tjiesar/scratch/sniper_filter_g1/walkforward_snapshot_2026-10-07.db`
+  (outside the repo), file sha256 `c42c151e…d177`, dataset fingerprint **= `f42275e3…` exactly**
+  (max_date 2026-10-06 — the backup captured G1FIX's data state). Both frozen and verified with
+  SystemExit BEFORE any outcome is computed.
+- **R7 feature 10 replaced:** `mkt_above_ma200` (equal-weight market index from the panel:
+  mean daily close-to-close return of the owner-screen universe, cumulated; 1.0 if above its
+  200-session MA) replaces the IHSG feature, which was constant for all of training (no corpus
+  IHSG before 2021-07). Feature count stays 10; truncation test covers it.
+- **R8 bar settled by the owner (ruling `560522a`):** PRIMARY pass bar = census **561 + 4 = 565**,
+  exact `emax_abs_z(565)` = **3.2765** (561 → 3.2745 reproduced from the recount). The 280-count
+  bar (3.07) is a **secondary report-only line** and can never pass a configuration. Ratifying
+  the 561 census in DECISION_LOG is a separate owner filing (not this study's act). The
+  predeclaration freezes exactly this (§7, §8, §11).
+- **Tests:** 17 (was 12), all pass. **Old sidecar:** `PREDECLARATION.sha256` @ `72b4bd5`, file
+  sha256 `fafaf4c97abfb8db3edc9aea6cf94657716752eb1d2d0f7e74cd776e2bbbcf89` (git history).
+
+---
+
+**Original G0 record (2026-10-07, pre-Revision-1) follows — sections 1–6 below describe the
+first freeze; where Revision 1 supersedes them (bar, feature 10, reference sets, PBO, snapshot
+gate, RESULT schema), §Revision 1 above and PREDECLARATION §11 govern.**
+
 **Date:** 2026-10-07 · **Branch:** `research/sniper-filter-2026-10` (from the post-Task-0
 hardening tip `a28ec7e`) · **Authority:** `ZCODE_BRIEF_SNIPER_FILTER_2026-10-07.md` as overridden
 by `ZCODE_NEXT_TASKS_2026-10-07.md` (Task 1). **No outcome has been read.** G1 is machine-gated
