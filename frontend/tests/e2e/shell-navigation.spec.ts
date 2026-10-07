@@ -19,22 +19,25 @@ test.describe('Phase 4 NP-12 — browser history', () => {
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Decision Center')
 
     const sidebar = page.getByRole('navigation', { name: 'Workspaces' })
-    await sidebar.getByRole('link', { name: /Portfolio/ }).click()
-    await expect(page).toHaveURL('/portfolio')
-
+    // Frontend freeze 2026-10-06: this journey used to click the Portfolio
+    // sidebar link; that workspace is retired, so the round-trip now runs on
+    // Market.
     await sidebar.getByRole('link', { name: /Market/ }).click()
     await expect(page).toHaveURL('/market')
 
+    await sidebar.getByRole('link', { name: /Search/ }).click()
+    await expect(page).toHaveURL('/search')
+
     await page.goBack()
-    await expect(page).toHaveURL('/portfolio')
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Portfolio')
+    await expect(page).toHaveURL('/market')
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Market')
 
     await page.goBack()
     await expect(page).toHaveURL('/decision')
 
     await page.goForward()
-    await expect(page).toHaveURL('/portfolio')
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Portfolio')
+    await expect(page).toHaveURL('/market')
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Market')
   })
 
   test('normalization uses REPLACE, so Back never lands on a non-canonical URL', async ({
@@ -73,6 +76,20 @@ test.describe('Phase 4 P4-13 §14 — refresh restores the route', () => {
   }
 })
 
+test.describe('Frontend freeze 2026-10-06 — frozen paths', () => {
+  test('a bookmark to a removed workspace lands on the frozen banner page, not a 404', async ({
+    page,
+  }) => {
+    await page.goto('/watchlist')
+
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Workspace frozen')
+    await expect(page.getByTestId('frozen-banner')).toContainText('5001 frontend is frozen')
+
+    const link = page.getByTestId('frozen-banner').getByRole('link', { name: /jurnal26 :5004/ })
+    await expect(link).toHaveAttribute('href', 'http://localhost:5004/')
+  })
+})
+
 test.describe('Phase 4 P4-07 — deep links', () => {
   test('a resource deep link opens directly, in one navigation step', async ({ page }) => {
     await page.goto('/ticker/BBCA')
@@ -88,8 +105,8 @@ test.describe('Phase 4 P4-07 — deep links', () => {
     const context = await browser.newContext()
     const page = await context.newPage()
 
-    await page.goto('/watchlist')
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Watchlist')
+    await page.goto('/decision')
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Decision Center')
 
     await context.close()
   })

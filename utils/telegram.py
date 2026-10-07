@@ -24,6 +24,23 @@ _MUTE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
                           "logs", "TELEGRAM_MUTE")
 _mute_cache = None  # (st_mtime, frozenset(tokens)) | None
 
+# ── Global outbound kill switch (owner-ordered blackout, 2026-10-05) ────────
+# While logs/TELEGRAM_OFF exists, NO outbound notification leaves this repo
+# through any sender — including the 'alert' category TELEGRAM_MUTE structurally
+# protects. The standalone python senders (stockbit_fetcher.py, auto_token.py,
+# routes/telegram.py send_telegram_reply) and the bash wrapper
+# scripts/cron_wrap.sh check the same file. Suppressed sends are still logged
+# with category + first 80 chars, so the later what-to-send curation has a full
+# record: journalctl --user -u idx-walkforward | grep 'global OFF'.
+# Restore everything: delete the file. Checked per send, no restart needed.
+_OFF_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                         "logs", "TELEGRAM_OFF")
+
+
+def is_off() -> bool:
+    """True while logs/TELEGRAM_OFF exists (total outbound blackout)."""
+    return os.path.exists(_OFF_FILE)
+
 
 def is_muted(category: str) -> bool:
     """True when `category` is listed in logs/TELEGRAM_MUTE (mtime-cached).
@@ -48,15 +65,29 @@ def is_muted(category: str) -> bool:
     return category.lower() in _mute_cache[1]
 
 
-def send_telegram(msg: str, category: str = "alert") -> None:
+def send_telegram(msg: str, event: str = None, subject: str = None,
+                  state: str = None, category: str = None) -> bool:
+    """Send one notification through the curation policy (utils.notify_policy).
+
+    event= (required in practice — the classification CI test enforces it at
+    every call site) selects tier + dedup rule; subject partitions dedup keys
+    (ticker/job/provider); state feeds on_change rules. Returns True only when
+    a message actually went out. A legacy category= (TELEGRAM_MUTE) is still
+    honored for callers that pass one alongside a registered event.
+    """
+    from utils.notify_policy import decide
+    action, reason = decide(event, subject=subject, state=state, msg=msg)
+    if action != "send":
+        return False
+
     token = os.environ.get("TELEGRAM_TOKEN", "")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
     if not token or not chat_id or "ISI_" in token:
-        return
+        return False
     if is_muted(category):
         logger.info("[telegram] muted (category=%s): %.80s",
                     category, str(msg).replace("\n", " "))
-        return
+        return False
 
     # RC1 fix R-4: every outbound alert passes through the same secret-redaction
     # rule as log lines (utils.logging_config.redact_secrets) — e.g. an
@@ -78,7 +109,7 @@ def send_telegram(msg: str, category: str = "alert") -> None:
             if resp.ok:
                 _last_sent = time.time()
                 logger.info(f"[telegram] sent OK ({len(msg)} chars)")
-                return
+                return True
             # 400 often means HTML parse error — strip to plain text and retry
             if resp.status_code == 400 and payload.get("parse_mode") == "HTML":
                 logger.warning(f"[telegram] HTML parse error (400), retrying as plain text")
@@ -87,16 +118,17 @@ def send_telegram(msg: str, category: str = "alert") -> None:
                 if resp2.ok:
                     _last_sent = time.time()
                     logger.info(f"[telegram] sent OK as plain text ({len(msg)} chars)")
-                    return
+                    return True
                 logger.error(f"[telegram] plain-text fallback also failed: {resp2.status_code} {resp2.text[:200]}")
-                return
+                return False
             logger.error(f"[telegram] HTTP {resp.status_code}: {resp.text[:200]}")
             if attempt < _MAX_RETRIES:
                 time.sleep(2 ** attempt)
             else:
-                return
+                return False
         except requests.exceptions.RequestException as e:
             if attempt == _MAX_RETRIES:
                 logger.error(f"[telegram] send failed after {_MAX_RETRIES + 1} attempts: {e}")
-            else:
-                time.sleep(2 ** attempt)
+                return False
+            time.sleep(2 ** attempt)
+    return False

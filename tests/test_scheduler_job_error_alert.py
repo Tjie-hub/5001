@@ -28,7 +28,7 @@ def test_format_job_error_alert_truncates_long_exception_text():
 
 def test_job_error_listener_sends_telegram_alert(monkeypatch):
     sent = []
-    monkeypatch.setattr(sched, "send_telegram", lambda text: sent.append(text))
+    monkeypatch.setattr(sched, "send_telegram", lambda text, **kw: sent.append(text))
 
     fake_job = MagicMock()
     fake_job.name = "EOD Trade Plan 16:40"
@@ -59,7 +59,7 @@ def test_job_error_listener_survives_send_telegram_failure(monkeypatch):
 
 def test_job_error_listener_handles_get_job_lookup_failure(monkeypatch):
     sent = []
-    monkeypatch.setattr(sched, "send_telegram", lambda text: sent.append(text))
+    monkeypatch.setattr(sched, "send_telegram", lambda text, **kw: sent.append(text))
 
     fake_scheduler = MagicMock()
     fake_scheduler.get_job.side_effect = Exception("scheduler shutting down")
@@ -162,7 +162,7 @@ class TestJobErrorListenerRateLimiting:
 
     def _listener(self, monkeypatch, clock, cooldown_s=3600):
         sent = []
-        monkeypatch.setattr(sched, "send_telegram", lambda text: sent.append(text))
+        monkeypatch.setattr(sched, "send_telegram", lambda text, **kw: sent.append(text))
         fake_scheduler = MagicMock()
         fake_scheduler.get_job.return_value = None
         limiter = sched.JobErrorRateLimiter(cooldown_s=cooldown_s, clock=clock)

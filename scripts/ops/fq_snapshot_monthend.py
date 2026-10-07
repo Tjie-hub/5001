@@ -146,7 +146,8 @@ def main(argv: list[str] | None = None) -> int:
                               root / "research" / "fq_snapshot.py",
                               root / ".stockbit_token", month)
     if reasons:
-        send_ops(f"{OPS_PREFIX} snapshot NOT READY: " + "; ".join(reasons), dry=dry)
+        send_ops(f"{OPS_PREFIX} snapshot NOT READY: " + "; ".join(reasons),
+                 event="ops.fq_snapshot", dry=dry)
         return 0
 
     venv_py = root / "venv" / "bin" / "python3"
@@ -154,7 +155,8 @@ def main(argv: list[str] | None = None) -> int:
         proc = run_snapshot(venv_py, root, limit=RUN_LIMIT)
         result = parse_run_output(proc.stdout)
     except Exception as exc:
-        send_ops(f"{OPS_PREFIX} ⚠️ {{FQ}} snapshot run failed: {exc}", dry=dry)
+        send_ops(f"{OPS_PREFIX} ⚠️ {{FQ}} snapshot run failed: {exc}",
+                 event="ops.fq_snapshot", dry=dry)
         return 0
     captured = result.get("captured", [])
     failed = result.get("failed", [])
@@ -165,7 +167,7 @@ def main(argv: list[str] | None = None) -> int:
         lines.append("⚠️ Stockbit token rejected (401/403) — refresh via auto_token.py and re-check")
     if failed:
         lines.append(f"⚠️ {len(failed)} per-ticker failure(s) reported by the module")
-    send_ops("\n".join(lines), dry=dry)
+    send_ops("\n".join(lines), event="ops.fq_snapshot", dry=dry)
     return 0
 
 

@@ -24,7 +24,7 @@ def _nets(trades):
 
 
 def assemble_candidate(strategy_fn, trades, scan_family, wf, oos,
-                       target_regime=None, strategy_config_hash="") -> Candidate:
+                       target_regime=None, strategy_config_hash="", trial_returns=None) -> Candidate:
     """Group collected trades into regime cells and pack the analysis summaries.
     Pure: all heavy collection happens upstream."""
     regime_cells = {}
@@ -32,7 +32,10 @@ def assemble_candidate(strategy_fn, trades, scan_family, wf, oos,
         regime_cells.setdefault(t["regime"], []).append(t)
     meta = {"target_regime": target_regime,
             "strategy_config_hash": strategy_config_hash,
-            "wf": wf, "oos": oos}
+            "wf": wf, "oos": oos,
+            # {"labels": [...], "matrix": T x N} common-period returns of the trial family
+            # (parameter variants); None for regime-cell families -> Stage 9 WATCH.
+            "trial_returns": trial_returns}
     return Candidate(strategy_fn=strategy_fn, trades=list(trades),
                      regime_cells=regime_cells, scan_family=list(scan_family), meta=meta)
 
@@ -80,6 +83,7 @@ def build_ctx(candidate: Candidate, config) -> dict:
         "scan_sharpes": [c.sharpe for c in candidate.scan_family],
         "wf": candidate.meta.get("wf", {}),
         "oos": candidate.meta.get("oos", {}),
+        "trial_returns": candidate.meta.get("trial_returns"),
     }
 
 

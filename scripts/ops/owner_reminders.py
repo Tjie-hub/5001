@@ -49,7 +49,7 @@ def main(argv: list[str] | None = None) -> int:
     if not due:
         print(f"no owner to-do items due {today}")
         return 0
-    send_ops(build_message(today, due), dry=dry)
+    send_ops(build_message(today, due), event="ops.owner_reminders", dry=dry)
     return 0
 
 

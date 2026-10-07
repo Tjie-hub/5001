@@ -1,0 +1,12 @@
+{
+  "spec_id": "FWD-PM-BANK-001",
+  "hypothesis": "HYP-PM-0014",
+  "protocol": "PROTOCOL.md",
+  "protocol_sha256": "2371cc48658f6a7dd00ef3c4c4f3a7ff6829c29c0ea37241cc9b63ee3c6d527e",
+  "opened_utc": "2026-10-05T16:09:16+00:00",
+  "family": "P-M \u00b7 Price-Reversal {R1,R2}",
+  "_comment": "Append-only. One object per event, written when its 10-session window closes with every leg present. Never back-filled: no event with signal_date earlier than opened_utc. Voided windows (|ret|>35%, split, rights/bonus/reverse split) are not written.",
+  "trades": [],
+  "fingerprint_sha256": null,
+  "last_append_utc": null
+}

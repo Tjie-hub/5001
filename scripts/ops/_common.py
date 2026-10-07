@@ -31,15 +31,19 @@ def today_wib() -> str:
     return now_wib().strftime("%Y-%m-%d")
 
 
-def send_ops(msg: str, *, dry: bool = False, root: Path | None = None) -> None:
+def send_ops(msg: str, *, event: str, dry: bool = False,
+             root: Path | None = None) -> None:
     """Send one ops message through the repo's existing Telegram sender.
 
-    category="alert" deliberately: logs/TELEGRAM_MUTE can silence report
-    categories but is structurally unable to silence "alert", and these
-    owner-facing messages must survive that mute file. Importing `config`
-    loads <root>/.env into os.environ, which is where utils.telegram reads
-    TELEGRAM_TOKEN/TELEGRAM_CHAT_ID — the same path every other cron sender
-    takes.
+    event= (required — the classification CI test enforces a registered
+    literal at every call site) routes the message through the curation
+    policy: J1/J2/J3 are digest-tier decision support, J4/J5 send only on
+    failure/anomaly (alert tier). category="alert" deliberately: logs/
+    TELEGRAM_MUTE can silence report categories but is structurally unable
+    to silence "alert", and these owner-facing messages must survive that
+    mute file. Importing `config` loads <root>/.env into os.environ, which
+    is where utils.telegram reads TELEGRAM_TOKEN/TELEGRAM_CHAT_ID — the
+    same path every other cron sender takes.
     """
     if dry:
         print(msg)
@@ -50,4 +54,4 @@ def send_ops(msg: str, *, dry: bool = False, root: Path | None = None) -> None:
     import config  # noqa: F401  side effect: loads <root>/.env
     from utils.telegram import send_telegram
 
-    send_telegram(msg, category="alert")
+    send_telegram(msg, event=event, category="alert")

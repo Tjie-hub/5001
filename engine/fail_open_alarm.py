@@ -30,7 +30,7 @@ def fail_open_alarm(source: str, detail: str, count: int = 0,
     logger.warning(msg)
     if notify:
         try:
-            send_telegram(msg)
+            send_telegram(msg, event="system.fail_open", subject=source)
         except Exception as _e:  # best-effort: notifier down must not raise
             logger.debug("fail_open_alarm notify failed: %s", _e)
     return msg

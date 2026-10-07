@@ -59,7 +59,7 @@ def _run(monkeypatch, tmp_path, *, base_rows, revise_decisions, daily_plan_ticke
                                            if d.action != "REMOVE" and d.base_row])
     monkeypatch.setattr("engine.liquidity.select_top_liquid_longs",
                         lambda survivors, conn, date_str, top_n: survivors)
-    monkeypatch.setattr(jobs_mod, "send_telegram", lambda msg: None)
+    monkeypatch.setattr(jobs_mod, "send_telegram", lambda msg, **kw: None)
 
     if daily_plan_tickers is not None:
         conn = sqlite3.connect(db)

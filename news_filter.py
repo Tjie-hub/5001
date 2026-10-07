@@ -39,6 +39,8 @@ _RSS_TIMEOUT_S = 10
 # is quote_plus-encoded into the query value, so it can never steer the request
 # elsewhere. The guard below makes that explicit and redirects stay off.
 _RSS_HOST = "news.google.com"
+_RSS_RETRY_STATUS = (404, 429, 500, 502, 503)
+_RSS_RETRY_BACKOFF_S = 2
 
 # Some publishers block the default feedparser UA
 feedparser.USER_AGENT = "Mozilla/5.0 (compatible; idx-walkforward/1.0)"
@@ -91,6 +93,16 @@ def fetch_news_for_ticker(ticker, today=None):
             url, timeout=_RSS_TIMEOUT_S, allow_redirects=False,
             headers={"User-Agent": feedparser.USER_AGENT},
         )
+        # Google intermittently 404s/429s the first requests of a sweep for
+        # tickers that return 200 moments later (2026-09-29..10-02: 23 zeroed
+        # tickers, all re-fetched fine by hand). One bounded retry recovers
+        # them; timeouts are NOT retried so the 2026-07-24 stall bound holds.
+        if resp.status_code in _RSS_RETRY_STATUS:
+            time.sleep(_RSS_RETRY_BACKOFF_S)
+            resp = requests.get(
+                url, timeout=_RSS_TIMEOUT_S, allow_redirects=False,
+                headers={"User-Agent": feedparser.USER_AGENT},
+            )
         resp.raise_for_status()
         feed = feedparser.parse(resp.content)
     except requests.exceptions.Timeout:

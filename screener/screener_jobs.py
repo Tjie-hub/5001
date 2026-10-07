@@ -103,10 +103,10 @@ def _eod_verified_token() -> tuple[str | None, str]:
     return (new, f'refreshed after {what}') if new else (None, f'dead ({what}, refresh failed)')
 
 
-def _send(send_telegram, msg: str) -> None:
+def _send(send_telegram, msg: str, event=None, subject=None) -> None:
     if send_telegram:
         try:
-            send_telegram(msg)
+            send_telegram(msg, event=event, subject=subject)
         except Exception as e:
             logger.warning(f"[screener] telegram send failed: {e}")
 
@@ -125,8 +125,8 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None,
         sb_token, token_note = _eod_verified_token()
         if not sb_token:
             logger.error(f"[screener] EOD finalisation aborted: Stockbit token {token_note}")
-            _send(send_telegram,
-                  f"🔴 <b>EOD finalisation ABORTED</b> ({trade_date})\n\n"
+            _send(send_telegram, event="data.token_expired", subject="eod_scraper",
+                  msg=f"🔴 <b>EOD finalisation ABORTED</b> ({trade_date})\n\n"
                   f"Stockbit token {token_note}. Nothing was saved; bars for {trade_date} "
                   f"stay provisional.\n"
                   f"Fix: <code>python3 auto_token.py --login</code> — the 17:30 EOD retry "
@@ -143,7 +143,7 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None,
                     f"🔴 <b>Intraday GAGAL</b>\n\n"
                     f"Stockbit token tidak ditemukan ({trade_date}).\n"
                     f"Refresh token: <code>python3 auto_token.py</code>"
-                )
+                , event="data.token_expired", subject="screener_intraday")
             except Exception:
                 pass
         return {'ok': 0, 'err': 0, 'duration_s': 0, 'type': 'intraday', 'error': 'no_token',
@@ -195,7 +195,7 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None,
                 f"🔴 <b>Stockbit Scraper GAGAL</b>\n\n"
                 f"Tidak ada data dari Stockbit ({trade_date}).\n"
                 f"Token mungkin expired — cek: <code>python3 auto_token.py --check</code>"
-            )
+            , event="data.scraper_failed")
         except Exception:
             pass
 
@@ -270,7 +270,7 @@ def _alert_if_eod_degraded(intraday_result: dict, trade_date: str, send_telegram
                 f"Likely: token revoked (HTTP 401) or empty upstream responses — see app.log.\n"
                 f"Fix the token (<code>python3 auto_token.py --login</code>), then "
                 f"<code>python3 scripts/repair_provisional_bars.py --apply</code>"
-            )
+            , event="data.eod_degraded")
         except Exception as e:
             logger.warning(f"[screener] EOD degraded alert send failed: {e}")
     return True
@@ -323,8 +323,8 @@ def run_eod_retry(trade_date: str = None, send_telegram=None, today: str = None)
     sb_token, note = _eod_verified_token()
     if not sb_token:
         logger.error(f"[screener] EOD retry aborted: Stockbit token {note}")
-        _send(send_telegram,
-              f"🔴 <b>EOD retry ABORTED</b> ({trade_date})\n\n"
+        _send(send_telegram, event="data.token_expired", subject="eod_retry",
+              msg=f"🔴 <b>EOD retry ABORTED</b> ({trade_date})\n\n"
               f"{len(final)}/{total} final, {len(targets)} to retry, but the Stockbit token is "
               f"{note}. Nothing saved.\nFix: <code>python3 auto_token.py --login</code>")
         return {**base, 'action': 'token_invalid', 'retried': 0, 'finalised': 0}
@@ -335,8 +335,13 @@ def run_eod_retry(trade_date: str = None, send_telegram=None, today: str = None)
     saved = scraper.save_ohlcv_to_db(got, trade_date, is_final=True) if got else 0
     final_after, prov_after = _final_state(trade_date, tickers)
     logger.info(f"[screener] EOD retry done: {saved} finalised; now {len(final_after)}/{total} final")
+    _retry_ok = len(final_after) / max(total, 1) >= EOD_MIN_FILL_FRAC
+    # Curation 2026-10-06: a RED outcome (session still degraded) needs action
+    # now → tier 1; a 🟢 recovery is success noise → evening digest.
     _send(send_telegram,
-          f"{'🟢' if len(final_after) / max(total, 1) >= EOD_MIN_FILL_FRAC else '🔴'} "
+          event="screener.eod_retry_recovered" if _retry_ok else "data.eod_degraded",
+          subject="eod_retry",
+          msg=f"{'🟢' if _retry_ok else '🔴'} "
           f"<b>EOD retry</b> ({trade_date})\n\n"
           f"Retried {len(targets)} tickers ({'degraded day' if degraded else 'provisional leftovers'}), "
           f"token {note}.\nFinal bars: {len(final)} → <b>{len(final_after)}/{total}</b>; "
@@ -475,7 +480,7 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
                 for r in top:
                     d = "▲" if r["direction"] == "long" else "▼"
                     lines.append(f"{d} <b>{r['ticker']}</b> conv {r['conviction']:.0f} @ {r['close']:,}")
-                send_telegram("\n".join(lines), category="reversal_watchlist")
+                send_telegram("\n".join(lines), event="report.reversal_watchlist")
             except Exception:
                 pass
     except Exception as _re:

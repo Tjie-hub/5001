@@ -528,3 +528,15 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
 .topbar-right { display:flex; align-items:center; gap:12px; margin-left:auto; }
 #app-content[aria-busy="true"] { opacity:.55; transition:opacity .12s; }
 @media (max-width:900px){ .shell-nav .nav-sep { display:none; } .shell-nav { gap:2px; } }
+
+/* ── Frontend freeze banner (2026-10-06) ─────────────────────────────────── */
+.frozen-banner {
+  padding: 5px 20px;
+  background: var(--surface, #12141c);
+  border-bottom: 1px solid var(--border, rgba(255,255,255,.07));
+  color: var(--text-mute, #8a93a6);
+  font: 500 12px/1.5 'Inter', sans-serif;
+  text-align: center;
+}
+.frozen-banner a { color: var(--text, #e8edf4); text-decoration: underline; }
+.frozen-banner a:hover { color: #fff; }

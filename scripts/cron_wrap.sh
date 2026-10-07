@@ -21,6 +21,21 @@ rc=$?
 echo "[$(date '+%F %T')] EXIT $JOB rc=$rc" >> "$LOG"
 
 if [ "$rc" -ne 0 ]; then
+    # Curation policy (2026-10-06 brief): cron failure alerts are tier-1 SEND
+    # but deduped once per job per day, and the global logs/TELEGRAM_OFF
+    # blackout suppresses them entirely. State lives under this wrapper's own
+    # LOG_DIR (CRON_WRAP_LOG_DIR override included) so tests stay hermetic.
+    if [ -f "$LOG_DIR/TELEGRAM_OFF" ]; then
+        echo "[$(date '+%F %T')] ALERT SKIPPED (telegram globally OFF) for $JOB" >> "$LOG"
+        exit "$rc"
+    fi
+    STATE_DIR="$LOG_DIR/notify_state"
+    MARKER="$STATE_DIR/cronfail_${JOB}_$(date +%F)"
+    if [ -f "$MARKER" ]; then
+        echo "[$(date '+%F %T')] ALERT SKIPPED (already alerted today) for $JOB" >> "$LOG"
+        exit "$rc"
+    fi
+    mkdir -p "$STATE_DIR"
     ENV_FILE="${CRON_WRAP_ENV:-$DIR/.env}"
     TOKEN=$(grep -E '^TELEGRAM_TOKEN=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2-)
     CHAT=$(grep -E '^TELEGRAM_CHAT_ID=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2-)
@@ -54,6 +69,7 @@ sys.stdout.write(redact_secrets(sys.stdin.read()))
         echo "[$(date '+%F %T')] REDACTION SKIPPED for $JOB (no venv at $PYBIN)" >> "$LOG"
     fi
     if [ -n "$TOKEN" ] && [ -n "$CHAT" ]; then
+        touch "$MARKER"   # once per job per day, regardless of send outcome
         curl -fsS --max-time 10 "$API_BASE/bot$TOKEN/sendMessage" \
             --data-urlencode "chat_id=$CHAT" \
             --data-urlencode "text=$MSG" >/dev/null 2>&1 \

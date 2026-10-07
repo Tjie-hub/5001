@@ -103,14 +103,14 @@ def run_flow_fetch():
                 f"{fin['date']} before 16:15 WIB.\n"
                 f"Same-day bars are provisional until the EOD scraper runs — "
                 f"likely the yfinance gap-filler wrote unsettled data as settled."
-            )
+            , event="data.pit_finality_violation")
         if is_first_session and count == 0:
             send_telegram(
                 f"⚠️ <b>Flow Fetch WARNING</b>\n\n"
                 f"Sesi pertama ({now_str}) selesai tapi <b>0 tickers tersimpan</b>.\n"
                 f"Kemungkinan: token Stockbit expired.\n\n"
                 f"Cek: <code>cat .stockbit_token</code>"
-            )
+            , event="data.flow_zero_warning")
     except Exception as e:
         logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] Flow fetch error: {e}")
         if is_first_session:
@@ -119,7 +119,7 @@ def run_flow_fetch():
                 f"Sesi pertama ({now_str}) error:\n"
                 f"<code>{redact_and_truncate(str(e), 200)}</code>\n\n"
                 f"Signal scan 15:35 akan berjalan <b>tanpa flow data</b>."
-            )
+            , event="data.flow_fetch_failed")
 
 
 def check_flow_coverage(db_path: str, trade_date: str, lookback: int = 10,
@@ -233,7 +233,7 @@ def run_broker_flow_fetch():
         from stockbit_fetcher import extract_token_from_chrome, verify_token, run_flow, get_tickers
         token = extract_token_from_chrome()
         if not token or not verify_token(token):
-            send_telegram("🔴 <b>Broker Flow Fetch GAGAL</b>\nToken Stockbit expired atau tidak ditemukan.")
+            send_telegram("🔴 <b>Broker Flow Fetch GAGAL</b>\nToken Stockbit expired atau tidak ditemukan.", event="data.token_expired", subject="broker_flow")
             return
         tickers = get_tickers("ALL")
         # Include open paper trade tickers not already in ALL list
@@ -268,7 +268,7 @@ def run_broker_flow_fetch():
                 f"{cov['reason']}\n\n"
                 f"Backfill hanya mungkin selagi sesi masih live — cek token & "
                 f"re-run <code>run_broker_flow_fetch</code> hari ini."
-            )
+            , event="data.flow_coverage")
 
         # Bootstrap C2: a PRIOR completed session with zero flow tickers is the
         # 2026-08-25 gap class — the same-day monitor above cannot fire when the
@@ -285,10 +285,10 @@ def run_broker_flow_fetch():
                 f"The session cannot be re-fetched historically — record the gap "
                 f"for research exclusion "
                 f"(see docs/research_programs/P-M/DATA_GAP_AUDIT_2026-09-14.md)."
-            )
+            , event="data.flow_gap")
     except Exception as e:
         logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] Broker flow fetch error: {e}")
-        send_telegram(f"🔴 <b>Broker Flow Fetch Error</b>\n<code>{redact_and_truncate(str(e), 200)}</code>")
+        send_telegram(f"🔴 <b>Broker Flow Fetch Error</b>\n<code>{redact_and_truncate(str(e), 200)}</code>", event="data.flow_fetch_failed")
 
 
 def run_broker_period_summary_fetch():
@@ -324,7 +324,7 @@ def run_broker_period_summary_fetch():
     token = extract_token_from_chrome()
     if not token or not verify_token(token):
         send_telegram("🔴 <b>Broker Period Summary Fetch GAGAL</b>\n"
-                      "Token Stockbit expired atau tidak ditemukan.")
+                      "Token Stockbit expired atau tidak ditemukan.", event="data.token_expired", subject="broker_period")
         return
 
     tickers = get_tickers("ALL")
@@ -349,7 +349,7 @@ def run_broker_period_summary_fetch():
             f"{len(failures)} kombinasi ticker/period gagal ({len(tickers_failed)} ticker):\n"
             f"{detail}{more}\n\n"
             f"{total} baris tersimpan dari kombinasi yang berhasil."
-        )
+        , event="data.broker_period_failed")
     else:
         logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Broker period summary fetch selesai. "
                    f"{total} baris tersimpan untuk {len(tickers)} tickers x {len(PERIODS)} periods.")
@@ -392,7 +392,7 @@ def run_corporate_actions_fetch():
     token = extract_token_from_chrome()
     if not token or not verify_token(token):
         send_telegram("🔴 <b>Corporate Actions Fetch GAGAL</b>\n"
-                      "Token Stockbit expired atau tidak ditemukan.")
+                      "Token Stockbit expired atau tidak ditemukan.", event="data.token_expired", subject="corporate_actions")
         return
 
     tickers = get_tickers("ALL")
@@ -414,7 +414,7 @@ def run_corporate_actions_fetch():
             f"🔴 <b>Corporate Actions Fetch GAGAL (sebagian)</b>\n\n"
             f"{len(failures)}/{len(tickers)} ticker gagal:\n{detail}{more}\n\n"
             f"{total} event tersimpan dari ticker yang berhasil."
-        )
+        , event="data.corporate_actions_failed")
     else:
         logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Corporate actions fetch selesai. "
                    f"{total} event tersimpan untuk {len(tickers)} tickers.")
@@ -454,7 +454,7 @@ def run_ownership_fetch():
     token = extract_token_from_chrome()
     if not token or not verify_token(token):
         send_telegram("🔴 <b>Ownership Fetch GAGAL</b>\n"
-                      "Token Stockbit expired atau tidak ditemukan.")
+                      "Token Stockbit expired atau tidak ditemukan.", event="data.token_expired", subject="ownership")
         return
 
     tickers = get_tickers("ALL")
@@ -476,7 +476,7 @@ def run_ownership_fetch():
             f"🔴 <b>Ownership Fetch GAGAL (sebagian)</b>\n\n"
             f"{len(failures)}/{len(tickers)} ticker gagal:\n{detail}{more}\n\n"
             f"{total} baris tersimpan dari ticker yang berhasil."
-        )
+        , event="data.ownership_failed")
     else:
         logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Ownership fetch selesai. "
                    f"{total} baris tersimpan untuk {len(tickers)} tickers.")
@@ -515,7 +515,7 @@ def run_insider_fetch():
     token = extract_token_from_chrome()
     if not token or not verify_token(token):
         send_telegram("🔴 <b>Insider Transactions Fetch GAGAL</b>\n"
-                      "Token Stockbit expired atau tidak ditemukan.")
+                      "Token Stockbit expired atau tidak ditemukan.", event="data.token_expired", subject="insider")
         return
 
     tickers = get_tickers("ALL")
@@ -537,7 +537,7 @@ def run_insider_fetch():
             f"🔴 <b>Insider Transactions Fetch GAGAL (sebagian)</b>\n\n"
             f"{len(failures)}/{len(tickers)} ticker gagal:\n{detail}{more}\n\n"
             f"{total} transaksi tersimpan dari ticker yang berhasil."
-        )
+        , event="data.insider_failed")
     else:
         logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Insider transactions fetch selesai. "
                    f"{total} transaksi tersimpan untuk {len(tickers)} tickers.")
@@ -579,7 +579,7 @@ def run_stockbit_screener_fetch():
             f"🔴 <b>Stockbit Screener Fetch GAGAL (sebagian)</b>\n\n"
             f"{len(failures)}/{len(GURU_TEMPLATES)} template gagal:\n{detail}\n\n"
             f"{total} baris tersimpan dari template yang berhasil."
-        )
+        , event="data.screener_fetch_failed")
     else:
         logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] Stockbit screener fetch selesai. "
                    f"{total} baris tersimpan.")
@@ -605,7 +605,7 @@ def run_ohlcv_reconciliation():
                 f"\u2696\ufe0f <b>OHLCV Reconciliation {today}</b>\n\n"
                 f"{n} mismatch(es) > 0.1% of {rep['compared']} compared "
                 f"(alert-only; scraper is authority):\n{top}"
-            )
+            , event="data.ohlcv_reconcile")
     except Exception as e:
         logger.warning(f"[scheduler] OHLCV reconcile error: {e}")
 
@@ -637,7 +637,7 @@ def run_token_health_check(token_file: str = None):
         f"{icon} <b>Stockbit Token {s['status'].upper()}</b>\n\n"
         f"Token: {left}. Fetching/backfill will 401 until refreshed.\n"
         f"Refresh: <code>python3 auto_token.py</code>"
-    )
+    , event="data.token_health_warning")
     logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Token health ALERT: {s['status']} ({left})")
 
 
@@ -686,7 +686,7 @@ def run_token_live_probe(token_file: str = None):
             f"⚠️ <b>Stockbit token probe inconclusive</b> ({now})\n\n"
             f"Live check returned {'a network error' if status is None else f'HTTP {status}'}, "
             f"not 401. No re-login attempted (a new login can revoke a working session).\n"
-            f"Watch the 16:15 EOD finalisation.")
+            f"Watch the 16:15 EOD finalisation.", event="data.token_probe_inconclusive")
         return
 
     what = "missing" if not tok else f"HTTP {status}"
@@ -701,7 +701,7 @@ def run_token_live_probe(token_file: str = None):
         send_telegram(
             f"🟡 <b>Stockbit token revoked — recovered</b> ({now})\n\n"
             f"Live probe got {what} although the exp claim looked valid; auto_token refreshed "
-            f"it and the new token verifies. 16:15 EOD should finalise normally.")
+            f"it and the new token verifies. 16:15 EOD should finalise normally.", event="data.token_recovered")
     else:
         send_telegram(
             f"🔴 <b>Stockbit token DEAD before EOD</b> ({now})\n\n"
@@ -709,7 +709,7 @@ def run_token_live_probe(token_file: str = None):
             f"{'ran but the token still fails' if refreshed else 'failed'} "
             f"(re-probe: {after}). The 16:15 EOD finalisation will fail.\n"
             f"Fix: <code>python3 auto_token.py --login</code>, then after 16:30 "
-            f"<code>python3 scripts/repair_provisional_bars.py --apply</code>")
+            f"<code>python3 scripts/repair_provisional_bars.py --apply</code>", event="data.token_dead_pre_eod")
 
 
 def run_ohlcv_coverage_check(date_str: str = None):
@@ -741,7 +741,7 @@ def run_ohlcv_coverage_check(date_str: str = None):
             f"Only <b>{count}/{universe}</b> tickers ({s['pct']*100:.0f}%) have a bar.\n"
             f"Likely a fetch outage (check token: <code>python3 auto_token.py --check</code>) "
             f"or scraper failure."
-        )
+        , event="data.ohlcv_coverage")
 
 
 def run_foreign_snapshot():
@@ -807,7 +807,7 @@ def run_news_fetch():
         send_telegram(
             f"🔴 <b>News Fetch GAGAL</b>\n\n"
             f"<code>{redact_and_truncate(str(e), 200)}</code>"
-        )
+        , event="data.news_fetch_failed")
 
 
 def _run_open_trade_monitor():
@@ -927,7 +927,7 @@ def run_premover_eod():
     _cb_state, _cb_reason = check_circuit_breaker(_risk)
     if _cb_state == CircuitBreakerState.OPEN:
         logger.info(f"[{now_str}] Circuit breaker OPEN: {_cb_reason} — premover EOD paused")
-        send_telegram(f"⛔ <b>Circuit Breaker Active</b>\n\n{_cb_reason}\n\nAuto-trading paused. Manual override required.")
+        send_telegram(f"⛔ <b>Circuit Breaker Active</b>\n\n{_cb_reason}\n\nAuto-trading paused. Manual override required.", event="risk.circuit_breaker")
         return
 
     logger.info(f"[{now_str}] Pre-mover EOD scan dimulai...")
@@ -937,7 +937,7 @@ def run_premover_eod():
               f"{len(new_setups)} new setups.")
     except Exception as e:
         logger.warning(f"[{datetime.now(WIB).strftime('%H:%M')}] Pre-mover scan error: {e}")
-        send_telegram(f"🔴 <b>Pre-mover Scan Error</b>\n<code>{redact_and_truncate(str(e), 200)}</code>")
+        send_telegram(f"🔴 <b>Pre-mover Scan Error</b>\n<code>{redact_and_truncate(str(e), 200)}</code>", event="data.premover_scan_failed")
         return
 
     mode = get_premover_mode()
@@ -1012,7 +1012,8 @@ def run_staged_entry_fills():
                    f"(signal {r['signal_date']}, source {r.get('source') or 'n/a'})"
                    for r in filled))
         try:
-            send_telegram(msg)
+            send_telegram(msg, event="trade.paper_opened",
+                          subject=",".join(r["ticker"] for r in filled[:5]))
         except Exception as e:
             logger.warning(f"[{now_str}] staged-fill notify error: {e}")
     n_expired = sum(1 for r in results if r.get("status") == "EXPIRED")
@@ -1106,7 +1107,7 @@ def run_market_health_report():
             logging.warning(f"[market_health_report] news digest skipped: {_ne}")
 
         msg = ext_block + health + news_block
-        send_telegram(msg, category="market_health_report")
+        send_telegram(msg, event="report.market_health")
         logger.info(f"[{now.strftime('%H:%M')}] Premarket briefing sent (tier={risk['tier']})")
     except Exception as e:
         logging.error(f"[market_health_report] {e}")
@@ -1430,7 +1431,7 @@ def run_premarket_firm_scan():
             f"<code>watchlist_publication</code>, so there is nothing to revise.\n\n"
             f"This is not the same as an empty plan: the EOD job appears not to "
             f"have published at all. Check the 16:40 job."
-        )
+        , event="data.premarket_no_snapshot")
         return
 
     if base_status == _wl.BASE_EMPTY:
@@ -1640,7 +1641,7 @@ def run_premarket_firm_scan():
                 f"({len(base_rows)} candidates) \u2192 {len(survivors)} after "
                 f"revision. Discovery adds: "
                 f"{'on' if _allow_adds else 'off'}.</i>")
-        send_telegram(msg, category="premarket_summary")
+        send_telegram(msg, event="report.premarket_summary")
     except Exception as e:
         logger.warning(f"[premarket firm] Telegram error: {e}")
 
@@ -1755,7 +1756,7 @@ def run_eod_trade_plan():
             wl_diff = wr.diff_snapshot(_wl_conn, date_str, cands)
             wr.record_snapshot(_wl_conn, date_str, cands, regime=regime[0])
         send_telegram(wr.build_message(date_str, wl_diff, len(cands), reasons=reasons),
-                      category="watchlist_update")
+                      event="report.watchlist_update")
     except Exception as e:
         logging.warning(f"[eod_trade_plan] watchlist update report error (fail-soft): {e}")
 
@@ -1792,7 +1793,7 @@ def run_eod_trade_plan():
         send_telegram(tp.build_message([], regime, now.strftime('%d/%m'), degraded=False,
                                        vpin_summary=vpin_summary, diff=diff,
                                        watchlist_size=len(cands)) + pw_section,
-                      category="eod_trade_plan")
+                      event="report.eod_trade_plan_empty")
         logger.info(f"[{now_str}] EOD trade plan: all candidates vetoed by edge pre-screen — empty plan sent")
         return
 
@@ -1924,7 +1925,7 @@ def run_eod_trade_plan():
                                        degraded=degraded, vpin_summary=vpin_summary,
                                        provider_line=p_line, diff=diff,
                                        watchlist_size=len(cands)) + pw_section,
-                      category="eod_trade_plan")
+                      event="report.eod_trade_plan")
     except Exception as e:
         logger.warning(f"[eod_trade_plan] Telegram error: {e}")
 
@@ -2154,8 +2155,9 @@ def run_forward_test_cycle(db_path=None, run_date=None):
         # errors must not mask a successful cycle, so this is its own try/except.
         try:
             from forward_testing.reporting import build_forward_test_report
-            send_telegram(build_forward_test_report(db, rd, repo=repo),
-                          category="forward_test_report")
+            _ft_msg = build_forward_test_report(db, rd, repo=repo)
+            send_telegram(_ft_msg, event="report.forward_test",
+                          state=_ft_msg[:150])
         except Exception as e:
             logger.warning(f"[forward_test] Telegram report error: {e}")
     except Exception as e:
@@ -2210,4 +2212,4 @@ def run_phase5_bull_watch():
         lines = [f"{'🟢' if new in ('BULL_MODERATE','BULL_STRONG') else '⚪'} "
                  f"{t}: {old} → {new}" for t, old, new in changes]
         send_telegram("📡 <b>PHASE 5 BULL-watch</b>\n" + "\n".join(lines)
-                      + f"\nNR7-eligible now: {eligible_n}/{len(cur)}")
+                      + f"\nNR7-eligible now: {eligible_n}/{len(cur)}", event="report.bull_watch")

@@ -1,63 +1,76 @@
-# 06 · PIT quarterly fundamentals (filing-timestamped, ≥2012, incl. delisted) — FEASIBILITY MEMO · 2026-09-30
+# 06 · PIT quarterly fundamentals (with filing timestamps, ≥2012, incl. delisted) — FEASIBILITY · 2026-09-30
 
-**Item (planner task 3A):** quarterly fundamentals WITH filing timestamps, from 2012, including
-delisted names — the data a PIT value/profitability/quality/size family ({FQ}) would need.
-Scoping + one POC only; no pipeline. POC: `poc_pit_fundamentals_ohlcv.py` (this directory),
-run 2026-09-30 (output embedded below).
+**Item:** point-in-time quarterly fundamentals for the {FQ} family (value, profitability, quality,
+size) — the data gap FINDINGS_2026-09-18 §6 called "the single highest-value data acquisition" and
+whose Yahoo fetch was closed as a data null (52.6% coverage, ~4 annual cross-sections, no
+timestamps). Scoping only; no backfill, no pipeline.
 
 ## Verdict
 
-**No free/scriptable PIT-grade source exists today.** Every candidate either lacks filing
-timestamps (yfinance), is Cloudflare-blocked without an Owner ToS ruling (idx.co.id), or is
-authenticated history whose scrape is an Owner decision (Stockbit). The {FQ} data gate is
-**NOT satisfied**; per the D-065 draft, the family does not open until a PIT source exists.
+**No free/scriptable source with per-statement filing timestamps was found in this pass.** Two
+probes were made (idnfinancials, and the already-provisioned Stockbit access assessed from repo
+tooling). The realistic design is (a) numbers from a public/vendor source, plus (b) a
+**conservative statutory filing date** (period end + regulatory publication deadline) when actual
+announcement timestamps are unavailable — later-than-true first-available ⇒ no look-ahead by
+construction, at the cost of burning the first ~2 months of each quarter's signal. This is a
+usable PIT approximation for screens, and it must be labelled as such on any card.
 
-## POC result (BBCA.JK, yfinance annual income statement, run 2026-09-30)
+## Sources, probed and ranked
 
-```json
-{"period_end": "2025-12-31",
- "headline": {"TotalRevenue": 114319648000000,
-              "NetIncomeContinuousOperations": 57563093000000},
- "filing_timestamp_present": false,
- "note": "Yahoo statements carry period-end columns only; no filing/publication
-          timestamp exists anywhere in the payload -- PIT from this source is
-          construction, not observation"}
-```
+1. **idx.co.id financial-statement announcements + PDF/XBRL downloads** — the authoritative
+   source: every periodic statement is announced with a date, and the statements themselves are
+   downloadable. **Probe result:** the announcements area is a JS app backed by POST APIs;
+   plain-HTTP probes of the search UI were not attempted beyond confirming the pattern (the
+   earlier D-c POC session hit bot-guarding on IDX fetch paths). Scripted bulk access = Owner
+   ToS/technical decision; per-name manual downloads are feasible but do not scale.
+   **Effort if authorized:** 3–5 days build + maintenance; coverage incl. delisted names is the
+   best of any option (delisted names' statements remain published).
+2. **Stockbit (provisioned: `.env` creds + `auto_token.py` → `exodus.stockbit.com/keystats/<TICKER>`)** —
+   keystats carries PE/PBV/ROE/EPS; the corpus only began recording 2026-04, but whether the
+   endpoint serves **history** (and with what timestamps) is decidable with **one authenticated
+   probe (~1h)** — not run in this scoping pass. Coverage for delisted names: unknown.
+3. **idnfinancials.com (probed live, BBCA)** — quarterly Net Interest Income / Net Profit by
+   fiscal quarter (e.g. BBCA Q4/2024 net profit IDR 13,762,442 jt) **with period labels only —
+   no publication/filing dates on the page**; plain fetch returns **403** (bot-guarded; a
+   reader-view fetch works, automation-friendly access is therefore fragile). Historic depth and
+   delisted coverage unverified. Usable as a numbers source paired with statutory PIT dates.
+4. **IDX periodic publications (Financial Data & Ratio, IDX Statistics/Fact Book)** — annual
+   aggregates; no per-statement timestamps; no delisted history. Reference/QA use only.
+5. **yfinance fundamentals** — already tested by the program: null (52.6% coverage, no
+   timestamps). Closed; do not revisit.
 
-Numbers are real and free, but the *filing date is absent by construction* — assuming a lag
-("period end + 90 days") fabricates PIT and would fail the program's own evidence standards.
+## POC (item-mandated shape: one ticker, one fiscal year)
 
-## Sources, ranked by confidence they could work
+- Ticker/fiscal year attempted: BBCA, FY2024 → period end **2024-12-31**; quarterly numbers
+  retrievable (Q4/2024 net profit IDR 13,762,442 jt, net interest income IDR 21,331,393 jt from
+  idnfinancials live probe 2026-09-30).
+- **Filing date: NOT obtainable from any probed public page.** Under the conservative design the
+  PIT date for FY2024 would be **2025-04-30** (statutory annual publication deadline) — i.e. the
+  numbers are treated as first-visible 4 months after period end. Quarterly statements: +2 months
+  after quarter end by the same rule. Exact POJK citation to be confirmed before a card relies on
+  the rule.
+- Sample output captured in this memo (no DB writes, no backfill).
 
-1. **idx.co.id financial-statement downloads (XBRL/PDF), per-company disclosure pages** —
-   coverage: all listed names incl. delisted archives; PIT-ness: **excellent** (every document
-   carries an announcement stamp); the single true PIT source. **Access: blocked** — the POC's
-   single unauthenticated GET to the site's own announcement endpoint returned **HTTP 403
-   (Cloudflare "Just a moment")**; per the ground rules the source was dropped, no bypass
-   attempted. **This is an Owner decision point**: authorize a terms-compliant retrieval path
-   (or an official IDX data product) before any engineering. Effort post-ruling: 3–5 days build
-   + ongoing maintenance.
-2. **Stockbit fundamentals (credentials ARE provisioned: `.env` `STOCKBIT_USER/PASS`,
-   headless token refresh working — `auto_token.py`)** — authenticated *access* exists, but
-   pulling statement history behind auth is a **scrape-behind-auth decision reserved to the
-   Owner** (same posture as memo 01); not attempted. PIT-ness unverified (UI shows period
-   labels; filing dates unlikely). Coverage from ~2016, delisted names likely absent. Effort
-   post-ruling: 1–2 days to inspect + pilot.
-3. **IDX Financial Data & Ratio publications / IDX Statistics / Fact Book** — annual
-   publications (not quarterly), PIT = publication date, delisted names appear in their final
-   year. Usable as an annual cross-check, not a quarterly PIT source. Access: same idx.co.id
-   wall as (1). Effort if hand-curated: 1–2 days per decade, manual.
-4. **yfinance quarterly/annual statements** — free, scriptable, **no filing timestamps**
-   (POC), delisted statements generally purged with the delisted price history (see memo 07).
-   Only honest use: period-end-anchored studies explicitly labelled non-PIT, which the program's
-   standards treat as in-sample-flavored. Effort: 0.5 day (already working in the POC).
-5. **Paid vendor (Refinitiv/FACTIVA/Bloomberg/S&P CIQ)** — would satisfy PIT + delisted +
-   2012 depth outright; no subscription provisioned; cost decision for the Owner. Effort once
-   licensed: 2–3 days ingest.
+## Effort estimate
 
-## Effort summary if the Owner pursues this for real
+- Stockbit history probe: **1h** (decides whether a numbers source with real timestamps already
+  exists behind our own credentials).
+- Conservative-PIT build (numbers from idnfinancials/IDX PDFs + statutory dates, 2012→present,
+  incl. delisted where obtainable): **3–5 days**, mostly per-statement date sourcing for delisted
+  names; coverage realistically ≥90% of currently-listed, materially lower for delisted.
+- Authoritative IDX announcement scrape: 3–5 days **+ Owner authorization** (bot-guarded).
 
-- Honest minimum that meets the PIT bar: **Owner-authorized IDX retrieval (3–5 days)** or
-  **paid vendor (2–3 days + cost)**. Everything free is either timestamp-less or blocked.
-- A no-PIT fallback (yfinance with assumed lags) is buildable in ~1 day but should be
-  pre-declared as non-PIT and kept out of any {FQ} registration claim.
+## From the second run (17ec02e)
+
+Findings unique to the second agent's pass (POC: `poc_pit_fundamentals_ohlcv.py`, same run date):
+
+- **yfinance payload inspection (BBCA.JK, annual income statement):** FY2025 statement retrieved
+  free — period end 2025-12-31, TotalRevenue Rp 114,319,648,000,000,
+  NetIncomeContinuousOperations Rp 57,563,093,000,000 — and **no filing/publication timestamp
+  exists anywhere in the payload** (checked, not assumed). yfinance numbers are real but
+  PIT-by-construction only; any assumed filing lag is fabricated PIT.
+- **idx.co.id announcement endpoint (HTTP-level probe):** single unauthenticated GET to
+  `primary/Announcement/GetAnnouncement` returned **HTTP 403 Cloudflare** ("Just a moment") —
+  confirming this memo's JS-app assessment at the protocol level. Source dropped per ground
+  rules; no bypass attempted.
+- Stockbit credentials-are-provisioned assessment concurs with this memo's source 2; not attempted.

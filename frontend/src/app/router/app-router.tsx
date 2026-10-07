@@ -5,6 +5,12 @@
  * exactly one canonical root (P4-06 §4); no route has two owners (P4-06 §17);
  * no nested workspaces (P4-06 §3).
  *
+ * Frontend freeze (owner-directed 2026-10-06): the portfolio, intelligence
+ * and watchlist workspaces were removed. Their old paths stay registered and
+ * resolve to the FrozenWorkspacePage banner page — never a blank SPA error or
+ * a 404 — so old bookmarks keep working. See
+ * docs/INTEGRATION_CONSOLIDATION_MAP_2026-10-06.md.
+ *
  * NO LOADERS. React Router's data APIs would fetch outside the frozen chain in
  * Phase 7 v1.1 §8 (Component → ViewModel → Domain Adapter → Repository →
  * Server State → API Client). Data access arrives in Workstream E through the
@@ -20,14 +26,13 @@ import { AppShell } from '../shell/app-shell'
 import { WorkspaceShellPage } from '../shell/workspace-shell-page'
 import { UrlNormalizationGuard } from './url-normalization-guard'
 import { NotFoundPage } from './not-found-page'
+import { FrozenWorkspacePage, PORTFOLIO_FROZEN_NOTE } from './frozen-workspace-page'
 import { getWorkspace, ROUTE_PATHS, type WorkspaceId } from './workspaces'
 import { DecisionPage } from '@domains/decision/decision-page'
 import { SettingsPage } from '@domains/settings/settings-page'
-import { WatchlistPage } from '@domains/watchlist/watchlist-page'
 import { MarketPage } from '@domains/market/market-page'
 import { SearchPage } from '@domains/search/search-page'
 import { TickerDetailPage } from '@domains/ticker/ticker-detail-page'
-import { IntelligencePage } from '@domains/intelligence/intelligence-page'
 
 function WorkspaceRoute({ id }: { id: WorkspaceId }) {
   return <WorkspaceShellPage workspace={getWorkspace(id)} />
@@ -66,48 +71,28 @@ export function AppRoutes() {
 
           {/*
             Decision Center — the first Workstream D workspace built (see
-            domains/decision/decision-page.tsx docstring). Settings, Watchlist,
-            Market, Search and the Ticker detail route are also real (see
-            their own docstrings); Portfolio and the /ticker index remain
-            the generic placeholder shell.
+            domains/decision/decision-page.tsx docstring). Settings, Market,
+            Search and the Ticker detail route are also real (see their own
+            docstrings); the /ticker index remains the generic placeholder
+            shell.
           */}
           <Route path={ROUTE_PATHS.decision} element={<DecisionPage />} />
           {/*
-            Investment Intelligence — consolidation 2026-09-03: composes the
-            canonical investment portfolio (absorbed from the external
-            Investment Dashboard, ex-port 5003) with the watchlist / market /
-            registry read models inside the OS. See
-            domains/intelligence/intelligence-page.tsx and
-            docs/INTEGRATION_CONSOLIDATION_MAP_2026-09-03.md.
+            Frozen workspaces — frontend freeze, owner-directed 2026-10-06.
+            '/portfolio', '/intelligence' and '/watchlist' resolve to the
+            FrozenWorkspacePage banner page so old bookmarks work (supersedes
+            ADR-006 §5's interim fix, which left /portfolio to the catch-all:
+            a deliberate banner page is honest where a 404 was merely honest).
+            /portfolio additionally carries the stopped-at note for the 5001
+            investment store. The workspaces themselves are gone from
+            workspaces.ts; their domain modules are left in the tree unused.
           */}
-          <Route path={ROUTE_PATHS.intelligence} element={<IntelligencePage />} />
-          {/*
-            ADR-006 §5 (docs/OneDrive_2026-08-07/Frontend arch/
-            ADR-006_LEGACY_UI_DISPOSITION.md), interim fix, applied 2026-08-20:
-            no <Route> for ROUTE_PATHS.portfolio here. Flask's own
-            `@app.route("/portfolio")` (app.py) already serves a real, working
-            legacy page at this URL; this SPA's Portfolio workspace is still
-            an empty WorkspaceShellPage placeholder (Workstream D, blocked on
-            U-2/U-3/U-4). Registering the shell here made "/portfolio" race
-            two different applications depending on how the user arrived
-            (full page load -> Flask; client-side nav -> the empty SPA
-            shell) -- ADR-006 §5 calls this a live defect independent of
-            which of its three disposition options is eventually chosen.
-            Dropping the <Route> lets an unmatched client-side "/portfolio"
-            fall through to the `*` catch-all (NotFoundPage) instead of
-            rendering the misleading empty shell. The route is added back,
-            deliberately, when the real Portfolio workspace (D5) is built --
-            see ADR-006 §7 Q-3 for what "feature-complete" will mean then.
-            workspaces.ts's WORKSPACES entry for 'portfolio' is unchanged:
-            the seven-workspace list itself is not being altered here, only
-            this one route's SPA registration.
-          */}
-          {/*
-            Watchlist — Production OS Slice 2, first workspace built directly
-            on the approved ADR-003 architecture. See
-            domains/watchlist/watchlist-page.tsx docstring.
-          */}
-          <Route path={ROUTE_PATHS.watchlist} element={<WatchlistPage />} />
+          <Route
+            path={ROUTE_PATHS.portfolio}
+            element={<FrozenWorkspacePage retired="Portfolio" note={PORTFOLIO_FROZEN_NOTE} />}
+          />
+          <Route path={ROUTE_PATHS.intelligence} element={<FrozenWorkspacePage retired="Investment Intelligence" />} />
+          <Route path={ROUTE_PATHS.watchlist} element={<FrozenWorkspacePage retired="Watchlist" />} />
           {/*
             Market — Production OS Slice 4, built directly on the approved
             ADR-003 architecture. See domains/market/market-page.tsx docstring.

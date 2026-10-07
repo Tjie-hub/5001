@@ -1,4 +1,4 @@
-"""The eight gate stages (spec §5 stage-contract table).
+"""The nine gate stages (spec §5 stage-contract table; ⑨ PBO added in config v3).
 
 Each stage takes the precomputed `ctx` (built once by the pipeline from the
 candidate) and the frozen `GateConfig`, and returns a StageResult carrying the
@@ -124,6 +124,31 @@ def stage_out_of_sample(ctx, config) -> StageResult:
                                   "promotion_bar_pct": config.promotion_bar_pct})
 
 
+def stage_pbo(ctx, config) -> StageResult:
+    """⑨ Probability of Backtest Overfitting (CSCV) over the trial family's common-period
+    returns. RESEARCH_VALIDATION_FRAMEWORK makes PBO mandatory, so a candidate whose family
+    has no common-period trial matrix (e.g. regime cells, which trade in different months)
+    is WATCH, never PASS: it cannot be promoted without the overfitting check."""
+    cfg = config.pbo
+    thr = {"watch_at": cfg["watch_at"], "fail_at": cfg["fail_at"], "n_splits": cfg["n_splits"]}
+    tr = ctx.get("trial_returns") or {}
+    matrix = tr.get("matrix") or []
+    labels = tr.get("labels") or []
+    if len(labels) < 2 or len(matrix) < 2 * cfg["n_splits"]:
+        return StageResult(stage="pbo", verdict=Verdict.WATCH,
+                           statistic={"pbo": None, "reason": "no common-period trial matrix (>= 2 trials, "
+                                                             f">= {2 * cfg['n_splits']} periods)"},
+                           threshold=thr)
+    r = st.pbo_cscv(matrix, n_splits=cfg["n_splits"])
+    if r["pbo"] >= cfg["fail_at"]:
+        verdict = Verdict.FAIL
+    elif r["pbo"] >= cfg["watch_at"]:
+        verdict = Verdict.WATCH
+    else:
+        verdict = Verdict.PASS
+    return StageResult(stage="pbo", verdict=verdict, statistic={**r, "labels": labels}, threshold=thr)
+
+
 def stage_ft_eligibility(ctx, config) -> StageResult:
     """⑧ Forward-test eligibility: never fails alone — attaches the frozen
     pre-registered forward-test rule that a PROMOTE carries."""
@@ -141,5 +166,6 @@ PIPELINE = (
     stage_deflated_sharpe,
     stage_walk_forward,
     stage_out_of_sample,
+    stage_pbo,
     stage_ft_eligibility,
 )

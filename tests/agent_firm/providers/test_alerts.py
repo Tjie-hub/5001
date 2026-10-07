@@ -11,7 +11,7 @@ from engine.agent_firm.providers import alerts
 def _clean(monkeypatch):
     alerts.reset_state()
     sent = []
-    monkeypatch.setattr(alerts, "send_telegram", lambda msg: sent.append(msg))
+    monkeypatch.setattr(alerts, "send_telegram", lambda msg, **kw: sent.append(msg))
     yield sent
     alerts.reset_state()
 
@@ -70,7 +70,7 @@ def test_alerts_disabled_by_config(_clean, monkeypatch):
 
 def test_telegram_failure_never_raises(monkeypatch):
     alerts.reset_state()
-    def _boom(msg):
+    def _boom(msg, **kw):
         raise RuntimeError("telegram down")
     monkeypatch.setattr(alerts, "send_telegram", _boom)
     assert alerts.session_limit_alert("claude", _RESET_A) is True  # logged anyway

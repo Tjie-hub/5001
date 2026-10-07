@@ -65,13 +65,15 @@ describe('theme switching', () => {
    * P6-14: "Changing themes shall preserve layouts, navigation, interactions
    * and accessibility. Only token values shall change."
    *
-   * Verified structurally — the same landmarks and the same seven workspace
+   * Verified structurally — the same landmarks and the same workspace
    * links survive the switch. This is the guarantee that makes theming safe to
-   * hand to Workstream C.
+   * hand to Workstream C. (Frontend freeze 2026-10-06: was rendered on
+   * /watchlist; that workspace is retired, so the contract now runs on
+   * /market.)
    */
   it('preserves layout, navigation and landmarks across a switch', async () => {
     const user = userEvent.setup()
-    renderApp('/watchlist')
+    renderApp('/market')
 
     const before = screen.getAllByRole('link').map((link) => link.getAttribute('href'))
 
@@ -82,6 +84,6 @@ describe('theme switching', () => {
     expect(screen.getByRole('main')).toBeInTheDocument()
     expect(screen.getByRole('contentinfo')).toBeInTheDocument()
     expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(before)
-    expect(screen.getByRole('heading', { level: 1, name: /Watchlist/ })).toBeVisible()
+    expect(screen.getByRole('heading', { level: 1, name: /Market/ })).toBeVisible()
   })
 })

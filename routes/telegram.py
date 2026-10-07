@@ -18,6 +18,8 @@ from config import (
     WEBHOOK_PATH,
 )
 from utils.logging_config import redact_secrets
+from utils.notify_policy import decide  # curation gate — bot replies are tier-1 "bot.reply"
+from utils.telegram import is_off  # global outbound kill switch (2026-10-05)
 
 telegram_bp = Blueprint("telegram_bot", __name__)
 
@@ -70,6 +72,12 @@ def send_telegram_reply(chat_id, text):
     """Send a reply via Telegram."""
     if "ISI_" in TELEGRAM_TOKEN:
         print(f"[Telegram skip] ChatID:{chat_id} - {text}")
+        return
+    # Owner-initiated command replies are tier-1 "bot.reply" (each one is
+    # inherently singular); the gate still honors the global TELEGRAM_OFF.
+    action, reason = decide("bot.reply", msg=text)
+    if action != "send":
+        print(f"[Telegram {action} ({reason})] ChatID:{chat_id}")
         return
     text = redact_secrets(text)  # RC1 fix R-4 — same rule as send_telegram()/log lines
     try:
@@ -237,7 +245,7 @@ def setup_telegram_webhook():
             telegram_polling_active = True
             from scheduler import send_telegram
             msg = f"✅ Telegram polling mode activated!\n\nPolling updates at /telegram/start-polling"
-            send_telegram(msg)
+            send_telegram(msg, event="system.polling_activated")
             return jsonify({
                 'success': True,
                 'message': 'Telegram polling mode activated',

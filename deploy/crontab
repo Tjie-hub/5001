@@ -135,3 +135,8 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # provider_switch audit rows not increasing (state: logs/ops_health_state.json)
 10 17 * * 1-5 cd $D && $W ops_health_daily venv/bin/python3 scripts/ops/ops_health_daily.py
 
+# FWD-PM-BANK-001 forward test (HYP-PM-0014, family P-M Price-Reversal {R1,R2}),
+# opened 2026-10-05 (D-066). Appends a big-4 bank 2-ATR climax-low event to
+# docs/research_programs/P-M/forward_bank/ledger.json only when its 10-session
+# window closes with every leg present; read-only against the DB; refuses back-fill.
+40 9 * * * cd $D && $W fwd_bank_recorder venv/bin/python3 docs/research_programs/P-M/forward_bank/run_recorder.py

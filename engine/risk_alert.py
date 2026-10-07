@@ -78,7 +78,7 @@ def route_risk_alert(
             f"Foreign-Broker: {components.get('foreign_flow', '?'):.1f}\n\n"
             f"<i>Immediate action may be required.</i>"
         )
-        send_telegram(msg)
+        send_telegram(msg, event="risk.market_critical")
         conn.execute(
             "UPDATE market_risk_log SET sent=1 WHERE date=? AND time=? AND tier='CRITICAL'",
             (date_str, time_str),
@@ -127,7 +127,7 @@ def send_hourly_risk_bundle(date_str: str, time_str: str):
     pending = [a for a in get_pending_risk_alerts(conn, date_str) if a['tier'] == 'RED']
     if pending:
         msg = build_risk_summary_message(pending, date_str)
-        send_telegram(msg)
+        send_telegram(msg, event="market.risk_red_bundle")
         mark_alerts_sent(conn, [a['id'] for a in pending])
         conn.commit()
         logging.info(f"[risk_alert] Sent {len(pending)} RED alerts (hourly bundle)")
@@ -143,7 +143,7 @@ def send_eod_risk_summary(date_str: str):
     ]
     if pending:
         msg = build_risk_summary_message(pending, date_str)
-        send_telegram(msg)
+        send_telegram(msg, event="report.eod_risk_summary")
         mark_alerts_sent(conn, [a['id'] for a in pending])
         conn.commit()
         logging.info(f"[risk_alert] Sent {len(pending)} ORANGE/YELLOW alerts (EOD)")

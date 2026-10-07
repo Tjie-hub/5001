@@ -2186,6 +2186,63 @@ lifecycle-debt exception is now stale — amending it is the Owner's call.
 
 ---
 
+### D-065 · Gatekeeper gate config v3: Stage 9 PBO/CSCV implemented — closes a framework-vs-code gap
+**Status:** RECORDED · **Date:** 2026-10-05 · **Type:** Methodology (pre-registered gate change) +
+engineering · **Approval authority:** Owner instruction 2026-10-05, "fix all", on the gap list from the
+literature comparison (gap 2: "PBO/CSCV stage; threshold literature default").
+
+- **Gap found.** [[RESEARCH_VALIDATION_FRAMEWORK]] §1 states PBO via CSCV "must be applied", but
+  `research/gatekeeper/stages.py` ran eight stages without it. The framework promised a check the code
+  never ran (same class as the §5 corrections: a canonical claim contradicted by the repository).
+- **Change.** `statistics.pbo_cscv()` (Bailey, Borwein, Lopez de Prado & Zhu 2015; deterministic,
+  per-block sums over C(S,S/2) splits) and **Stage 9 `pbo`** before FT eligibility. Thresholds in the
+  hashed config: `n_splits 16`, **WATCH at PBO >= 0.25, FAIL at PBO >= 0.50** (overfit more likely
+  than not). `gate_config.yaml` version 2 -> **3**: a new config_hash and a new decision lineage;
+  no existing gate decision is touched (append-only).
+- **Posture: no matrix -> WATCH, never PASS.** CSCV needs a common-period trial matrix (e.g.
+  parameter variants). The current scan family is regime cells, which trade in different months, so
+  for those candidates Stage 9 returns WATCH: nothing reaches PROMOTE without the overfitting check the
+  framework makes mandatory. A strategy that wants PROMOTE must supply `trial_returns` (T x N).
+- **Consequence.** Under v3 a candidate identical to the v2 "clean strong" fixture is WATCHLIST unless
+  it carries a trial matrix. The gatekeeper has never issued a PROMOTE, so no live promotion changes.
+- **Tests.** statistics (noise -> PBO ~0.5, persistent edge -> ~0, determinism, input checks), stage
+  banding incl. the no-matrix WATCH, pipeline PROMOTE-with-matrix / WATCHLIST-without; suite 3463 pass.
+  Two pre-existing failures (`tests/test_routes_telegram_redaction.py`) come from the live
+  `logs/TELEGRAM_OFF` kill file (commit `12e8978`), not from this change.
+- **RD-4 note.** This implements the third leg of "FDR and DSR and PBO" but does not close rationale
+  debt RD-4 (why the conjunction); only the original decider can.
+
+### D-066 · P-M Price-Reversal widened {R1} -> {R1, R2}; HYP-PM-0014 registered (bank 2-ATR climax-low liquidity provision); FWD-PM-BANK-001 opened
+**Status:** RECORDED · **Date:** 2026-10-05 · **Type:** Family amendment + registration + forward-test open ·
+**Approval authority:** Owner, 2026-10-05, "Approve and push", on
+`P-M/forward_bank/OWNER_DECISION_PACKAGE_R2_BANK_2026-10-05.md` (commit `59dd6fd`).
+
+- **Family.** Price-Reversal widened by formal amendment (D-028 mechanism) to {R1, R2}. R2 = OHLCV-only
+  short-horizon *positive* reversal after a volatility climax in mega-cap liquid names. Widened rather than
+  a new family because invariant 12 scopes families by data epoch + feature space and R2 shares R1's; a new
+  family would split multiplicity (PG-3/PG-6/R7.5). Registered count 1 -> 2.
+- **HYP-PM-0014** frozen as `P-M/forward_bank/PROTOCOL.md` sha256 `2371cc48658f…` (recorder `c8e440c47adf…`,
+  SHA256SUMS.txt). Primary BBCA 10-session net excess vs EW liquid book (0.60% RT); secondary big-4 pooled.
+  GO >= +0.50% and t >= 2.0 at N >= 15 primary events or 36 months.
+- **Risks accepted (stated in the package):** BBCA selected after ~120 looks; frozen pre-2021 OOS t 2.36 is
+  below the program deflation bar 3.06 (D-064); OOS effect half the in-sample; primary read ~2029-2030.
+- **FWD-PM-BANK-001** opened `2026-10-05T16:09:16+00:00`, cron 09:40; no back-fill (the 2026-09-24/29 firings
+  are refused). The personal jurnal26 Telegram alert on the same rule is not the recorder and not evidence.
+
+### D-069 · Decision-number collision recorded: D-066 was assigned twice (2026-10-07)
+Two different decisions were filed as D-066 on separate branches and met at the 2026-10-07
+consolidation merge:
+(a) **2026-10-01, NR7_BULL retired from SHADOW**: ops/hardening-2026-07-10, cited by the
+CLAUDE.md invariant #10 amendment.
+(b) **2026-10-05, P-M Price-Reversal widened {R1} → {R1, R2}; HYP-PM-0014 registered;
+FWD-PM-BANK-001 opened**: research lineage.
+Both entries stay verbatim and in place. From here on they are cited as **D-066** (a) and
+**D-066-B** (b). An unqualified "D-066" in a document dated before 2026-10-07 resolves by its
+subject. D-065, D-067 and D-068 are unaffected. No decision content changes. Next free number:
+D-070.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

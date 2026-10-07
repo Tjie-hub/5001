@@ -224,7 +224,7 @@ async def test_scenario_E_all_providers_unavailable(events_db, clock, monkeypatc
     of the observed multi-minute re-probe-then-fail loop."""
     from engine.agent_firm.providers import alerts
     sent = []
-    monkeypatch.setattr(alerts, "send_telegram", lambda msg: sent.append(msg))
+    monkeypatch.setattr(alerts, "send_telegram", lambda msg, **kw: sent.append(msg))
 
     reset = clock["now"] + timedelta(hours=2)
     claude1 = _fake("claude", error=ProviderSessionLimit("limit", reset_time=reset))

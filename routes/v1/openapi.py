@@ -24,8 +24,8 @@ _PATHS = {
         "Standard envelope wrapping {openapi, info, paths}",
     ),
     "/api/v1/status/jobs/running": _get(
-        "Jobs currently executing",
-        "Standard envelope wrapping {running: [...], count}",
+        "Jobs currently executing (orphaned restart strays counted separately)",
+        "Standard envelope wrapping {running: [...], count, orphaned_count}",
     ),
     "/api/v1/status/jobs/latest": _get(
         "Most recent execution row per distinct job",
@@ -41,7 +41,8 @@ _PATHS = {
     ),
     "/api/v1/status/summary": _get(
         "Aggregate job counts by status",
-        "Standard envelope wrapping {total, success, failed, skipped, running}",
+        "Standard envelope wrapping {total, success, failed, skipped, running, "
+        "orphaned}",
     ),
     "/api/v1/scheduler": _get(
         "Live scheduler status",

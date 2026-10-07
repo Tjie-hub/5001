@@ -58,10 +58,69 @@ def test_seeded_todo_json_loads_and_has_expected_days():
     j1 = load_module("owner_reminders")
     seed = OPS_DIR.parents[1] / "ops" / "owner_todo.json"
     items = j1.load_items(seed)
-    dates = {it["date"] for it in items}
-    assert dates == {"2026-10-01", "2026-10-02", "2026-10-05",
-                     "2026-10-23", "2026-10-28", "2026-10-31"}
+    # pruned 2026-10-07: only the three forward-looking items remain active
+    assert {it["date"] for it in items} == {"2026-10-23", "2026-10-28", "2026-10-31"}
     assert all(it.get("text", "").strip() for it in items)
+    # the pre-2026-10-07 items moved to a `done` list, not deleted
+    with open(seed, encoding="utf-8") as fh:
+        data = json.load(fh)
+    done = data.get("done", [])
+    assert {it["date"] for it in done} == {"2026-10-01", "2026-10-02", "2026-10-05"}
+    assert all(it.get("text", "").strip() for it in done)
+
+
+# ── J1–J5 telegram routing (consolidation 2026-10-07) ───────────────────────
+
+JOB_EVENTS = {
+    "owner_reminders.py": "ops.owner_reminders",
+    "p1_3_preflight.py": "ops.p1_3_preflight",
+    "fq_snapshot_monthend.py": "ops.fq_snapshot",
+    "ledger_push_weekly.py": "ops.ledger_push",
+    "ops_health_daily.py": "ops.health_daily",
+}
+
+
+def test_ops_events_registered_with_brief_tiers():
+    """The routing the consolidation brief orders: J1/J2/J3 are digest-tier
+    decision support; J4/J5 send only on failure/anomaly (alert tier)."""
+    from utils import notify_policy
+    expected_tiers = {
+        "ops.owner_reminders": notify_policy.TIER_DIGEST,
+        "ops.p1_3_preflight": notify_policy.TIER_DIGEST,
+        "ops.fq_snapshot": notify_policy.TIER_DIGEST,
+        "ops.ledger_push": notify_policy.TIER_SEND,
+        "ops.health_daily": notify_policy.TIER_SEND,
+    }
+    for event, tier in expected_tiers.items():
+        assert event in notify_policy.EVENTS, event
+        assert notify_policy.EVENTS[event][0] == tier, event
+
+
+def test_every_send_ops_call_site_has_its_job_event():
+    """AST check mirroring tests/test_notify_policy_classification.py but for
+    the send_ops indirection: every job script passes its own registered
+    ops.* event literal."""
+    import ast
+    for fname, expected_event in JOB_EVENTS.items():
+        tree = ast.parse((OPS_DIR / fname).read_text())
+        calls = [n for n in ast.walk(tree)
+                 if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+                 and n.func.id == "send_ops"]
+        assert calls, f"{fname}: no send_ops call sites found"
+        for node in calls:
+            kw = {k.arg: k for k in node.keywords}
+            assert "event" in kw, f"{fname}:{node.lineno} — send_ops without event="
+            val = kw["event"].value
+            assert getattr(val, "value", None) == expected_event, \
+                f"{fname}:{node.lineno} — expected {expected_event}"
+
+
+def test_send_ops_requires_event_and_prints_in_dry(capsys):
+    common = load_module("_common")
+    with pytest.raises(TypeError):
+        common.send_ops("[OPS] no event passed")          # event= is mandatory
+    common.send_ops("[OPS] dry print", event="ops.owner_reminders", dry=True)
+    assert "[OPS] dry print" in capsys.readouterr().out    # dry: print, no telegram
 
 
 # ── J2 p1_3_preflight ───────────────────────────────────────────────────────

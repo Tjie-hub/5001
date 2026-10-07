@@ -91,3 +91,56 @@ def test_run_news_batch_holds_no_db_connection_while_fetching(monkeypatch):
         "run_news_batch opened a DB connection before the fetch sweep finished — "
         "that is the held-write-lock shape of the 2026-07-24 incident"
     )
+
+
+class _Resp:
+    def __init__(self, status, content=b"<rss><channel></channel></rss>"):
+        self.status_code = status
+        self.content = content
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise requests.exceptions.HTTPError(f"{self.status_code} Client Error")
+
+
+def test_fetch_news_for_ticker_retries_once_on_transient_404(monkeypatch):
+    calls = []
+
+    def _fake_get(url, **kwargs):
+        calls.append(url)
+        return _Resp(404 if len(calls) == 1 else 200)
+
+    monkeypatch.setattr(news_filter.requests, "get", _fake_get)
+    monkeypatch.setattr(news_filter.time, "sleep", lambda s: None)
+
+    count, headlines = news_filter.fetch_news_for_ticker("ABDA")
+
+    assert len(calls) == 2
+    assert (count, headlines) == (0, [])
+
+
+def test_fetch_news_for_ticker_retry_is_bounded_to_one(monkeypatch):
+    calls = []
+
+    def _fake_get(url, **kwargs):
+        calls.append(url)
+        return _Resp(404)
+
+    monkeypatch.setattr(news_filter.requests, "get", _fake_get)
+    monkeypatch.setattr(news_filter.time, "sleep", lambda s: None)
+
+    assert news_filter.fetch_news_for_ticker("ABDA") == (0, [])  # must not raise
+    assert len(calls) == 2
+
+
+def test_fetch_news_for_ticker_does_not_retry_on_timeout(monkeypatch):
+    calls = []
+
+    def _fake_get(url, **kwargs):
+        calls.append(url)
+        raise requests.exceptions.Timeout("simulated stalled feed")
+
+    monkeypatch.setattr(news_filter.requests, "get", _fake_get)
+
+    assert news_filter.fetch_news_for_ticker("ABDA") == (0, [])
+    assert len(calls) == 1

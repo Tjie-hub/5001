@@ -184,7 +184,8 @@ def main(argv: list[str] | None = None) -> int:
     state_path.write_text(json.dumps(new_state, indent=2) + "\n", encoding="utf-8")
     if anomalies:
         send_ops(f"{OPS_PREFIX} ⚠️ ops health anomalies ({today}):\n" +
-                 "\n".join(f"• {a}" for a in anomalies), dry=dry)
+                 "\n".join(f"• {a}" for a in anomalies),
+                 event="ops.health_daily", dry=dry)
     else:
         print(f"ops health OK ({today}); state={new_state}")
     return 0

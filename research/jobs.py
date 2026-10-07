@@ -169,7 +169,7 @@ def refresh_wf_scores():
                     for s, r in sorted(losing, key=lambda x: x[1]):
                         msg += f"  {s}: {r:+.2f}%/window\n"
                     msg += "\nPertimbangkan menambahkan ke disabled_strategies (paper_config)."
-                    send_telegram(msg)
+                    send_telegram(msg, event="report.wf_revalidation")
                     print(f"[WF] Re-validation alert: {len(losing)} losing live strategies")
             except Exception as _rv_err:
                 print(f"[WF] Re-validation check error: {_rv_err}")

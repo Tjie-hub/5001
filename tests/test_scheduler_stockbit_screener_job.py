@@ -33,7 +33,7 @@ def test_success_calls_run_and_persist_for_every_guru_template(monkeypatch):
 
     monkeypatch.setattr("screener.stockbit_screener.run_and_persist_screener", _fake)
     alerts = []
-    monkeypatch.setattr(jobs, "send_telegram", lambda text: alerts.append(text))
+    monkeypatch.setattr(jobs, "send_telegram", lambda text, **kw: alerts.append(text))
 
     jobs.run_stockbit_screener_fetch()
 
@@ -57,7 +57,7 @@ def test_one_template_failure_does_not_block_the_others(monkeypatch):
 
     monkeypatch.setattr("screener.stockbit_screener.run_and_persist_screener", _fake)
     alerts = []
-    monkeypatch.setattr(jobs, "send_telegram", lambda text: alerts.append(text))
+    monkeypatch.setattr(jobs, "send_telegram", lambda text, **kw: alerts.append(text))
 
     jobs.run_stockbit_screener_fetch()  # must not raise
 
@@ -73,7 +73,7 @@ def test_all_templates_failing_never_raises(monkeypatch):
         raise RuntimeError("boom")
 
     monkeypatch.setattr("screener.stockbit_screener.run_and_persist_screener", _fail)
-    monkeypatch.setattr(jobs, "send_telegram", lambda text: None)
+    monkeypatch.setattr(jobs, "send_telegram", lambda text, **kw: None)
 
     jobs.run_stockbit_screener_fetch()  # must complete without raising, so the
     # scheduler process (and every other scheduled job) keeps running

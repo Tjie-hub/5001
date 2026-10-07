@@ -63,7 +63,8 @@ def main(argv: list[str] | None = None) -> int:
 
     add = git(root, "add", "--", *files)
     if add.returncode != 0:
-        send_ops(f"{OPS_PREFIX} ⚠️ weekly ledger push: git add failed — {add.stderr.strip()[-300:]}", dry=dry)
+        send_ops(f"{OPS_PREFIX} ⚠️ weekly ledger push: git add failed — {add.stderr.strip()[-300:]}",
+                 event="ops.ledger_push", dry=dry)
         return 0
 
     if git(root, "diff", "--cached", "--quiet").returncode == 0:
@@ -72,7 +73,8 @@ def main(argv: list[str] | None = None) -> int:
 
     commit = git(root, "commit", "-m", COMMIT_MESSAGE)
     if commit.returncode != 0:
-        send_ops(f"{OPS_PREFIX} ⚠️ weekly ledger push: commit failed — {commit.stderr.strip()[-300:]}", dry=dry)
+        send_ops(f"{OPS_PREFIX} ⚠️ weekly ledger push: commit failed — {commit.stderr.strip()[-300:]}",
+                 event="ops.ledger_push", dry=dry)
         return 0
     head = git(root, "rev-parse", "HEAD").stdout.strip()
     print(f"committed {head}")
@@ -85,7 +87,8 @@ def main(argv: list[str] | None = None) -> int:
     if push.returncode != 0:
         kind = "REJECTED" if push_rejected(push.stderr) else "FAILED"
         send_ops(f"{OPS_PREFIX} ⚠️ weekly ledger push {kind} on {BRANCH} — "
-                 f"no pull/rebase/force attempted, manual review needed.\n{push.stderr.strip()[-400:]}", dry=dry)
+                 f"no pull/rebase/force attempted, manual review needed.\n{push.stderr.strip()[-400:]}",
+                 event="ops.ledger_push", dry=dry)
         return 0
 
     remote = git(root, "ls-remote", "origin", BRANCH).stdout.split()

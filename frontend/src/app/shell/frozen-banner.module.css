@@ -1,0 +1,26 @@
+/**
+ * Frontend freeze banner styles — owner-directed 2026-10-06.
+ *
+ * A thin strip above the global header: visually present, never a landmark,
+ * no dismiss state. Contrast meets WCAG 2.2 AA in both themes by reusing the
+ * shell's own surface/text variables.
+ */
+
+.banner {
+  padding: 0.25rem 1rem;
+  border-bottom: 1px solid var(--shell-border);
+  background: var(--shell-surface);
+  color: var(--shell-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.link {
+  color: var(--shell-text);
+  text-decoration: underline;
+}
+
+.link:hover {
+  color: var(--shell-text-strong);
+}

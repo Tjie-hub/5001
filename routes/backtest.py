@@ -919,7 +919,7 @@ def api_paper_close():
     result = close_trade(int(body['trade_id']), float(body['exit_price']), body.get('reason','MANUAL'), notify=False)
     if 'pnl_rp' in result:
         emoji = "🟢" if result['pnl_rp'] >= 0 else "🔴"
-        send_telegram(f"{emoji} Paper Trade Closed - {result['ticker']} | {result['exit_reason']} | P&L: Rp {result['pnl_rp']:,} ({result['pnl_pct']:+.2f}%)")
+        send_telegram(f"{emoji} Paper Trade Closed - {result['ticker']} | {result['exit_reason']} | P&L: Rp {result['pnl_rp']:,} ({result['pnl_pct']:+.2f}%)", event="trade.paper_closed", subject=result["ticker"])
     return jsonify(result)
 
 
@@ -1103,7 +1103,7 @@ def api_signals_custom():
             msg += f"🎯 Ticker: {ticker_label}\n"
             msg += f"⚙️ Filter aktif: <i>{filter_str}</i> | VR≥{vr_min}x\n\n"
             msg += f"❌ Tidak ada ticker lolos dari {len(results)} yang discan."
-        send_telegram(msg)
+        send_telegram(msg, event="bot.ui_scan_result")
     except Exception as _te:
         print(f"Telegram error: {_te}")
 

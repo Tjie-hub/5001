@@ -47,6 +47,12 @@ _Hours, not days. No research judgement required. Do this first._
       (`.winvenv/`, P0-5 class). _Env note:_ the tree's `.env` carries the production XPS-13
       `DB_PATH` and breaks any test touching the default DB before monkeypatching — always run
       the suite with `DB_PATH=data/walkforward.db` exported (CI condition has no `.env`).
+      _Also recorded on fix/telegram-curation (2026-10-01, XPS-13):_
+      **2026-10-01, XPS-13 tally (venv Python 3.12.3, same major as CI):** `python -m pytest -q` →
+      **3450 passed, 3 skipped, 0 failed**, 0 collection errors, 609s — `logs/pytest_full_20261001.log`.
+      First trustworthy tally on the production box (old 72-entry cache was stale; current cache
+      held 11). Item stays open only for the **WSL re-run before P1-1** — the P0/P1 brief wants the
+      known-good baseline on the box the migration runs on.
 
 - [x] **P0-3. Resolve the 3 collection errors** — CLOSED 2026-09-30. `tests/test_auto_token.py` and
       `tests/test_stockbit_fetcher_ensure_valid_token.py` collect clean (confirmed in the 2026-09-30
@@ -54,12 +60,21 @@ _Hours, not days. No research judgement required. Do this first._
       deleted** with the client it tested: commit `85cab31` "chore(firm): delete DeepSeekClient —
       replaced by ZAIProvider"; replacement coverage lives in `tests/agent_firm/providers/`
       (test_factory/test_base/test_circuit_breaker et al.). Not an accidental loss.
+      _Also recorded on fix/telegram-curation (2026-10-01, XPS-13):_
+      **CLOSED 2026-10-01 (XPS-13):** fate confirmed — deleted intentionally 2026-07-08 in
+      `85cab31` ("chore(firm): delete DeepSeekClient — replaced by ZAIProvider"); the replacement
+      provider has its own suite (`tests/agent_firm/providers/test_zai_provider.py`). The two
+      auto-token files re-collected clean in the 2026-10-01 full run.
 
 - [x] **P0-4. Track or delete the 5 untracked test files** — CLOSED 2026-09-30, already converged:
       `git ls-files 'tests/**test_*.py'` = 359 = on-disk count; all 5 named files
       (`tests/test_news_filter.py`, `tests/test_filter_exploration.py`,
       `tests/agent_firm/providers/test_quota_{hydration_edge_cases,scenarios,state_persistence}.py`)
       are now tracked (committed since the 2026-09-22 snapshot) and run in CI.
+      _Also recorded on fix/telegram-curation (2026-10-01, XPS-13):_
+      **CLOSED 2026-10-01 (XPS-13):** 359 tracked = 359 on disk, 0 untracked test files. All five
+      landed as real coverage: `test_news_filter.py` → `cf18e43`, `test_filter_exploration.py` →
+      `e83e3d6`, the provider quota trio → `1933233` (owner-verified 52 passed / 0 failed 2026-09-21).
 
 - [x] **P0-6. Stockbit auto-token corruption incident (2026-09-22)** — DONE, commit `04e4fdd`.
       `.stockbit_token` held the literal 9-byte string `undefined` (not a JWT) since 2026-09-21
@@ -84,6 +99,18 @@ _Hours, not days. No research judgement required. Do this first._
       `Claude outputs/`, `atr_plan/` (informal local workspaces), `data/ajaib_raw/` (machine-local
       raw dumps), `.fuse_hidden*` (WSL/NTFS interop). `git status --porcelain | grep -c '^??'` → 0;
       `backups/` confirmed ignored.
+      _Also recorded on fix/telegram-curation (2026-10-01, XPS-13):_
+      **Re-triaged 2026-10-01 (XPS-13):** the enumerated 64-file pile is fully resolved — 0 of the
+      enumerated paths remain untracked. The CURRENT pile is new material, now smaller:
+      `data/.fuse_hidden*` (12 FUSE mount artefacts) and `data/ajaib_raw/` (raw TOWR snapshot
+      scrapes) → both gitignored 2026-10-01, raw data stays out of git. Two dirs remain as
+      **Owner decisions** (real work-product both, but not session work): `atr_plan/` (14 files —
+      standalone ATR-exit study the Owner unzipped from ~/Downloads 2026-09-24, has null-test
+      methodology + results_2026-09-24 + verdict.csv + its own unit tests; recommend commit) and
+      `Claude outputs/` (22 files — Owner's claude.ai download folder: session briefs/playbooks/
+      pine+py scratchpads; the BRPT playbook itself marks the scripts "session scratchpad, not
+      saved to the repo"; recommend committing the .md briefs/playbooks and ignoring/deleting the
+      scratch). Item stays open on those two decisions only.
 
 ---
 
@@ -97,6 +124,12 @@ cutover runbook (`9bb2fd7`) that was never `--apply`-ed. All 8 Tier-1 tables sti
 > `research.db` on first call and `ensure_gate_tables()` creates empty tables in it — so the next
 > gate run writes its decision to a fresh empty DB while every historical `gate_decisions` row stays
 > in `walkforward.db`. The append-only ledger forks in two, silently, with no error.
+>
+> **2026-10-01, cross-box note (from an XPS-13 session):** P1-1/P1-2 are WSL-side and **cannot be
+> executed from XPS-13** — the DBs deliberately do not sync. XPS-13's `data/walkforward.db` is the
+> LIVE production DB (service active during market hours), so running the migration here would be
+> P1-3 out of order — its own dependency is P1-2 "prove it locally first" on WSL — and P1-3 means a
+> service stop: do it outside 09:00–15:30 WIB as a deliberate, Owner-coordinated action.
 
 - [x] **P1-1. Cutover — LOCAL (WSL)** — DONE 2026-09-30. `python scripts/migrate_r5_tier1.py`
       dry-run → review → `--apply`. **Local-copy caveat:** this machine's `walkforward.db` only ever

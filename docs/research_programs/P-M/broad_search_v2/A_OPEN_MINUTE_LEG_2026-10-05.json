@@ -1,0 +1,23 @@
+{
+ "all": {
+  "n": 16889,
+  "stale_share_pct": 30.0,
+  "tickers": 59,
+  "sessions": 309
+ },
+ "nonstale": {
+  "n": 11827,
+  "bar09_eq_open_pct": 18.6,
+  "within_1tick_pct": 48.7,
+  "median_dev_ticks": 2.0,
+  "p90_dev_ticks": 6.0
+ },
+ "stale": {
+  "n": 5062,
+  "bar09_eq_open_pct": 23.2,
+  "within_1tick_pct": 56.6,
+  "median_dev_ticks": 1.0,
+  "p90_dev_ticks": 4.0
+ },
+ "nonstale_median_abs_open_minus_pc_ticks": 2.0
+}

@@ -133,3 +133,38 @@ def test_dsr_harder_with_more_trials():
     assert 0.0 <= d2["dsr"] <= 1.0
     assert d2["dsr"] < d1["dsr"]                        # more trials => tougher benchmark
     assert d2["sr_benchmark"] > d1["sr_benchmark"]
+
+
+# ─── pbo_cscv (Bailey, Borwein, Lopez de Prado & Zhu 2015) ─────────────────────
+
+def test_pbo_pure_noise_is_near_one_half():
+    # Every trial is noise: the in-sample winner is a coin flip out of sample.
+    m = np.random.default_rng(7).normal(0.0, 1.0, (240, 40))
+    r = st.pbo_cscv(m, n_splits=10)
+    assert 0.3 <= r["pbo"] <= 0.7
+    assert r["n_combinations"] == math.comb(10, 5)
+    assert r["n_trials"] == 40
+
+
+def test_pbo_one_skilled_trial_is_near_zero():
+    rng = np.random.default_rng(11)
+    m = rng.normal(0.0, 1.0, (240, 20))
+    m[:, 3] += 0.8                       # a real, persistent edge in trial 3
+    r = st.pbo_cscv(m, n_splits=10)
+    assert r["pbo"] <= 0.05
+
+
+def test_pbo_is_deterministic_and_order_of_trials_irrelevant():
+    m = np.random.default_rng(3).normal(0.0, 1.0, (120, 12))
+    a = st.pbo_cscv(m, n_splits=8)
+    b = st.pbo_cscv(m[:, ::-1], n_splits=8)
+    assert a["pbo"] == b["pbo"]
+
+
+def test_pbo_rejects_bad_input():
+    with pytest.raises(ValueError):
+        st.pbo_cscv(np.zeros((100, 1)))            # one trial: nothing to select among
+    with pytest.raises(ValueError):
+        st.pbo_cscv(np.zeros((100, 5)), n_splits=7)  # S must be even
+    with pytest.raises(ValueError):
+        st.pbo_cscv(np.zeros((10, 5)), n_splits=16)  # fewer rows than splits

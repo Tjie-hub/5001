@@ -116,7 +116,8 @@ def main(argv: list[str] | None = None) -> int:
         problems.append(f"venv python not found at {venv_py}")
     if problems:
         MARKER.write_text("failed-preflight\n", encoding="utf-8")
-        send_ops(f"{OPS_PREFIX} ⚠️ P1-3 preflight could not run: {'; '.join(problems)}", dry=dry)
+        send_ops(f"{OPS_PREFIX} ⚠️ P1-3 preflight could not run: {'; '.join(problems)}",
+                 event="ops.p1_3_preflight", dry=dry)
         return 0
 
     proc = subprocess.run([str(venv_py), "-m", "scripts.migrate_r5_tier1"],
@@ -129,7 +130,8 @@ def main(argv: list[str] | None = None) -> int:
         tail = (proc.stderr or proc.stdout).strip().splitlines()[-5:]
         msg_extra = (msg_extra + " | " if msg_extra else "") + \
             f"dry-run exited rc={proc.returncode}: " + " / ".join(tail)
-    send_ops(build_message(counts, absent, tables, unexpected, missing, msg_extra), dry=dry)
+    send_ops(build_message(counts, absent, tables, unexpected, missing, msg_extra),
+             event="ops.p1_3_preflight", dry=dry)
     MARKER.write_text(f"rc={proc.returncode}\n", encoding="utf-8")
     return 0
 

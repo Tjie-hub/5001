@@ -579,7 +579,7 @@ def daily_signal_scan():
     else:
         msg = f"📊 <b>Momentum Signal — {now}</b>\n\nTidak ada sinyal Momentum hari ini."
 
-    send_telegram(msg, category="daily_signal_report")
+    send_telegram(msg, event="report.daily_signal")
     logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Scan selesai. {len(signals)} signals ditemukan.")
 
     # ── AUTO-OPEN PAPER TRADE ──
@@ -639,7 +639,8 @@ def daily_signal_scan():
                     f"📝 <b>Momentum Signals Staged</b>\n\n"
                     f"⏳ {len(staged)} signal(s) staged for NEXT-SESSION OPEN fill\n"
                     f"(no same-bar fills — P3 execution-model fix):\n"
-                    + "\n".join(f"• <b>{t}</b>" for t in staged)
+                    + "\n".join(f"• <b>{t}</b>" for t in staged),
+                    event="trade.paper_staged", subject=",".join(staged[:5])
                 )
                 logger.info(f"[AutoTrade] {len(staged)} signal(s) staged for next-session open fill.")
             else:
@@ -1039,7 +1040,7 @@ def _alert_admission_deadlock(counts, scanned, date_str, time_str):
         f"validation then zero signals is the correct output \u2014 but the "
         f"engine must never look alive while its buy side is closed.\n"
         f"Diagnose: <code>python -m scripts.admission_report</code>"
-    )
+    , event="report.admission_zero")
 
 
 def _safe_regime(df: pd.DataFrame) -> str:
@@ -1355,7 +1356,7 @@ def scheduled_multi_strategy_scan():
                     f"Death Cross: {'YES ❌' if _tech['death_cross'] else 'NO'}\n"
                     f"Lower High: {'YES ❌' if _tech['lower_high'] else 'NO'}\n"
                     + (f"Support Broken: {', '.join(_tech['support_breaks'])}\n" if _tech['support_breaks'] else "")
-                )
+                , event="market.ihsg_technical", state=_tech["label"])
     except Exception as _te:
         logging.warning(f"[scan] IHSG technicals error: {_te}")
 
@@ -1567,7 +1568,7 @@ def scheduled_multi_strategy_scan():
                     "strategies LIKE '%NR7%' AND signal_direction='BUY'"
                 ).fetchone()[0]
                 for _t in _nr7_hits:
-                    send_telegram(nr7_signal_alert_msg(_t, _n))
+                    send_telegram(nr7_signal_alert_msg(_t, _n), event="screener.nr7_signal", subject=_t)
         except Exception as _p5e:
             logging.warning(f"[phase5] signal alert failed: {_p5e}")
 
@@ -1822,7 +1823,7 @@ def scheduled_multi_strategy_scan():
                 flow = r.get('flow', {})
                 msg += f"  • {r['ticker']}: Flow {flow['score']:+d}\n"
 
-        send_telegram(msg, category="scan_summary")
+        send_telegram(msg, event="report.scan_summary")
     else:
         logger.info(f"[{time_str}] No flow-confirmed signals (strategy pass: {len(intersection_results)}) — silent.")
     logger.info(f"[{time_str}] Multi-strategy scan complete.\n")

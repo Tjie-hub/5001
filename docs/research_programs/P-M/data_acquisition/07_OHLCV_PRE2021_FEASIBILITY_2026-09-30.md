@@ -1,48 +1,68 @@
-# 07 · OHLCV before 2021-07 (incl. delisted) — FEASIBILITY MEMO · 2026-09-30
+# 07 · OHLCV before 2021-07 (incl. delisted) — FEASIBILITY · 2026-09-30
 
-**Item (planner task 3B):** can the pre-backfill price panel be deepened — and can the
-delisted-name blind spot be closed — from reachable sources? Scoping + POC probes only;
-no backfill, no DB writes. POC: `poc_pit_fundamentals_ohlcv.py` (this directory).
+**Item:** extend the price panel back before the corpus start (2021-07-05) toward ≥2012,
+including delisted names, to lengthen samples and to measure survivorship. Scoping only; POC run
+2026-09-30 (`poc_ohlcv_pre2021_yfinance.py`, output embedded below; no DB writes).
 
 ## Verdict
 
-**Free sources deepen nothing that matters and cannot close the delisted gap.** Survivor
-names already have deep free history (and the repo's backfill `hist_pre2021.pkl` IS the
-yfinance source); confirmed-delisted names are **purged from Yahoo**; the only true recovery
-paths (IDX-direct or paid vendor) sit behind the same Owner decision as memo 06. The
-survivorship blind spot stands, with its known sign: for AVOID-side results it biases
-*against* the effect (worst names missing), recorded in every spec since S2.
+**Surviving names: yes, free and deep. Delisted names: no — yfinance serves none, so a yfinance-
+only backfill is survivorship-broken by construction.** Since the effect under study is long-only
+cross-sectional, survivorship bias is *optimistic* — a survivors-only long panel would inflate
+every long-side screen. That is the disqualifying flaw for a naive backfill, and the reason the
+item splits in two.
 
-## POC results (2026-09-30, yfinance 1.2.0)
+## POC result (actual, one run)
 
-| probe | rows | first | last | reading |
-|---|---|---|---|---|
-| BTEL.JK (delisted — Bakrie Telecom, forced delisting ~2019) | **0** | — | — | **delisted names are purged from Yahoo** — the blind spot is confirmed, not hypothetical |
-| ELTY.JK | 6,020 | 2002-06-13 | 2026-09-30 | deep history where the name survives |
-| DUTI.JK | 6,131 | 2002-01-09 | 2026-09-29 | same |
+A. Still-listed long-history names (monthly bars, `period=max`):
 
-Corpus-side survivorship count (already recorded in S2): **54 of 929** `ohlcv_long` names end
-before 2026; pre-2021 the panel is the yfinance backfill, so anything Yahoo purged before the
-backfill's fetch date is absent by construction.
+| ticker | rows | first bar | last bar |
+|---|---|---|---|
+| BBRI.JK | 275 | **2003-11** | 2026-09 |
+| UNTR.JK | 313 | **2000-09** | 2026-09 |
+| HMSP.JK | 301 | **2001-09** | 2026-09 |
 
-## Sources, ranked
+B. Delisted/inactive names (from `idx_tickers.status='inactive'`, 14 names):
 
-1. **yfinance `.JK` (free, scriptable)** — depth for survivors to 2002 and earlier (POC);
-   zero depth for the delisted (BTEL probe). Marginal value of a systematic refetch: gap/corporate-
-   action repair for survivors only — the backfill already did this pass. Effort: 1–2 days for a
-   full survivor audit; **does not touch the delisted gap**.
-2. **IDX/KSEI historical daily summaries (Ringkasan Saham, daily files back to ~2011)** — would
-   cover delisted names while listed. Same Cloudflare wall as memo 06 (POC probe 3: HTTP 403);
-   Owner ToS ruling required before any retrieval engineering. Effort post-ruling: 4–6 days
-   (daily files, year by year) + storage.
-3. **Kaggle/community datasets** — stale one-off snapshots, unknown method, no update path;
-   not a corpus-grade source. Not recommended beyond cross-checks.
-4. **Paid vendor (Refinitiv/Nasdaq Data Link/regional vendors)** — full delisted history with
-   corporate actions; cost decision for the Owner. Effort once licensed: 2–3 days.
+| ticker | yfinance result |
+|---|---|
+| ZEUS.JK | EMPTY |
+| TURI.JK | EMPTY |
+| BSMT.JK | EMPTY |
+| FINN.JK | EMPTY |
 
-## Effort summary if the Owner pursues this
+## Interpretation and gaps
 
-- Survivor-panel audit via yfinance: 1–2 days, free, low value (backfill already covers it).
-- Delisted recovery to 2012: **only via Owner-authorized IDX retrieval (4–6 days) or a paid
-  vendor (2–3 days + cost)**. Free-only acquisition cannot do it — demonstrated by the BTEL
-  probe, not assumed.
+- Daily bars for survivors back to ~2000–2003 are obtainable today (the POC used monthly; daily
+  depth is expected to be similar, to be confirmed per-name in a real acquisition brief — Yahoo's
+  .JK daily history has known start-date variance by name).
+- **Delisted names are entirely absent from yfinance.** Without them, any 2012→2021 extension
+  measures only companies that survived to 2026 — the worst IPOs, mergers and failures are
+  missing. For long-only screens this biases returns upward; the corpus's own survivorship note
+  (54/929 names end early) already flags direction.
+- Candidate sources for the delisted tail: IDX historical data services (paid), KSEI archives,
+  paid vendors (Bloomberg/Refinitiv), or manual collection from archived IDX daily summaries —
+  **no free scripted source identified**; this is an Owner cost/authorization decision, same
+  posture as item 06.
+
+## Effort estimate
+
+- Survivors-only daily backfill 2012→2021-07 + gap/finality audit + PIT spec: **1 day** (yfinance
+  fetch script reusing the cross-asset POC pattern; ~960 tickers).
+- Delisted-name backfill: no free path — **vendor/manual, Owner decision** (do not build before
+  that decision).
+- Recommended interim use: survivors-only pre-2021 data is fit for *time-series* checks (e.g.
+  regime/era robustness of an existing registered test) and unfit for new *cross-sectional*
+  discoveries without an explicit survivorship caveat on the card.
+
+## From the second run (17ec02e)
+
+Findings unique to the second agent's pass (same POC file, probes complementary to this memo's):
+
+- **BTEL.JK** (Bakrie Telecom, forced delisting ~2019 — a confirmed delisting, unlike this
+  memo's probes): yfinance returns **0 rows** — direct evidence that Yahoo purges delisted
+  `.JK` names, not an inference.
+- Corpus-side survivorship count (S2 record): **54 of 929** `ohlcv_long` names end before 2026;
+  pre-2021 the panel is the yfinance backfill, so pre-fetch purges are absent by construction.
+- ELTY.JK (6,020 rows from 2002-06) and DUTI.JK (6,131 rows from 2002-01) confirm survivor
+  depth to ~2002 under daily bars, matching this memo's survivors finding.

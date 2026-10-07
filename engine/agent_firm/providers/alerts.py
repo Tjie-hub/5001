@@ -43,7 +43,7 @@ def _emit(key: str, message: str, min_interval_s: Optional[float] = None) -> boo
     _last_sent[key] = now
     logger.warning(message)
     try:
-        send_telegram(message)
+        send_telegram(message, event="llm.provider_quota", subject=key)
     except Exception as err:  # notifier down must not break a provider call
         logger.debug("provider alert notify failed: %s", err)
     return True

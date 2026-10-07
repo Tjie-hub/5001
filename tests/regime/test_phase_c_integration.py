@@ -4,7 +4,7 @@ from research.gatekeeper.candidate import Candidate, build_ctx
 
 def test_gate_config_v2_family_is_three_regimes_only():
     cfg = load_gate_config()
-    assert cfg.version == 2
+    assert cfg.version >= 2          # v3 (2026-10-05) only added Stage 9 PBO; the v2 family is unchanged
     assert cfg.multiplicity["family"]["regimes"] == ["BULL", "BEAR", "SIDEWAYS"]
 
 

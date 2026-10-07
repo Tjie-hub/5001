@@ -212,9 +212,9 @@ def test_startup_banner_helper_never_raises(monkeypatch):
     monkeypatch.setattr(rl, "get_registry",
                         lambda: {'entries': [], 'skipped': [], 'hash': 'x'})
     sent = []
-    rl.announce_registry(telegram_fn=lambda m: sent.append(m))
+    rl.announce_registry(telegram_fn=lambda m, **kw: sent.append(m))
     assert sent and "registry @x" in sent[0]
 
-    def _boom(_m):
+    def _boom(_m, **kw):
         raise RuntimeError("down")
     rl.announce_registry(telegram_fn=_boom)   # must not raise

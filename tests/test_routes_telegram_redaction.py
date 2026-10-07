@@ -3,7 +3,20 @@ same way utils.telegram.send_telegram does, reusing the same
 utils.logging_config.redact_secrets() rule (not a second implementation)."""
 from unittest.mock import patch
 
+import pytest
+
 import routes.telegram as rt
+import utils.notify_policy as np
+
+
+@pytest.fixture(autouse=True)
+def _hermetic_gate(tmp_path, monkeypatch):
+    """Hermetic vs the production box: logs/TELEGRAM_OFF really exists there
+    (owner blackout 2026-10-05). Replies are tier-1 'bot.reply' through the
+    gate — these tests exercise the send path with the switch off."""
+    monkeypatch.setattr(np, "OFF_FILE", str(tmp_path / "TELEGRAM_OFF"))
+    monkeypatch.setattr(np, "STATE_FILE", str(tmp_path / "notify_state.json"))
+    monkeypatch.setattr(np, "DIGEST_DIR", str(tmp_path / "digest_buffer"))
 
 
 def test_send_telegram_reply_redacts_configured_secret(monkeypatch):

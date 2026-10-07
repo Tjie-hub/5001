@@ -1,12 +1,14 @@
 {
   "items": [
+    {"date": "2026-10-23", "text": "Keystats code merged + snapshot job must be READY by Oct 29"},
+    {"date": "2026-10-28", "text": "Check snapshot guard says READY"},
+    {"date": "2026-10-31", "text": "First {FQ} snapshot — check summary"}
+  ],
+  "done": [
     {"date": "2026-10-01", "text": "Tonight P1-3 cutover — dry-run arrives 17:00 WIB; reply go to zcode after reading"},
     {"date": "2026-10-02", "text": "Sign/reject D-065 v2 (after Claude Code consolidation report)"},
     {"date": "2026-10-02", "text": "Download LWZ factor data → priors/external/lwz/"},
     {"date": "2026-10-02", "text": ".env.example Aug-5 change (AGENT_FIRM_PROVIDER=zai, glm-5.2): keep or revert?"},
-    {"date": "2026-10-05", "text": "Optional: rotate Syncthing API key; pause IDX folder on Windows too"},
-    {"date": "2026-10-23", "text": "Keystats code merged + snapshot job must be READY by Oct 29"},
-    {"date": "2026-10-28", "text": "Check snapshot guard says READY"},
-    {"date": "2026-10-31", "text": "First {FQ} snapshot — check summary"}
+    {"date": "2026-10-05", "text": "Optional: rotate Syncthing API key; pause IDX folder on Windows too"}
   ]
 }

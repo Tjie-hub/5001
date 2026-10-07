@@ -12,6 +12,15 @@ shared.
 Restart-safe by construction: a process crash mid-job leaves an orphaned
 'running' row rather than losing the execution record; the next execution of
 the same job_name mints a fresh run_id and never collides with it.
+
+Orphan classification is READ-ONLY (frontend-trim brief, 2026-10-06): the
+append-only ledger is never rewritten, so a 'running' row left by a dead
+process stays 'running' forever in the table. Reads classify instead — a
+running row counts as orphaned when it started before the current process
+started (fallback when the process start time is unavailable: older than
+ORPHAN_MAX_AGE_S, 6 h). get_running_jobs() returns only live runs,
+get_orphaned_running_jobs() only orphaned ones, and get_status_summary()
+counts them under separate keys; the ledger itself is untouched.
 """
 import contextvars
 import os
@@ -30,6 +39,10 @@ from data.db import connect as db_connect
 
 WIB = pytz.timezone("Asia/Jakarta")
 DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
+
+# Fallback orphan rule: when the current process's start time cannot be
+# determined, a 'running' row older than this counts as orphaned.
+ORPHAN_MAX_AGE_S = 6 * 3600
 
 JOB_EXECUTION_LOG_DDL = """
 CREATE TABLE IF NOT EXISTS job_execution_log (
@@ -277,8 +290,29 @@ def get_jobs_since(since, db_path: str = None):
 
 
 def get_running_jobs(db_path: str = None):
-    """All status='running' rows, newest first -- jobs currently executing
-    (or, if orphaned by a process crash, jobs that never finalized)."""
+    """Live running rows only, newest first.
+
+    A status='running' row that started before the CURRENT process started is
+    orphaned (left by a crashed/restarted process — the ledger is append-only,
+    so the row is never rewritten) and is NOT returned here; see
+    get_orphaned_running_jobs(). When the process start time is unavailable,
+    the fallback rule applies: a running row older than ORPHAN_MAX_AGE_S (6 h)
+    counts as orphaned. A row with an unparsable started_at stays visible as
+    live (fail-open — never hide a possibly-running job).
+    """
+    live, _orphaned = _running_partition(db_path)
+    return live
+
+
+def get_orphaned_running_jobs(db_path: str = None):
+    """Orphaned running rows only, newest first — the complement of
+    get_running_jobs(). See there for the classification rule."""
+    _live, orphaned = _running_partition(db_path)
+    return orphaned
+
+
+def _running_partition(db_path: str = None):
+    """Split status='running' rows into (live, orphaned). Read-only."""
     db_path = db_path or DB_PATH
     conn = db_connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -287,9 +321,69 @@ def get_running_jobs(db_path: str = None):
         rows = conn.execute(
             "SELECT * FROM job_execution_log WHERE status='running' ORDER BY id DESC"
         ).fetchall()
-        return [_row_to_dict(r) for r in rows]
     finally:
         conn.close()
+    return _partition_running([_row_to_dict(r) for r in rows])
+
+
+def _partition_running(rows, now_epoch: Optional[float] = None,
+                       process_start: Optional[float] = None):
+    """Classify running rows into (live, orphaned).
+
+    Orphan rule (read-only classification; the row itself is never mutated):
+      primary   — started before the current process started;
+      fallback  — process start unavailable → older than ORPHAN_MAX_AGE_S.
+
+    `now_epoch`/`process_start` are injection points for tests; None means
+    "compute now" / "probe /proc then fall back to the age rule".
+    """
+    now_epoch = time.time() if now_epoch is None else now_epoch
+    if process_start is None:
+        process_start = process_start_epoch()
+    live, orphaned = [], []
+    for row in rows:
+        started = _started_at_epoch(row.get("started_at"))
+        if started is None:
+            live.append(row)  # undatable — keep visible, never hide
+        elif process_start is not None:
+            (orphaned if started < process_start else live).append(row)
+        else:
+            (orphaned if (now_epoch - started) > ORPHAN_MAX_AGE_S else live).append(row)
+    return live, orphaned
+
+
+def _started_at_epoch(started_at) -> Optional[float]:
+    """Parse a ledger started_at ('%Y-%m-%d %H:%M:%S', WIB wall time) to a
+    Unix epoch; None when missing or unparsable."""
+    if not started_at:
+        return None
+    try:
+        return WIB.localize(
+            datetime.strptime(str(started_at), "%Y-%m-%d %H:%M:%S")
+        ).timestamp()
+    except (ValueError, TypeError):
+        return None
+
+
+def process_start_epoch() -> Optional[float]:
+    """Unix epoch when the CURRENT process started, via Linux /proc
+    (/proc/self/stat's starttime in clock ticks since boot, anchored to
+    /proc/stat's btime). None when unavailable — non-Linux, restricted /proc,
+    or unparsable — which switches the orphan rule to the ORPHAN_MAX_AGE_S
+    age fallback."""
+    try:
+        with open("/proc/self/stat", "rb") as fh:
+            # comm can contain spaces/parens: split after the closing paren.
+            fields = fh.read().decode("ascii", "replace").rsplit(")", 1)[1].split()
+        ticks = float(fields[19])  # overall field 22 (starttime); 3 fields consumed
+        hertz = os.sysconf("SC_CLK_TCK")
+        with open("/proc/stat") as fh:
+            for line in fh:
+                if line.startswith("btime"):
+                    return float(line.split()[1]) + ticks / hertz
+    except Exception:
+        pass
+    return None
 
 
 _RECENT_JOBS_DEFAULT_LIMIT = 50
@@ -325,19 +419,33 @@ def get_recent_jobs(limit: int = _RECENT_JOBS_DEFAULT_LIMIT, db_path: str = None
 
 def get_status_summary(db_path: str = None) -> dict:
     """Aggregate counts by status, plus a total -- the at-a-glance health
-    snapshot for a status dashboard/report. Always returns all 5 keys, zero-
-    filled for statuses with no rows (never a KeyError for a quiet engine)."""
+    snapshot for a status dashboard/report. Always returns all 6 keys, zero-
+    filled for statuses with no rows (never a KeyError for a quiet engine).
+
+    'running' counts only LIVE runs; rows orphaned by a process restart are
+    counted under 'orphaned' (read-only classification — the ledger is
+    append-only and those rows are never rewritten). total is the count of
+    all rows, so it is unchanged by the split.
+    """
     db_path = db_path or DB_PATH
     conn = db_connect(db_path)
+    conn.row_factory = sqlite3.Row
     try:
         ensure_job_status_table(conn)
         rows = conn.execute(
-            "SELECT status, COUNT(*) FROM job_execution_log GROUP BY status"
+            "SELECT status, COUNT(*) FROM job_execution_log "
+            "WHERE status != 'running' GROUP BY status"
+        ).fetchall()
+        running_rows = conn.execute(
+            "SELECT started_at FROM job_execution_log WHERE status='running'"
         ).fetchall()
     finally:
         conn.close()
-    counts = {"success": 0, "failed": 0, "skipped": 0, "running": 0}
+    counts = {"success": 0, "failed": 0, "skipped": 0}
     for status, count in rows:
         if status in counts:
             counts[status] = count
+    live, orphaned = _partition_running([dict(r) for r in running_rows])
+    counts["running"] = len(live)
+    counts["orphaned"] = len(orphaned)
     return {"total": sum(counts.values()), **counts}

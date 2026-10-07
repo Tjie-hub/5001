@@ -148,3 +148,36 @@ def test_ft_eligibility_always_passes_and_attaches_frozen_rule():
     assert r.verdict == Verdict.PASS
     assert r.statistic["forward_test_rule"]["min_n"] == 15
     assert r.statistic["forward_test_rule"]["go_exp"] == 0.50
+
+
+# ── Stage 9 — probability of backtest overfitting (CSCV) ─────────────────────
+
+def _trials(skill, seed=0):
+    m = np.random.default_rng(seed).normal(0.0, 1.0, (200, 15))
+    m[:, 0] += skill
+    return {"labels": [f"t{i}" for i in range(15)], "matrix": m.tolist()}
+
+
+def test_pbo_passes_a_persistent_edge():
+    r = stages.stage_pbo({"trial_returns": _trials(0.8)}, CFG)
+    assert r.verdict == Verdict.PASS
+    assert r.statistic["pbo"] < CFG.pbo["watch_at"]
+
+
+def test_pbo_fails_or_watches_pure_noise():
+    r = stages.stage_pbo({"trial_returns": _trials(0.0, seed=5)}, CFG)
+    assert r.verdict in (Verdict.WATCH, Verdict.FAIL)
+
+
+def test_pbo_without_common_period_trials_is_watch_not_pass():
+    # RESEARCH_VALIDATION_FRAMEWORK: PBO "must be applied" -- a candidate that cannot
+    # be checked for overfitting may not be promoted on the strength of other stages.
+    for ctx in ({}, {"trial_returns": None}, {"trial_returns": {"labels": ["a"], "matrix": [[1.0]] * 50}}):
+        r = stages.stage_pbo(ctx, CFG)
+        assert r.verdict == Verdict.WATCH
+        assert r.statistic["pbo"] is None
+
+
+def test_pbo_is_in_the_pipeline_before_ft_eligibility():
+    names = [s.__name__ for s in stages.PIPELINE]
+    assert names.index("stage_pbo") == names.index("stage_ft_eligibility") - 1

@@ -94,7 +94,7 @@ def test_provider_switch_recorded(tmp_path, monkeypatch):
     monkeypatch.setenv("DB_PATH", db)
     from engine.agent_firm.providers import alerts
     alerts.reset_state()
-    monkeypatch.setattr(alerts, "send_telegram", lambda msg: None)
+    monkeypatch.setattr(alerts, "send_telegram", lambda msg, **kw: None)
     alerts.session_limit_alert("claude", None)
     alerts.provider_restored_alert("claude")
     rows = sqlite3.connect(db).execute(
