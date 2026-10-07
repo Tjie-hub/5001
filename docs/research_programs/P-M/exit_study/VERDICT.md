@@ -421,3 +421,257 @@ stop, and it fails the frozen both-eras rule (E2 t +1.50 < 2.0). **Do not adopt 
 - Numbers in this file come from `_verdict_tables.md`, rendered mechanically from the RESULT
   by `gen_verdict.py`; narrative figures were quoted programmatically from the same file.
 - G1 is DONE. Per the brief: **no re-runs with changed settings.**
+
+---
+
+# P4 fix and G1-bis (2026-10-07)
+
+**Authority:** brief `ZCODE_BRIEF_EXIT_STUDY_P4_FIX_2026-10-07.md` (owner-approved 2026-10-07)
+after planner review of `HANDOFF_G1BIS_STOP.md`. **This addendum SUPERSEDES G1's P4 rows
+(trade metrics, paired tests, E-SN-vs-E-RND P4 row) and ALL of G1's portfolio tables above —
+they are kept for the record, not deleted. Everything else in G1 stands: the population
+machinery, every non-P4 arm, the P2 tail question and the exit-arm conclusions are
+bit-identical to the G1 run (gate below).**
+
+The frozen driver's day-loop carried a bottom-of-loop P4 fill block that could only ever fire
+on the arming day (the in-step next-session path runs first on any later day), "filling" the
+top-up limit at the arming day's own low — a price printed before the arming close that placed
+the order (look-ahead) — and booking no buy leg, so the top-up sale booked phantom proceeds.
+Per the brief, the block was **deleted** (not fixed) in `exit_study.py::simulate_trade` and
+`portfolio_v2.py::simulate_legs`; the frozen rule's own text ("top-up of 50% at entry − 0.5·ATR
+**limit, from the next session**", PREDECLARATION §6) already forbade the same-day fill.
+Disclosed as **Amendment 2026-10-07** in PREDECLARATION §6, with a same-day regression test in
+both test files; re-frozen at commit `006ef6a` (sidecars `PREDECLARATION.md`
+`2ccbd25a…e0f2d`, `exit_study.py` `6b29b92c…c2bc`, `test_pit_exit_study.py`
+`6ec96c2e…fdadc`; `PORTFOLIO_FIX.sha256` regenerated; pushed before any run).
+
+## The firing-count assertion (why deletion, not booking)
+
+An instrumented throwaway copy of the OLD frozen driver (git `0abe6de`, not committed) was run
+over all P4 calls in the three populations (G1's exact trade sets): the bottom block fired
+**132 times — E_SN 33, E_RND 29, E_BRK 70 — and all 132 fires were on the arming day**
+(`k == armed_day` in every case), exactly matching the G1-bis parity-failure trades. The block
+had no legitimate path: it was look-ahead by construction.
+
+## Gates (all passed)
+
+1. **Re-freeze verified** before both runs: amended trio sidecar + mini-freeze sidecar OK.
+2. **Data:** fingerprint `f42275e3…` (max_date 2026-10-06, panel pinned as G1-bis does) — zero
+   drift; populations re-derived **exactly** G1's: E-SN 3,682 / E-RND 3,682 / E-BRK 5,141.
+3. **Non-P4 bit-identity gate (G1FIX):** every non-P4 arm × population — metrics, portfolio,
+   paired-vs-baseline, by-year, recommendations, E-SN-vs-E-RND, the P2 tail block —
+   **0 mismatches** against `RESULT_20261006T142027Z.json` (canonical-JSON equality). Only the
+   P4 rows changed.
+4. **Parity gate (G1-bis):** canonical legs vs the frozen simulation on **150,060 trade × arm
+   pairs: max |Δnet%| = 0.0** (gate: ≤ 1e-9), 0 exit day/reason mismatches.
+5. **Cash and caps (G1-bis):** min cash across all 72 portfolios ≥ −4.4e-16 (float noise;
+   every buy is cash-limited) — cash never negative; 20% entry / 30% add caps enforced by the
+   min-leg sizing (pinned by `test_portfolio_v2.py`, all 39 tests pass, incl. the two new
+   same-day tests).
+
+## Corrected P4 (trade level, G1FIX — `RESULT_G1FIX_20261007T034553Z.json`)
+
+Paired vs P0 on matched trades — G1's recorded rows (superseded) beside the corrected rows:
+
+| population | era | G1 t (superseded) | corrected t | G1 mean R diff | corrected mean R diff | G1 expectancy R | corrected expectancy R | G1 mean net% | corrected mean net% |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| E_SN | E1 | +4.26 | +0.65 | 0.12 | 0.00 | 0.13 | 0.00 | 0.76% | 0.27% |
+| E_SN | E2 | +3.25 | -0.13 | 0.05 | -0.00 | 0.00 | -0.04 | 0.32% | -0.15% |
+| E_RND | E1 | +3.23 | -2.90 | 0.06 | -0.01 | -0.12 | -0.19 | -0.04% | -0.42% |
+| E_RND | E2 | +3.46 | +0.25 | 0.08 | 0.00 | -0.03 | -0.11 | -0.14% | -0.61% |
+| E_BRK | E1 | +6.01 | +0.03 | 0.13 | 0.00 | 0.11 | -0.01 | 0.74% | 0.02% |
+| E_BRK | E2 | +4.92 | +0.76 | 0.09 | 0.00 | -0.07 | -0.16 | -0.54% | -1.30% |
+
+Full corrected P4 metric rows (every other cell of the G1 metric tables is unchanged):
+
+| metric row | n | mean net% | median net% | expectancy R | win rate | avg win% | avg loss% | mean hold |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| E_SN E1 P4 | 2253 | 0.27% | 0.81% | 0.00 | 54.5% | 5.55% | -6.07% | 6.0 |
+| E_SN E2 P4 | 1429 | -0.15% | 0.62% | -0.04 | 53.4% | 7.26% | -8.63% | 5.5 |
+| E_RND E1 P4 | 2252 | -0.42% | -1.98% | -0.19 | 46.5% | 5.88% | -5.91% | 6.7 |
+| E_RND E2 P4 | 1429 | -0.61% | -2.44% | -0.11 | 45.6% | 7.63% | -7.52% | 6.3 |
+| E_BRK E1 P4 | 3129 | 0.02% | -0.54% | -0.01 | 45.7% | 4.98% | -4.14% | 4.4 |
+| E_BRK E2 P4 | 2012 | -1.30% | -0.60% | -0.16 | 42.5% | 4.73% | -5.77% | 3.6 |
+
+Reading: once the top-up can only fill from the next session (and books its buy), the swing
+lot's advantage disappears everywhere. The stop-report's interim sensitivity (t 2.31/2.32 on
+E-SN) still contained the same-day fills — as the brief warned — and the true corrected values
+are far lower. On the random-entry control in E1 P4 is mildly WORSE than P0 (t −2.90, one era
+only). **P4's statistical leg fails in every population × era** (no cell reaches t ≥ 2.0).
+
+## Portfolio tables (G1-bis — `RESULT_G1BIS_20261007T035639Z.json`, portfolio_v2)
+
+The real-cash portfolio model (20% entry cap, 30% add cap, cash-limited) that G1-bis was
+approved to run. These supersede G1's portfolio tables (which modelled no position legs and
+no cash limit; their X0/X2 busts were sizing artifacts).
+
+| population | era | arm | CAGR full | CAGR era | max DD | worst 12m | final equity | taken/signals | min cash |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|
+| E_SN | E1 | X0 | 6.63% | 8.49% | -53.5% | -41.9% | 5.439 | 1097/2253 | -0.0000 |
+| E_SN | E1 | X1 | 12.25% | 15.79% | -76.5% | -68.6% | 21.071 | 26/2253 | -0.0000 |
+| E_SN | E1 | X2 | 3.10% | 3.95% | -66.5% | -62.7% | 2.235 | 412/2253 | -0.0000 |
+| E_SN | E1 | X3 | 10.93% | 14.07% | -77.1% | -71.6% | 15.426 | 81/2253 | -0.0000 |
+| E_SN | E1 | X4 | 10.05% | 12.93% | -78.6% | -70.8% | 12.523 | 52/2253 | -0.0000 |
+| E_SN | E1 | X5 | 12.24% | 15.79% | -76.5% | -68.6% | 21.064 | 28/2253 | -0.0000 |
+| E_SN | E1 | X6 | 11.07% | 14.26% | -73.4% | -66.2% | 15.964 | 47/2253 | -0.0000 |
+| E_SN | E1 | P0 | 12.25% | 15.79% | -76.5% | -68.6% | 21.071 | 26/2253 | -0.0000 |
+| E_SN | E1 | P1 | 12.28% | 15.84% | -76.4% | -68.5% | 21.249 | 30/2253 | -0.0000 |
+| E_SN | E1 | P2 | 12.25% | 15.79% | -76.5% | -68.6% | 21.071 | 26/2253 | -0.0000 |
+| E_SN | E1 | P3 | 12.25% | 15.80% | -76.5% | -68.6% | 21.087 | 26/2253 | -0.0000 |
+| E_SN | E1 | P4 | 12.25% | 15.79% | -76.5% | -68.6% | 21.071 | 26/2253 | -0.0000 |
+| E_SN | E2 | X0 | -1.70% | -9.02% | -57.0% | -36.1% | 0.635 | 477/1429 | -0.0000 |
+| E_SN | E2 | X1 | 1.21% | 6.84% | -52.0% | -42.5% | 1.374 | 45/1429 | -0.0000 |
+| E_SN | E2 | X2 | -2.43% | -12.65% | -55.2% | -35.7% | 0.523 | 436/1429 | -0.0000 |
+| E_SN | E2 | X3 | -2.94% | -15.14% | -70.8% | -41.8% | 0.455 | 292/1429 | -0.0000 |
+| E_SN | E2 | X4 | 0.00% | 0.00% | -58.6% | -38.5% | 1.000 | 220/1429 | -0.0000 |
+| E_SN | E2 | X5 | 1.08% | 6.10% | -53.9% | -42.8% | 1.328 | 38/1429 | -0.0000 |
+| E_SN | E2 | X6 | 0.04% | 0.21% | -42.8% | -33.8% | 1.010 | 34/1429 | -0.0000 |
+| E_SN | E2 | P0 | 1.21% | 6.84% | -52.0% | -42.5% | 1.374 | 45/1429 | -0.0000 |
+| E_SN | E2 | P1 | 1.86% | 10.69% | -54.3% | -43.4% | 1.627 | 44/1429 | -0.0000 |
+| E_SN | E2 | P2 | 1.20% | 6.80% | -52.0% | -42.5% | 1.371 | 45/1429 | -0.0000 |
+| E_SN | E2 | P3 | 2.02% | 11.63% | -49.6% | -39.6% | 1.695 | 39/1429 | -0.0000 |
+| E_SN | E2 | P4 | 1.21% | 6.84% | -52.0% | -42.5% | 1.374 | 45/1429 | -0.0000 |
+| E_RND | E1 | X0 | -1.74% | -2.20% | -83.1% | -74.3% | 0.630 | 1275/2253 | -0.0000 |
+| E_RND | E1 | X1 | 12.22% | 15.76% | -73.5% | -65.1% | 20.924 | 24/2253 | -0.0000 |
+| E_RND | E1 | X2 | 3.13% | 3.99% | -85.1% | -68.4% | 2.257 | 209/2253 | -0.0000 |
+| E_RND | E1 | X3 | 10.76% | 13.85% | -69.7% | -62.4% | 14.817 | 58/2253 | -0.0000 |
+| E_RND | E1 | X4 | 10.93% | 14.08% | -68.4% | -62.1% | 15.446 | 42/2253 | -0.0000 |
+| E_RND | E1 | X5 | 11.92% | 15.37% | -73.1% | -64.8% | 19.521 | 24/2253 | 0.0000 |
+| E_RND | E1 | X6 | 12.89% | 16.64% | -77.4% | -71.3% | 24.529 | 32/2253 | 0.0000 |
+| E_RND | E1 | P0 | 12.22% | 15.76% | -73.5% | -65.1% | 20.924 | 24/2253 | -0.0000 |
+| E_RND | E1 | P1 | 12.31% | 15.88% | -73.6% | -65.2% | 21.381 | 24/2253 | -0.0000 |
+| E_RND | E1 | P2 | 12.24% | 15.79% | -73.5% | -65.1% | 21.036 | 24/2253 | -0.0000 |
+| E_RND | E1 | P3 | 12.33% | 15.90% | -73.6% | -65.2% | 21.469 | 23/2253 | -0.0000 |
+| E_RND | E1 | P4 | 12.27% | 15.82% | -73.6% | -65.2% | 21.174 | 24/2253 | 0.0000 |
+| E_RND | E2 | X0 | -1.43% | -7.63% | -68.8% | -46.4% | 0.683 | 489/1429 | -0.0000 |
+| E_RND | E2 | X1 | 3.88% | 23.27% | -57.7% | -35.3% | 2.728 | 37/1429 | -0.0000 |
+| E_RND | E2 | X2 | -1.09% | -5.87% | -67.3% | -40.9% | 0.748 | 358/1429 | -0.0000 |
+| E_RND | E2 | X3 | 0.75% | 4.22% | -43.5% | -28.1% | 1.219 | 74/1429 | -0.0000 |
+| E_RND | E2 | X4 | 1.40% | 7.96% | -46.5% | -26.8% | 1.444 | 134/1429 | -0.0000 |
+| E_RND | E2 | X5 | 0.52% | 2.92% | -73.1% | -57.7% | 1.148 | 45/1429 | -0.0000 |
+| E_RND | E2 | X6 | 0.55% | 3.07% | -73.2% | -59.2% | 1.156 | 33/1429 | -0.0000 |
+| E_RND | E2 | P0 | 3.88% | 23.27% | -57.7% | -35.3% | 2.728 | 37/1429 | -0.0000 |
+| E_RND | E2 | P1 | 3.31% | 19.60% | -58.3% | -36.1% | 2.359 | 41/1429 | -0.0000 |
+| E_RND | E2 | P2 | 3.87% | 23.22% | -57.8% | -35.9% | 2.722 | 37/1429 | -0.0000 |
+| E_RND | E2 | P3 | 3.88% | 23.28% | -57.7% | -35.3% | 2.728 | 37/1429 | -0.0000 |
+| E_RND | E2 | P4 | 3.88% | 23.27% | -57.7% | -35.3% | 2.728 | 37/1429 | -0.0000 |
+| E_BRK | E1 | X0 | — | — | — | — | — | 1187/3129 | -0.0000 |
+| E_BRK | E1 | X1 | 11.66% | 15.03% | -74.1% | -65.7% | 18.352 | 15/3129 | 0.0000 |
+| E_BRK | E1 | X2 | 11.28% | 14.53% | -78.6% | -72.6% | 16.761 | 60/3129 | 0.0000 |
+| E_BRK | E1 | X3 | 8.25% | 10.59% | -67.4% | -60.7% | 8.098 | 140/3129 | -0.0000 |
+| E_BRK | E1 | X4 | 6.13% | 7.84% | -72.1% | -68.9% | 4.803 | 168/3129 | -0.0000 |
+| E_BRK | E1 | X5 | 11.59% | 14.94% | -74.1% | -65.7% | 18.059 | 15/3129 | -0.0000 |
+| E_BRK | E1 | X6 | 11.57% | 14.92% | -74.4% | -65.9% | 17.984 | 15/3129 | -0.0000 |
+| E_BRK | E1 | P0 | 11.66% | 15.03% | -74.1% | -65.7% | 18.352 | 15/3129 | 0.0000 |
+| E_BRK | E1 | P1 | 11.73% | 15.12% | -74.1% | -65.7% | 18.667 | 15/3129 | 0.0000 |
+| E_BRK | E1 | P2 | 11.72% | 15.11% | -74.2% | -65.7% | 18.626 | 15/3129 | 0.0000 |
+| E_BRK | E1 | P3 | 11.62% | 14.98% | -74.2% | -65.8% | 18.195 | 15/3129 | 0.0000 |
+| E_BRK | E1 | P4 | 11.66% | 15.03% | -74.1% | -65.7% | 18.347 | 15/3129 | 0.0000 |
+| E_BRK | E2 | X0 | — | — | — | — | — | 535/2012 | -0.0000 |
+| E_BRK | E2 | X1 | 3.12% | 18.42% | -47.3% | -36.9% | 2.250 | 17/2012 | -0.0000 |
+| E_BRK | E2 | X2 | -0.28% | -1.50% | -66.4% | -45.9% | 0.930 | 177/2012 | -0.0000 |
+| E_BRK | E2 | X3 | -1.03% | -5.55% | -66.4% | -44.6% | 0.760 | 325/2012 | -0.0000 |
+| E_BRK | E2 | X4 | -3.37% | -17.21% | -74.6% | -44.9% | 0.404 | 337/2012 | -0.0000 |
+| E_BRK | E2 | X5 | 3.12% | 18.42% | -47.3% | -36.9% | 2.250 | 17/2012 | -0.0000 |
+| E_BRK | E2 | X6 | 3.13% | 18.49% | -47.3% | -36.8% | 2.256 | 14/2012 | -0.0000 |
+| E_BRK | E2 | P0 | 3.12% | 18.42% | -47.3% | -36.9% | 2.250 | 17/2012 | -0.0000 |
+| E_BRK | E2 | P1 | 3.16% | 18.66% | -45.7% | -34.8% | 2.272 | 12/2012 | 0.0000 |
+| E_BRK | E2 | P2 | 3.12% | 18.42% | -47.3% | -36.9% | 2.250 | 17/2012 | -0.0000 |
+| E_BRK | E2 | P3 | 3.12% | 18.42% | -47.3% | -36.9% | 2.250 | 17/2012 | -0.0000 |
+| E_BRK | E2 | P4 | 3.12% | 18.42% | -47.3% | -36.9% | 2.250 | 17/2012 | -0.0000 |
+
+Skip/exposure detail (skipped full / cash / tiny, adds skipped, avg gross exposure and
+% days at 10 positions over the era) is in the RESULT; the pattern mirrors the table above —
+X0/X2-style wide or absent stops fill the book with small trades (up to 412 taken in E_SN E1
+X2), the stopped arms are cash-bound most of the time, and E-BRK X0 (no stop on breakouts)
+goes bust in both eras — the ruin finding from G1 survives the real-cash model.
+
+Drawdown leg, P4 vs P0:
+
+| population | era | P0 max DD | P4 max DD | P4 deepens DD? |
+|---|---|---:|---:|---|
+| E_SN | E1 | -76.5% | -76.5% | no |
+| E_SN | E2 | -52.0% | -52.0% | no |
+| E_RND | E1 | -73.5% | -73.6% | YES |
+| E_RND | E2 | -57.7% | -57.7% | no |
+
+With the fix, P4's portfolio is nearly indistinguishable from P0's: a pullback all the way to
+entry − 0.5·ATR **after** the arming close is rare, so the top-up almost never fills at all
+(E-SN E1: zero top-up fills — P4's portfolio row equals P0's exactly).
+
+## Final recommendation per arm
+
+Frozen rule via `exit_study.recommend()`, fed the **Step 2 statistical leg** (G1FIX
+expectancy_R and paired_t_vs_base) and the **Step 3 drawdown leg** (portfolio_v2 max DD), per
+the brief. (The recommendation block inside `RESULT_G1BIS_…json` is the mini-freeze's
+mechanical carry-over of G1's pre-fix t-statistics and is superseded by this table.)
+
+| E_SN arm | verdict | E1 t | E1 expHigher | E1 dd_ok | E2 t | E2 expHigher | E2 dd_ok |
+|---|---|---:|---|---|---:|---|---|
+| X1 | **NO_RELIABLE_DIFFERENCE** | -2.00 | False | False | +1.50 | True | True |
+| X2 | **NO_RELIABLE_DIFFERENCE** | +0.23 | True | False | -0.47 | False | True |
+| X3 | **NO_RELIABLE_DIFFERENCE** | -1.40 | False | False | +0.89 | True | False |
+| X4 | **NO_RELIABLE_DIFFERENCE** | -1.73 | False | False | +1.15 | True | True |
+| X5 | **NO_RELIABLE_DIFFERENCE** | -2.07 | False | False | +1.43 | True | True |
+| X6 | **NO_RELIABLE_DIFFERENCE** | -0.02 | False | False | -0.08 | False | True |
+| P1 | **NO_RELIABLE_DIFFERENCE** | +3.13 | True | True | +0.08 | True | True |
+| P2 | **NO_RELIABLE_DIFFERENCE** | +3.18 | True | True | +1.50 | True | True |
+| P3 | **NO_RELIABLE_DIFFERENCE** | -0.33 | False | True | +0.79 | True | True |
+| P4 | **NO_RELIABLE_DIFFERENCE** | +0.65 | True | True | -0.13 | False | True |
+
+| E_RND arm | verdict | E1 t | E1 expHigher | E1 dd_ok | E2 t | E2 expHigher | E2 dd_ok |
+|---|---|---:|---|---|---:|---|---|
+| X1 | **NO_RELIABLE_DIFFERENCE** | -0.43 | False | True | +0.10 | True | True |
+| X2 | **NO_RELIABLE_DIFFERENCE** | +0.34 | True | True | -0.52 | False | True |
+| X3 | **NO_RELIABLE_DIFFERENCE** | -0.04 | False | True | +0.94 | True | True |
+| X4 | **NO_RELIABLE_DIFFERENCE** | +0.03 | True | True | +0.36 | True | True |
+| X5 | **NO_RELIABLE_DIFFERENCE** | -0.46 | False | True | +0.19 | True | True |
+| X6 | **NO_RELIABLE_DIFFERENCE** | -0.92 | False | True | -0.59 | False | True |
+| P1 | **NO_RELIABLE_DIFFERENCE** | -0.72 | False | True | +0.32 | True | True |
+| P2 | **NO_RELIABLE_DIFFERENCE** | +1.91 | True | True | -0.51 | False | True |
+| P3 | **NO_RELIABLE_DIFFERENCE** | -0.99 | False | True | +0.53 | True | True |
+| P4 | **NO_RELIABLE_DIFFERENCE** | -2.90 | False | True | +0.25 | True | True |
+
+**P4 is NOT recommended. Stated plainly: the swing-lot edge G1 recorded was phantom proceeds
+plus look-ahead fills; once both are removed, no arm in this study clears the frozen
+both-eras rule in either entry population. A null P4 is the answer.** The rest of G1's
+guidance stands unchanged (keep the structure stop for ruin control; do not adopt P2; the
+E-SN-vs-E-RND entry comparisons are unchanged bit-for-bit). The P2 worst-5% tail question did
+not need re-reporting: its rows are bit-identical to G1 (identity gate).
+
+## Addendum disclosures
+
+1. **Runner-crash transparency (G1FIX).** The G1FIX runner (`g1fix_run.py`, orchestration
+   only, not frozen) crashed twice in its own comparison code BEFORE the identity gate ran and
+   before any artifact was written: once on a KeyError (it compared the baseline arms X0/P0,
+   which `recommend()` does not emit) and once because the E-SN-vs-E-RND loop had not yet been
+   restricted to non-P4 arms. Both were bugs in the gate code, not in the study; the study
+   computation is deterministic and identical across invocations; the run is counted once and
+   completed on the third invocation with the gate intact. Nothing about the run's inputs or
+   the frozen code changed between invocations.
+2. **The mini-freeze text (PORTFOLIO_FIX.md) still describes the transcription as "including
+   the frozen bottom-of-loop P4 fill block"** — historically accurate at mini-freeze time and
+   superseded by the Amendment (the mini-freeze was not edited, per the brief's constraint);
+   `portfolio_v2.py` and `g1bis_run.py` hashes in the regenerated `PORTFOLIO_FIX.sha256` are
+   the amended ones.
+3. **The runner-internal recommendation blocks** (in `RESULT_G1BIS_…json`) feed G1's stale
+   pre-fix t-statistics per the mini-freeze's frozen wording ("G1's unchanged trade-level
+   expectancy_R and paired_t_vs_base") — superseded by the Final-recommendation table above,
+   which the brief defines as Step 2 stats + Step 3 drawdown.
+4. **E-BRK X0 busts** (both eras) under the real-cash model — same ruin finding as G1's X0/X2
+   note; cash itself never goes negative (min ≥ −4.4e-16); the bust is mark-to-market.
+5. Practice study, as before: no registry, family-slot, or DECISION_LOG edits; no ~/jurnal26,
+   production, or other-branch writes; read-only data throughout.
+
+## Addendum provenance
+
+- Amendment + re-freeze: commit `006ef6a5cbf89385e27cb6eaf07e41f1177e5c7b` (pushed and
+  ls-remote-verified BEFORE any run). Firing-count assertion: instrumented throwaway copy of
+  the old driver under /tmp (not committed), populations re-derived exactly G1's.
+- Step 2: `g1fix_run.py` (committed for provenance) → `RESULT_G1FIX_20261007T034553Z.json`,
+  runtime 592.9 s, gate `EXIT_STUDY_G1_APPROVED=1`.
+- Step 3: `g1bis_run.py` (mini-frozen, unchanged, hash `f553c276…37c4`) →
+  `RESULT_G1BIS_20261007T035639Z.json`, runtime 576.5 s, same gate.
+- Addendum tables rendered mechanically from the two RESULT files (throwaway renderer under
+  /tmp, G1 practice); narrative authored around them.
+- **G1FIX/G1-bis are terminal. Per the brief: commit, push, STOP.**

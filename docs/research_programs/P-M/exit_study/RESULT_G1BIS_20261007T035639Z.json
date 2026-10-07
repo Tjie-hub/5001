@@ -1,0 +1,1551 @@
+{
+ "populations": {
+  "E_SN": {
+   "n_trades": 3682
+  },
+  "E_RND": {
+   "n_trades": 3682
+  },
+  "E_BRK": {
+   "n_trades": 5141
+  }
+ },
+ "portfolio": {
+  "E_SN": {
+   "E1": {
+    "X0": {
+     "signals": 2253,
+     "taken": 1097,
+     "skipped_full": 76,
+     "skipped_cash": 1065,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.0662932594319825,
+     "cagr_era": 0.08489497386024336,
+     "max_dd": -0.5347463546196748,
+     "worst_12m": -0.4187909256055383,
+     "final_equity": 5.438734998065149,
+     "avg_gross_exposure_era": 0.6560513948264529,
+     "pct_days_at_10_positions_era": 0.010007698229407237,
+     "min_cash": -2.220446049250313e-16
+    },
+    "X1": {
+     "signals": 2253,
+     "taken": 26,
+     "skipped_full": 0,
+     "skipped_cash": 2212,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.12245694202796109,
+     "cagr_era": 0.15794334941631116,
+     "max_dd": -0.7647733355764672,
+     "worst_12m": -0.6856567696848734,
+     "final_equity": 21.070609950342515,
+     "avg_gross_exposure_era": 0.951294429132414,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X2": {
+     "signals": 2253,
+     "taken": 412,
+     "skipped_full": 0,
+     "skipped_cash": 1826,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.03095145135868882,
+     "cagr_era": 0.039453564210713665,
+     "max_dd": -0.6653704240339926,
+     "worst_12m": -0.6272018344803121,
+     "final_equity": 2.2349975306763588,
+     "avg_gross_exposure_era": 0.788620274240919,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -5.551115123125783e-17
+    },
+    "X3": {
+     "signals": 2253,
+     "taken": 81,
+     "skipped_full": 0,
+     "skipped_cash": 2157,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.10926991223666116,
+     "cagr_era": 0.14070140581427837,
+     "max_dd": -0.7707202378414959,
+     "worst_12m": -0.7159997658440365,
+     "final_equity": 15.426321041370972,
+     "avg_gross_exposure_era": 0.8986225777748996,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -5.551115123125783e-17
+    },
+    "X4": {
+     "signals": 2253,
+     "taken": 52,
+     "skipped_full": 0,
+     "skipped_cash": 2186,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.10053757630716142,
+     "cagr_era": 0.1293142576967492,
+     "max_dd": -0.7855429457686999,
+     "worst_12m": -0.7080979786967355,
+     "final_equity": 12.522845877793406,
+     "avg_gross_exposure_era": 0.896357102008231,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X5": {
+     "signals": 2253,
+     "taken": 28,
+     "skipped_full": 0,
+     "skipped_cash": 2210,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.12244380099052887,
+     "cagr_era": 0.15792614031883812,
+     "max_dd": -0.7647773070993544,
+     "worst_12m": -0.6856597383947824,
+     "final_equity": 21.064102465314168,
+     "avg_gross_exposure_era": 0.950675881740938,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X6": {
+     "signals": 2253,
+     "taken": 47,
+     "skipped_full": 0,
+     "skipped_cash": 2191,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.11071099333787005,
+     "cagr_era": 0.14258293365510966,
+     "max_dd": -0.7343501392188871,
+     "worst_12m": -0.6616863461598856,
+     "final_equity": 15.96388681935137,
+     "avg_gross_exposure_era": 0.918939488079817,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -5.551115123125783e-17
+    },
+    "P0": {
+     "signals": 2253,
+     "taken": 26,
+     "skipped_full": 0,
+     "skipped_cash": 2212,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.12245694202796109,
+     "cagr_era": 0.15794334941631116,
+     "max_dd": -0.7647733355764672,
+     "worst_12m": -0.6856567696848734,
+     "final_equity": 21.070609950342515,
+     "avg_gross_exposure_era": 0.951294429132414,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "P1": {
+     "signals": 2253,
+     "taken": 30,
+     "skipped_full": 0,
+     "skipped_cash": 2208,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.12281602525389879,
+     "cagr_era": 0.15841361474477544,
+     "max_dd": -0.7644681799294721,
+     "worst_12m": -0.685411704551139,
+     "final_equity": 21.249179553716495,
+     "avg_gross_exposure_era": 0.9510295437034361,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -1.3877787807814457e-17
+    },
+    "P2": {
+     "signals": 2253,
+     "taken": 26,
+     "skipped_full": 0,
+     "skipped_cash": 2212,
+     "skipped_tiny": 15,
+     "adds_skipped": 6,
+     "cagr_full": 0.12245694202796109,
+     "cagr_era": 0.15794334941631116,
+     "max_dd": -0.7647733355764672,
+     "worst_12m": -0.6856567696848734,
+     "final_equity": 21.070609950342515,
+     "avg_gross_exposure_era": 0.951294429132414,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "P3": {
+     "signals": 2253,
+     "taken": 26,
+     "skipped_full": 0,
+     "skipped_cash": 2212,
+     "skipped_tiny": 15,
+     "adds_skipped": 3,
+     "cagr_full": 0.12248962882213976,
+     "cagr_era": 0.15798615526965265,
+     "max_dd": -0.7647566952375442,
+     "worst_12m": -0.6856436884985637,
+     "final_equity": 21.086804948688314,
+     "avg_gross_exposure_era": 0.9512970301371206,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "P4": {
+     "signals": 2253,
+     "taken": 26,
+     "skipped_full": 0,
+     "skipped_cash": 2212,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.12245694202796109,
+     "cagr_era": 0.15794334941631116,
+     "max_dd": -0.7647733355764672,
+     "worst_12m": -0.6856567696848734,
+     "final_equity": 21.070609950342515,
+     "avg_gross_exposure_era": 0.951294429132414,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -2.7755575615628914e-17
+    }
+   },
+   "E2": {
+    "X0": {
+     "signals": 1429,
+     "taken": 477,
+     "skipped_full": 352,
+     "skipped_cash": 592,
+     "skipped_tiny": 8,
+     "adds_skipped": 0,
+     "cagr_full": -0.01704579773414472,
+     "cagr_era": -0.0902465334941267,
+     "max_dd": -0.5701073586637027,
+     "worst_12m": -0.36109474488841176,
+     "final_equity": 0.6353282353559808,
+     "avg_gross_exposure_era": 0.9151301075236947,
+     "pct_days_at_10_positions_era": 0.17597998331943285,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X1": {
+     "signals": 1429,
+     "taken": 45,
+     "skipped_full": 0,
+     "skipped_cash": 1368,
+     "skipped_tiny": 16,
+     "adds_skipped": 0,
+     "cagr_full": 0.01210301546575221,
+     "cagr_era": 0.06842118248472984,
+     "max_dd": -0.51988288885967,
+     "worst_12m": -0.4247497811905533,
+     "final_equity": 1.3735642562270307,
+     "avg_gross_exposure_era": 0.9915704420038735,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -1.3877787807814457e-17
+    },
+    "X2": {
+     "signals": 1429,
+     "taken": 436,
+     "skipped_full": 631,
+     "skipped_cash": 357,
+     "skipped_tiny": 5,
+     "adds_skipped": 0,
+     "cagr_full": -0.0242793106581376,
+     "cagr_era": -0.12647171429463966,
+     "max_dd": -0.5523100667498242,
+     "worst_12m": -0.3570766947876646,
+     "final_equity": 0.5228346473050036,
+     "avg_gross_exposure_era": 0.9408259713187112,
+     "pct_days_at_10_positions_era": 0.3694745621351126,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X3": {
+     "signals": 1429,
+     "taken": 292,
+     "skipped_full": 126,
+     "skipped_cash": 996,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": -0.029399345807196497,
+     "cagr_era": -0.1513922854439712,
+     "max_dd": -0.7084396817118309,
+     "worst_12m": -0.418206326760419,
+     "final_equity": 0.45507047014675855,
+     "avg_gross_exposure_era": 0.9632455426510518,
+     "pct_days_at_10_positions_era": 0.09591326105087573,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X4": {
+     "signals": 1429,
+     "taken": 220,
+     "skipped_full": 3,
+     "skipped_cash": 1190,
+     "skipped_tiny": 16,
+     "adds_skipped": 0,
+     "cagr_full": 5.293542320039535e-06,
+     "cagr_era": 2.912145215172579e-05,
+     "max_dd": -0.5859098042657569,
+     "worst_12m": -0.38488953517763047,
+     "final_equity": 1.0001396742044468,
+     "avg_gross_exposure_era": 0.9708050214965673,
+     "pct_days_at_10_positions_era": 0.0008340283569641367,
+     "min_cash": -5.551115123125783e-17
+    },
+    "X5": {
+     "signals": 1429,
+     "taken": 38,
+     "skipped_full": 1316,
+     "skipped_cash": 75,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.010812819276051044,
+     "cagr_era": 0.06095000497596659,
+     "max_dd": -0.5390747131764977,
+     "worst_12m": -0.42768225621243094,
+     "final_equity": 1.3281062863680697,
+     "avg_gross_exposure_era": 0.9921522128233266,
+     "pct_days_at_10_positions_era": 0.9374478732276897,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X6": {
+     "signals": 1429,
+     "taken": 34,
+     "skipped_full": 282,
+     "skipped_cash": 1097,
+     "skipped_tiny": 16,
+     "adds_skipped": 0,
+     "cagr_full": 0.00038516619438699884,
+     "cagr_era": 0.0021207335507360536,
+     "max_dd": -0.42810019205000804,
+     "worst_12m": -0.33805045344185203,
+     "final_equity": 1.0102120590824706,
+     "avg_gross_exposure_era": 0.9846698509161323,
+     "pct_days_at_10_positions_era": 0.1743119266055046,
+     "min_cash": -1.3877787807814457e-17
+    },
+    "P0": {
+     "signals": 1429,
+     "taken": 45,
+     "skipped_full": 0,
+     "skipped_cash": 1368,
+     "skipped_tiny": 16,
+     "adds_skipped": 0,
+     "cagr_full": 0.01210301546575221,
+     "cagr_era": 0.06842118248472984,
+     "max_dd": -0.51988288885967,
+     "worst_12m": -0.4247497811905533,
+     "final_equity": 1.3735642562270307,
+     "avg_gross_exposure_era": 0.9915704420038735,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -1.3877787807814457e-17
+    },
+    "P1": {
+     "signals": 1429,
+     "taken": 44,
+     "skipped_full": 1351,
+     "skipped_cash": 34,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.018626804584118473,
+     "cagr_era": 0.1068609818994386,
+     "max_dd": -0.542736146241431,
+     "worst_12m": -0.43416619223860164,
+     "final_equity": 1.627310414067746,
+     "avg_gross_exposure_era": 0.9909260342007358,
+     "pct_days_at_10_positions_era": 0.9616346955796498,
+     "min_cash": -1.3877787807814457e-17
+    },
+    "P2": {
+     "signals": 1429,
+     "taken": 45,
+     "skipped_full": 0,
+     "skipped_cash": 1368,
+     "skipped_tiny": 16,
+     "adds_skipped": 7,
+     "cagr_full": 0.012026489195486878,
+     "cagr_era": 0.06797684200728482,
+     "max_dd": -0.5197533519557278,
+     "worst_12m": -0.42473898173009783,
+     "final_equity": 1.3708267272174757,
+     "avg_gross_exposure_era": 0.9916280243731346,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -1.3877787807814457e-17
+    },
+    "P3": {
+     "signals": 1429,
+     "taken": 39,
+     "skipped_full": 1338,
+     "skipped_cash": 52,
+     "skipped_tiny": 0,
+     "adds_skipped": 8,
+     "cagr_full": 0.020201912784908904,
+     "cagr_era": 0.11630944874471894,
+     "max_dd": -0.49612689627585804,
+     "worst_12m": -0.3964367364678163,
+     "final_equity": 1.6950204614580406,
+     "avg_gross_exposure_era": 0.9921189827903055,
+     "pct_days_at_10_positions_era": 0.9499582985821518,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "P4": {
+     "signals": 1429,
+     "taken": 45,
+     "skipped_full": 0,
+     "skipped_cash": 1368,
+     "skipped_tiny": 16,
+     "adds_skipped": 3,
+     "cagr_full": 0.01210301546575221,
+     "cagr_era": 0.06842118248472984,
+     "max_dd": -0.51988288885967,
+     "worst_12m": -0.4247497811905533,
+     "final_equity": 1.3735642562270307,
+     "avg_gross_exposure_era": 0.9915704420038735,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -1.3877787807814457e-17
+    }
+   }
+  },
+  "E_RND": {
+   "E1": {
+    "X0": {
+     "signals": 2253,
+     "taken": 1275,
+     "skipped_full": 69,
+     "skipped_cash": 895,
+     "skipped_tiny": 14,
+     "adds_skipped": 0,
+     "cagr_full": -0.017373873844463095,
+     "cagr_era": -0.022003214239741498,
+     "max_dd": -0.8305926315989989,
+     "worst_12m": -0.743104453927129,
+     "final_equity": 0.6297571286540142,
+     "avg_gross_exposure_era": 0.7122079312993042,
+     "pct_days_at_10_positions_era": 0.010200153964588145,
+     "min_cash": -5.551115123125783e-17
+    },
+    "X1": {
+     "signals": 2253,
+     "taken": 24,
+     "skipped_full": 0,
+     "skipped_cash": 2214,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.12216007167610599,
+     "cagr_era": 0.1575545903962816,
+     "max_dd": -0.73508052953388,
+     "worst_12m": -0.6509197734732137,
+     "final_equity": 20.92406943155173,
+     "avg_gross_exposure_era": 0.9430163962339841,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -6.938893903907228e-18
+    },
+    "X2": {
+     "signals": 2253,
+     "taken": 209,
+     "skipped_full": 0,
+     "skipped_cash": 2029,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.031330120745232115,
+     "cagr_era": 0.03993824975434768,
+     "max_dd": -0.8511352781429617,
+     "worst_12m": -0.6843010693053402,
+     "final_equity": 2.2567578657687024,
+     "avg_gross_exposure_era": 0.8458214933708014,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -5.551115123125783e-17
+    },
+    "X3": {
+     "signals": 2253,
+     "taken": 58,
+     "skipped_full": 0,
+     "skipped_cash": 2180,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.10757654268672634,
+     "cagr_era": 0.138491322549968,
+     "max_dd": -0.6973421935812965,
+     "worst_12m": -0.6244530160454518,
+     "final_equity": 14.816888088563944,
+     "avg_gross_exposure_era": 0.9385822547768635,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -5.551115123125783e-17
+    },
+    "X4": {
+     "signals": 2253,
+     "taken": 42,
+     "skipped_full": 0,
+     "skipped_cash": 2196,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.10932434841364835,
+     "cagr_era": 0.1407724677014175,
+     "max_dd": -0.6835436679469546,
+     "worst_12m": -0.621239489343981,
+     "final_equity": 15.446306950561018,
+     "avg_gross_exposure_era": 0.9337333949227022,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X5": {
+     "signals": 2253,
+     "taken": 24,
+     "skipped_full": 0,
+     "skipped_cash": 2214,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.11921114277662448,
+     "cagr_era": 0.15369440114128397,
+     "max_dd": -0.7313136379443961,
+     "worst_12m": -0.6477956130390415,
+     "final_equity": 19.52067701124607,
+     "avg_gross_exposure_era": 0.9413018380871038,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": 0.0
+    },
+    "X6": {
+     "signals": 2253,
+     "taken": 32,
+     "skipped_full": 0,
+     "skipped_cash": 2206,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.12894110973855843,
+     "cagr_era": 0.16644142806525508,
+     "max_dd": -0.7738930973013879,
+     "worst_12m": -0.7126441697997572,
+     "final_equity": 24.52896707235991,
+     "avg_gross_exposure_era": 0.8938125190414662,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": 0.0
+    },
+    "P0": {
+     "signals": 2253,
+     "taken": 24,
+     "skipped_full": 0,
+     "skipped_cash": 2214,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.12216007167610599,
+     "cagr_era": 0.1575545903962816,
+     "max_dd": -0.73508052953388,
+     "worst_12m": -0.6509197734732137,
+     "final_equity": 20.92406943155173,
+     "avg_gross_exposure_era": 0.9430163962339841,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -6.938893903907228e-18
+    },
+    "P1": {
+     "signals": 2253,
+     "taken": 24,
+     "skipped_full": 0,
+     "skipped_cash": 2214,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.12307907939760399,
+     "cagr_era": 0.15875814344745498,
+     "max_dd": -0.7362748859138354,
+     "worst_12m": -0.6518981031303526,
+     "final_equity": 21.38091761235212,
+     "avg_gross_exposure_era": 0.9427068003368059,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "P2": {
+     "signals": 2253,
+     "taken": 24,
+     "skipped_full": 0,
+     "skipped_cash": 2214,
+     "skipped_tiny": 15,
+     "adds_skipped": 1,
+     "cagr_full": 0.12238732769727068,
+     "cagr_era": 0.15785218525303057,
+     "max_dd": -0.7352560178257606,
+     "worst_12m": -0.6510774475202155,
+     "final_equity": 21.036158707855563,
+     "avg_gross_exposure_era": 0.9431420384596771,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -1.3877787807814457e-17
+    },
+    "P3": {
+     "signals": 2253,
+     "taken": 23,
+     "skipped_full": 0,
+     "skipped_cash": 2215,
+     "skipped_tiny": 15,
+     "adds_skipped": 1,
+     "cagr_full": 0.12325391744829339,
+     "cagr_era": 0.15898714531822034,
+     "max_dd": -0.7363352087914892,
+     "worst_12m": -0.6519628311829486,
+     "final_equity": 21.46891118256886,
+     "avg_gross_exposure_era": 0.9440880008569512,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -6.938893903907228e-18
+    },
+    "P4": {
+     "signals": 2253,
+     "taken": 24,
+     "skipped_full": 0,
+     "skipped_cash": 2214,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.12266592360518769,
+     "cagr_era": 0.15821703254254604,
+     "max_dd": -0.7360206273582699,
+     "worst_12m": -0.6516870206248909,
+     "final_equity": 21.174358646521846,
+     "avg_gross_exposure_era": 0.9430420670683177,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": 0.0
+    }
+   },
+   "E2": {
+    "X0": {
+     "signals": 1429,
+     "taken": 489,
+     "skipped_full": 249,
+     "skipped_cash": 677,
+     "skipped_tiny": 14,
+     "adds_skipped": 0,
+     "cagr_full": -0.014325711223825977,
+     "cagr_era": -0.07631048221641024,
+     "max_dd": -0.6878721746901861,
+     "worst_12m": -0.4637234872542595,
+     "final_equity": 0.6833807936732113,
+     "avg_gross_exposure_era": 0.9484949832251925,
+     "pct_days_at_10_positions_era": 0.14678899082568808,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X1": {
+     "signals": 1429,
+     "taken": 37,
+     "skipped_full": 1296,
+     "skipped_cash": 95,
+     "skipped_tiny": 1,
+     "adds_skipped": 0,
+     "cagr_full": 0.03876552949337664,
+     "cagr_era": 0.2327274774621939,
+     "max_dd": -0.5770072845675018,
+     "worst_12m": -0.3527856835268076,
+     "final_equity": 2.727711903331744,
+     "avg_gross_exposure_era": 0.9973016700807513,
+     "pct_days_at_10_positions_era": 0.9224353628023353,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X2": {
+     "signals": 1429,
+     "taken": 358,
+     "skipped_full": 444,
+     "skipped_cash": 616,
+     "skipped_tiny": 11,
+     "adds_skipped": 0,
+     "cagr_full": -0.01092785172915689,
+     "cagr_era": -0.05865704009069728,
+     "max_dd": -0.6731367571570572,
+     "worst_12m": -0.4091736559278365,
+     "final_equity": 0.7483328799715816,
+     "avg_gross_exposure_era": 0.9618129064310077,
+     "pct_days_at_10_positions_era": 0.3219349457881568,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X3": {
+     "signals": 1429,
+     "taken": 74,
+     "skipped_full": 12,
+     "skipped_cash": 1328,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.007548747123960808,
+     "cagr_era": 0.04223932644110251,
+     "max_dd": -0.43491280905369023,
+     "worst_12m": -0.28083209486679284,
+     "final_equity": 1.2194722442437478,
+     "avg_gross_exposure_era": 0.9962181108680325,
+     "pct_days_at_10_positions_era": 0.006672226855713094,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X4": {
+     "signals": 1429,
+     "taken": 134,
+     "skipped_full": 0,
+     "skipped_cash": 1279,
+     "skipped_tiny": 16,
+     "adds_skipped": 0,
+     "cagr_full": 0.014012450183992886,
+     "cagr_era": 0.07955715684126385,
+     "max_dd": -0.4649048609732366,
+     "worst_12m": -0.2679597952114219,
+     "final_equity": 1.4435974080950182,
+     "avg_gross_exposure_era": 0.9915408768905414,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X5": {
+     "signals": 1429,
+     "taken": 45,
+     "skipped_full": 11,
+     "skipped_cash": 1358,
+     "skipped_tiny": 15,
+     "adds_skipped": 0,
+     "cagr_full": 0.005240278273908494,
+     "cagr_era": 0.02917016818538154,
+     "max_dd": -0.7306605897590159,
+     "worst_12m": -0.5766286155309142,
+     "final_equity": 1.1478590406320501,
+     "avg_gross_exposure_era": 0.9968575181669841,
+     "pct_days_at_10_positions_era": 0.006672226855713094,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X6": {
+     "signals": 1429,
+     "taken": 33,
+     "skipped_full": 1321,
+     "skipped_cash": 74,
+     "skipped_tiny": 1,
+     "adds_skipped": 0,
+     "cagr_full": 0.005503529950456887,
+     "cagr_era": 0.030653730830668913,
+     "max_dd": -0.732225189384037,
+     "worst_12m": -0.591925827288819,
+     "final_equity": 1.1558165036887194,
+     "avg_gross_exposure_era": 0.9947448423103745,
+     "pct_days_at_10_positions_era": 0.939115929941618,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "P0": {
+     "signals": 1429,
+     "taken": 37,
+     "skipped_full": 1296,
+     "skipped_cash": 95,
+     "skipped_tiny": 1,
+     "adds_skipped": 0,
+     "cagr_full": 0.03876552949337664,
+     "cagr_era": 0.2327274774621939,
+     "max_dd": -0.5770072845675018,
+     "worst_12m": -0.3527856835268076,
+     "final_equity": 2.727711903331744,
+     "avg_gross_exposure_era": 0.9973016700807513,
+     "pct_days_at_10_positions_era": 0.9224353628023353,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "P1": {
+     "signals": 1429,
+     "taken": 41,
+     "skipped_full": 1381,
+     "skipped_cash": 7,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.03307092970542036,
+     "cagr_era": 0.19600625736554123,
+     "max_dd": -0.5828623084214306,
+     "worst_12m": -0.3608271562799503,
+     "final_equity": 2.359443787728189,
+     "avg_gross_exposure_era": 0.995061848861767,
+     "pct_days_at_10_positions_era": 0.9766472060050042,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "P2": {
+     "signals": 1429,
+     "taken": 37,
+     "skipped_full": 1296,
+     "skipped_cash": 95,
+     "skipped_tiny": 1,
+     "adds_skipped": 7,
+     "cagr_full": 0.03869021518107374,
+     "cagr_era": 0.23223587091474562,
+     "max_dd": -0.5776173006870711,
+     "worst_12m": -0.35911428728294825,
+     "final_equity": 2.7224987616382785,
+     "avg_gross_exposure_era": 0.9972695651775669,
+     "pct_days_at_10_positions_era": 0.9224353628023353,
+     "min_cash": -6.938893903907228e-18
+    },
+    "P3": {
+     "signals": 1429,
+     "taken": 37,
+     "skipped_full": 1296,
+     "skipped_cash": 95,
+     "skipped_tiny": 1,
+     "adds_skipped": 3,
+     "cagr_full": 0.038775562172484124,
+     "cagr_era": 0.23279297686990974,
+     "max_dd": -0.5769451786310835,
+     "worst_12m": -0.35275303959356574,
+     "final_equity": 2.7284070745248927,
+     "avg_gross_exposure_era": 0.9973245077216034,
+     "pct_days_at_10_positions_era": 0.9224353628023353,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "P4": {
+     "signals": 1429,
+     "taken": 37,
+     "skipped_full": 1296,
+     "skipped_cash": 95,
+     "skipped_tiny": 1,
+     "adds_skipped": 1,
+     "cagr_full": 0.03876552949337664,
+     "cagr_era": 0.2327274774621939,
+     "max_dd": -0.5770072845675018,
+     "worst_12m": -0.3527856835268076,
+     "final_equity": 2.727711903331744,
+     "avg_gross_exposure_era": 0.9973016700807513,
+     "pct_days_at_10_positions_era": 0.9224353628023353,
+     "min_cash": -2.7755575615628914e-17
+    }
+   }
+  },
+  "E_BRK": {
+   "E1": {
+    "X0": {
+     "signals": 3129,
+     "taken": 1187,
+     "skipped_full": 118,
+     "skipped_cash": 1168,
+     "skipped_tiny": 656,
+     "adds_skipped": 0,
+     "cagr_full": null,
+     "cagr_era": null,
+     "max_dd": null,
+     "worst_12m": null,
+     "final_equity": null,
+     "avg_gross_exposure_era": 0.5890400690383875,
+     "pct_days_at_10_positions_era": 0.023479599692070825,
+     "min_cash": -4.440892098500626e-16
+    },
+    "X1": {
+     "signals": 3129,
+     "taken": 15,
+     "skipped_full": 0,
+     "skipped_cash": 3114,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.1165951763471158,
+     "cagr_era": 0.15027235722000043,
+     "max_dd": -0.7414601706078315,
+     "worst_12m": -0.6571490480486604,
+     "final_equity": 18.351915416307385,
+     "avg_gross_exposure_era": 0.9533832270786198,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": 0.0
+    },
+    "X2": {
+     "signals": 3129,
+     "taken": 60,
+     "skipped_full": 0,
+     "skipped_cash": 3069,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.11276409214308569,
+     "cagr_era": 0.14526467016187716,
+     "max_dd": -0.7861243270773832,
+     "worst_12m": -0.7263148645505776,
+     "final_equity": 16.760982312920518,
+     "avg_gross_exposure_era": 0.8894220227123157,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": 0.0
+    },
+    "X3": {
+     "signals": 3129,
+     "taken": 140,
+     "skipped_full": 2898,
+     "skipped_cash": 91,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.08250275780479921,
+     "cagr_era": 0.10587361517415439,
+     "max_dd": -0.6740382485387937,
+     "worst_12m": -0.6070964892207272,
+     "final_equity": 8.097949011759956,
+     "avg_gross_exposure_era": 0.831243867135643,
+     "pct_days_at_10_positions_era": 0.7115088529638183,
+     "min_cash": -5.551115123125783e-17
+    },
+    "X4": {
+     "signals": 3129,
+     "taken": 168,
+     "skipped_full": 1,
+     "skipped_cash": 2960,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.06128168384854682,
+     "cagr_era": 0.07842620797271538,
+     "max_dd": -0.7205659919664695,
+     "worst_12m": -0.6890240849799387,
+     "final_equity": 4.803041855638167,
+     "avg_gross_exposure_era": 0.8460508998301328,
+     "pct_days_at_10_positions_era": 0.0013471901462663587,
+     "min_cash": -5.551115123125783e-17
+    },
+    "X5": {
+     "signals": 3129,
+     "taken": 15,
+     "skipped_full": 0,
+     "skipped_cash": 3114,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.11591348462687545,
+     "cagr_era": 0.14938096521773203,
+     "max_dd": -0.7414606060867858,
+     "worst_12m": -0.6571493666906884,
+     "final_equity": 18.05858789979333,
+     "avg_gross_exposure_era": 0.9532624695345854,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X6": {
+     "signals": 3129,
+     "taken": 15,
+     "skipped_full": 0,
+     "skipped_cash": 3114,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.11573949770513603,
+     "cagr_era": 0.14915348037693144,
+     "max_dd": -0.7436947472791999,
+     "worst_12m": -0.6589944796985467,
+     "final_equity": 17.984448112913455,
+     "avg_gross_exposure_era": 0.9541953938537119,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "P0": {
+     "signals": 3129,
+     "taken": 15,
+     "skipped_full": 0,
+     "skipped_cash": 3114,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.1165951763471158,
+     "cagr_era": 0.15027235722000043,
+     "max_dd": -0.7414601706078315,
+     "worst_12m": -0.6571490480486604,
+     "final_equity": 18.351915416307385,
+     "avg_gross_exposure_era": 0.9533832270786198,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": 0.0
+    },
+    "P1": {
+     "signals": 3129,
+     "taken": 15,
+     "skipped_full": 0,
+     "skipped_cash": 3114,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.11731567020483435,
+     "cagr_era": 0.1512146469726685,
+     "max_dd": -0.7413287189135589,
+     "worst_12m": -0.6571416428795028,
+     "final_equity": 18.666920362494285,
+     "avg_gross_exposure_era": 0.9532536126767798,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": 0.0
+    },
+    "P2": {
+     "signals": 3129,
+     "taken": 15,
+     "skipped_full": 0,
+     "skipped_cash": 3114,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.11722217088658815,
+     "cagr_era": 0.15109235569866875,
+     "max_dd": -0.7415329454317281,
+     "worst_12m": -0.657202299639426,
+     "final_equity": 18.625750001500016,
+     "avg_gross_exposure_era": 0.9542573593622915,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": 0.0
+    },
+    "P3": {
+     "signals": 3129,
+     "taken": 15,
+     "skipped_full": 0,
+     "skipped_cash": 3114,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.11623245318851705,
+     "cagr_era": 0.14979803582241047,
+     "max_dd": -0.7424690557158458,
+     "worst_12m": -0.6578876224197818,
+     "final_equity": 18.195272041723616,
+     "avg_gross_exposure_era": 0.9543401273289029,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": 0.0
+    },
+    "P4": {
+     "signals": 3129,
+     "taken": 15,
+     "skipped_full": 0,
+     "skipped_cash": 3114,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.11658430298137312,
+     "cagr_era": 0.15025813786597841,
+     "max_dd": -0.7414752748241966,
+     "worst_12m": -0.6571600999559932,
+     "final_equity": 18.34720090576846,
+     "avg_gross_exposure_era": 0.9535259021465399,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": 0.0
+    }
+   },
+   "E2": {
+    "X0": {
+     "signals": 2012,
+     "taken": 535,
+     "skipped_full": 929,
+     "skipped_cash": 548,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": null,
+     "cagr_era": null,
+     "max_dd": null,
+     "worst_12m": null,
+     "final_equity": null,
+     "avg_gross_exposure_era": 0.9192018692512662,
+     "pct_days_at_10_positions_era": 0.46205170975813176,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X1": {
+     "signals": 2012,
+     "taken": 17,
+     "skipped_full": 0,
+     "skipped_cash": 1995,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.031216347585277582,
+     "cagr_era": 0.18424222329276607,
+     "max_dd": -0.47307157827971846,
+     "worst_12m": -0.3688625310158691,
+     "final_equity": 2.2501985314432025,
+     "avg_gross_exposure_era": 0.9973715109484412,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -1.3877787807814457e-17
+    },
+    "X2": {
+     "signals": 2012,
+     "taken": 177,
+     "skipped_full": 1679,
+     "skipped_cash": 156,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": -0.002752503862906819,
+     "cagr_era": -0.015048711731415088,
+     "max_dd": -0.6640441679124875,
+     "worst_12m": -0.4593177127948822,
+     "final_equity": 0.9298591164922477,
+     "avg_gross_exposure_era": 0.9873386456678246,
+     "pct_days_at_10_positions_era": 0.8457047539616347,
+     "min_cash": -1.3877787807814457e-17
+    },
+    "X3": {
+     "signals": 2012,
+     "taken": 325,
+     "skipped_full": 1415,
+     "skipped_cash": 272,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": -0.010323846986526553,
+     "cagr_era": -0.0554902547060917,
+     "max_dd": -0.6638007271062321,
+     "worst_12m": -0.44615618806304314,
+     "final_equity": 0.760484036085423,
+     "avg_gross_exposure_era": 0.9470187426383295,
+     "pct_days_at_10_positions_era": 0.6922435362802335,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X4": {
+     "signals": 2012,
+     "taken": 337,
+     "skipped_full": 972,
+     "skipped_cash": 703,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": -0.03373828863118555,
+     "cagr_era": -0.1720528949618414,
+     "max_dd": -0.746202414200558,
+     "worst_12m": -0.4489589889211205,
+     "final_equity": 0.4043341571326721,
+     "avg_gross_exposure_era": 0.9738063517086933,
+     "pct_days_at_10_positions_era": 0.5204336947456214,
+     "min_cash": -2.7755575615628914e-17
+    },
+    "X5": {
+     "signals": 2012,
+     "taken": 17,
+     "skipped_full": 0,
+     "skipped_cash": 1995,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.031216347585277582,
+     "cagr_era": 0.18424222329276607,
+     "max_dd": -0.47307157827971846,
+     "worst_12m": -0.3688625310158691,
+     "final_equity": 2.2501985314432025,
+     "avg_gross_exposure_era": 0.9973715109484412,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -1.3877787807814457e-17
+    },
+    "X6": {
+     "signals": 2012,
+     "taken": 14,
+     "skipped_full": 0,
+     "skipped_cash": 1998,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.0313238548106296,
+     "cagr_era": 0.18492157046226443,
+     "max_dd": -0.47253012225965174,
+     "worst_12m": -0.36795513517595413,
+     "final_equity": 2.2563961393151404,
+     "avg_gross_exposure_era": 0.9974628166026964,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -1.3877787807814457e-17
+    },
+    "P0": {
+     "signals": 2012,
+     "taken": 17,
+     "skipped_full": 0,
+     "skipped_cash": 1995,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.031216347585277582,
+     "cagr_era": 0.18424222329276607,
+     "max_dd": -0.47307157827971846,
+     "worst_12m": -0.3688625310158691,
+     "final_equity": 2.2501985314432025,
+     "avg_gross_exposure_era": 0.9973715109484412,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -1.3877787807814457e-17
+    },
+    "P1": {
+     "signals": 2012,
+     "taken": 12,
+     "skipped_full": 0,
+     "skipped_cash": 2000,
+     "skipped_tiny": 0,
+     "adds_skipped": 0,
+     "cagr_full": 0.031593128650828195,
+     "cagr_era": 0.18662453410623248,
+     "max_dd": -0.4566690373490846,
+     "worst_12m": -0.34772534332869476,
+     "final_equity": 2.2719914823179668,
+     "avg_gross_exposure_era": 0.997504115566224,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": 0.0
+    },
+    "P2": {
+     "signals": 2012,
+     "taken": 17,
+     "skipped_full": 0,
+     "skipped_cash": 1995,
+     "skipped_tiny": 0,
+     "adds_skipped": 5,
+     "cagr_full": 0.03121115438716071,
+     "cagr_era": 0.18420941510930744,
+     "max_dd": -0.4730979384082633,
+     "worst_12m": -0.36890668808268545,
+     "final_equity": 2.2498995674962075,
+     "avg_gross_exposure_era": 0.9973872811589674,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -1.3877787807814457e-17
+    },
+    "P3": {
+     "signals": 2012,
+     "taken": 17,
+     "skipped_full": 0,
+     "skipped_cash": 1995,
+     "skipped_tiny": 0,
+     "adds_skipped": 2,
+     "cagr_full": 0.031216347585277582,
+     "cagr_era": 0.18424222329276607,
+     "max_dd": -0.47307157827971846,
+     "worst_12m": -0.3688625310158691,
+     "final_equity": 2.2501985314432025,
+     "avg_gross_exposure_era": 0.9973715109484412,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -1.3877787807814457e-17
+    },
+    "P4": {
+     "signals": 2012,
+     "taken": 17,
+     "skipped_full": 0,
+     "skipped_cash": 1995,
+     "skipped_tiny": 0,
+     "adds_skipped": 1,
+     "cagr_full": 0.031216347585277582,
+     "cagr_era": 0.18424222329276607,
+     "max_dd": -0.47307157827971846,
+     "worst_12m": -0.3688625310158691,
+     "final_equity": 2.2501985314432025,
+     "avg_gross_exposure_era": 0.9973715109484412,
+     "pct_days_at_10_positions_era": 0.0,
+     "min_cash": -1.3877787807814457e-17
+    }
+   }
+  }
+ },
+ "recommendations": {
+  "E_SN": {
+   "X1": {
+    "per_era": {
+     "E1": {
+      "expHigher": false,
+      "t": -1.9993797195426584,
+      "dd_ok": false
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 1.498439913999008,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "X2": {
+    "per_era": {
+     "E1": {
+      "expHigher": true,
+      "t": 0.22661502606451195,
+      "dd_ok": false
+     },
+     "E2": {
+      "expHigher": false,
+      "t": -0.4721612445218542,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "X3": {
+    "per_era": {
+     "E1": {
+      "expHigher": false,
+      "t": -1.3952844292723148,
+      "dd_ok": false
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 0.8880425145953902,
+      "dd_ok": false
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "X4": {
+    "per_era": {
+     "E1": {
+      "expHigher": false,
+      "t": -1.7319918308895381,
+      "dd_ok": false
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 1.1483645254154105,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "X5": {
+    "per_era": {
+     "E1": {
+      "expHigher": false,
+      "t": -2.0668697350753376,
+      "dd_ok": false
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 1.433527445881146,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "X6": {
+    "per_era": {
+     "E1": {
+      "expHigher": false,
+      "t": -0.019852311538599683,
+      "dd_ok": false
+     },
+     "E2": {
+      "expHigher": false,
+      "t": -0.07648535140208836,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "P1": {
+    "per_era": {
+     "E1": {
+      "expHigher": true,
+      "t": 3.1340727099144163,
+      "dd_ok": true
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 0.07907520840520722,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "P2": {
+    "per_era": {
+     "E1": {
+      "expHigher": true,
+      "t": 3.176927214353346,
+      "dd_ok": true
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 1.4982858204003318,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "P3": {
+    "per_era": {
+     "E1": {
+      "expHigher": false,
+      "t": -0.33168469431692865,
+      "dd_ok": true
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 0.7862305157251043,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "P4": {
+    "per_era": {
+     "E1": {
+      "expHigher": true,
+      "t": 4.2606127908064675,
+      "dd_ok": true
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 3.2487084998777718,
+      "dd_ok": true
+     }
+    },
+    "verdict": "RECOMMENDED"
+   }
+  },
+  "E_RND": {
+   "X1": {
+    "per_era": {
+     "E1": {
+      "expHigher": false,
+      "t": -0.4273594870104224,
+      "dd_ok": true
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 0.09867421948780249,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "X2": {
+    "per_era": {
+     "E1": {
+      "expHigher": true,
+      "t": 0.3371111765811899,
+      "dd_ok": true
+     },
+     "E2": {
+      "expHigher": false,
+      "t": -0.5234357496883953,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "X3": {
+    "per_era": {
+     "E1": {
+      "expHigher": false,
+      "t": -0.04279729600261327,
+      "dd_ok": true
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 0.9402811440612294,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "X4": {
+    "per_era": {
+     "E1": {
+      "expHigher": true,
+      "t": 0.032647719727455,
+      "dd_ok": true
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 0.3589411850041405,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "X5": {
+    "per_era": {
+     "E1": {
+      "expHigher": false,
+      "t": -0.45778854485862563,
+      "dd_ok": true
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 0.1905920674900366,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "X6": {
+    "per_era": {
+     "E1": {
+      "expHigher": false,
+      "t": -0.9232860717117481,
+      "dd_ok": true
+     },
+     "E2": {
+      "expHigher": false,
+      "t": -0.5861255010518964,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "P1": {
+    "per_era": {
+     "E1": {
+      "expHigher": false,
+      "t": -0.7186853764777463,
+      "dd_ok": true
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 0.3233018618070739,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "P2": {
+    "per_era": {
+     "E1": {
+      "expHigher": true,
+      "t": 1.913482189934685,
+      "dd_ok": true
+     },
+     "E2": {
+      "expHigher": false,
+      "t": -0.5059163544437558,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "P3": {
+    "per_era": {
+     "E1": {
+      "expHigher": false,
+      "t": -0.9933112707318955,
+      "dd_ok": true
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 0.5327057032353034,
+      "dd_ok": true
+     }
+    },
+    "verdict": "NO_RELIABLE_DIFFERENCE"
+   },
+   "P4": {
+    "per_era": {
+     "E1": {
+      "expHigher": true,
+      "t": 3.2341734514945424,
+      "dd_ok": true
+     },
+     "E2": {
+      "expHigher": true,
+      "t": 3.4591657938918385,
+      "dd_ok": true
+     }
+    },
+    "verdict": "RECOMMENDED"
+   }
+  }
+ },
+ "p4_vs_p0_drawdown": {
+  "E_SN": {
+   "E1": {
+    "p0_max_dd": -0.7647733355764672,
+    "p4_max_dd": -0.7647733355764672,
+    "deepens": false
+   },
+   "E2": {
+    "p0_max_dd": -0.51988288885967,
+    "p4_max_dd": -0.51988288885967,
+    "deepens": false
+   }
+  },
+  "E_RND": {
+   "E1": {
+    "p0_max_dd": -0.73508052953388,
+    "p4_max_dd": -0.7360206273582699,
+    "deepens": true
+   },
+   "E2": {
+    "p0_max_dd": -0.5770072845675018,
+    "p4_max_dd": -0.5770072845675018,
+    "deepens": false
+   }
+  }
+ },
+ "generated_utc": "2026-10-07T04:06:15.857817+00:00",
+ "runtime_seconds": 576.5,
+ "git_commit": "006ef6a5cbf89385e27cb6eaf07e41f1177e5c7b",
+ "gates": {
+  "env": "EXIT_STUDY_G1_APPROVED=1 (owner approval of G1-bis, 2026-10-07)",
+  "single_run": true,
+  "data_access": "read-only",
+  "panel_pin": "2026-10-06"
+ },
+ "dataset_fingerprint": {
+  "max_date": "2026-10-06",
+  "total_rows": 1101826,
+  "sha256": "f42275e34cb4525d3101fdf3effb14674b7192627db7b6a77a2bac9c5da5e73e"
+ },
+ "g1_fingerprint": "f42275e34cb4525d3101fdf3effb14674b7192627db7b6a77a2bac9c5da5e73e",
+ "fingerprint_drift_vs_g1": false,
+ "parity": {
+  "checked": 150060,
+  "max_abs_diff": 0.0,
+  "exit_mismatches": 0
+ },
+ "g1_result_file": "RESULT_20261006T142027Z.json",
+ "frozen_artifact_sha256": {
+  "PREDECLARATION.md": "2ccbd25a8baa27d0a0442548d6991e38a459e56051f49d5aa9507aefc57e0f2d",
+  "exit_study.py": "6b29b92c2db96f30d2e13248e0615b251b9ca7b23fccedf5f69e457e57c9c2bc",
+  "test_pit_exit_study.py": "6ec96c2e5129adb07a42119072aa07a4bd0e2d7d71e1da9e04926d5561ffdadc"
+ },
+ "minifreeze_sha256": {
+  "PORTFOLIO_FIX.md": "8fb33a1cbf5fecfb58d19b79ec8cebb0e48d066102bb1c1d6bac900f79cb55fc",
+  "portfolio_v2.py": "33b6be26a259eeee10289d2e4ac7707f5c3aa030ca726abd340d88b238a730df",
+  "test_portfolio_v2.py": "3ed677c0d0a63c82f30a0497acc16c5e03a07837550af8b34f9bd53e58d254d6",
+  "g1bis_run.py": "f553c276a48af3837b0e4caa75df4f71109d628d476b8a68dc7d1dd7fb37c42e"
+ },
+ "e_rnd_unmatched": 0
+}

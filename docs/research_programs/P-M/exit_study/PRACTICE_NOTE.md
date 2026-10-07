@@ -54,3 +54,21 @@ tested against pre-set thresholds — roughly one threshold in twenty can false-
 chance, which is why only the variant that passed in both eras AND on both entry populations
 is being recommended. One run; no re-runs; numbers live in `RESULT_20261006T142027Z.json` and
 `VERDICT.md` on `research/exit-study-2026-10`.
+
+## Correction 2026-10-07 — the swing-lot recommendation is withdrawn
+
+The section-3 advice to trade swing lots (P4) was an error, and it is withdrawn. A defect was
+found in the study code: the simulated swing lot was allowed to "fill" its top-up order on the
+very day the rule triggered — using a price printed before the triggering close, which cannot
+happen in real trading — and the simulated purchase was never actually paid for, so its later
+sale booked made-up profit. That inflated 132 of the 12,505 simulated trades, some by more
+than 100 percentage points each, and it alone produced the entire recommendation. With the
+defect removed (one run to re-derive the trades, one run for the portfolio check, both under
+the study's pre-agreed gates): the swing lot's edge disappears everywhere — on your entries it
+goes from "t +4.3/+3.2" to +0.65 and −0.13 (no effect), and on random entries it was slightly
+harmful in the discovery era (t −2.90). In practice the corrected rule rarely even trades: a
+pullback all the way back to entry − 0.5 ATR after the stock is already up 1 ATR almost never
+happens the very next session, so the order mostly sits unfilled. **Verdict: drop the swing
+lot — the study gives no evidence it helps, and weak evidence it slightly hurts. Everything
+else in this note (keep the stop for ruin control, don't average down, keep your
+zone/stop/target levels) is unaffected by the correction.**
