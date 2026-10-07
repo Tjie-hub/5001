@@ -99,8 +99,10 @@ A model passes only if all five hold:
 - **Family:** Price-Learning **{L1}** (D-067), "learned combination of price/volume features". The
   family stays as it is. HYP-PM-0016 is a new member and inherits the {L1} multiplicity.
 - **Census:** 276 + the number of configurations.
-- **Files:** draft `REGISTRATION_DRAFT.md` and the D-entry text. The next free number is **D-070**,
-  since D-069 is reserved by the consolidation brief. Don't edit HYPOTHESIS_REGISTRY,
+- **Files:** draft `REGISTRATION_DRAFT.md` and the D-entry text. **Leave the number as `D-0xx`.**
+  D-069 is reserved by the consolidation brief, and the price-pattern closure (expected D-070) files
+  first, so the owner assigns the next free number at filing. Cite the closure decision as the
+  reason HYP-PM-0016 is the last admitted price-feature study. Don't edit HYPOTHESIS_REGISTRY,
   FAILURE_REGISTRY or DECISION_LOG.
 - **PIT tests at G0:**
   - (a) every feature at s is bit-identical when the panel is truncated at s
