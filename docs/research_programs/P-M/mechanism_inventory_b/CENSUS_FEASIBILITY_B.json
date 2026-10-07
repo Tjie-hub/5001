@@ -1,0 +1,1006 @@
+{
+ "census": "FEASIBILITY_B_2026-10-07 (mechanism inventory B, classes G/H/I/K/M/N/O)",
+ "no_outcomes_rule": "no return/price-change/excess computed after any decision date or window start; liquidity (ADV20) and pre-event vol only",
+ "panel": {
+  "rows": 2516005,
+  "tickers": 958,
+  "span": [
+   "2000-03-30",
+   "2026-10-07"
+  ],
+  "loader": "research/rulecard/data.load_extended_ohlcv(issuance=True) \u2014 D-053 backfill + DB corpus is_final=1, gap-verified split repair, D-064 issuance correction (recorded per D-064 section D)",
+  "hist_input": "/home/tjiesar/10 Projects/idx-walkforward-5001/docs/research_programs/P-M/forward_volex/remeasure/work/hist_pre2021.pkl"
+ },
+ "deflation_bar": {
+  "method": "exact E[max|Z|] = int_0^inf 1-(2*Phi(z)-1)^N dz (iid, two-sided), identical to deflation_audit/bar_v2.py (D-064 section C)",
+  "owner_ruling": "2026-10-07: the stricter recount governs (DECISION_DRAFT_CENSUS_RATIFICATION_2026-10-07.md @ 2937488, draft D-071). Census ratified at N=595 = 270 recorded + 245 pattern studies + 20 double-top + 20 gap-battery + 6 X1 + 6 HYP-PM-0015 + 8 BOS + 20 exit study. The brief's '276 vs 561' wording is superseded.",
+  "primary": "N = 599 = 595 + HYP-PM-0016's 4 configurations at filing; bar",
+  "bar_primary_599": 3.2931,
+  "bar_reference_595": 3.2912,
+  "bar_secondary_280": 3.0713,
+  "bar_reference_276": 3.067,
+  "secondary_line_rule": "276-count bars (3.07) are reported as a secondary line only, per the ratification draft",
+  "check_266": 3.0558
+ },
+ "power_convention": {
+  "preevent_vol": "SD of daily simple returns over the ticker's 60 sessions ending the session before the decision date (min 40)",
+  "liquid_gate": "ADV20 (mean close*volume over 20 sessions ending the session before the decision date) >= Rp 10bn",
+  "mde": "bar * sigma_daily * sqrt(H) / sqrt(n) [independent]; month-clustered = bar * sigma_daily * sqrt(H) * sqrt(m/C), C = event months, m = n/C, worst-case within-cluster correlation 1"
+ },
+ "G": {
+  "class": "G_global_index_rebalances",
+  "event_dates_in_db": "NONE \u2014 no membership table; scheduler/scanner.py:889 _event_guard_active() holds ONE hardcoded window (paper_config event_guard 2026-06-15..2026-06-24, MSCI accessibility review Jun 18 + classification Jun 23 2026); no announcement/effective/add-delete history",
+  "panel_risk_summary_NOT_event_power": "60-session daily SD of liquid names (ADV20 >= Rp 10bn), read at the last session of each quarter 2009..2026 \u2014 a panel risk measure per D-070, NOT event-conditioned power; MDE below is parameterized by the unknown event count N (announcement dates do not exist yet)",
+  "liquid_names_at_quarter_ends_median": 71,
+  "preevent_vol_liquid_names_quarter_ends": {
+   "n": 6222,
+   "median": 0.027588,
+   "iqr": [
+    0.020532,
+    0.040691
+   ]
+  },
+  "mde_parameterized_by_N": {
+   "50": {
+    "bar_primary_599": {
+     "n": 50,
+     "n_clusters": 12,
+     "5": {
+      "indep_pct": 2.873,
+      "month_clustered_pct": 5.864
+     },
+     "10": {
+      "indep_pct": 4.063,
+      "month_clustered_pct": 8.293
+     },
+     "20": {
+      "indep_pct": 5.746,
+      "month_clustered_pct": 11.729
+     }
+    },
+    "bar_secondary_280": {
+     "n": 50,
+     "n_clusters": 12,
+     "5": {
+      "indep_pct": 2.679,
+      "month_clustered_pct": 5.469
+     },
+     "10": {
+      "indep_pct": 3.789,
+      "month_clustered_pct": 7.735
+     },
+     "20": {
+      "indep_pct": 5.359,
+      "month_clustered_pct": 10.939
+     }
+    }
+   },
+   "100": {
+    "bar_primary_599": {
+     "n": 100,
+     "n_clusters": 25,
+     "5": {
+      "indep_pct": 2.031,
+      "month_clustered_pct": 4.063
+     },
+     "10": {
+      "indep_pct": 2.873,
+      "month_clustered_pct": 5.746
+     },
+     "20": {
+      "indep_pct": 4.063,
+      "month_clustered_pct": 8.126
+     }
+    },
+    "bar_secondary_280": {
+     "n": 100,
+     "n_clusters": 25,
+     "5": {
+      "indep_pct": 1.895,
+      "month_clustered_pct": 3.789
+     },
+     "10": {
+      "indep_pct": 2.679,
+      "month_clustered_pct": 5.359
+     },
+     "20": {
+      "indep_pct": 3.789,
+      "month_clustered_pct": 7.578
+     }
+    }
+   },
+   "200": {
+    "bar_primary_599": {
+     "n": 200,
+     "n_clusters": 50,
+     "5": {
+      "indep_pct": 1.436,
+      "month_clustered_pct": 2.873
+     },
+     "10": {
+      "indep_pct": 2.031,
+      "month_clustered_pct": 4.063
+     },
+     "20": {
+      "indep_pct": 2.873,
+      "month_clustered_pct": 5.746
+     }
+    },
+    "bar_secondary_280": {
+     "n": 200,
+     "n_clusters": 50,
+     "5": {
+      "indep_pct": 1.34,
+      "month_clustered_pct": 2.679
+     },
+     "10": {
+      "indep_pct": 1.895,
+      "month_clustered_pct": 3.789
+     },
+     "20": {
+      "indep_pct": 2.679,
+      "month_clustered_pct": 5.359
+     }
+    }
+   }
+  },
+  "cluster_assumption": "quarterly/semi-annual reviews mean ~3-6 event months per year; the clustered column assumes ~4 events per month cluster, worst-case within-cluster correlation 1 \u2014 illustrative until announcement dates exist"
+ },
+ "H": {
+  "class": "H_ipo_lockup_8m",
+  "listing_proxy": "first panel bar; onboarding artifacts excluded (first bar == 2021-07-05 corpus start or backfill start)",
+  "onboarding_artifacts_excluded": 181,
+  "listing_tickers_since_2009": 542,
+  "lockup_rule": "8 months post-listing (POJK-era statutory rule; exact article and start year flagged TO-VERIFY against primary source \u2014 no fetching allowed in this task)",
+  "unlock_events_since_2009": 541,
+  "events_by_unlock_year": {
+   "2009": 1,
+   "2010": 12,
+   "2011": 17,
+   "2012": 19,
+   "2013": 18,
+   "2014": 24,
+   "2015": 12,
+   "2016": 13,
+   "2017": 12,
+   "2018": 32,
+   "2019": 49,
+   "2020": 56,
+   "2021": 34,
+   "2022": 56,
+   "2023": 74,
+   "2024": 67,
+   "2025": 32,
+   "2026": 13
+  },
+  "events_by_era": {
+   "era1_2009_2021-09": 289,
+   "era2_2021-10_2026": 252
+  },
+  "liquid_unlock_events_total": 86,
+  "liquid_events_by_era": {
+   "era1_2009_2021-09": 39,
+   "era2_2021-10_2026": 47
+  },
+  "cohort_tickers_exited_panel_gap6m": 0,
+  "overlap_tickers_with_any_suspension_row": 539,
+  "preevent_vol_all": {
+   "n": 541,
+   "median": 0.030574,
+   "iqr": [
+    0.020317,
+    0.045582
+   ]
+  },
+  "preevent_vol_liquid": {
+   "n": 86,
+   "median": 0.031315,
+   "iqr": [
+    0.022,
+    0.045606
+   ]
+  },
+  "mde_liquid": {
+   "bar_primary_599": {
+    "n": 86,
+    "n_clusters": 63,
+    "5": {
+     "indep_pct": 2.486,
+     "month_clustered_pct": 2.905
+    },
+    "10": {
+     "indep_pct": 3.516,
+     "month_clustered_pct": 4.108
+    },
+    "20": {
+     "indep_pct": 4.973,
+     "month_clustered_pct": 5.81
+    }
+   },
+   "bar_secondary_280": {
+    "n": 86,
+    "n_clusters": 63,
+    "5": {
+     "indep_pct": 2.319,
+     "month_clustered_pct": 2.709
+    },
+    "10": {
+     "indep_pct": 3.28,
+     "month_clustered_pct": 3.832
+    },
+    "20": {
+     "indep_pct": 4.638,
+     "month_clustered_pct": 5.419
+    }
+   }
+  }
+ },
+ "I": {
+  "class": "I_suspension_resumption",
+  "rows_total": 3189,
+  "field_taint": "gap_pct and classification are OUTCOME-TAINTED (engine/suspension_detector.py: gap_pct=(resume_open-last_close)/last_close; classification = abs(gap_pct)>=10%) \u2014 neither enters any statistic below except as a population LABEL (disclosed)",
+  "db_span": [
+   "2022-04-28",
+   "2026-07-17"
+  ],
+  "note_db_era_only": "suspension_events derives from the DB corpus (ohlcv from 2021-07-05); no pre-2021 suspension history exists",
+  "halt_onsets_by_year_last_normal": {
+   "2022": 772,
+   "2023": 846,
+   "2024": 283,
+   "2025": 336,
+   "2026": 952
+  },
+  "missing_td_median": 5.0,
+  "missing_td_p90": 8.0,
+  "events_within_2y_of_listing_proxy": 656,
+  "board_placement_data": "ABSENT (dataset_b/foundation.py: 'Pemantauan Khusus call-auction names are NOT modelled'); no announcement dates stored \u2014 halt knowable T+1 by absence, resumption date not known before the resume session",
+  "populations": {
+   "all_rows_upper_bound_incl_collection_gaps": {
+    "rows": 3189,
+    "resumptions_total": 3189,
+    "resumptions_by_era": {
+     "era1_2009_2021-09": 0,
+     "era2_2021-10_2026": 3189
+    },
+    "liquid_resumptions_total": 514,
+    "liquid_by_era": {
+     "era1_2009_2021-09": 0,
+     "era2_2021-10_2026": 514
+    },
+    "preevent_vol_liquid": {
+     "n": 502,
+     "median": 0.038141,
+     "iqr": [
+      0.023849,
+      0.063158
+     ]
+    },
+    "mde_liquid": {
+     "bar_primary_599": {
+      "n": 514,
+      "n_clusters": 22,
+      "5": {
+       "indep_pct": 1.239,
+       "month_clustered_pct": 5.988
+      },
+      "10": {
+       "indep_pct": 1.752,
+       "month_clustered_pct": 8.468
+      },
+      "20": {
+       "indep_pct": 2.478,
+       "month_clustered_pct": 11.976
+      }
+     },
+     "bar_secondary_280": {
+      "n": 514,
+      "n_clusters": 22,
+      "5": {
+       "indep_pct": 1.155,
+       "month_clustered_pct": 5.585
+      },
+      "10": {
+       "indep_pct": 1.634,
+       "month_clustered_pct": 7.898
+      },
+      "20": {
+       "indep_pct": 2.311,
+       "month_clustered_pct": 11.169
+      }
+     }
+    }
+   },
+   "recorded_suspension_label_outcome_conditioned_label": {
+    "rows": 359,
+    "resumptions_total": 359,
+    "resumptions_by_era": {
+     "era1_2009_2021-09": 0,
+     "era2_2021-10_2026": 359
+    },
+    "liquid_resumptions_total": 87,
+    "liquid_by_era": {
+     "era1_2009_2021-09": 0,
+     "era2_2021-10_2026": 87
+    },
+    "preevent_vol_liquid": {
+     "n": 86,
+     "median": 0.059361,
+     "iqr": [
+      0.046243,
+      0.081961
+     ]
+    },
+    "mde_liquid": {
+     "bar_primary_599": {
+      "n": 87,
+      "n_clusters": 6,
+      "5": {
+       "indep_pct": 4.686,
+       "month_clustered_pct": 17.845
+      },
+      "10": {
+       "indep_pct": 6.627,
+       "month_clustered_pct": 25.237
+      },
+      "20": {
+       "indep_pct": 9.373,
+       "month_clustered_pct": 35.69
+      }
+     },
+     "bar_secondary_280": {
+      "n": 87,
+      "n_clusters": 6,
+      "5": {
+       "indep_pct": 4.371,
+       "month_clustered_pct": 16.643
+      },
+      "10": {
+       "indep_pct": 6.181,
+       "month_clustered_pct": 23.537
+      },
+      "20": {
+       "indep_pct": 8.741,
+       "month_clustered_pct": 33.286
+      }
+     }
+    }
+   },
+   "breadth_ticker_specific_price_free": {
+    "rows": 1571,
+    "resumptions_total": 1571,
+    "resumptions_by_era": {
+     "era1_2009_2021-09": 0,
+     "era2_2021-10_2026": 1571
+    },
+    "liquid_resumptions_total": 246,
+    "liquid_by_era": {
+     "era1_2009_2021-09": 0,
+     "era2_2021-10_2026": 246
+    },
+    "preevent_vol_liquid": {
+     "n": 244,
+     "median": 0.056251,
+     "iqr": [
+      0.035069,
+      0.076442
+     ]
+    },
+    "mde_liquid": {
+     "bar_primary_599": {
+      "n": 246,
+      "n_clusters": 20,
+      "5": {
+       "indep_pct": 2.641,
+       "month_clustered_pct": 9.262
+      },
+      "10": {
+       "indep_pct": 3.735,
+       "month_clustered_pct": 13.099
+      },
+      "20": {
+       "indep_pct": 5.282,
+       "month_clustered_pct": 18.524
+      }
+     },
+     "bar_secondary_280": {
+      "n": 246,
+      "n_clusters": 20,
+      "5": {
+       "indep_pct": 2.463,
+       "month_clustered_pct": 8.638
+      },
+      "10": {
+       "indep_pct": 3.483,
+       "month_clustered_pct": 12.216
+      },
+      "20": {
+       "indep_pct": 4.926,
+       "month_clustered_pct": 17.277
+      }
+     }
+    }
+   }
+  },
+  "episode_tag_counts": {
+   "no_observable_missing_session": 1618,
+   "breadth_ticker_specific": 1571
+  },
+  "breadth_split_note": "no_observable_missing_session = the missing dates are not panel sessions at all \u2014 the market-wide/infra signature; those episodes have no session to price and are excluded from resumption populations by construction"
+ },
+ "K": {
+  "W1_turn_of_month_last1_plus_next3": {
+   "definition": "last session of month + first 3 of next month (4 sessions); mechanism: scheduled payroll/pension/mutual-fund inflows concentrating at month turns",
+   "instances_since_2009": 213,
+   "instances_by_era": {
+    "era1_2009_2021-09": 152,
+    "era2_2021-10_2026": 61
+   },
+   "preevent_vol_ew_liquid_portfolio": {
+    "n": 212,
+    "median": 0.010576,
+    "iqr": [
+     0.008681,
+     0.015412
+    ]
+   },
+   "mde_portfolio": {
+    "bar_primary_599": {
+     "n": 213,
+     "n_clusters": 213,
+     "5": {
+      "indep_pct": 0.534,
+      "month_clustered_pct": 0.534
+     },
+     "10": {
+      "indep_pct": 0.755,
+      "month_clustered_pct": 0.755
+     },
+     "20": {
+      "indep_pct": 1.067,
+      "month_clustered_pct": 1.067
+     }
+    },
+    "bar_secondary_280": {
+     "n": 213,
+     "n_clusters": 213,
+     "5": {
+      "indep_pct": 0.498,
+      "month_clustered_pct": 0.498
+     },
+     "10": {
+      "indep_pct": 0.704,
+      "month_clustered_pct": 0.704
+     },
+     "20": {
+      "indep_pct": 0.995,
+      "month_clustered_pct": 0.995
+     }
+    }
+   }
+  },
+  "W2_quarter_end_last5_MJSD": {
+   "definition": "last 5 sessions of Mar/Jun/Sep/Dec (5 sessions); mechanism: quarter/year-end window dressing by local funds + quarter-end institutional rebalancing",
+   "instances_since_2009": 71,
+   "instances_by_era": {
+    "era1_2009_2021-09": 51,
+    "era2_2021-10_2026": 20
+   },
+   "preevent_vol_ew_liquid_portfolio": {
+    "n": 71,
+    "median": 0.010723,
+    "iqr": [
+     0.008571,
+     0.014842
+    ]
+   },
+   "mde_portfolio": {
+    "bar_primary_599": {
+     "n": 71,
+     "n_clusters": 71,
+     "5": {
+      "indep_pct": 0.937,
+      "month_clustered_pct": 0.937
+     },
+     "10": {
+      "indep_pct": 1.325,
+      "month_clustered_pct": 1.325
+     },
+     "20": {
+      "indep_pct": 1.874,
+      "month_clustered_pct": 1.874
+     }
+    },
+    "bar_secondary_280": {
+     "n": 71,
+     "n_clusters": 71,
+     "5": {
+      "indep_pct": 0.874,
+      "month_clustered_pct": 0.874
+     },
+     "10": {
+      "indep_pct": 1.236,
+      "month_clustered_pct": 1.236
+     },
+     "20": {
+      "indep_pct": 1.748,
+      "month_clustered_pct": 1.748
+     }
+    }
+   }
+  },
+  "multiplicity_note": "exactly 2 windows predeclared in this inventory; no window scan and no alternative offsets were computed \u2014 calendar effects are the classic data-mining zoo, and any window beyond these 2 is a new census entry",
+  "session_overlap_W1_W2_sessions": 71,
+  "lebaran_thr_note": "Lebaran/THR NOT computed: Eid al-Fitr closure dates are not in the DB and hardcoding recalled holiday dates was judged too error-prone for a frozen inventory; needs the official IDX holiday archive (small effort, backfillable point-in-time). Valid candidate window for a later D-entry, NOT one of the 2 predeclared windows here."
+ },
+ "M": {
+  "class": "M_pooled_short_term_reversal",
+  "status": "STOPPED \u2014 prior coverage: Price-Reversal {R1,R2} (HYP-PM-0012 FADE-001 / HYP-PM-0014 BANK-001, in forward test), M2x NO-GO (DISCOVERY_2026-08-21), factor_zoo 1-week reversal dead in robustness, D-062 bars correlated registration",
+  "n_formation_dates": 920,
+  "formation_dates_by_era": {
+   "era1_2009_2021-09": 660,
+   "era2_2021-10_2026": 260
+  },
+  "median_xs_size": 72,
+  "preevent_vol_ew_liquid_book": {
+   "n": 920,
+   "median": 0.010514,
+   "iqr": [
+    0.008677,
+    0.01527
+   ]
+  },
+  "note": "per the brief's M rule: formation-date counts, cross-section size and pre-formation volatility ONLY. No portfolio return exists in this census."
+ },
+ "N": {
+  "class": "N_commodity_geopolitical_exporter_sectors",
+  "mapping_basis": "ticker_sector (industry level; yfinance-style taxonomy)",
+  "rebalance_dates_total": 214,
+  "rebalance_dates_by_era": {
+   "era1_2009_2021-09": 153,
+   "era2_2021-10_2026": 61
+  },
+  "buckets": {
+   "coal": {
+    "tickers_mapped": 33,
+    "liquid_names_per_year": {
+     "2009": 7,
+     "2010": 9,
+     "2011": 8,
+     "2012": 13,
+     "2013": 11,
+     "2014": 6,
+     "2015": 4,
+     "2016": 9,
+     "2017": 8,
+     "2018": 8,
+     "2019": 8,
+     "2020": 7,
+     "2021": 13,
+     "2022": 19,
+     "2023": 20,
+     "2024": 17,
+     "2025": 19,
+     "2026": 21
+    },
+    "rebalance_dates_with_3plus_liquid": 208,
+    "pre_formation_vol_book": {
+     "n": 208,
+     "median": 0.021361,
+     "iqr": [
+      0.01737,
+      0.026512
+     ]
+    },
+    "mde_monthly_21d": {
+     "bar_primary_599": {
+      "n": 208,
+      "n_clusters": 208,
+      "5": {
+       "indep_pct": 1.091,
+       "month_clustered_pct": 1.091
+      },
+      "10": {
+       "indep_pct": 1.542,
+       "month_clustered_pct": 1.542
+      },
+      "20": {
+       "indep_pct": 2.181,
+       "month_clustered_pct": 2.181
+      }
+     },
+     "bar_secondary_280": {
+      "n": 208,
+      "n_clusters": 208,
+      "5": {
+       "indep_pct": 1.017,
+       "month_clustered_pct": 1.017
+      },
+      "10": {
+       "indep_pct": 1.439,
+       "month_clustered_pct": 1.439
+      },
+      "20": {
+       "indep_pct": 2.034,
+       "month_clustered_pct": 2.034
+      }
+     }
+    }
+   },
+   "oil_gas": {
+    "tickers_mapped": 19,
+    "liquid_names_per_year": {
+     "2009": 4,
+     "2010": 4,
+     "2011": 3,
+     "2012": 4,
+     "2013": 4,
+     "2014": 3,
+     "2015": 3,
+     "2016": 4,
+     "2017": 4,
+     "2018": 4,
+     "2019": 4,
+     "2020": 4,
+     "2021": 5,
+     "2022": 6,
+     "2023": 6,
+     "2024": 8,
+     "2025": 9,
+     "2026": 11
+    },
+    "rebalance_dates_with_3plus_liquid": 138,
+    "pre_formation_vol_book": {
+     "n": 138,
+     "median": 0.021373,
+     "iqr": [
+      0.018503,
+      0.026186
+     ]
+    },
+    "mde_monthly_21d": {
+     "bar_primary_599": {
+      "n": 138,
+      "n_clusters": 138,
+      "5": {
+       "indep_pct": 1.34,
+       "month_clustered_pct": 1.34
+      },
+      "10": {
+       "indep_pct": 1.895,
+       "month_clustered_pct": 1.895
+      },
+      "20": {
+       "indep_pct": 2.679,
+       "month_clustered_pct": 2.679
+      }
+     },
+     "bar_secondary_280": {
+      "n": 138,
+      "n_clusters": 138,
+      "5": {
+       "indep_pct": 1.25,
+       "month_clustered_pct": 1.25
+      },
+      "10": {
+       "indep_pct": 1.767,
+       "month_clustered_pct": 1.767
+      },
+      "20": {
+       "indep_pct": 2.499,
+       "month_clustered_pct": 2.499
+      }
+     }
+    }
+   },
+   "gold": {
+    "tickers_mapped": 6,
+    "liquid_names_per_year": {
+     "2009": 1,
+     "2010": 1,
+     "2011": 0,
+     "2012": 2,
+     "2013": 1,
+     "2014": 1,
+     "2015": 2,
+     "2016": 2,
+     "2017": 1,
+     "2018": 2,
+     "2019": 3,
+     "2020": 2,
+     "2021": 3,
+     "2022": 2,
+     "2023": 3,
+     "2024": 3,
+     "2025": 5,
+     "2026": 6
+    },
+    "rebalance_dates_with_3plus_liquid": 36,
+    "pre_formation_vol_book": {
+     "n": 36,
+     "median": 0.0284,
+     "iqr": [
+      0.020551,
+      0.035622
+     ]
+    },
+    "mde_monthly_21d": {
+     "bar_primary_599": {
+      "n": 36,
+      "n_clusters": 36,
+      "5": {
+       "indep_pct": 3.485,
+       "month_clustered_pct": 3.485
+      },
+      "10": {
+       "indep_pct": 4.929,
+       "month_clustered_pct": 4.929
+      },
+      "20": {
+       "indep_pct": 6.971,
+       "month_clustered_pct": 6.971
+      }
+     },
+     "bar_secondary_280": {
+      "n": 36,
+      "n_clusters": 36,
+      "5": {
+       "indep_pct": 3.251,
+       "month_clustered_pct": 3.251
+      },
+      "10": {
+       "indep_pct": 4.597,
+       "month_clustered_pct": 4.597
+      },
+      "20": {
+       "indep_pct": 6.501,
+       "month_clustered_pct": 6.501
+      }
+     }
+    }
+   },
+   "copper_nickel": {
+    "tickers_mapped": 21,
+    "liquid_names_per_year": {
+     "2009": 3,
+     "2010": 4,
+     "2011": 6,
+     "2012": 7,
+     "2013": 6,
+     "2014": 5,
+     "2015": 3,
+     "2016": 5,
+     "2017": 7,
+     "2018": 7,
+     "2019": 6,
+     "2020": 8,
+     "2021": 9,
+     "2022": 9,
+     "2023": 11,
+     "2024": 15,
+     "2025": 16,
+     "2026": 14
+    },
+    "rebalance_dates_with_3plus_liquid": 198,
+    "pre_formation_vol_book": {
+     "n": 198,
+     "median": 0.018492,
+     "iqr": [
+      0.015805,
+      0.022841
+     ]
+    },
+    "mde_monthly_21d": {
+     "bar_primary_599": {
+      "n": 198,
+      "n_clusters": 198,
+      "5": {
+       "indep_pct": 0.968,
+       "month_clustered_pct": 0.968
+      },
+      "10": {
+       "indep_pct": 1.369,
+       "month_clustered_pct": 1.369
+      },
+      "20": {
+       "indep_pct": 1.935,
+       "month_clustered_pct": 1.935
+      }
+     },
+     "bar_secondary_280": {
+      "n": 198,
+      "n_clusters": 198,
+      "5": {
+       "indep_pct": 0.903,
+       "month_clustered_pct": 0.903
+      },
+      "10": {
+       "indep_pct": 1.276,
+       "month_clustered_pct": 1.276
+      },
+      "20": {
+       "indep_pct": 1.805,
+       "month_clustered_pct": 1.805
+      }
+     }
+    }
+   },
+   "cpo": {
+    "tickers_mapped": 36,
+    "liquid_names_per_year": {
+     "2009": 7,
+     "2010": 8,
+     "2011": 6,
+     "2012": 5,
+     "2013": 5,
+     "2014": 6,
+     "2015": 5,
+     "2016": 6,
+     "2017": 6,
+     "2018": 5,
+     "2019": 5,
+     "2020": 6,
+     "2021": 11,
+     "2022": 14,
+     "2023": 11,
+     "2024": 13,
+     "2025": 19,
+     "2026": 25
+    },
+    "rebalance_dates_with_3plus_liquid": 202,
+    "pre_formation_vol_book": {
+     "n": 202,
+     "median": 0.017846,
+     "iqr": [
+      0.014524,
+      0.021644
+     ]
+    },
+    "mde_monthly_21d": {
+     "bar_primary_599": {
+      "n": 202,
+      "n_clusters": 202,
+      "5": {
+       "indep_pct": 0.925,
+       "month_clustered_pct": 0.925
+      },
+      "10": {
+       "indep_pct": 1.308,
+       "month_clustered_pct": 1.308
+      },
+      "20": {
+       "indep_pct": 1.849,
+       "month_clustered_pct": 1.849
+      }
+     },
+     "bar_secondary_280": {
+      "n": 202,
+      "n_clusters": 202,
+      "5": {
+       "indep_pct": 0.862,
+       "month_clustered_pct": 0.862
+      },
+      "10": {
+       "indep_pct": 1.22,
+       "month_clustered_pct": 1.22
+      },
+      "20": {
+       "indep_pct": 1.725,
+       "month_clustered_pct": 1.725
+      }
+     }
+    }
+   }
+  },
+  "note": "signal legs (commodity returns, GPR) are the SIGNAL series, not outcomes; their acquisition is a separate logged one-time probe (probe_class_n.py), not part of this census. No sector or stock return after any formation date is computed here."
+ },
+ "O": {
+  "class": "O_opening_auction_imbalance",
+  "store": {
+   "path": "/home/tjiesar/10 Projects/idx-walkforward-5001/data/frozen/stockbit-flow-bars-v002/stockbit-flow-bars-v002.db",
+   "columns": [
+    "ticker",
+    "trade_date",
+    "bar_time",
+    "buy_lot",
+    "sell_lot",
+    "buy_freq",
+    "sell_freq",
+    "net_value",
+    "price",
+    "delta"
+   ],
+   "time_column": "bar_time",
+   "price_column": "price",
+   "seen_window": [
+    "2025-01-02",
+    "2026-04-27"
+   ],
+   "sessions_seen": 309
+  },
+  "cumulative_check": {
+   "method": "12 dates x first 5 tickers each, full day ordered by bar_time; buy_lot/sell_lot/buy_freq/sell_freq must be nondecreasing",
+   "ticker_days_checked": 60,
+   "violations": 0,
+   "conclusion": "cumulative within the day"
+  },
+  "decision_minute": "09:15",
+  "seen_window_liquid": {
+   "liquid_ticker_days": 44217,
+   "sigma_1min_pre_decision": {
+    "n": 44148,
+    "median": 0.004452,
+    "iqr": [
+     0.002976,
+     0.006822
+    ]
+   },
+   "flat_minute_share_of_returns": 0.48619901888453126,
+   "imbalance_computable_share": 0.9815681751362598,
+   "median_abs_imbalance_09_00": 0.4127325800699614,
+   "tick_le_0_2pct_of_price_share": 0.02502944640753828
+  },
+  "power": {
+   "horizons_minutes": {
+    "to_10_00": 45,
+    "to_close": 275,
+    "note": "minutes from 09:15; 275 = 135 pre-lunch + 140 post-lunch; iid minute scaling declared"
+   },
+   "n_independent_ticker_days": 44148,
+   "n_date_clusters": 309,
+   "median_sigma_1min": 0.004452482644074732,
+   "mde_pct_of_price": {
+    "to_10_00_indep_bar599": 0.047,
+    "to_10_00_indep_bar280": 0.044,
+    "to_10_00_dateclust_bar599": 0.56,
+    "to_10_00_dateclust_bar280": 0.522,
+    "to_close_indep_bar599": 0.116,
+    "to_close_indep_bar280": 0.108,
+    "to_close_dateclust_bar599": 1.383,
+    "to_close_dateclust_bar280": 1.29
+   },
+   "note": "MDE = bar * sigma_1min * sqrt(minutes) / sqrt(n); indep n = liquid ticker-days, date-clustered n = distinct dates"
+  },
+  "live_clean_window": {
+   "live_table_columns": "tuple index out of range",
+   "live_indexes": [],
+   "distinct_dates_since_2026_04_28": 109,
+   "live_note": "live schema probe failed",
+   "note": "clean (never-seen) window starts 2026-04-28; 2025-01..2026-04 is SEEN by the planner's descriptive volatility-profile read"
+  },
+  "costs": {
+   "round_trip_fees_tax_pct": 0.4,
+   "tick_ladder_idr": [
+    [
+     200,
+     1
+    ],
+    [
+     500,
+     2
+    ],
+    [
+     2000,
+     5
+    ],
+    [
+     5000,
+     10
+    ],
+    [
+     "inf",
+     25
+    ]
+   ],
+   "verdict_inputs": "one tick is 0.1-0.6% of price on mid-priced names; fees+tax ~0.4% RT \u2014 an intraday effect must clear ~0.5-1.0% per round trip to matter"
+  },
+  "no_outcome_note": "no price at or after 09:15 was read in any window; volatility uses minutes 09:00..09:14 only"
+ },
+ "J": {
+  "class": "J_earnings_pead",
+  "census": "NONE POSSIBLE \u2014 no PIT filing dates; see FEASIBILITY_B section J",
+  "stockbit_keystats": "9,781 rows, 110 fetch_dates 2026-04-10..2026-10-07, 972 tickers; ratio snapshots only, no dates of record",
+  "fundamentals_artifacts": "fund_quarterly.pkl ABSENT (script exists: factor_zoo/scripts/fetch_quarterly.py, output never committed); fund_annual.pkl 2,217 rows / 552 tickers, period_end 2021-12-31..2026-06-30; brief's '2,908 observations' not locatable in repo \u2014 DISCREPANCY RECORDED",
+  "filing_dates": "none anywhere (yfinance period_end columns only)"
+ }
+}
