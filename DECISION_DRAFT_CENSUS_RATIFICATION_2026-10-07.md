@@ -91,7 +91,7 @@ entry only raises the program-wide census, which is append-only and monotonic. N
 
 - **(a) Exit-study count: 20 (upper bound) or 10 (random-entry control counted 0).** The draft uses
   20. With 10, N = 585 and the bar is 3.286. The difference is negligible.
-- **(b) The sniper's frozen bar.** Your ruling set the primary bar at "3.28" (N = 565, 3.2765). The
+- **(b) RESOLVED 2026-10-07: owner chose 3.29 (N = 599); ZCode Revision 2.** The sniper's frozen bar. Your ruling set the primary bar at "3.28" (N = 565, 3.2765). The
   complete count gives N = 599, **3.2931**.
   - Recommendation: freeze HYP-PM-0016 at **3.29** (N = 599), so the predeclaration matches the
     ratified census. That's a one-constant change to session A's Revision 1 before approval.
