@@ -138,12 +138,6 @@ def simulate_legs(tr, arm, P, I_by_stock):
             if arm == "X5" and k == t1 + E.X5_TIME and cl_k < tr["entry"] + E.X5_PROFIT_ATR * atr:
                 exit_idx, exit_px, reason = k, float(cl_k), "time10"
                 break
-        if topup is not None and topup["entry_px"] is None and np.isfinite(lo_k) \
-                and lo_k <= topup["px"]:
-            fpx = O[k] if O[k] <= topup["px"] else topup["px"]
-            buy(k, fpx, 0.5, "topup_buy")
-            topup.update({"entry_px": float(fpx), "entry_idx": k,
-                          "sell_px": float(fpx) + E.P4_SELL_ATR * atr, "exited": False})
         k += 1
     if exit_idx is None:
         exit_idx = k_end

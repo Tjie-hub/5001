@@ -141,6 +141,24 @@ zone low = entry − 1·ATR14 (position-arm geometry). E-BRK carries no structur
 
 ## 6. Arms (frozen; 12 per entry population)
 
+> **Amendment 2026-10-07: P4 same-day top-up fill removed (look-ahead + unbooked buy).**
+> Found by the G1-bis parity gate (HANDOFF_G1BIS_STOP.md; owner/planner review of the
+> executor's stop). The frozen day-loop carried a bottom-of-loop P4 fill block that could only
+> ever fire on the ARMING day itself (on any later day the in-step next-session path runs
+> first), so it "filled" the top-up limit at the arming day's own low — a price printed before
+> the arming close ≥ entry + 1·ATR that placed the order: look-ahead — and it recorded the
+> fill WITHOUT booking its buy leg, so the later top-up sale booked phantom proceeds (132
+> trades across the three populations, net % inflated by up to 117 percentage points). The
+> frozen rule text already forbids this — §6 P4: "after a close ≥ entry + 1·ATR, a top-up of
+> 50% at entry − 0.5·ATR **(limit, from the next session)**" — the fill can come no earlier
+> than the next session. **The block is deleted** in `exit_study.py::simulate_trade` and in
+> `portfolio_v2.py::simulate_legs`; the in-step next-session fill path (which books its buy)
+> is unchanged. New tests in both test files pin the same-day case: no fill on the arming
+> day, a fill on the next touching day, exactly one top-up buy leg and one sell leg. G1's P4
+> rows (and the recommendation built on them) are superseded by the re-derived G1FIX run;
+> the G1-bis portfolio run then completes against the fixed driver. The sidecars are
+> regenerated for this amendment; the previous sidecar (G1's freeze) remains in git history.
+
 **Exit arms** (single full-size entry at the zone top — P0 geometry):
 
 | Arm | Rule (implementation conventions in §7) |

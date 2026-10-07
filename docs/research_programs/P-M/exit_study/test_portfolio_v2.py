@@ -282,3 +282,36 @@ def test_p4_topup_sells_on_its_own_day():
     # the engine must not go negative around the top-up sale and the final exit
     assert st["min_cash"] >= -1e-12
     assert st["final_equity"] > 0
+
+
+def test_p4_topup_never_fills_on_the_arming_day():
+    """Amendment 2026-10-07, portfolio-side: the same-day top-up fill is look-
+    ahead (an order placed because of the close, filled at a low printed before
+    that close) and is deleted here too. An arming day whose low already
+    touches entry-0.5ATR must not produce a top-up leg; the top-up buys on the
+    next touching day and sells on its own target day — exactly one buy leg
+    and one sell leg."""
+    n = 200
+    o, h, lo, c, v = bars(n, seed=13)
+    o[:] = h[:] = lo[:] = c[:] = 100.0
+    c[70] = 105.5                            # arm the swing lot (close >= +1ATR)
+    o[70] = 101.0; h[70] = 106.0; lo[70] = 97.0   # ...and the day's low touches 97.5
+    lo[75] = 97.5                            # next touching day: top-up fills at 97.5
+    o[75] = 99.0; h[75] = 100.0; c[75] = 99.5
+    h[85] = 105.5                            # top-up sells at 97.5+1.5ATR = 105
+    o[85] = 100.0; c[85] = 105.0; lo[85] = 100.0
+    P = mk_panel({"open": {"T": o}, "high": {"T": h}, "low": {"T": lo},
+                  "close": {"T": c}, "volume": {"T": v}}, n)
+    I = {"T": E.stock_indicators(o, h, lo, c, v)}
+    tr = _trade("T", 65, 66, 100.0, zone_low=96.0, stop=90.0, target=160.0, atr=5.0)
+    lg = PV.simulate_legs(tr, "P4", P, I)
+    buys = [leg for leg in lg["legs"] if leg[3] == "topup_buy"]
+    sells = [leg for leg in lg["legs"] if leg[3] == "topup_sell"]
+    assert len(buys) == 1 and len(sells) == 1
+    assert buys[0][0] == 75 and sells[0][0] == 85
+    # the engine books exactly one top-up buy fill, on the fill day (not the arming day)
+    st = PV.run_portfolio_v2([tr], {("T", 65): lg["legs"]}, {"T": c},
+                             P["close"].index, "E1", record_fills=True)
+    topup_fills = [f for f in st["fills"] if f["role"] == "topup_buy"]
+    assert len(topup_fills) == 1 and topup_fills[0]["t"] == 75
+    assert st["min_cash"] >= -1e-12 and st["final_equity"] > 0

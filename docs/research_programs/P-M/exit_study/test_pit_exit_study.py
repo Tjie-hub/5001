@@ -504,6 +504,26 @@ def test_p4_swing_lot_topup_and_own_target():
     assert oc["buy_notional"] == pytest.approx(100.0 + 97.5 * 0.5)
 
 
+def test_p4_topup_never_fills_on_the_arming_day():
+    """Amendment 2026-10-07: the frozen bottom-of-loop fill block could book a
+    same-day top-up from a low printed BEFORE the arming close (look-ahead) and
+    never booked its buy leg. The frozen rule arms on a close and the top-up
+    limit lives from the NEXT session: an arming day whose low already touches
+    entry-0.5ATR must NOT fill; the fill comes on the next touching day, and
+    the top-up books exactly one buy leg and one sell leg."""
+    n = 40
+    o, h, lo, c, v = bars(n, seed=13)
+    o[:] = h[:] = lo[:] = c[:] = 100.0
+    c[4] = 105.5; o[4] = 100.5; h[4] = 106.0; lo[4] = 97.0    # arms AND touches 97.5 the same day
+    lo[6] = 97.5; o[6] = 99.0; h[6] = 100.0; c[6] = 99.5      # next touching day: fills at 97.5
+    h[8] = 105.5; o[8] = 100.0; c[8] = 105.0; lo[8] = 100.0   # top-up sells at 97.5+7.5=105.0
+    P = mk_panel({"open": {"T": o}, "high": {"T": h}, "low": {"T": lo},
+                  "close": {"T": c}, "volume": {"T": v}}, n)
+    oc = E.simulate_trade(_flat_trade(), "P4", P, {})
+    assert oc["n_legs"] == 4                                  # core buy, top-up buy+sell, core sell
+    assert oc["buy_notional"] == pytest.approx(100.0 + 97.5 * 0.5)
+
+
 # ── cost / R arithmetic ───────────────────────────────────────────────────────
 
 def test_cost_and_r_arithmetic_hand_computed():
