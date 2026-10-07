@@ -132,3 +132,10 @@ Don't start a G0 for A or D yet.
 - No outcomes before approval.
 - Research-side only. Production tree untouched. Read-only DB. Never print secrets.
 - No registry or DECISION_LOG edits. No force-push. `logs/TELEGRAM_OFF` stays.
+
+## Owner ruling, 2026-10-07: R8 settled
+
+The owner set the **primary pass bar to the stricter census: N = 561 + 4 = 565, exact
+`emax_abs_z` ≈ 3.28**. The 280-count bar (3.07) stays as a secondary reporting line only, and can't
+pass a configuration. Freeze it this way; no further planner amendment is needed. Ratifying the
+561 census in the DECISION_LOG is a separate owner filing. Don't file it.
