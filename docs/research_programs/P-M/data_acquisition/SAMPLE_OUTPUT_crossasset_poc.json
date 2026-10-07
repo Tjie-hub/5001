@@ -1,0 +1,64 @@
+{
+  "poc": "cross_asset_fetch_2026-09-30",
+  "ran_at_utc": "2026-09-30T03:19:09.388248+00:00",
+  "yfinance_version": "1.7.0",
+  "purpose": "scoping only \u2014 no DB writes, no pipeline wiring",
+  "results": [
+    {
+      "ticker": "TLK",
+      "status": "OK",
+      "first_date": "1995-11-14",
+      "last_date": "2026-09-29",
+      "n_rows": 7768,
+      "max_gap_days": 7,
+      "n_gaps_over_7d": 0,
+      "last_close": 13.2,
+      "currency": "unknown",
+      "pit_note": "daily close known only after own-market close; US closes map to next-day WIB pre-open"
+    },
+    {
+      "ticker": "USDIDR=X",
+      "status": "OK",
+      "first_date": "2001-06-28",
+      "last_date": "2026-09-30",
+      "n_rows": 6378,
+      "max_gap_days": 214,
+      "n_gaps_over_7d": 3,
+      "last_close": 17993.0,
+      "currency": "unknown",
+      "pit_note": "daily close known after own-market close"
+    },
+    {
+      "ticker": "^JKSE",
+      "status": "OK",
+      "first_date": "1990-04-06",
+      "last_date": "2026-09-30",
+      "n_rows": 8880,
+      "max_gap_days": 12,
+      "n_gaps_over_7d": 23,
+      "last_close": 6135.8169,
+      "currency": "unknown",
+      "pit_note": "daily close known after own-market close"
+    },
+    {
+      "ticker": "KOL",
+      "status": "EMPTY \u2014 no data returned"
+    },
+    {
+      "ticker": "BTU",
+      "status": "OK",
+      "first_date": "2017-04-03",
+      "last_date": "2026-09-29",
+      "n_rows": 2386,
+      "max_gap_days": 4,
+      "n_gaps_over_7d": 0,
+      "last_close": 24.37,
+      "currency": "unknown",
+      "pit_note": "daily close known only after own-market close; US closes map to next-day WIB pre-open"
+    },
+    {
+      "ticker": "FCPO=F",
+      "status": "EMPTY \u2014 no data returned"
+    }
+  ]
+}

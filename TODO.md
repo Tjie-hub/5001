@@ -37,29 +37,29 @@ _Hours, not days. No research judgement required. Do this first._
       `security/route_policy.py` committed `817f732` (2026-08-20, "fix(security): gate ADMIN routes
       unconditionally; escalate 10 side-effect routes"). Verified 2026-09-22.
 
-- [ ] **P0-2. Run the real test suite and record it** — the on-disk cache
-      (`.pytest_cache/v/cache/lastfailed`, 72 entries) is *cumulative across partial runs*, not a
-      current failure count, and is likely polluted by Windows-side runs where POSIX-only tests
-      (chmod, symlinks, /tmp) fail environmentally. There is currently **no trustworthy number**.
-      _Where:_ WSL (Python 3.12 venv, matching CI) · _Cmd:_
-      `python -m pytest -q 2>&1 | tee logs/pytest_full_20260819.log` ·
-      _Accept:_ a real pass/fail/error tally committed to the log · _Est:_ ~6 min runtime.
+- [x] **P0-2. Run the real test suite and record it** — DONE 2026-09-30 (WSL, Python 3.12.13 venv,
+      CI-matching, `DB_PATH=data/walkforward.db` override required — see note). Real tally:
+      **12 failed / 3438 passed / 3 skipped in 475.72s** (`logs/pytest_full_20260930_p0p1.log`).
+      All 12 verified pre-existing/environmental, none code-caused (reproduced on a pristine
+      worktree with the same `.env`): 6× `test_config_validation` + 1× `test_provider_hierarchy`
+      = the synced production `.env` (foreign XPS-13 path/keys); 4× `test_value_format` = `node`
+      missing in WSL; 1× `test_secret_hygiene` = untracked vendored packages in the tree
+      (`.winvenv/`, P0-5 class). _Env note:_ the tree's `.env` carries the production XPS-13
+      `DB_PATH` and breaks any test touching the default DB before monkeypatching — always run
+      the suite with `DB_PATH=data/walkforward.db` exported (CI condition has no `.env`).
 
-- [ ] **P0-3. Resolve the 3 collection errors** — re-verified 2026-09-22: `tests/test_auto_token.py`
-      and `tests/test_stockbit_fetcher_ensure_valid_token.py` now **collect clean** (42 tests,
-      confirmed while fixing the 2026-09-22 auto-token incident below). `tests/agent_firm/test_client.py`
-      **no longer exists on disk** — needs a fresh check for what replaced it (renamed under
-      `tests/agent_firm/` during a reorg, or genuinely dropped) before this item can close.
-      _Where:_ WSL · _Depends:_ P0-2 · _Accept:_ confirm `test_client.py`'s fate, then close.
+- [x] **P0-3. Resolve the 3 collection errors** — CLOSED 2026-09-30. `tests/test_auto_token.py` and
+      `tests/test_stockbit_fetcher_ensure_valid_token.py` collect clean (confirmed in the 2026-09-30
+      full-suite run — zero collection errors). `tests/agent_firm/test_client.py` was **deliberately
+      deleted** with the client it tested: commit `85cab31` "chore(firm): delete DeepSeekClient —
+      replaced by ZAIProvider"; replacement coverage lives in `tests/agent_firm/providers/`
+      (test_factory/test_base/test_circuit_breaker et al.). Not an accidental loss.
 
-- [ ] **P0-4. Track or delete the 5 untracked test files** — 283 test files on disk, **278 tracked**.
-      CI checks out only tracked files, so these have **never run in CI**:
-      `tests/test_news_filter.py` (2 of the cached failures), `tests/test_filter_exploration.py`,
-      `tests/agent_firm/providers/test_quota_{hydration_edge_cases,scenarios,state_persistence}.py`.
-      They currently do the worst of both: run locally, pollute the failure cache, prove nothing in
-      CI. Decide per-file: real coverage → commit; scratch → delete.
-      _Where:_ WSL · _Depends:_ P0-2 · _Accept:_ `git ls-files 'tests/**test_*.py' | wc -l` equals
-      the on-disk count.
+- [x] **P0-4. Track or delete the 5 untracked test files** — CLOSED 2026-09-30, already converged:
+      `git ls-files 'tests/**test_*.py'` = 359 = on-disk count; all 5 named files
+      (`tests/test_news_filter.py`, `tests/test_filter_exploration.py`,
+      `tests/agent_firm/providers/test_quota_{hydration_edge_cases,scenarios,state_persistence}.py`)
+      are now tracked (committed since the 2026-09-22 snapshot) and run in CI.
 
 - [x] **P0-6. Stockbit auto-token corruption incident (2026-09-22)** — DONE, commit `04e4fdd`.
       `.stockbit_token` held the literal 9-byte string `undefined` (not a JWT) since 2026-09-21
@@ -76,11 +76,14 @@ _Hours, not days. No research judgement required. Do this first._
       wasn't covered by the existing `*.backup*` rule and a stray `git add -A` would have tried to
       commit a 9GB file.
 
-- [ ] **P0-5. Triage the 64-file untracked pile** — long-standing open thread, now enumerated:
-      `docs/audit/STOCKBIT_FLOW_*` (11 files), 10 `docs/superpowers/plans/*.md`,
-      `Audit/R5_TIER1_DB_SPLIT_CLOSURE_REPORT.md`, `docs/data/`, `docs/infra/`, `images/`,
-      `scripts/probe_*.py`. Commit what is real work-product; `.gitignore` the rest.
-      _Where:_ WSL · _Accept:_ `git status --porcelain | grep -c '^??'` → 0.
+- [x] **P0-5. Triage the 64-file untracked pile** — CLOSED 2026-09-30 (commit `d7ca641`).
+      TODO.md's enumerated pile (`docs/audit/STOCKBIT_FLOW_*`, superpowers plans, R5 closure report,
+      `docs/data/`, `docs/infra/`, `images/`, `scripts/probe_*`) was already fully tracked. The
+      remaining items: committed the P-M data-acquisition POC script + sample output (deliverables
+      of 0607c30's handoff); deleted `1}` (0-byte shell artifact); gitignored with reasons:
+      `Claude outputs/`, `atr_plan/` (informal local workspaces), `data/ajaib_raw/` (machine-local
+      raw dumps), `.fuse_hidden*` (WSL/NTFS interop). `git status --porcelain | grep -c '^??'` → 0;
+      `backups/` confirmed ignored.
 
 ---
 
@@ -95,15 +98,22 @@ cutover runbook (`9bb2fd7`) that was never `--apply`-ed. All 8 Tier-1 tables sti
 > gate run writes its decision to a fresh empty DB while every historical `gate_decisions` row stays
 > in `walkforward.db`. The append-only ledger forks in two, silently, with no error.
 
-- [ ] **P1-1. Cutover — LOCAL (WSL)** — `python scripts/migrate_r5_tier1.py` (dry-run default) →
-      review output → `--apply`. Migrates: `research_runs`, `gate_decisions`, `gate_evidence`,
-      `regime_profiles`, `regime_profile_cells`, `hypotheses`, `hypothesis_links`,
-      `failure_registry`.
-      _Where:_ WSL · _Accept:_ `data/research.db` exists; row counts match pre-migration.
+- [x] **P1-1. Cutover — LOCAL (WSL)** — DONE 2026-09-30. `python scripts/migrate_r5_tier1.py`
+      dry-run → review → `--apply`. **Local-copy caveat:** this machine's `walkforward.db` only ever
+      held 3 of the 8 Tier-1 tables (`research_runs` 25, `gate_decisions` 5, `gate_evidence` 40);
+      `regime_profiles`, `regime_profile_cells`, `hypotheses`, `hypothesis_links`, `failure_registry`
+      are absent from the local copy (production-only) — the migration treated them as already-migrated
+      no-ops. All 3 present tables migrated + dropped; `data/research.db` created with integrity=ok.
+      _Env note (WSL/DrvFS):_ SQLite reads of the 3.3 GB DB through `/mnt/d` fail with
+      `disk I/O error` unless `PRAGMA mmap_size=0` is set on every connection — the backup and
+      migration were run under a small wrapper that sets it (production's native FS is unaffected).
+      Production cutover (P1-3) is a separate human-run act on XPS-13 and will move the remaining
+      5 tables.
 
-- [ ] **P1-2. Verify no orphans (LOCAL)** — confirm every Tier-1 table landed intact and nothing
-      remains stranded in `walkforward.db`. Back up first (`scripts/db_backup.py`).
-      _Where:_ WSL · _Depends:_ P1-1 · _Accept:_ per-table row-count diff = 0.
+- [x] **P1-2. Verify no orphans (LOCAL)** — DONE 2026-09-30. Backup taken first
+      (`scripts/db_backup.py` online-backup API → `~/backups/idx-walkforward-5001/walkforward-20260930-113213.db.gz`,
+      719.7 MB compressed, integrity=ok, 69 tables / 30,345,539 rows). Per-table row counts match
+      exactly (25/5/40); both DBs pass `PRAGMA quick_check`; source tables confirmed dropped.
 
 - [ ] **P1-3. Cutover — PRODUCTION (XPS-13)** — same script, on the live DB. **Separate action
       because DBs do not sync.** Low memory cost (8 metadata tables, not the 3.3 GB OHLCV/ticks), so
@@ -156,11 +166,12 @@ problem is that the evidence it rests on has since eroded (see P4) and nobody ha
       zero? Run `research/studies/phase5_tracker.py` against **production** data.
       _Where:_ XPS-13 (production data) · _Accept:_ a real N and expectancy, or a confirmed zero.
 
-- [ ] **P2-3. 🔑 OWNER DECISION — revoke or re-affirm** — with P2-1/P2-2 in hand:
-      **(a)** revoke to `SHADOW` (stops live selection immediately, keeps collecting forward data), or
-      **(b)** re-affirm APPROVED in writing, explicitly acknowledging the P4 erosion.
-      Drifting to the 2027-01-08 deadline by default is the one option that is not a decision.
-      _Depends:_ P2-1, P2-2 · _Accept:_ a dated entry in the registry changelog + manifest.
+- [x] **P2-3. ~~OWNER DECISION — revoke or re-affirm~~ SUPERSEDED by D-029 (commit `4f3098f`,
+      2026-08-19)** — NR7_BULL v1 APPROVED → v2 **SHADOW** before this decision point was reached
+      (registry `NR7_BULL` v2, D-029, Evidence Model C3/E5+X3 bar). P2-1/P2-2 (re-eval +
+      shadow-N check) mooted by that demotion and deliberately not run (planner instruction
+      2026-09-30). The P4 evidence-erosion items remain independently valid — they now describe
+      why the SHADOW status should not be casually reversed.
 
 - [ ] **P2-4. Make runtime evidence-validation enforcing, not advisory** —
       `registry_loader.py:147`'s `entries.append(e)` sits **outside** the `if reasons:` block, so an
@@ -263,24 +274,14 @@ _Each item independently undermines the 2026-07-04 approval that P2's grandfathe
 
 ## 🟢 P5 — Generate New Evidence
 
-- [ ] **P5-1. Write `run_exp_pa_0001.py`** — the confirmatory script for **HYP-PA-0001** (index
-      reconstitution / closing-auction dislocation), REGISTERED 2026-07-19 and never executed. Fully
-      specified in `docs/research_programs/P-A/HYP-PA-0001_HARNESS_SPEC.md`; data curated
-      (`WP-D/reconstitution_events.csv`, 210 sourced ticker-events, 105 ADD / 105 DELETE, 13 review
-      clusters, 2022-08→2026-05). Estimator: event-study CAR vs IHSG, 230-td estimation window
-      ending ~20 td before announcement, reversal window t+1..t+5, cluster-robust (CR1) SEs by review
-      date, α=0.05. Test 2: DELETE-only net-of-cost (N=105) using the **imported** 0.60% round-trip
-      constant from `engine/exits/costs.py` — not re-derived. Dedup key `(ticker, effective_date,
-      event_type)`. Follow `run_exp_pm_0001.py`'s packaging discipline (read-only DB, JSON results +
-      execution log, frozen MANIFEST) — **not** its estimator.
-      _Where:_ **WSL only** (memory-heavy) · _Depends:_ P1-2.
-
-- [ ] **P5-2. Execute under custody + close out** — run once, apply the frozen decision rule
-      verbatim, produce `results.json`, `execution.log`, `EVIDENCE_PACKAGE.md`, and either an
-      Accepted-Knowledge or Failure-Library entry. **No re-runs, no k-tuning** (X1/R15).
-      _Depends:_ P5-1.
-
-- [ ] **P5-3. Update `HYPOTHESIS_REGISTRY.md` + `FAILURE_REGISTRY.md`** with the outcome.
+- [x] **P5-1. Write `run_exp_pa_0001.py`** — DONE (previously executed outside this list):
+      `run_exp_pa_0001.py` exists and HYP-PA-0001 was REGISTERED 2026-07-19 and EXECUTED 2026-08-19.
+- [x] **P5-2. Execute under custody + close out** — DONE: EXP-PA-0001 ran once, decision rule
+      applied, outcome **FAILED (F2 — prediction failure; both pre-registered tests failed)**. Evidence:
+      `docs/research_programs/P-A/experiments/EXP-PA-0001/{results.json,EVIDENCE_PACKAGE.md,FAILURE_ENTRY.md}`.
+- [x] **P5-3. Update `HYPOTHESIS_REGISTRY.md` + `FAILURE_REGISTRY.md`** — DONE:
+      `docs/research_programs/HYPOTHESIS_REGISTRY.md:18` and `FAILURE_REGISTRY.md:13` carry the
+      outcome. Registries are append-only — no re-run permitted (HL-1/R12); nothing further here.
 
 ---
 
