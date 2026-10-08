@@ -83,9 +83,11 @@ WF_SNAPSHOT = "/home/tjiesar/scratch/g0_snapshots_2026-10-08/walkforward_snapsho
 HL_SNAPSHOT = "/home/tjiesar/scratch/g0_snapshots_2026-10-08/history_long_snapshot_2026-10-08.db"
 WF_SHA256 = "a2d7e675e5c66387446b888287ebbe7cef563b278c48f1518a88c797bc4bbc47"
 HL_SHA256 = "7d298068fbc5633277ef0c032ed0257f935c9ef902068b16daa75ac0ba5e5714"
-CENSUS_LEDGER = 601
-N_EXPECTED = 604          # ledger 601 + D-073's 2 arms (registered at Task-1 G0 approval) + 1
-N_IF_D074 = 605           # + D-074's 1 arm if registered before this one
+CENSUS_LEDGER = 605       # re-frozen 2026-10-08: 599 (D-071/D-072) + 2 exploratory arms
+                          # (A/D-trap, volume-profile swing) + 4 NR7 post-mortem entry-time
+                          # comparisons (owner re-freeze; was 601 at the first freeze)
+N_EXPECTED = 608          # ledger 605 + D-073's 2 arms (registered at Task-1 G0 approval) + 1
+N_IF_D074 = 609           # + D-074's 1 arm if registered before this one
 FORU_CUTOFF = date(2026, 9, 14)
 
 import importlib.util as _ilu  # noqa: E402
@@ -95,10 +97,10 @@ _spec = _ilu.spec_from_file_location(
 _bar = _ilu.module_from_spec(_spec)
 _spec.loader.exec_module(_bar)
 e_max_abs_z = _bar.e_max_abs_z
-BAR_EXACT_604 = e_max_abs_z(N_EXPECTED)
-BAR_EXACT_605 = e_max_abs_z(N_IF_D074)
-BAR_FROZEN_604 = round(BAR_EXACT_604, 4)   # 3.2954
-BAR_FROZEN_605 = round(BAR_EXACT_605, 4)   # 3.2959
+BAR_EXACT_608 = e_max_abs_z(N_EXPECTED)
+BAR_EXACT_609 = e_max_abs_z(N_IF_D074)
+BAR_FROZEN_608 = round(BAR_EXACT_608, 4)   # 3.2973 (re-frozen 2026-10-08; was 3.2954 at 604)
+BAR_FROZEN_609 = round(BAR_EXACT_609, 4)   # 3.2978 (was 3.2959 at 605)
 
 
 def parse_date(v):

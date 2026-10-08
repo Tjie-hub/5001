@@ -15,7 +15,7 @@
 | arms | S1 (exactly one; S2/horizons/later-in-episode days are report-only) |
 | panels | E1 history_long (2007-01..2021-06-30), E2 walkforward (2021-07→); E1/E2 flag agreement gated ≤ 20% at G0 |
 | primary statistic | pooled mean R over episodes, t = mean/sd·√n (episodes independent) |
-| bar | **3.2954 at N = 604** (expected; `bar_v2.e_max_abs_z`), 3.2959 at N = 605 if HYP-PM-0018 registers first; N re-verified at submission and at G1 |
+| bar | **3.2973 at N = 608** (expected, re-frozen 2026-10-08; `bar_v2.e_max_abs_z`), 3.2978 at N = 609 if HYP-PM-0018 registers first; N re-verified at submission and at G1 |
 | halves | E1 2007-01..2020-12 and E2 2021-07→ means both > 0; 2021-01..06 events pooled but in neither half |
 | data | walkforward snapshot `a2d7e675…` + history_long snapshot `7d298068…` (2026-10-08, `CENSUS_G0.json`) |
 | G0 | branch `research/market-stress-reversal-2026-10`, PREDECLARATION.sha256 sidecar, counts-only census + E1/E2 agreement + 15:49 pre-close check |

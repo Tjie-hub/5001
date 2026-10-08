@@ -1,19 +1,19 @@
 {
- "generated_utc": "2026-10-08T06:18:49.044830+00:00",
+ "generated_utc": "2026-10-08T07:03:21.949288+00:00",
  "mode": "synthetic",
  "gate": "none (--synthetic)",
  "snapshots": {
   "mode": "synthetic"
  },
- "bar_frozen": 3.2954,
- "N_frozen": 604,
+ "bar_frozen": 3.2973,
+ "N_frozen": 608,
  "conditions": {
   "n_events": 2,
   "mean": -0.015749577490562938,
   "sd": 0.003398054753951127,
   "t": -6.554710768830794,
-  "bar": 3.2954,
-  "n_frozen": 604,
+  "bar": 3.2973,
+  "n_frozen": 608,
   "e1_mean": -0.015749577490562938,
   "e2_mean": NaN,
   "h1_2007_2020_n": 0,

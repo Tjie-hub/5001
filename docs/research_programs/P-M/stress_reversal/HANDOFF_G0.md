@@ -72,28 +72,52 @@ order, submission waits for HYP-PM-0017's G0 approval. G1 is machine-gated on
   guard as day-t returns is applied (one corrupted 2025-03-21 print without it gave a +26.8%
   "market" move). Pass condition 3 (next-day entry) covers the case where they cannot know.
 
-## Power (pre-event dispersion only; bar = 3.2954)
+## Power (pre-event dispersion only; bar = 3.2973)
 
 - E1: median member daily σ 3.66%, stress multiplier 0.434 → σ_5 = 3.55%, **MDE 1.73%** at
   n = 46. E2: σ 4.70%, multiplier 0.308 → σ_5 = 3.24%, **MDE 2.59%** at n = 17. Pooled at
   n = 63 with σ_5 ≈ 3.4%: **MDE ≈ 1.4%** — the planner's 0.8–1.3% approximation was mildly
-  optimistic; a reversal of ~1.5%+ per event is detectable.
+  optimistic; a reversal of ~1.5%+ per event is detectable. (MDEs recomputed at the re-frozen
+  bar 3.297294; they move by < 0.06% relative to the first freeze.)
+
+## Re-freeze 2026-10-08
+
+The census ledger moved after this G0 was first frozen (843e562): on 2026-10-08 the planner ran
+an NR7 failure post-mortem whose **4 entry-time comparisons** (winners vs losers on gap size,
+stop distance in ATR, planned R:R, ADV — each across both halves with a permutation test) count
+as census arms under D-071 §5. The ledger is now **605** = 599 (after D-071/D-072) + 2 (the
+A/D-trap and volume-profile swing checks of 2026-10-08) + 4 (the NR7 post-mortem
+comparisons). Per the owner's instruction this G0 is RE-FROZEN at N = 605 + HYP-PM-0017's 2
+arms + 1 = **608**, bar **3.2973** (exact `bar_v2.e_max_abs_z(608)` = 3.297294; was N = 604,
+bar 3.2954; contingency 609 / 3.2978). **No outcome was read before or during the re-freeze;
+the only change is the bar** (and the ledger list, which now follows the owner's decomposition
+verbatim — the first freeze's component list had omitted D-072's 4 configurations, and this
+file's first freeze also misquoted `e_max_abs_z(604)` as 3.295375 where the exact value was
+3.295427). The censuses were NOT re-run: their counts do not depend on N; `CENSUS_G0.json`'s
+census/power block was updated in place to the values the census script emits at the new
+constants. Old PREDECLARATION sha256
+`b82bfc0d6aa980e0079d8fa5dbf884bc0596e7ac7458eaf9be8dae5336aaf6b1` → new sha256 in
+`PREDECLARATION.sha256` (this commit). The study stays **NOT submitted** until HYP-PM-0017 is
+approved, and N is re-verified at submission and at G1.
 
 ## The bar and its N
 
-- **Expected N = 604, bar 3.2954** (exact `bar_v2.e_max_abs_z(604)` = 3.295375);
-  **N = 605, bar 3.2959** (exact 3.295896) applies only if HYP-PM-0018 (D-074, tender offers)
+- **Expected N = 608, bar 3.2973** (exact `bar_v2.e_max_abs_z(608)` = 3.297294), re-frozen
+  2026-10-08 (first-frozen at N = 604 / 3.2954 — see the Re-freeze note above);
+  **N = 609, bar 3.2978** (exact 3.297758) applies only if HYP-PM-0018 (D-074, tender offers)
   registers before this one — its G0 is "NOT NOW" per the owner.
-- **Which:** 604. At freeze, HYP-PM-0017's G0 is frozen (branch
+- **Which:** 608. At freeze, HYP-PM-0017's G0 is frozen (branch
   `research/dividend-clientele-2026-10`, pushed) and registers at the owner's approval — the
   submission gate for this study; D-074 has no G0. The final N is re-verified at submission and
-  again at G1 against `CENSUS_G0.json: census.ledger_rows_counted` (595 D-071 components + 2
-  exploratory arms of 2026-10-08 + HYP-PM-0017's 2 arms + this arm).
-- **Conflict note (brief vs D-entry, D-entry wins, already owner-corrected):** the brief's
-  "ledger 601 + 1 = 602 if frozen today" reading is superseded by the same task order that
-  fixed D-073's G0 at 603 — the census ledger counts previously-frozen G0 arms once their
-  studies are at the gate ahead of this one. No other conflicts: the brief's counts were
-  reproduced within convention drift (above), and nothing in the brief contradicted D-075.
+  again at G1 against `CENSUS_G0.json: census.ledger_rows_counted` (599 after D-071/D-072 + 2
+  exploratory arms of 2026-10-08 + 4 NR7 post-mortem comparisons of 2026-10-08 + HYP-PM-0017's
+  2 arms + this arm).
+- **Conflict note (brief vs D-entry, D-entry wins, owner-corrected):** the brief's "ledger 601
+  + 1 = 602 if frozen today" reading is superseded by the owner's task orders — first the one
+  that froze D-073's G0 at 603, then the 2026-10-08 re-freeze after the ledger moved +4 (NR7
+  post-mortem) — the census ledger counts previously-frozen G0 arms once their studies are at
+  the gate ahead of this one. No other conflicts: the brief's counts were reproduced within
+  convention drift (above), and nothing in the brief contradicted D-075.
 
 ## Snapshots (pinned; G1 re-hashes both BEFORE any outcome)
 

@@ -8,7 +8,7 @@ booleans (strength vs the frozen bar, both halves > 0, next-day entry > 0,
 Parkinson control > 0); the two reported controls (ex-big-4, ex-ex-date);
 the report-only list (S2, horizons, per-event table, 5 worst, year table).
 BOTH snapshot sha256s are re-hashed and matched against CENSUS_G0.json BEFORE
-any outcome; a mismatch SystemExit's. The bar's N (604 vs 605) is
+any outcome; a mismatch SystemExit's. The bar's N (608 vs 609) is
 re-verified against the census ledger rows at run time.
 
 `--synthetic`: a dry run on the fixture market — proves the RESULT schema
@@ -76,7 +76,7 @@ def main() -> None:
                     "matches_census": True}
     # the bar's N re-verified at run time (D-071 section 2): the census ledger
     # rows listed at G0 plus this arm must equal the frozen N in the census.
-    bar = census["census"]["bar_frozen_604"]
+    bar = census["census"]["bar_frozen_608"]
     n_frozen = census["census"]["N_expected"]
 
     rows1 = run_book(e1, ev1)

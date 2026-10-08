@@ -16,7 +16,7 @@ predeclared claim from PREDECLARATION.md §6:
   (f) the G0 census path never computes a return after the close of t: AST
       proof that g0_census.py / stress_reversal.py import neither `outcomes`
       nor any outcome function, plus a forbidden-token grep;
-  plus the frozen bars (N=604 -> 3.2954; N=605 -> 3.2959) and the true-ADV
+  plus the frozen bars (N=608 -> 3.2973; N=609 -> 3.2978, re-frozen 2026-10-08) and the true-ADV
   split-factor correction.
 
 Run:  venv/bin/python -m pytest \
@@ -156,9 +156,9 @@ def test_f_census_path_has_no_outcomes():
 
 # --- frozen bars and the split-factor ADV correction --------------------------
 def test_bars_frozen():
-    assert SR.CENSUS_LEDGER == 601 and SR.N_EXPECTED == 604 and SR.N_IF_D074 == 605
-    assert SR.BAR_FROZEN_604 == 3.2954 and SR.BAR_FROZEN_605 == 3.2959
-    assert SR.e_max_abs_z(605) > SR.e_max_abs_z(604) > SR.e_max_abs_z(603)
+    assert SR.CENSUS_LEDGER == 605 and SR.N_EXPECTED == 608 and SR.N_IF_D074 == 609
+    assert SR.BAR_FROZEN_608 == 3.2973 and SR.BAR_FROZEN_609 == 3.2978
+    assert SR.e_max_abs_z(609) > SR.e_max_abs_z(608) > SR.e_max_abs_z(607)
 
 
 def test_true_adv_split_correction():

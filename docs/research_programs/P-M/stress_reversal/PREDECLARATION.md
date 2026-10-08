@@ -90,14 +90,17 @@ drag forced selling out over days; a pass in E1 (2007–2020) only reads as deca
 ## 5. Pass bar and controls (frozen; all pass conditions must hold)
 
 1. **Strength:** mean R > 0 **and** t ≥ the frozen bar = `bar_v2.e_max_abs_z(N)`:
-   - **N = 604 is the expected freeze** (bar exact 3.295375 → **3.2954**): census ledger 601
-     (D-075 census note) + HYP-PM-0017's 2 arms, registered at the owner's approval of that G0 —
-     the submission gate for this study — + this G0's 1 arm (S1).
-   - **N = 605** (bar exact 3.295896 → **3.2959**) applies only if HYP-PM-0018 (D-074, tender
+   - **N = 608 is the expected freeze** (bar exact 3.297294 → **3.2973**; re-frozen
+     2026-10-08 at the moved ledger — was 604 / 3.2954): census ledger **605** (599 after
+     D-071/D-072 + the two exploratory arms of 2026-10-08 + the four NR7 post-mortem
+     entry-time comparisons of 2026-10-08) + HYP-PM-0017's 2 arms, registered at the owner's
+     approval of that G0 — the submission gate for this study — + this G0's 1 arm (S1).
+   - **N = 609** (bar exact 3.297758 → **3.2978**) applies only if HYP-PM-0018 (D-074, tender
      offers) registers before this one; its G0 is "NOT NOW" per the owner.
    - The final N is re-verified at submission and again at G1 against the ledger rows listed in
-     `CENSUS_G0.json: census.ledger_rows_counted` (D-071 §2). Ledger counted: 595 (D-071's nine
-     components) + 2 exploratory arms of 2026-10-08 + HYP-PM-0017's 2 arms + this arm.
+     `CENSUS_G0.json: census.ledger_rows_counted` (D-071 §2). Ledger counted: 599 (D-071/D-072)
+     + 2 exploratory arms of 2026-10-08 + 4 NR7 post-mortem comparisons of 2026-10-08
+     + HYP-PM-0017's 2 arms + this arm.
 2. **Both halves > 0:** E1 2007-01 → 2020-12 and E2 2021-07 →. Events from 2021-01..06 sit in
    the pooled test but in NEITHER half and are listed.
 3. **Next-day entry > 0:** R with entry at the close of t+1 and exit at the close of t+6.

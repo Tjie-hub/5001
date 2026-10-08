@@ -201,20 +201,22 @@
   }
  },
  "census": {
-  "ledger": 601,
+  "ledger": 605,
   "ledger_rows_counted": [
-   "D-071 ratified census N=595 (its 9 components)",
-   "2 exploratory arms run 2026-10-08 (A/D 'trap' check, volume-profile swing check), both null (D-075 census note)",
+   "599 after D-071/D-072 (D-071's ratified 595 in its 9 components + HYP-PM-0016's 4 configurations)",
+   "+2 exploratory arms run 2026-10-08 (A/D 'trap' check, volume-profile swing check), both null (D-075 census note)",
+   "+4 NR7 post-mortem entry-time comparisons run 2026-10-08 (gap size, stop distance in ATR, planned R:R, ADV; each across both halves with a permutation test)",
    "HYP-PM-0017's 2 arms (D1, D2) - G0 frozen 2026-10-08 on research/dividend-clientele-2026-10, registered at owner approval (the submission gate for this study)"
   ],
   "n_this_g0_arms": 1,
-  "N_expected": 604,
-  "bar_exact_604": 3.295427,
-  "bar_frozen_604": 3.2954,
-  "N_if_d074_registered_first": 605,
-  "bar_exact_605": 3.295895,
-  "bar_frozen_605": 3.2959,
-  "which": "604 is expected: this G0 submits only after HYP-PM-0017's registration (owner gate) and D-074's G0 is NOT NOW per the owner; 605 applies only if D-074 registers before this one. The final N is re-verified at submission and at G1 (D-071 section 2)."
+  "N_expected": 608,
+  "N_if_d074_registered_first": 609,
+  "which": "608 is expected: this G0 submits only after HYP-PM-0017's registration (owner gate) and D-074's G0 is NOT NOW per the owner; 609 applies only if D-074 registers before this one. The final N is re-verified at submission and at G1 (D-071 section 2).",
+  "bar_exact_608": 3.297294,
+  "bar_frozen_608": 3.2973,
+  "bar_exact_609": 3.297758,
+  "bar_frozen_609": 3.2978,
+  "refreeze_2026_10_08": "census ledger moved 601 -> 605 (+4 NR7 post-mortem entry-time comparisons, owner 2026-10-08); counts untouched, the census was NOT re-run; only the bar/N block (and the power block's bar-scaled MDEs) changed, updated in place to what the census script emits at the new constants; no outcome was read before or during the re-freeze"
  },
  "events": {
   "e1_days": 113,
@@ -409,14 +411,14 @@
    "median_member_daily_sigma": 0.03662942851267473,
    "median_stress_dispersion_multiplier": 0.434,
    "sigma_5_sessions": 0.035511040907445765,
-   "mde_at_bar604": 0.01725411245067039
+   "mde_at_bar608": 0.0172638876
   },
   "e2": {
    "n_events": 17,
    "median_member_daily_sigma": 0.047028807335183456,
    "median_stress_dispersion_multiplier": 0.308,
    "sigma_5_sessions": 0.032402488768321525,
-   "mde_at_bar604": 0.02589775067213582
+   "mde_at_bar608": 0.0259124229
   }
  },
  "preclose_1549": {

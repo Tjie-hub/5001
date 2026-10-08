@@ -175,7 +175,7 @@ def _power(panel: SR.Panel, evs: list[date]) -> dict:
     n = max(1, len(evs))
     return {"n_events": len(evs), "median_member_daily_sigma": sd,
             "median_stress_dispersion_multiplier": round(m, 3), "sigma_5_sessions": sigma5,
-            "mde_at_bar604": SR.BAR_FROZEN_604 * sigma5 / math.sqrt(n)}
+            "mde_at_bar608": SR.BAR_FROZEN_608 * sigma5 / math.sqrt(n)}
 
 
 def _fp(db_path: str) -> dict:
@@ -244,21 +244,25 @@ def census_g0(wf_db: str, hl_db: str) -> dict:
         "census": {
             "ledger": SR.CENSUS_LEDGER,
             "ledger_rows_counted": [
-                "D-071 ratified census N=595 (its 9 components)",
-                "2 exploratory arms run 2026-10-08 (A/D 'trap' check, volume-profile swing "
+                "599 after D-071/D-072 (D-071's ratified 595 in its 9 components "
+                "+ HYP-PM-0016's 4 configurations)",
+                "+2 exploratory arms run 2026-10-08 (A/D 'trap' check, volume-profile swing "
                 "check), both null (D-075 census note)",
+                "+4 NR7 post-mortem entry-time comparisons run 2026-10-08 (gap size, stop "
+                "distance in ATR, planned R:R, ADV; each across both halves with a "
+                "permutation test)",
                 "HYP-PM-0017's 2 arms (D1, D2) - G0 frozen 2026-10-08 on "
                 "research/dividend-clientele-2026-10, registered at owner approval (the "
                 "submission gate for this study)"],
             "n_this_g0_arms": 1,
             "N_expected": SR.N_EXPECTED,
-            "bar_exact_604": round(SR.BAR_EXACT_604, 6),
-            "bar_frozen_604": SR.BAR_FROZEN_604,
+            "bar_exact_608": round(SR.BAR_EXACT_608, 6),
+            "bar_frozen_608": SR.BAR_FROZEN_608,
             "N_if_d074_registered_first": SR.N_IF_D074,
-            "bar_exact_605": round(SR.BAR_EXACT_605, 6),
-            "bar_frozen_605": SR.BAR_FROZEN_605,
-            "which": "604 is expected: this G0 submits only after HYP-PM-0017's registration "
-                     "(owner gate) and D-074's G0 is NOT NOW per the owner; 605 applies only "
+            "bar_exact_609": round(SR.BAR_EXACT_609, 6),
+            "bar_frozen_609": SR.BAR_FROZEN_609,
+            "which": "608 is expected: this G0 submits only after HYP-PM-0017's registration "
+                     "(owner gate) and D-074's G0 is NOT NOW per the owner; 609 applies only "
                      "if D-074 registers before this one. The final N is re-verified at "
                      "submission and at G1 (D-071 section 2).",
         },
@@ -303,7 +307,7 @@ def main() -> None:
     print("agreement:", a["agree"], "/", a["union"], "flagged days; disagree rate", a["disagree_rate_union"])
     print("events: E1", out["events"]["e1_events"], "| E2", out["events"]["e2_events"],
           "| pooled", out["events"]["pooled_events"])
-    print("bar: N=604 ->", out["census"]["bar_frozen_604"], "(605 ->", out["census"]["bar_frozen_605"], ")")
+    print("bar: N=608 ->", out["census"]["bar_frozen_608"], "(609 ->", out["census"]["bar_frozen_609"], ")")
     print("preclose 15:49:", out["preclose_1549"]["agree"], "agree /", out["preclose_1549"]["disagree"],
           "disagree over", out["preclose_1549"]["days"], "days")
 
