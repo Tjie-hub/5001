@@ -1,0 +1,159 @@
+{
+ "generated_utc": "2026-10-08T08:50:15.310146+00:00",
+ "mode": "G1",
+ "gate": "DIVIDEND_G1_APPROVED",
+ "snapshot": {
+  "path": "/home/tjiesar/scratch/g0_snapshots_2026-10-08/walkforward_snapshot_2026-10-08.db",
+  "sha256": "a2d7e675e5c66387446b888287ebbe7cef563b278c48f1518a88c797bc4bbc47",
+  "dataset_fingerprint": {
+   "max_date": "2026-10-07",
+   "total_rows": 1102829,
+   "sha256": "9c26e0df2fdd4e4bec378ff9d38b4d4ccbbdeaa9a6176ca71b3fdb955f137c03"
+  },
+  "matches_census": true
+ },
+ "census_n": 607,
+ "bar_frozen": 3.2968,
+ "runs": {
+  "D1": {
+   "n": 547,
+   "mean": -0.005119816915384018,
+   "median": -0.009828165848986709,
+   "win_rate": 0.42230347349177333,
+   "t_month": -0.9272618701384396,
+   "t_two_way_cluster": -1.900707951099789,
+   "primary_t": -1.900707951099789,
+   "bar": 3.2968,
+   "half1_n": 223,
+   "half1_mean": -0.003162797583292476,
+   "half2_n": 324,
+   "half2_mean": -0.006466777751977887,
+   "decile_n": 534,
+   "decile_mean": -0.004384181625566893,
+   "pass_strength": false,
+   "pass_halves": false,
+   "pass_decile": false,
+   "year_table": {
+    "2021": {
+     "n": 19,
+     "mean": 0.022654943501586287
+    },
+    "2022": {
+     "n": 105,
+     "mean": 2.7766667108390455e-05
+    },
+    "2023": {
+     "n": 99,
+     "mean": -0.011501649370209525
+    },
+    "2024": {
+     "n": 102,
+     "mean": -0.005493941244761831
+    },
+    "2025": {
+     "n": 116,
+     "mean": -0.007100303986703103
+    },
+    "2026": {
+     "n": 106,
+     "mean": -0.006709610586958195
+    }
+   },
+   "agm_season": {
+    "may_jul_n": 334,
+    "may_jul_mean": -0.007721474979609375,
+    "rest_n": 213,
+    "rest_mean": -0.0010402216409649123
+   },
+   "foreign_ownership_proxy": "none PIT; not reported",
+   "pass": false
+  },
+  "D2": {
+   "n": 324,
+   "mean": 0.013309528211054198,
+   "median": 0.0003568912126481314,
+   "win_rate": 0.5185185185185185,
+   "t_month": 2.0229498368197993,
+   "t_two_way_cluster": 1.8093249841931012,
+   "primary_t": 1.8093249841931012,
+   "bar": 3.2968,
+   "half1_n": 128,
+   "half1_mean": 0.03665150021592233,
+   "half2_n": 196,
+   "half2_mean": -0.0019342086084515248,
+   "decile_n": 320,
+   "decile_mean": 0.013785668892056065,
+   "pass_strength": false,
+   "pass_halves": false,
+   "pass_decile": true,
+   "year_table": {
+    "2021": {
+     "n": 7,
+     "mean": 0.10299246985401216
+    },
+    "2022": {
+     "n": 61,
+     "mean": 0.01871438515943667
+    },
+    "2023": {
+     "n": 60,
+     "mean": 0.04714778739890561
+    },
+    "2024": {
+     "n": 60,
+     "mean": 0.0036945373700725233
+    },
+    "2025": {
+     "n": 78,
+     "mean": -0.005469556510722791
+    },
+    "2026": {
+     "n": 58,
+     "mean": -0.0030026158900771137
+    }
+   },
+   "agm_season": {
+    "may_jul_n": 185,
+    "may_jul_mean": 0.014889268679150088,
+    "rest_n": 139,
+    "rest_mean": 0.011206995933372623
+   },
+   "foreign_ownership_proxy": "none PIT; not reported",
+   "window_distribution": {
+    "3": 13,
+    "4": 26,
+    "5": 474,
+    "6": 4,
+    "7": 3,
+    "9": 1,
+    "10": 26
+   },
+   "not_top_tercile_only": true,
+   "pass": false,
+   "extras": {
+    "gross_mean": 0.019958357068412907,
+    "drop_ratio_median": 0.6947491589878602,
+    "drop_ratio_iqr": [
+     0.43850458387903324,
+     0.8553362573099415
+    ],
+    "yield_terciles": {
+     "t1": {
+      "n": 108,
+      "mean": 0.0008601260703740969
+     },
+     "t2": {
+      "n": 108,
+      "mean": 0.003330000679098815
+     },
+     "t3": {
+      "n": 108,
+      "mean": 0.03573845788368968
+     }
+    },
+    "lower_two_terciles_mean": 0.0020950633747364557
+   }
+  }
+ },
+ "runtime_minutes": 95.8
+}
