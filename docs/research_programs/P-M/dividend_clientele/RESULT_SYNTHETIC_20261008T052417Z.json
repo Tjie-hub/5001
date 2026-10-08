@@ -1,0 +1,112 @@
+{
+ "generated_utc": "2026-10-08T05:24:17.253330+00:00",
+ "mode": "synthetic",
+ "gate": "none (--synthetic)",
+ "snapshot": {
+  "mode": "synthetic",
+  "dataset_fingerprint": {
+   "max_date": "2024-01-29",
+   "total_rows": 5460,
+   "sha256": "65c62a011a15b4ca60e335fb400c11fabd5a5977ad15be406cac2df0c9082c11"
+  }
+ },
+ "census_n": 603,
+ "bar_frozen": 3.295,
+ "runs": {
+  "D1": {
+   "n": 2,
+   "mean": -0.006,
+   "median": -0.006,
+   "win_rate": 0.0,
+   "t_month": NaN,
+   "t_two_way_cluster": -6000000000.0,
+   "primary_t": NaN,
+   "bar": 3.295,
+   "half1_n": 0,
+   "half1_mean": NaN,
+   "half2_n": 2,
+   "half2_mean": -0.006,
+   "decile_n": 2,
+   "decile_mean": -0.006,
+   "pass_strength": false,
+   "pass_halves": false,
+   "pass_decile": false,
+   "year_table": {
+    "2024": {
+     "n": 2,
+     "mean": -0.006
+    }
+   },
+   "agm_season": {
+    "may_jul_n": 0,
+    "may_jul_mean": null,
+    "rest_n": 2,
+    "rest_mean": -0.006
+   },
+   "foreign_ownership_proxy": "none PIT; not reported",
+   "pass": false
+  },
+  "D2": {
+   "n": 3,
+   "mean": 0.02265853658536585,
+   "median": 0.036317073170731705,
+   "win_rate": 0.6666666666666666,
+   "t_month": NaN,
+   "t_two_way_cluster": 22658536585.36585,
+   "primary_t": NaN,
+   "bar": 3.295,
+   "half1_n": 0,
+   "half1_mean": NaN,
+   "half2_n": 3,
+   "half2_mean": 0.02265853658536585,
+   "decile_n": 3,
+   "decile_mean": 0.02265853658536585,
+   "pass_strength": false,
+   "pass_halves": false,
+   "pass_decile": true,
+   "year_table": {
+    "2024": {
+     "n": 3,
+     "mean": 0.02265853658536585
+    }
+   },
+   "agm_season": {
+    "may_jul_n": 0,
+    "may_jul_mean": null,
+    "rest_n": 3,
+    "rest_mean": 0.02265853658536585
+   },
+   "foreign_ownership_proxy": "none PIT; not reported",
+   "window_distribution": {
+    "4": 1,
+    "10": 1
+   },
+   "not_top_tercile_only": true,
+   "pass": false,
+   "extras": {
+    "gross_mean": 0.02765853658536585,
+    "drop_ratio_median": 0.0,
+    "drop_ratio_iqr": [
+     0.0,
+     0.4
+    ],
+    "yield_terciles": {
+     "t1": {
+      "n": 0,
+      "mean": null
+     },
+     "t2": {
+      "n": 3,
+      "mean": 0.02265853658536585
+     },
+     "t3": {
+      "n": 0,
+      "mean": null
+     }
+    },
+    "lower_two_terciles_mean": 0.02265853658536585
+   }
+  }
+ },
+ "runtime_minutes": 0.0
+}

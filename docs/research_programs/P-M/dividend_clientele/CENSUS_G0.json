@@ -1,0 +1,220 @@
+{
+ "rule": "COUNTS ONLY: no return after any event's entry/cum close was computed, printed or stored (D-070 rule 1; PREDECLARATION \u00a79)",
+ "snapshot": {
+  "path": "/home/tjiesar/scratch/g0_snapshots_2026-10-08/walkforward_snapshot_2026-10-08.db",
+  "sha256": "a2d7e675e5c66387446b888287ebbe7cef563b278c48f1518a88c797bc4bbc47",
+  "dataset_fingerprint": {
+   "max_date": "2026-10-07",
+   "total_rows": 1102829,
+   "sha256": "9c26e0df2fdd4e4bec378ff9d38b4d4ccbbdeaa9a6176ca71b3fdb955f137c03"
+  }
+ },
+ "census": {
+  "ledger": 601,
+  "ledger_rows_counted": [
+   "D-071 ratified census N=595 (its 9 components)",
+   "2 exploratory arms run 2026-10-08 (A/D 'trap' check, volume-profile swing check), both null (D-075 census note)"
+  ],
+  "n_this_g0_arms": 2,
+  "N": 603,
+  "bar_exact": 3.294959,
+  "bar_frozen": 3.295
+ },
+ "dividend_rows": {
+  "n_rows": 4764,
+  "n_dup_id": 0,
+  "n_bad_currency": 0,
+  "n_value_le_0": 2,
+  "n_missing_dates": 0,
+  "n_ex_le_cum": 0
+ },
+ "events_merged": {
+  "n_rows": 4762,
+  "n_events_merged": 4758,
+  "drops": {
+   "cum_not_session": 2614,
+   "ex_mismatch": 1,
+   "ca_in_window": 14,
+   "missing_bar_cum": 0,
+   "missing_bar_ex": 0,
+   "foru": 0,
+   "not_liquid": 1567
+  },
+  "n_liquid": 562
+ },
+ "created": {
+  "per_year": {
+   "2015": 151,
+   "2016": 218,
+   "2017": 261,
+   "2018": 1322,
+   "2019": 263,
+   "2020": 237,
+   "2021": 281,
+   "2022": 348,
+   "2023": 396,
+   "2024": 429,
+   "2025": 453,
+   "2026": 403
+  },
+  "top_shared_dates": [
+   [
+    "2018-07-17",
+    1061
+   ],
+   [
+    "2015-07-28",
+    134
+   ],
+   [
+    "2021-09-23",
+    25
+   ],
+   [
+    "2023-06-26",
+    18
+   ],
+   [
+    "2024-06-19",
+    17
+   ],
+   [
+    "2019-07-08",
+    16
+   ],
+   [
+    "2025-06-12",
+    16
+   ],
+   [
+    "2026-06-26",
+    15
+   ],
+   [
+    "2026-05-25",
+    15
+   ],
+   [
+    "2026-06-11",
+    14
+   ]
+  ],
+  "artefact_tally": {
+   "created_missing": 0,
+   "created_ge_exdate": 2302,
+   "created_bulk_load": 0,
+   "usable": 2460
+  },
+  "usable_created_lt_cum": 2428
+ },
+ "rups": {
+  "tickers": 951,
+  "earliest": "2013-06-11",
+  "anchor_gaps_cal_days_p25_p50_p75": [
+   8,
+   10,
+   12
+  ],
+  "created_gap_cal_days_p25_p50_p75": [
+   5,
+   7,
+   8
+  ]
+ },
+ "liquid_events": {
+  "n": 562,
+  "per_year": {
+   "2021": 25,
+   "2022": 108,
+   "2023": 104,
+   "2024": 103,
+   "2025": 116,
+   "2026": 106
+  },
+  "halves": {
+   "h1_le_2023_12_31": 237,
+   "h2_ge_2024_01_01": 325
+  },
+  "agm_season_share": 0.605,
+  "park_decile_distribution": {
+   "1": 93,
+   "2": 66,
+   "3": 79,
+   "4": 60,
+   "5": 58,
+   "6": 57,
+   "7": 51,
+   "8": 33,
+   "9": 16,
+   "10": 30
+  }
+ },
+ "d1": {
+  "n_final": 547,
+  "n_no_entry_bar": 0,
+  "n_no_anchor": 0,
+  "n_short_window": 15,
+  "anchor_rups_only": 9,
+  "anchor_created_only": 125,
+  "anchor_both": 428,
+  "window_distribution": {
+   "3": 13,
+   "4": 26,
+   "5": 474,
+   "6": 4,
+   "7": 3,
+   "9": 1,
+   "10": 26
+  },
+  "per_year": {
+   "2021": 19,
+   "2022": 105,
+   "2023": 99,
+   "2024": 102,
+   "2025": 116,
+   "2026": 106
+  },
+  "halves": {
+   "h1_le_2023_12_31": 223,
+   "h2_ge_2024_01_01": 324
+  }
+ },
+ "d2": {
+  "n_yield_ge_2pct": 324,
+  "n_yield_undefined": 0,
+  "yield_tercile_edges": [
+   0.03482587064676617,
+   0.062348178137651825
+  ],
+  "per_year": {
+   "2021": 7,
+   "2022": 61,
+   "2023": 60,
+   "2024": 60,
+   "2025": 78,
+   "2026": 58
+  },
+  "halves": {
+   "h1_le_2023_12_31": 128,
+   "h2_ge_2024_01_01": 196
+  }
+ },
+ "power": {
+  "bar_frozen": 3.295,
+  "d1": {
+   "n": 547,
+   "median_window_sessions": 5.0,
+   "sigma_daily_median": 0.02629127572278724,
+   "mde_independent": 0.008282338216223154,
+   "n_months": 56,
+   "mde_month_clustered": 0.025885264734623728
+  },
+  "d2": {
+   "n": 324,
+   "sigma_overnight_median": 0.009180161102614924,
+   "mde_independent": 0.0016804583777369484
+  }
+ },
+ "generated_utc": "2026-10-08T05:15:53.313208+00:00",
+ "runtime_minutes": 2.0
+}
