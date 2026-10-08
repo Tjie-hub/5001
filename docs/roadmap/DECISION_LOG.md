@@ -2671,6 +2671,57 @@ close was computed.
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-076 · HYP-PM-0017 (dividend clientele) registered in {SE}, G0 frozen at N=607; census ledger 605 (supersedes D-075's census note)
+**Status:** RECORDED · **Date:** 2026-10-08 · **Type:** Registration + G0 freeze + census correction ·
+**Approval authority:** Owner, 2026-10-08: "approve D-073". The G0 is branch
+`research/dividend-clientele-2026-10` @ `0309cc6`, which re-freezes the first G0 `97eeb9b`.
+
+- **Why admitted.** D-073 accepted the dividend-clientele mechanism (D-070 §1). This is the first
+  registration in {SE}.
+- **Family.** **{SE} Structural-event forced flow**, a new family opened at this registration (D-028,
+  PG-3), slot **1**. Its scope is contractual or calendar corporate events that force or attract flow:
+  dividends (D-073), tender offers (D-074), and later index and lock-up events, if admitted. It is
+  denominated separately from the price families. Its multiplicity is carried at program level in the
+  census, so the separate family loosens no bar. It may be widened by formal amendment, never narrowed
+  or split.
+- **Census (supersedes D-075's census note).** The ledger is **605**:
+  - 599 after D-071/D-072
+  - + 2 exploratory arms on 2026-10-08: the A/D "trap" check and the volume-profile swing check
+  - + 4 exploratory arms on 2026-10-08: the NR7 post-mortem's winner-vs-loser entry-time comparisons
+    (gap, stop distance in ATR, planned R:R and ADV, each checked across halves with a permutation
+    test; all inconsistent, permutation p 0.26–1.00)
+
+  This registration adds **2** arms, making **607**. The frozen primary bar is **3.2968** (exact
+  `e_max_abs_z(607)` = 3.296828). The first G0 froze at 603 (3.2950) under D-075's count. It was
+  re-frozen before approval; no outcome was read, and only N and the bar changed.
+  - Consequences: the D-075 G0 freezes at **608** (3.2973), or **609** (3.2978) if D-074's G0 registers
+    first. D-074's G0 would be 608 if it came first. All are recomputed exactly at each G0 (D-071 §2).
+- **Study (frozen).** PREDECLARATION sha256 `50c91491…` (the sidecar covers the predeclaration, drivers,
+  synthetic fixture and PIT tests).
+  - **D1, pre-cum demand:** n = 547. The window starts at the anchor and ends at cum; it runs 3–10
+    sessions, with a median of 5. The anchor is the earlier of:
+    - the latest `rups_date` 1–90 calendar days before cum
+    - a non-artefact `dividend_created`, where an artefact is a `created` on or after the ex-date, or a
+      `created` date shared by more than 50 rows
+  - **D2, ex-day capture:** events with yield ≥ 2%, n = 324; tercile edges 3.48% / 6.23%.
+  - **Benchmark:** outcomes are measured against the total-return EW liquid book, net of the 0.60%
+    round trip. A Parkinson-60-decile-matched book is the control.
+  - **Primary t:** min(month-mean t, two-way cluster t).
+  - **Halves:** cum ≤ 2023-12-31 and cum ≥ 2024-01-01; both must be > 0.
+  - **D2** must also pass at the 0.9 tax factor, and not in the top tercile alone.
+  - **Era:** the 5001 panel starts 2021-07-05, so the study is effectively 2021-07+. 562 liquid events;
+    2,603 earlier events can't map to a session.
+  - **Power:** the minimum detectable effect is 2.59% for D1 (a null is likely, as predeclared) and
+    0.17% for D2.
+- **Data.** The walkforward snapshot sha256 is `a2d7e675…`, with its dataset fingerprint in
+  `CENSUS_G0.json`. G1 verifies both before reading any outcome.
+- **G1.** One run with `DIVIDEND_G1_APPROVED=1`, then RESULT, VERDICT and HANDOFF, then STOP. A null is a
+  useful, predeclared outcome (D-073's honest prior).
+- **Forward test.** Only if an arm passes: new liquid dividends after the G1 date, under the frozen rules,
+  recorded at cum and ex. The host would be the D-064 ex-date monitor lineage, gated by the owner.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
