@@ -2,7 +2,7 @@
 
 > The institutional repository of falsified hypotheses and failed experiments ([[FAILURE_LIBRARY_SCHEMA]]). **Append-only and immutable** — a failure entry is never edited or deleted (HL-1, R12). Preserving negative results maps the boundaries of market efficiency and keeps the family denominator honest (OS-10). A refutation is a first-class product (PG-11), not a defect.
 
-**Owner:** Chief Research Officer · **Last updated:** 2026-09-29 · **Governed by:** [[FAILURE_LIBRARY_SCHEMA]] · [[HYPOTHESIS_LIFECYCLE]]
+**Owner:** Chief Research Officer · **Last updated:** 2026-10-08 · **Governed by:** [[FAILURE_LIBRARY_SCHEMA]] · [[HYPOTHESIS_LIFECYCLE]]
 
 ## Entries
 
@@ -16,13 +16,14 @@
 | **FAIL-PM-0009** | HYP-PM-0009 | M2 · information / adverse selection — **I7 intraday execution timing** (v004 PIT cohort, `stockbit_flow_bars`) | EXP-PM-0009/R2 (`run_utc` 2026-09-15T01:41:30Z · script sha256 `d2e7a9a2…`) | **F2 · Prediction failure** — kill rule not met: primary k=1 θ_primary = +0.0337%/day, NW HAC t (lag 5) = 0.1102, two-sided p = 0.912223, 64 daily observations; θ_net sensitivity −0.5663% (sensitivity only). **NO POWER CLAIM (D-050): non-rejection is NOT evidence of absence.** R7 PIT provenance limitation retained | 2026-09-15 | [[FAILURE_ENTRY]] (in `experiments/EXP-PM-0009/`) · `MANIFEST.md` · DECISION_LOG D-050/D-051 |
 | **FAIL-PM-0007** | HYP-PM-0007 | Broker-flow imbalance baseline (BFI-001 / research.db `BROKER-001`) | `10_execute_bfi001` (run 2026-09-03 · `90_results.json`) | **INVALID · data** — primary BFI_broad = NV/GV identity-attenuated (\|NV/GV\| p90 0.00201, p99 0.0146, max 0.060, P(≥0.2)=0); structure secondaries VALID → NOT CONFIRMED (CONC t −2.65 Holm 0.097; BREADTH t +2.41, LOKAL t +2.43, Holm 0.164) | 2026-09-29 (alias ratified; outcome owner-ratified 2026-09-11) | DECISION_LOG D-063 · EXPERIMENT_LEDGER `BROKER-001` |
 | **FAIL-PM-0015** | HYP-PM-0015 | Price-Learning {L1} · learned cross-sectional rank of 14 OHLCV/volume feature ranks (ridge / shallow HistGBR) vs baseline M0 (low Parkinson-60 + 12-1 momentum) | G1 single run `run_id 167749f2…` (`RESULT_20261006T090908Z.json`, commit `f4a84df`, driver sha256 `47752c25…`) | **F2 · Prediction failure** | 2026-10-06 | [[ml_rank/VERDICT]] · [[ml_rank/PREDECLARATION]] |
+| **FAIL-PM-0016** | HYP-PM-0016 | Price-Learning {L1} · sniper setup filter (meta-label on the owner's E-SN entry; M0 low-vol + momentum, M1 logistic, M2 HistGBR) | G1 single run `RESULT_20261007T090305Z.json` (commit `b9e5e5b`, PREDECLARATION sha256 `aa68e12e…`, fingerprint `f42275e3…`) | **F2 · Prediction failure** — best NW t +0.23 vs 3.2931; selected mean R < 0 for all configs | 2026-10-08 | [[sniper_filter/VERDICT]] · [[sniper_filter/PREDECLARATION]] · D-072 |
 
 ## Failure-mode distribution (institutional self-diagnostic — §5.3)
 
 | Mode | Count | Note |
 |---|---|---|
 | F1 Mechanistic incoherence | 0 | |
-| **F2 Prediction failure** | **5** | FAIL-PM-0001, FAIL-PM-0003, FAIL-PA-0001, FAIL-PM-0009, FAIL-PM-0015 |
+| **F2 Prediction failure** | **6** | FAIL-PM-0001, FAIL-PM-0003, FAIL-PA-0001, FAIL-PM-0009, FAIL-PM-0015, FAIL-PM-0016 |
 | F3 Multiplicity collapse | 0 | |
 | F4 Cost destruction | 0 | |
 | F5 Regime artifact | 0 | |

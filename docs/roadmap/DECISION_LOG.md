@@ -2343,6 +2343,112 @@ neither predicts a price pattern.
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-071 · Research census ratified at N = 595 under the stricter count; deflation bar ≈ 3.29 for new gates (2026-10-08)
+**Status:** RECORDED · **Date:** 2026-10-08 · **Type:** Governance (multiplicity census) ·
+**Approval authority:** Owner, 2026-10-07, "use 3.28 as primary bar" (the stricter recount
+governs) and "sniper 3.29"; filed on "file both" 2026-10-08. Draft:
+`DECISION_DRAFT_CENSUS_RATIFICATION_2026-10-07.md` (`2937488`, edited `5f8798a`).
+
+**Context.**
+
+- **Two counts in circulation.** The recorded census was **276**: D-064's 266, plus XP-001's 4
+  arms, plus HYP-PM-0015's 6 configurations (D-067). Its bar is ≈ 3.07.
+- **The recount.** The 2026-10-05 broad-search-v2 recount (`origin/research/broad-search-v2-zcode`,
+  `P-M/broad_search_v2/recount/RECOUNT_W0_2026-10-05.md` and `CENSUS_NOTE.md`) counted studies the
+  recorded census never included: 245 script-countable trials from the 2026-09-24/25 chart-pattern
+  studies (13 artifacts in `Claude outputs/`, checksummed in place); the double-top study at its
+  upper bound, +20; a +20 placeholder for the gap-market microstructure battery (no surviving
+  scripts); X1's 6 arms. That gave N = 561, bar 3.2745, never ratified.
+- **The recount missed three items:** HYP-PM-0015's 6 configurations (it started from 270, not
+  276); the 2026-10-06 BOS / trendline-break study, 8 tests (`Claude outputs/bos_study_2026-10-06/
+  bos_study.py`); the 2026-10-07 exit / position-management study, 10 non-baseline arms × 2 entry
+  populations = **20** at the upper bound (10 if the random-entry control counted 0; the upper
+  bound is taken per REVIEW_R1 §1, where over-counting only raises the bar).
+- Descriptive statistics count 0 (no trading-rule return statistic): the owner's chart questions
+  and the 2026-10-07 opening-minutes volatility profile.
+
+**Decision.**
+
+1. **The census is ratified at N = 595:**
+
+   | Component | Trials |
+   |---|---|
+   | Recorded at D-064 / XP-001 | 270 |
+   | 2026-09-24/25 pattern studies | 245 |
+   | Double-top study (upper bound) | 20 |
+   | Gap-battery placeholder | 20 |
+   | X1 | 6 |
+   | HYP-PM-0015 | 6 |
+   | BOS / trendline-break | 8 |
+   | Exit study (upper bound) | 20 |
+   | **Total** | **595** |
+
+   This supersedes the 276 count for every gate from this date. The bar is the exact two-sided
+   E[max|Z|] (`deflation_audit/bar_v2.py`): **3.2912 at N = 595**.
+2. **Each new gate freezes its bar at the census + its own configurations**, computed exactly at
+   G0. HYP-PM-0016's 4 configurations gave N = 599, bar **3.2931** (D-072); the census after D-072
+   is **599**. Bars computed under the 276 count (≈ 3.07) may be reported as a secondary line only,
+   and no configuration passes on them.
+3. **Nothing recorded as dead revives** (the bar only rose). The survivor re-reads of RECOUNT_W0 §4
+   stand: FADE avoidance vs the EW book (|Z| 4.4) clears; T1-D (3.84) and S2 / {LC} (3.66) clear,
+   with S2 era-concentrated and {LC} unopened per D-064 §B. **FADE avoidance vs the IHSG calendar
+   (3.13) no longer clears.** FWD-PM-FADE-001 continues unchanged (Research Master Plan §3.2e) and
+   is judged on its own frozen protocol, not on this bar.
+4. **The two placeholder lines** (double top at its upper bound, gap-battery +20) stay until their
+   trials are reconstructed from session records. Reconstruction may only replace a placeholder
+   with an exact count at or above its value; a lower count needs its own superseding entry with
+   evidence.
+5. **Exploratory studies count from now on.** An exploratory study with a reported return
+   statistic enters the census when it is run, registered or not: filed in `CENSUS_UPDATE.md`, with
+   its script committed or checksummed, in the same session. This closes the F-1 gap that left 300+
+   trials uncounted.
+
+**Owner choice recorded:** the exit study is counted at its upper bound, 20 (the draft default;
+counting 10 would give N = 585, bar 3.286, a negligible difference).
+
+**Multiplicity.** No family is narrowed (D-028). Hypotheses keep their family counts (X8). This
+entry only raises the program-wide census, which is append-only and monotonic. No wall-clock decay
+(invariant 12).
+
+**Amendment.** Only by a superseding D-entry.
+
+### D-072 · HYP-PM-0016 (sniper setup filter) registered in {L1}, G0 frozen, G1 NULL — FAILED (F2)
+**Status:** RECORDED · **Date:** 2026-10-08 · **Type:** Registration + G0 freeze + result filing
+(predeclared null handling) · **Approval authority:** Owner, 2026-10-07: "yes, do both" (brief
+`ZCODE_BRIEF_SNIPER_FILTER_2026-10-07.md` as overridden by `ZCODE_NEXT_TASKS_2026-10-07.md`
+`7ccb15d`); pre-approval Revisions 1 and 2 (`3f2da64`, `5f8798a`); "sniper 3.29"; G1 approval of
+Revision 2; filed on "file both" 2026-10-08. Branch `research/sniper-filter-2026-10`.
+
+- **Why admitted.** D-070 §2 names HYP-PM-0016 as the last admitted price-feature study: it filters
+  an existing owner entry rule (meta-labelling; the entry stays) and its pre-registered baseline is
+  a risk measure (low volatility).
+- **Family.** Price-Learning **{L1}** (D-067), slot **2**; inherits {L1}'s multiplicity. Census
+  595 + 4 configurations = **599**; frozen primary bar **3.2931** (exact E[max|Z|]); 3.0713 at the
+  old 280 count reported as a secondary line only.
+- **Study (frozen).** One G1 walk-forward on the exit study's filled E-SN sniper setups (3,682;
+  outcome = the frozen X1 net R): 10 setup-day features, each ranked over the trailing 250 sessions
+  of strictly-earlier, already-filled setups; M0 = low Parkinson-60 + 126-session momentum rank
+  mean; M1 = L2 logistic (C ∈ {0.1, 10}, chosen on validation); M2 = shallow HistGBR; selection =
+  top 40% of scores. Train 2001–2015-12, validation 2016-01..2021-09, test 2021-10.. read once.
+  Pass: NW t ≥ 3.2931 on the selected-minus-all monthly R difference, selected mean R > 0, both
+  halves > 0, M1/M2 beat M0 at paired t ≥ 2, PBO < 0.5.
+- **Freeze.** G0 `72b4bd5`, Revision 1 `b3dd0bc`, Revision 2 `d261260` (disclosed pre-approval
+  revisions, no outcome read). PREDECLARATION sha256 `aa68e12e…`; sidecar verified at run time;
+  snapshot sha256 `c42c151e…`, dataset fingerprint `f42275e3…` (zero drift) checked before any
+  outcome.
+- **Result** (`RESULT_20261007T090305Z.json`, commit `b9e5e5b`, single run). Test n = 1,429,
+  all-setups mean −0.043R. No configuration passes: best NW t +0.23 (M2) vs 3.2931; selected mean R
+  negative everywhere (M1b −0.010R, M2 −0.029R, M0 −0.124R, the worst); first half negative for
+  all. M1b/M2 beat M0 (paired t 2.43 / 2.12). PBO 0.461.
+- **Filing.** HYP-PM-0016 → **FAILED (F2)**, FAILURE_REGISTRY **FAIL-PM-0016**. No forward test is
+  built (predeclaration §8 applies only if a model passes). {L1} slot count 2 (X8). With this
+  entry the daily price-feature search is closed in full (D-070).
+- **Reading for the program:** filtering the owner's sniper entry by price/volume features does not
+  produce profitable trades in 2021-10..2026-09; the HYP-PM-0015 low-vol + momentum lesson does not
+  transfer to this entry (it selected the worst setups).
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
