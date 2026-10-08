@@ -2587,6 +2587,92 @@ D-073's (draft @ `468fe8c`).
 
 ---
 
+### D-075 · Mechanism accepted: market-stress reversal (liquidity provision to forced sellers); one beta-adjusted arm; census ledger 601 (2026-10-08)
+**Status:** RECORDED · **Date:** 2026-10-08 · **Type:** Mechanism acceptance (D-070 §1) plus a census
+note. No registration and no G0 yet. · **Approval authority:** Owner, 2026-10-08: "go with
+recommendations, file it" (draft `DECISION_DRAFT_MECHANISM_MARKET_STRESS_REVERSAL_2026-10-08.md` @
+`8de96d9`). The planner's pre-event facts used **pre-event data only**; no return after any stress day's
+close was computed.
+
+- **Why.**
+  - Price-only reversal on IDX is exhausted and negative: S1-PM-0006, the 2026-09-17 pattern scan
+    (HYP-PM-0012), the exhaustion and confirmed-bottom grids, the chart-bottom studies, the factor-zoo
+    short-horizon reversal, HYP-PM-0001 and HYP-PA-0001.
+  - The literature places reversal profit in liquidity provision to forced sellers, largest when liquidity
+    is scarce (Nagel 2012, RFS). The surviving IDX reversal (HYP-PM-0014, big-4 bank 2-ATR climax low) fits
+    that reading.
+  - This entry admits a direct test on market-wide stress days.
+- **Mechanism.** On market-wide stress days, selling is driven by balance sheets more than by news: margin
+  calls and deleveraging, stop-outs, foreign outflows, redemptions.
+  - IDX concentrates this: heavy retail margin, ARB limits that spread the selling over sessions, and short
+    selling that is barely available.
+  - The stocks that fell most fell partly for reasons unrelated to value. Liquidity supplied that day earns a
+    premium, which shows as a partial reversal.
+  - Conditioning on market stress selects the days when large falls are forced. Most large falls are not
+    forced, which is why price-only reversal fails.
+- **Prediction (direction declared).** On a stress day t, the liquid names with the largest day-t falls
+  outperform over the next 5 sessions, beta-adjusted and net of cost.
+- **Pre-event facts (planner).**
+  - **Stress day:** the EW liquid return (ADV20 ≥ Rp 10bn, known on t−1) is ≤ **−2.5 ×** its trailing
+    250-session standard deviation (known before t).
+  - **Counts:**
+    - long panel `data/history_long.db` (at least 30 liquid names from 2005-01-31): **105 days / 63
+      episodes**, 2007 → 2026, spread across years
+    - 5001 panel 2021-07+: 32 days / 21 episodes
+    - A fixed −2.5% threshold is regime-biased: 30 of its 47 days since 2021 fall in 2026.
+  - **Universe:** liquid names per day, median 137 (5001 panel) and 70 (long panel). The bottom-quintile
+    basket is about 14–27 names.
+  - **Power:** MDE ≈ 0.8–1.3% over 5 sessions at n = 63 (planner approximation; the G0 recomputes it from
+    pre-event dispersion).
+- **Decision.**
+  1. **Mechanism accepted** as liquidity provision under forced selling (D-070 §1).
+  2. **Design limits for the G0** (the G0 freezes the details):
+     - **Event:** the first stress day of each episode. A new episode needs more than 5 sessions without a
+       stress day. The threshold is **−2.5σ, fixed now** (owner).
+     - **One tested arm, S1 (owner: S1 only):**
+       - Basket: an equal-weight portfolio of the liquid names in the bottom quintile of day-t return.
+         Exclude zero-volume ARB names.
+       - Entry: the close of t. Exit: the close of t+5.
+       - Outcome: basket − β × EW liquid market (β = trailing-250, known before t), net of the D-059
+         modelled cost per name.
+     - **Report only (not tested):** the market-level rebound (S2); later-in-episode stress days; horizons 1,
+       10 and 20.
+     - **Entry-timing check (required):** the 15:49 pre-close agreement rate from 2025+ minute bars, which is
+       a pre-event fact. S1 must also be > 0 with entry at the close of t+1.
+     - **Inference:** one observation per episode. Halves E1 2007 → 2020 (long panel) and E2 2021-07 →
+       (5001 panel) must both be > 0.
+     - **Required controls:** a Parkinson-60-decile-matched book (VOLEX {V}, D-062); excluding the big-4 banks
+       (HYP-PM-0014); excluding names with an ex-date inside the window.
+     - **The G0 must disclose:**
+       - `history_long` provenance, adjustment and survivorship
+       - the nominal ADV floor across 2007–2026
+       - the panel's earlier VOLEX out-of-sample use, which asked a different question
+  3. **Honest prior:** NULL is likely if IDX stress selling continues for days, which ARB makes plausible. A
+     pass in E1 only reads as decayed.
+- **Falsification.** Any one of these:
+  - the S1 beta-adjusted net mean is ≤ 0 or below the frozen bar
+  - a sign flip across the halves
+  - positive only at close-t entry
+  - explained by the Parkinson-matched control
+- **Family (owner).** **Price-Reversal {R1, R2} → {R1, R2, R3}**, widened by formal amendment at the G0
+  registration (D-028, PG-3/PG-6). The feature space is still a price reversal, with HYP-PM-0014 as its
+  closest relative. A new family was declined because it would escape the reversal family's count. Order:
+  G0 after D-073's (owner).
+- **Census note.**
+  - The census ledger stands at **601**: D-071/D-072's 599 plus two exploratory arms run 2026-10-08, the A/D
+    "trap" check and the volume-profile swing check, both null.
+  - Consequences:
+    - D-073's G0 freezes at **603** (bar 3.2950), not 601.
+    - D-074's at 604 (3.2954).
+    - This arm at 605 (about 3.2959) if its G0 is third.
+  - All are recomputed exactly at each G0 (D-071 §2).
+  - The 2026-10-08 audit of production screens against the market is **not** counted as an arm: it
+    evaluated existing outputs and selected nothing.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

@@ -1,6 +1,6 @@
 # DECISION_LOG draft: mechanism acceptance for market-stress reversal (liquidity provision) (2026-10-08)
 
-**Status:** DRAFT. Not filed.
+**Status:** FILED 2026-10-08 as **D-075**. Owner took all four recommendations: widen the family to {R1, R2, R3}, test S1 only, threshold −2.5σ, G0 after D-073. The filed text governs.
 **Filing:** append to `docs/roadmap/DECISION_LOG.md` on `ops/hardening-2026-07-10` under the next free number
 (expected **D-075**, unless the D-073 G0 registration takes it first).
 **Why this entry exists:**
