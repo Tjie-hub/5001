@@ -5,12 +5,31 @@
 after any event's entry/cum close was computed, printed or stored** (D-070 rule 1). Pushed and
 STOPPED; G1 awaits owner approval (`DIVIDEND_G1_APPROVED=1`).
 
+## Re-freeze 2026-10-08
+
+The census ledger moved after this G0 was first frozen (97eeb9b): on 2026-10-08 the planner ran
+an NR7 failure post-mortem whose **4 entry-time comparisons** (winners vs losers on gap size,
+stop distance in ATR, planned R:R, ADV — each across both halves with a permutation test) count
+as census arms under D-071 §5. The ledger is now **605** = 599 (after D-071/D-072) + 2 (the
+A/D-trap and volume-profile swing checks of 2026-10-08) + 4 (the NR7 post-mortem
+comparisons). Per the owner's instruction this G0 is RE-FROZEN at N = 605 + 2 = **607**, bar
+**3.2968** (exact `bar_v2.e_max_abs_z(607)` = 3.296828; was N = 603, bar 3.2950). **No outcome
+was read before or during the re-freeze; the only change is the bar** (and the ledger list,
+which now follows the owner's decomposition verbatim — the first freeze's component list had
+omitted D-072's 4 configurations). The censuses were NOT re-run: their counts do not depend on
+N; `CENSUS_G0.json`'s census/power block was updated in place to the values the census script
+emits at the new constants. Old PREDECLARATION sha256
+`e349111ab7a5d2685cc703e52c51dca018aa84a868b16ec9f31b226e4636bfbe` → new sha256 in
+`PREDECLARATION.sha256` (this commit).
+
 ## The bar and its N
 
-- **N = 603, bar = 3.2950** (exact `bar_v2.e_max_abs_z(603)` = 3.294959), frozen at G0.
-- Ledger rows counted: **601** = D-071's ratified census 595 (its 9 components) + the **two
-  exploratory arms run 2026-10-08** (the A/D "trap" check and the volume-profile swing check,
-  both null) per the **D-075 census note** — plus **this G0's 2 arms** (D1, D2).
+- **N = 607, bar = 3.2968** (exact `bar_v2.e_max_abs_z(607)` = 3.296828), re-frozen 2026-10-08
+  (first-frozen at N = 603 / 3.2950 — see the Re-freeze note above).
+- Ledger rows counted: **605** = 599 after D-071/D-072 (D-071's ratified 595 + HYP-PM-0016's 4
+  configurations) + the **two exploratory arms of 2026-10-08** (the A/D-trap check and the
+  volume-profile swing check, both null) + the **four NR7 post-mortem entry-time comparisons
+  of 2026-10-08** — plus **this G0's 2 arms** (D1, D2).
 - **Conflict, resolved by the D-entry + owner correction (D-entry wins):** the brief's census line
   ("599 + 2 = 601", "primary t ≥ 3.2940") and its "next free number expected **D-075**" are stale —
   the D-075 census note post-dates the brief and puts the ledger at 601 (→ 603 here), and D-075 is
@@ -63,12 +82,13 @@ STOPPED; G1 awaits owner approval (`DIVIDEND_G1_APPROVED=1`).
   mapping); 333 yield ≥ 2% → 324; 445 rups-anchored → 437. All deltas explained; none changes a
   frozen rule.
 
-## Power (pre-event σ only; t_bar = 3.2950)
+## Power (pre-event σ only; t_bar = 3.2968)
 
 - **D1:** median σ_d 2.63%/day, median window 5 sessions, n = 547, 56 months →
   **MDE 0.83% independent, 2.59% month-clustered.** (The brief expected ~1.3% clustered at a
   ~10-session window; the frozen anchor rule halves the window and the clustered MDE rises to
-  ~2.6% — D1 is, as predeclared, likely null.)
+  ~2.6% — D1 is, as predeclared, likely null.) Values recomputed at the re-frozen bar
+  3.296828; they move by < 0.06% relative to the first freeze.
 - **D2:** median overnight σ 0.92%, n = 324 → **MDE 0.17%** (the brief's 0.43% used close-to-close
   σ; the frozen rule uses the pre-event overnight σ, which is much smaller). D2 is well powered
   for a clientele gap of the size the literature reports.
@@ -82,8 +102,9 @@ membership + ADV20 over ~1,265 sessions × ~900 tickers) and 869 outcome evaluat
 
 ## Conflicts raised (none open)
 
-1. Brief census (601/3.2940) vs D-075 census note + owner correction (603/3.2950) → **frozen at
-   603/3.2950** (D-entry + owner win), per the task's explicit correction.
+1. Brief census (601/3.2940) vs D-075 census note + owner correction (first 603/3.2950, then
+   the 2026-10-08 re-freeze at **607/3.2968** after the ledger moved +4) → **frozen at
+   607/3.2968** (owner's re-freeze order wins), per the task's explicit correction.
 2. Brief "next D-number expected D-075" → **D-076** (D-075 taken).
 3. Brief's power expectations (~445 anchored, ~10-session windows, D2 MDE 0.43%) vs the frozen
    anchor rule's actuals (547 anchored, median window 5, D2 MDE 0.17%) → the FROZEN rule (owner's

@@ -15,7 +15,7 @@
 | arms | D1, D2 (exactly two; no horizon grid, no yield grid) |
 | benchmark | total-return EW liquid book (ADV20 ≥ Rp 10bn PIT); Parkinson-60-decile-matched control |
 | primary statistic | min(month-mean t, two-way cluster t by cum month × ticker), per arm |
-| bar | 3.2950 — `bar_v2.e_max_abs_z(603)`, frozen at G0 (census ledger 601 + 2 arms; D-071 §2) |
+| bar | **3.2968** — `bar_v2.e_max_abs_z(607)`, re-frozen 2026-10-08 at the moved census ledger (605 = 599 after D-071/D-072 + 2 exploratory arms + 4 NR7 post-mortem comparisons; + 2 arms here; D-071 §2) |
 | halves | cum ≤ 2023-12-31 (in effect 2021-07..) and cum ≥ 2024-01-01 — both means > 0 |
 | data | walkforward snapshot `a2d7e675…` / fingerprint `9c26e0df2fdd4e4b…` (2026-10-08, `CENSUS_G0.json`) |
 | population | 562 liquid events (2021-07..2026-09); D1 n = 547; D2 n = 324 (yield ≥ 2%) |
@@ -31,10 +31,12 @@
 
 - **Why admitted.** D-073 accepts the dividend-clientele mechanism (pre-cum demand; ex-day tax
   clientele) under D-070 §1; this is the first {SE} registration.
-- **Family/multiplicity.** New family {SE}, slot 1 (D-028, PG-3). Census: D-075 census-note
-  ledger **601** + this registration's **2** arms = **603**; frozen primary bar **3.2950** (exact
-  `e_max_abs_z(603)` = 3.294959). Bars computed under earlier counts are reported as a secondary
-  line only (D-071 §2).
+- **Family/multiplicity.** New family {SE}, slot 1 (D-028, PG-3). Census: ledger **605**
+  (599 after D-071/D-072 + the two exploratory arms of 2026-10-08 + the four NR7 post-mortem
+  entry-time comparisons of 2026-10-08) + this registration's **2** arms = **607**; frozen
+  primary bar **3.2968** (exact `e_max_abs_z(607)` = 3.296828; re-frozen 2026-10-08, was
+  603 / 3.2950). Bars computed under earlier counts are reported as a secondary line only
+  (D-071 §2).
 - **Study (frozen).** PREDECLARATION.md (this branch, sha256 sidecar): populations D1 = AGM/
   dividend_created-anchored liquid events with 3–10-session windows (n = 547; anchor = the earlier
   of the latest `rups_date` 1–90 calendar days before cum and a non-artefact `dividend_created`;

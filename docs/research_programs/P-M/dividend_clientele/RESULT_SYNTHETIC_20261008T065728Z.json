@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-10-08T05:24:17.253330+00:00",
+ "generated_utc": "2026-10-08T06:57:28.154644+00:00",
  "mode": "synthetic",
  "gate": "none (--synthetic)",
  "snapshot": {
@@ -10,8 +10,8 @@
    "sha256": "65c62a011a15b4ca60e335fb400c11fabd5a5977ad15be406cac2df0c9082c11"
   }
  },
- "census_n": 603,
- "bar_frozen": 3.295,
+ "census_n": 607,
+ "bar_frozen": 3.2968,
  "runs": {
   "D1": {
    "n": 2,
@@ -21,7 +21,7 @@
    "t_month": NaN,
    "t_two_way_cluster": -6000000000.0,
    "primary_t": NaN,
-   "bar": 3.295,
+   "bar": 3.2968,
    "half1_n": 0,
    "half1_mean": NaN,
    "half2_n": 2,
@@ -54,7 +54,7 @@
    "t_month": NaN,
    "t_two_way_cluster": 22658536585.36585,
    "primary_t": NaN,
-   "bar": 3.295,
+   "bar": 3.2968,
    "half1_n": 0,
    "half1_mean": NaN,
    "half2_n": 3,

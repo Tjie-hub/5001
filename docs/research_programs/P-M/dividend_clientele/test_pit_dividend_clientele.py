@@ -14,7 +14,7 @@ predeclared claim from PREDECLARATION.md §5:
   (f) the G0 census path never computes a post-entry return: AST proof that
       g0_census.py / dividend_clientele.py import neither `outcomes` nor any
       outcome function, plus a forbidden-token grep;
-  plus the frozen bar (N=603 -> 3.2950) and the primary-t arithmetic.
+  plus the frozen bar (N=607 -> 3.2968, re-frozen 2026-10-08) and the primary-t arithmetic.
 
 Run:  venv/bin/python -m pytest \
         docs/research_programs/P-M/dividend_clientele/test_pit_dividend_clientele.py -v
@@ -186,10 +186,10 @@ def test_f_census_path_has_no_outcomes():
 
 # --- frozen bar and inference arithmetic -------------------------------------
 def test_bar_frozen():
-    assert DC.CENSUS_LEDGER == 601 and DC.CENSUS_N == 603
-    assert DC.BAR_FROZEN == 3.2950
-    assert DC.e_max_abs_z(603) == pytest.approx(3.2950, abs=5e-5)
-    assert DC.e_max_abs_z(604) > DC.e_max_abs_z(603) > DC.e_max_abs_z(602)
+    assert DC.CENSUS_LEDGER == 605 and DC.CENSUS_N == 607
+    assert DC.BAR_FROZEN == 3.2968
+    assert DC.e_max_abs_z(607) == pytest.approx(3.2968, abs=5e-5)
+    assert DC.e_max_abs_z(608) > DC.e_max_abs_z(607) > DC.e_max_abs_z(606)
 
 
 def test_primary_t_arithmetic():
@@ -203,7 +203,7 @@ def test_primary_t_arithmetic():
     assert math.isfinite(OC.two_way_cluster_t(xs, months, tickers))
     rng = np.random.default_rng(7)
     big = list(rng.normal(0.001, 0.01, 400))
-    assert abs(OC.month_mean_t(big, [f"m{i // 20}" for i in range(400)])) < 3.2950
+    assert abs(OC.month_mean_t(big, [f"m{i // 20}" for i in range(400)])) < 3.2968
 
 
 def test_data_quality_funnel():

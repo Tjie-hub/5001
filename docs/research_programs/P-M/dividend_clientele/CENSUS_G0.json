@@ -10,15 +10,17 @@
   }
  },
  "census": {
-  "ledger": 601,
+  "ledger": 605,
   "ledger_rows_counted": [
-   "D-071 ratified census N=595 (its 9 components)",
-   "2 exploratory arms run 2026-10-08 (A/D 'trap' check, volume-profile swing check), both null (D-075 census note)"
+   "599 after D-071/D-072 (D-071's ratified 595 in its 9 components + HYP-PM-0016's 4 configurations)",
+   "+2 exploratory arms run 2026-10-08 (A/D 'trap' check, volume-profile swing check), both null (D-075 census note)",
+   "+4 NR7 post-mortem entry-time comparisons run 2026-10-08 (gap size, stop distance in ATR, planned R:R, ADV; each across both halves with a permutation test)"
   ],
   "n_this_g0_arms": 2,
-  "N": 603,
-  "bar_exact": 3.294959,
-  "bar_frozen": 3.295
+  "N": 607,
+  "bar_exact": 3.296828,
+  "bar_frozen": 3.2968,
+  "refreeze_2026_10_08": "census ledger moved 601 -> 605 (+4 NR7 post-mortem entry-time comparisons, owner 2026-10-08); counts untouched, the census was NOT re-run; only the bar/N block (and the power block's bar-scaled MDEs) changed, updated in place to what the census script emits at the new constants; no outcome was read before or during the re-freeze"
  },
  "dividend_rows": {
   "n_rows": 4764,
@@ -200,19 +202,19 @@
   }
  },
  "power": {
-  "bar_frozen": 3.295,
+  "bar_frozen": 3.2968,
   "d1": {
    "n": 547,
    "median_window_sessions": 5.0,
    "sigma_daily_median": 0.02629127572278724,
-   "mde_independent": 0.008282338216223154,
+   "mde_independent": 0.0082870362,
    "n_months": 56,
-   "mde_month_clustered": 0.025885264734623728
+   "mde_month_clustered": 0.0258999476
   },
   "d2": {
    "n": 324,
    "sigma_overnight_median": 0.009180161102614924,
-   "mde_independent": 0.0016804583777369484
+   "mde_independent": 0.0016814116
   }
  },
  "generated_utc": "2026-10-08T05:15:53.313208+00:00",

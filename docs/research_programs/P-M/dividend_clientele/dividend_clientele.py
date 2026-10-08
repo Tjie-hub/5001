@@ -65,7 +65,9 @@ TAX_FACTOR = 0.9         # 10% resident final withholding (D-073)
 ROUND_TRIP = 0.006       # frozen 0.60% round trip (arms' cost)
 FORU_CUTOFF = date(2026, 9, 14)      # D-063
 HALF_SPLIT = date(2023, 12, 31)      # cum <= -> half 1, else half 2
-CENSUS_LEDGER = 601      # D-075 census note: 599 (D-071) + 2 exploratory arms (2026-10-08)
+CENSUS_LEDGER = 605      # re-frozen 2026-10-08: 599 (D-071/D-072) + 2 exploratory arms
+                         # (A/D-trap, volume-profile swing) + 4 NR7 post-mortem entry-time
+                         # comparisons (owner re-freeze; was 601 at the first freeze)
 CENSUS_N = CENSUS_LEDGER + 2          # + this G0's two arms (D1, D2)
 SNAPSHOT_DEFAULT = "/home/tjiesar/scratch/g0_snapshots_2026-10-08/walkforward_snapshot_2026-10-08.db"
 
@@ -78,7 +80,7 @@ _bar = _ilu.module_from_spec(_spec)
 _spec.loader.exec_module(_bar)
 e_max_abs_z = _bar.e_max_abs_z
 BAR_EXACT = e_max_abs_z(CENSUS_N)
-BAR_FROZEN = round(BAR_EXACT, 4)  # 3.2950 at N=603
+BAR_FROZEN = round(BAR_EXACT, 4)  # 3.2968 at N=607 (re-frozen 2026-10-08; was 3.2950 at 603)
 
 
 def parse_date(v):
@@ -502,9 +504,13 @@ def census_g0(db_path: str | None = None) -> dict:
                      "dataset_fingerprint": fp},
         "census": {"ledger": CENSUS_LEDGER,
                    "ledger_rows_counted": [
-                       "D-071 ratified census N=595 (its 9 components)",
-                       "2 exploratory arms run 2026-10-08 (A/D 'trap' check, "
-                       "volume-profile swing check), both null (D-075 census note)"],
+                       "599 after D-071/D-072 (D-071's ratified 595 in its 9 components "
+                       "+ HYP-PM-0016's 4 configurations)",
+                       "+2 exploratory arms run 2026-10-08 (A/D 'trap' check, "
+                       "volume-profile swing check), both null (D-075 census note)",
+                       "+4 NR7 post-mortem entry-time comparisons run 2026-10-08 (gap size, "
+                       "stop distance in ATR, planned R:R, ADV; each across both halves with "
+                       "a permutation test)"],
                    "n_this_g0_arms": 2,
                    "N": CENSUS_N, "bar_exact": round(BAR_EXACT, 6),
                    "bar_frozen": BAR_FROZEN},

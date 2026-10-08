@@ -3,8 +3,12 @@
 **Status:** frozen before any outcome is read · **Date:** 2026-10-08 ·
 **Authority:** **D-073** (mechanism accepted, owner 2026-10-08: "D first", "2%"), brief
 `ZCODE_BRIEF_DIVIDEND_CLIENTELE_G0_2026-10-08.md` (0279035) as CORRECTED by the owner's task order
-(2026-10-08: census **N = 603, bar 3.2950** — the brief's "601 / 3.2940" is stale per the D-075
-census note). Where brief and D-entry disagree, D-073 wins; conflicts are listed in HANDOFF_G0.md.
+(2026-10-08: the brief's "601 / 3.2940" was stale per the D-075 census note → first-frozen at
+N = 603 / 3.2950) and **RE-FROZEN the same day at the moved ledger** (owner: "re-freeze at the
+current census ledger"): census ledger **605**, N = **607**, bar **3.2968** (exact 3.296828) —
+see HANDOFF_G0.md "Re-freeze 2026-10-08"; no outcome was read before or during the re-freeze,
+and the only change is the bar. Where brief and D-entry disagree, D-073 wins; conflicts are
+listed in HANDOFF_G0.md.
 **Branch:** `research/dividend-clientele-2026-10` from hardening `8664856`, new worktree.
 **Family:** new family **{SE} Structural-event forced flow**, opened at this registration
 (D-028, PG-3). Two gates: **G0 = this freeze + a counts-only census + PIT tests**, then STOP;
@@ -110,9 +114,11 @@ dividends as a source of flow edge.
   date's month) and (ii) the two-way cluster-robust t by cum month × ticker
   (Cameron-Gelbach-Miller, G/(G−1) small-sample factors).
 - **An arm passes only if ALL hold:**
-  1. **Strength:** pooled mean > 0 **and** primary t ≥ **3.2950** — frozen at G0 as
-     `bar_v2.e_max_abs_z(603)` = 3.294959 (exact), N = 603 = census ledger 601 (D-075 census note:
-     D-071's ratified 595 + the two exploratory arms run 2026-10-08) + this G0's two arms (D1, D2).
+  1. **Strength:** pooled mean > 0 **and** primary t ≥ **3.2968** — frozen at G0 and RE-FROZEN
+     2026-10-08 at the moved ledger as `bar_v2.e_max_abs_z(607)` = 3.296828 (exact),
+     N = 607 = census ledger **605** (599 after D-071/D-072, + the two exploratory arms of
+     2026-10-08, + the four NR7 post-mortem entry-time comparisons of 2026-10-08) + this G0's
+     two arms (D1, D2).
   2. **Both halves positive:** cum ≤ 2023-12-31 and cum ≥ 2024-01-01 (the split is frozen; the
      first half is in effect 2021-07..2023-12 — no liquid event is earlier; say so).
   3. **Volatility control positive** (§4 decile book).
@@ -156,7 +162,8 @@ sign flip across the halves; D2 positive only gross of the 10% tax or only in th
 tercile.
 
 **Governance (draft, do not file):** registration HYP-PM-0017 = D1 + D2, 2 arms, family {SE}
-slot 1; census 603, bar 3.2950; draft D-entry text in `REGISTRATION_DRAFT.md` under the next free
+slot 1; census 605 + 2 = **607, bar 3.2968** (re-frozen 2026-10-08; was 601 + 2 = 603,
+3.2950); draft D-entry text in `REGISTRATION_DRAFT.md` under the next free
 number at filing (expected **D-076** — the brief's "expected D-075" is stale, D-075 is taken).
 HYPOTHESIS_REGISTRY.md, FAILURE_REGISTRY.md and DECISION_LOG.md are NOT edited by this branch.
 The D-064 ex-date monitor continues unchanged.
