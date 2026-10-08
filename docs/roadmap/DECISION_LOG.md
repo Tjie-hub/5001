@@ -2451,6 +2451,142 @@ Revision 2; filed on "file both" 2026-10-08. Branch `research/sniper-filter-2026
 
 ---
 
+### D-073 · Mechanism accepted: dividend clientele flow (pre-cum demand D1, ex-day tax clientele D2); first {SE} G0 (2026-10-08)
+**Status:** RECORDED · **Date:** 2026-10-08 · **Type:** Mechanism acceptance (D-070 §1). No
+registration and no G0 yet. · **Approval authority:** Owner, 2026-10-08: "D first", "2%" (draft
+`DECISION_DRAFT_MECHANISMS_A_D_2026-10-08.md` @ `468fe8c`). Sources: Task 2 feasibility
+(`research/structural-events-feasibility-2026-10` @ `1c20f56`) and Task 3
+(`research/mechanism-inventory-b-2026-10` @ `571dee3`). The planner's pre-event facts used
+**pre-event data only**; no post-event price was read.
+
+- **Mechanism.** A cash dividend is a scheduled event, and the right to it is fixed at the cum date.
+  Two flows follow.
+  - **(i) Pre-cum demand.** Yield and dividend-capture buyers concentrate their purchases before the
+    cum date. This is price pressure from demand, not news (the dividend-month premium, Hartzmark &
+    Solomon 2013).
+  - **(ii) Ex-day tax clientele.** Holders are taxed differently on dividends:
+    - non-residents: 20% withholding, or the treaty rate
+    - resident individuals: 10% final, or exempt if reinvested under the 2021 rules
+    - resident corporates: their own rules
+
+    Capital gains are taxed at 0.1% of sale proceeds. So the marginal holder values one rupiah of
+    dividend at less than one rupiah of price, and the ex-date drop should be smaller than the
+    dividend.
+- **Predictions (directions declared).**
+  - **D1:** excess return vs the EW liquid book over the 10 sessions ending at the cum-date close
+    is > 0.
+  - **D2:** capture return is > 0.
+    - Formula: (P_ex open + 0.9 × dividend − P_cum close) / P_cum close − 0.60% round trip, minus
+      the EW book's return from the cum close to the ex open.
+    - Population: yield ≥ **2%** at the close before the cum date (owner, 2026-10-08).
+- **Pre-event facts (planner).**
+  - 576 liquid events (ADV20 ≥ Rp 10bn, IDR dividend > 0, 20 pre-bars). Task 2 counted 574.
+  - Yield p10/p25/p50/p75/p90: 0.45 / 1.17 / 2.52 / 5.02 / 8.5%. 333 events have yield ≥ 2%.
+  - 60% of cum dates fall in May–July.
+  - 560 of 574 events are in 2021-10 or later.
+  - Power (pre-event σ 2.36%/day):
+    - D1: MDE ≈ 0.95% treating events as independent, 1.63% clustered by month.
+    - D2: MDE ≈ 0.43% independent, about 0.7% clustered.
+- **Decision.**
+  1. Mechanism accepted as forced flow / clientele under D-070 §1. **Its G0 is the first in {SE}.**
+  2. **Design limits for the G0** (the G0 freezes the details):
+     - **Arms:** exactly two tested arms, D1 and D2. No horizon grid and no yield grid.
+     - **Population:**
+       - IDR cash dividends with `dividend_value` > 0 and stored cum and ex dates.
+       - Several dividends on one cum date are summed.
+       - ADV20 ≥ Rp 10bn on the session before the cum date.
+       - Events with a split, bonus, reverse split or rights ex-date inside the window are excluded.
+     - **PIT anchor for D1 (required).**
+       - D1 entry = the later of cum−10 and the first session after a point-in-time announcement
+         anchor.
+       - The anchor is the approving AGM (`rups` event).
+       - `dividend_created` may be the anchor only if it falls before the cum date and isn't a
+         backfill artefact. The G0 must show both.
+       - Events with no anchor are dropped from D1 but stay in D2.
+     - **Benchmark:** a total-return EW liquid book, with dividends added back on each ex-date.
+       5001's bars are raw, so a price-only book would count other stocks' ex-day drops as negative
+       returns.
+     - **Inference:**
+       - clustering by event month and by repeat ticker
+       - both halves (2009 → 2023-12 and 2024-01 →) must be > 0
+       - required control: a Parkinson-60-decile-matched book, to guard against overlap with VOLEX
+         {V} (D-062)
+     - **Report:** by month (AGM season vs the rest), by yield tercile, and by a PIT
+       foreign-ownership proxy if one exists. If none exists, the report says so.
+  3. The D-064 ex-date monitor (detection only) continues unchanged.
+  4. **Honest prior:**
+     - D1 is likely null: it is underpowered for an effect the size the literature reports.
+     - D2 is the real test of the clientele claim. A positive result may still fall inside the cost
+       on mid-yield names.
+     - Neither arm becomes a trading rule before a forward test.
+- **Falsification.** Either of these:
+  - the D1 or D2 pooled mean is ≤ 0, below the frozen bar, or flips sign across the halves
+  - D2 is positive only gross of the 10% tax, or only in the top yield tercile
+- **Multiplicity.** New family **{SE} Structural-event forced flow**, opened at the first G0
+  registration (D-028, PG-3). Registration HYP-PM-0017. Census 599 + 2 = **601**, bar **3.2940**,
+  recomputed exactly at G0 (D-071 §2).
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
+### D-074 · Mechanism accepted: tender-offer price floor (arbitrage spread to a contractual price with a deadline); G1 under a stop rule, forward recorder (2026-10-08)
+**Status:** RECORDED · **Date:** 2026-10-08 · **Type:** Mechanism acceptance (D-070 §1). No
+registration and no G0 yet. · **Approval authority:** Owner, 2026-10-08: "G1 + stop rule"; G0 after
+D-073's (draft @ `468fe8c`).
+
+- **Mechanism.** A tender offer is a public, contractual commitment to buy at a fixed price until
+  `tender_end`, with payment on `tender_paydate`. While the offer is open it sets a floor under the
+  price. A market price below the offer is an arbitrage spread, bounded by deal risk and the time to
+  payment. It is not a prediction. Mandatory offers (POJK 9/POJK.04/2018) are rarely withdrawn. The
+  spread pays for:
+  - time value
+  - settlement and acceptance friction for retail holders
+  - proration risk on partial voluntary offers
+- **Prediction (direction declared).** For offers priced above the market at entry, the price
+  converges towards the offer by `tender_end`, and the mean net return is > 0.
+- **Pre-event facts (planner).**
+  - 165 events. 129 have 20 pre-bars.
+  - **67 of 129 offers are priced below the market**, so they have no spread and are ineligible.
+  - Eligible events (spread ≥ 0.6% at the close before `tender_start`):
+    - 8 at ADV20 ≥ Rp 10bn (median spread 7.4%)
+    - **26** at ≥ Rp 1bn (median 3.6%)
+    - 61 with no liquidity floor (median 5.0%)
+  - Eligible events run 2021 → 2026. The median window is 22 sessions (range 4–25).
+  - MDE ≈ 7.5% under the feasibility convention (σ 2.42%/day, n = 26). That convention is
+    pessimistic for a price pinned under an offer.
+- **Decision.**
+  1. Mechanism accepted as a rule-constraint forced-flow mechanism under D-070 §1.
+  2. **Design limits for the G0** (filed after D-073's G0):
+     - **Population:**
+       - a stored `tender_price`, `tender_start` and `tender_end`
+       - ADV20 ≥ Rp 1bn on the session before `tender_start`
+       - spread at that close ≥ the 0.60% round trip plus the D-059 modelled cost for the name's ADV
+     - **Entry:** that close.
+     - **One tested arm:**
+       - Market exit at the `tender_end` close, net of the modelled cost.
+       - Test: pooled mean with month-clustered t, plus > 0 excess vs the EW liquid book.
+       - Report only: acceptance at the offer price, paid on `tender_paydate` with no proration.
+         This is the upper bound and is not tested.
+     - **Stop rule (owner):** if the frozen population has fewer than **20** eligible events, there
+       is no G1 and a descriptive spread ledger is filed instead. If stopped, the arm still counts
+       in the census from registration (X8).
+     - **Report:** mandatory vs voluntary offers, and full vs partial (`tender_percentage`).
+  3. **Forward recorder** (no hypothesis and no census arm). Every new offer is logged at
+     `tender_start` with its spread, and at `tender_end` with its convergence. The first case is
+     DOOH: offer 148, window 2026-10-05 → 11-03.
+  4. **Honest prior:** at n ≈ 26, expect a small positive mean below the bar, or a stop. The
+     recorder is the durable output.
+- **Falsification.** Either of these:
+  - the pooled net market-exit return is ≤ 0 or below the frozen bar
+  - losses concentrate in withdrawn or prorated deals that the rule can't exclude in advance
+- **Multiplicity.** Family {SE}, 1 tested arm. Registration HYP-PM-0018. Census 601 + 1 = **602**,
+  bar **3.2945**, recomputed exactly at G0.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

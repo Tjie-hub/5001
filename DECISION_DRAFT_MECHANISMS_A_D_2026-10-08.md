@@ -1,6 +1,6 @@
 # DECISION_LOG drafts: mechanism acceptance for tender offers (A) and dividend ex-dates (D) (2026-10-08)
 
-**Status:** DRAFT. Not filed.
+**Status:** FILED 2026-10-08 as **D-073 (D)** and **D-074 (A)**. Owner chose D first, A G1 with the stop rule, and a D2 floor of 2%. The filed text governs.
 **Filing:** append to `docs/roadmap/DECISION_LOG.md` on `ops/hardening-2026-07-10`. Use the next free
 numbers at filing, expected **D-073** (A) and **D-074** (D).
 **Why these entries exist:** D-070 §1 admits a structural-event study only after its economic
