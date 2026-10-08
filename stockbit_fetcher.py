@@ -44,6 +44,11 @@ CHROME_LOCALSTORAGE = os.path.expanduser(
 )
 STOCKBIT_BASE = "https://exodus.stockbit.com"
 RATE_LIMIT_DELAY = 1.5  # seconds between requests
+# Empty-broker-summary retry (see _retry_broker_flow): passes after the main loop,
+# pause before pass n = BROKER_RETRY_PAUSE * n seconds, BROKER_RETRY_DELAY between calls.
+BROKER_RETRY_PASSES = 2
+BROKER_RETRY_PAUSE = 60
+BROKER_RETRY_DELAY = 3.0
 
 from data.fetcher import IDX30, LQ45, IDX80, CATEGORIES, TICKERS
 
@@ -834,6 +839,74 @@ def fetch_broker_flow(token, ticker, date=None):
     return {"broker_rows": rows, "bandar": bandar, "trade_date": trade_date}
 
 
+def _save_broker_flow(conn, bf):
+    """Store one fetch_broker_flow() result. Returns "saved", "skip" (that
+    trade_date already in DB) or "empty" (None, or a 200 with no broker rows)."""
+    if not (bf and bf.get("broker_rows")):
+        return "empty"
+    existing = conn.execute(
+        "SELECT COUNT(*) FROM broker_flow WHERE ticker=? AND trade_date=?",
+        (bf["broker_rows"][0]["ticker"], bf["trade_date"])
+    ).fetchone()[0]
+    if existing > 0:
+        log(f"  [SKIP] Broker {bf['trade_date']} already in DB")
+        return "skip"
+    conn.executemany(
+        """INSERT OR REPLACE INTO broker_flow
+        (ticker,trade_date,broker_code,side,lot,lot_value,value,
+         value_total,avg_price,freq,investor_type)
+        VALUES (:ticker,:trade_date,:broker_code,:side,:lot,:lot_value,
+                :value,:value_total,:avg_price,:freq,:investor_type)""",
+        bf["broker_rows"],
+    )
+    b = bf["bandar"]
+    conn.execute(
+        """INSERT OR REPLACE INTO bandar_detector
+        (ticker,trade_date,avg_price,total_buyer,total_seller,
+         net_broker_count,broker_accdist,value,volume,
+         top1_accdist,top3_accdist,top5_accdist,top10_accdist,
+         avg_accdist,updated_at)
+        VALUES (:ticker,:trade_date,:avg_price,:total_buyer,:total_seller,
+                :net_broker_count,:broker_accdist,:value,:volume,
+                :top1_accdist,:top3_accdist,:top5_accdist,:top10_accdist,
+                :avg_accdist,:updated_at)""",
+        b,
+    )
+    conn.commit()
+    n_buy = sum(1 for r in bf["broker_rows"] if r["side"] == "BUY")
+    n_sell = sum(1 for r in bf["broker_rows"] if r["side"] == "SELL")
+    log(f"  ✓ Broker: {n_buy}B/{n_sell}S | {b['broker_accdist']} | top5={b['top5_accdist']}")
+    return "saved"
+
+
+def _retry_broker_flow(conn, token, tickers, date):
+    """Re-fetch traded tickers whose broker summary came back empty. Stockbit
+    answers 200 with an empty list under load (no 429), so the main pass lost
+    ~120-200 tickers/day from 2026-10-05 (TOWR 3 sessions) while the same call
+    worked hours later. Slower, spaced passes after the main loop recover them."""
+    missing = list(tickers)
+    total = len(missing)
+    for n in range(1, BROKER_RETRY_PASSES + 1):
+        if not missing:
+            break
+        time.sleep(BROKER_RETRY_PAUSE * n)
+        still = []
+        for ticker in missing:
+            try:
+                status = _save_broker_flow(conn, fetch_broker_flow(token, ticker, date))
+            except Exception as be:
+                log(f"  [WARN] broker retry {ticker}: {be}")
+                status = "error"
+            if status in ("empty", "error"):
+                still.append(ticker)
+            time.sleep(BROKER_RETRY_DELAY)
+        log(f"Broker retry pass {n}: recovered {len(missing) - len(still)}/{len(missing)}")
+        missing = still
+    log(f"Broker coverage: {total} empty in main pass, {len(missing)} still empty"
+        + (f": {', '.join(missing[:30])}" if missing else ""))
+    return missing
+
+
 def run_flow(token, tickers, date=None):
     log("=" * 50)
     log("STOCKBIT FLOW FETCHER" + (f" — BACKFILL {date}" if date else ""))
@@ -841,6 +914,7 @@ def run_flow(token, tickers, date=None):
     conn = init_flow_db()
     log(f"Fetching flow for {len(tickers)} tickers...\n")
     success = 0
+    broker_missing = []
     for i, ticker in enumerate(tickers, 1):
         log(f"[{i}/{len(tickers)}] {ticker}...")
         try:
@@ -899,57 +973,29 @@ def run_flow(token, tickers, date=None):
                 # docs/audit/BROKER_FLOW_BACKFILL_REPORT.md) — the prior
                 # assumption that this endpoint had no historical param was
                 # wrong, so backfill mode no longer skips this block.
+                traded = (flow.get("buy_lot") or 0) + (flow.get("sell_lot") or 0) > 0
                 try:
-                    bf = fetch_broker_flow(token, ticker, date)
-                    # Skip only if data for this trade_date already exists in DB.
-                    # This allows saving prior trading days that were missed.
-                    _bf_existing = 0
-                    if bf and bf.get("broker_rows"):
-                        _bf_existing = conn.execute(
-                            "SELECT COUNT(*) FROM broker_flow WHERE ticker=? AND trade_date=?",
-                            (ticker, bf["trade_date"])
-                        ).fetchone()[0]
-                    if bf and bf.get("broker_rows") and _bf_existing > 0:
-                        log(f"  [SKIP] Broker {bf['trade_date']} already in DB")
-                    elif bf and bf.get("broker_rows"):
-                        conn.executemany(
-                            """INSERT OR REPLACE INTO broker_flow
-                            (ticker,trade_date,broker_code,side,lot,lot_value,value,
-                             value_total,avg_price,freq,investor_type)
-                            VALUES (:ticker,:trade_date,:broker_code,:side,:lot,:lot_value,
-                                    :value,:value_total,:avg_price,:freq,:investor_type)""",
-                            bf["broker_rows"],
-                        )
-                        b = bf["bandar"]
-                        conn.execute(
-                            """INSERT OR REPLACE INTO bandar_detector
-                            (ticker,trade_date,avg_price,total_buyer,total_seller,
-                             net_broker_count,broker_accdist,value,volume,
-                             top1_accdist,top3_accdist,top5_accdist,top10_accdist,
-                             avg_accdist,updated_at)
-                            VALUES (:ticker,:trade_date,:avg_price,:total_buyer,:total_seller,
-                                    :net_broker_count,:broker_accdist,:value,:volume,
-                                    :top1_accdist,:top3_accdist,:top5_accdist,:top10_accdist,
-                                    :avg_accdist,:updated_at)""",
-                            b,
-                        )
-                        conn.commit()
-                        n_buy = sum(1 for r in bf["broker_rows"] if r["side"] == "BUY")
-                        n_sell = sum(1 for r in bf["broker_rows"] if r["side"] == "SELL")
-                        log(f"  ✓ Broker: {n_buy}B/{n_sell}S | {b['broker_accdist']} | top5={b['top5_accdist']}")
+                    status = _save_broker_flow(conn, fetch_broker_flow(token, ticker, date))
                 except Exception as be:
                     log(f"  [WARN] broker flow error: {be}")
+                    status = "error"
+                if status in ("empty", "error") and traded:
+                    if status == "empty":
+                        log("  [WARN] broker summary empty (traded ticker) -- queued for retry")
+                    broker_missing.append(ticker)
             else:
                 log(f"  ✗ No data")
         except Exception as e:
             log(f"  ✗ {e}")
         time.sleep(RATE_LIMIT_DELAY)
+    broker_empty = _retry_broker_flow(conn, token, broker_missing, date) if broker_missing else []
     conn.close()
     log(f"\nDONE: {success}/{len(tickers)} success")
     if success == len(tickers):
         send_telegram(
             f"✅ <b>Flow & Broker Fetch DONE</b>\n"
             f"Sukses: {success}/{len(tickers)} tickers\n"
+            f"Broker kosong (setelah retry): {len(broker_empty)}\n"
             f"Waktu: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             category="flow_fetch_done",
          event="report.flow_fetch_done")
@@ -958,6 +1004,7 @@ def run_flow(token, tickers, date=None):
             f"⚠️ <b>Flow & Broker Fetch SELESAI (ada gagal)</b>\n"
             f"Sukses: {success}/{len(tickers)} tickers\n"
             f"Gagal: {len(tickers) - success} tickers\n"
+            f"Broker kosong (setelah retry): {len(broker_empty)}\n"
             f"Waktu: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         , event="data.flow_partial")
 
