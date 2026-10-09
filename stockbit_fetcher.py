@@ -617,10 +617,17 @@ def fetch_flow(token, ticker, date=None):
     net_vals = d.get("net_values", [])
     prices = d.get("prices", [])
 
-    total_buy_lot = sum(int(b["lot"]["raw"]) for b in buys if b.get("lot") and b["lot"].get("raw"))
-    total_sell_lot = sum(int(s["lot"]["raw"]) for s in sells if s.get("lot") and s["lot"].get("raw"))
-    total_buy_freq = sum(int(b["frequency"]["raw"]) for b in buys if b.get("frequency") and b["frequency"].get("raw"))
-    total_sell_freq = sum(int(s["frequency"]["raw"]) for s in sells if s.get("frequency") and s["frequency"].get("raw"))
+    # lot/frequency series are CUMULATIVE session totals, so the day's total is the series' last
+    # (= max) value; summing them overstated the totals ~100-200x (2026-10-09). net_value is
+    # per-minute, so its sum is the day's net value.
+    def _last(series, key):
+        vals = [int(x[key]["raw"]) for x in series if x.get(key) and x[key].get("raw")]
+        return max(vals) if vals else 0
+
+    total_buy_lot = _last(buys, "lot")
+    total_sell_lot = _last(sells, "lot")
+    total_buy_freq = _last(buys, "frequency")
+    total_sell_freq = _last(sells, "frequency")
     total_net_value = sum(int(nv["value"]["raw"]) for nv in net_vals if nv.get("value") and nv["value"].get("raw"))
     last_price = int(prices[-1]["value"]["raw"]) if prices and prices[-1].get("value") else None
     # Use `or` (not dict-default): the live endpoint returns an EMPTY date

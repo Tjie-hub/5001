@@ -105,8 +105,32 @@ def _parse_bars(data):
     return bars
 
 
+def _per_minute(bars):
+    """De-cumulate the trade-book counters before any per-minute maths.
+
+    buy_lot/sell_lot/buy_freq/sell_freq from the trade-book chart are CUMULATIVE session totals
+    through bar_time (monotone: 0 decreases in 177,688 steps on 2026-10-08; engine/trade_flow.py
+    documents the same). net_value is already per-minute. Until 2026-10-09 _analyze summed and
+    windowed the cumulative counters as if each were one minute's volume, so imbalance, absorption,
+    smart_money and acceleration measured running totals; recomputing 2026-10-08 on per-minute flow
+    changed the verdict for 51% of tickers. A negative step (vendor revision) is clamped to 0.
+    """
+    out, prev = [], {"buy_lot": 0, "sell_lot": 0, "buy_freq": 0, "sell_freq": 0}
+    for b in bars:
+        m = dict(b)
+        for k in prev:
+            m[k] = max(b[k] - prev[k], 0)
+            prev[k] = b[k]
+        m["delta"] = m["buy_lot"] - m["sell_lot"]
+        out.append(m)
+    return out
+
+
 def _analyze(ticker, bars):
     """Run 5 flow strategies, return rich result dict.
+
+    `bars` are _parse_bars() output (cumulative counters, as stored in stockbit_flow_bars); they are
+    de-cumulated here first (see _per_minute).
 
     Canonical keys: score, verdict (no emoji), smart_money, imbalance,
     divergence_type, cum_delta, price_chg_pct, absorption, distribution,
@@ -114,6 +138,7 @@ def _analyze(ticker, bars):
     """
     if not bars or len(bars) < 30:
         return None
+    bars = _per_minute(bars)
 
     market_bars = [b for b in bars if "09:" <= b["time"] <= "16:"]
     if len(market_bars) < 20:
