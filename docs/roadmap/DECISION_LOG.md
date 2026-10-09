@@ -2879,6 +2879,83 @@ result commit `82e8afa`.
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-081 · Volume basis: `ohlcv.volume` is consolidated from 2026-07-06; research liquidity uses regular-market volume
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** Data-basis rule ·
+**Approval authority:** Owner, 2026-10-09: "file it". The evidence is ZCode's audit, branch
+`research/data-audits-2026-10` @ `3bacdcc` (`P-M/data_audits/minute_volume/DIAGNOSIS.md`), verified
+independently by the planner the same day.
+
+- **Finding.** From **2026-07-06** the vendor's daily OHLC volume, and the minute print tape, report
+  **consolidated** volume, including the negotiated (NG) market.
+  - It flip-flopped on 07-08/09 and has been permanent since **2026-07-10**.
+  - The trade-book minute bars (`stockbit_flow_bars`) stay **regular-market only**, as before.
+  - Planner check, same tickers each day, ohlcv vs `(max buy_lot + max sell_lot) × 100`:
+    - 07-01..03: 1.00
+    - 07-06: 31.7G vs 17.6G (0.55)
+    - 07-07: 0.55
+    - 07-08: 1.00
+    - 07-10: 0.67
+    - 07-14: 0.51
+  - The bars are structurally intact. The trade-book endpoint **cannot** backfill the gap: a dry run
+    returned 12/12 identical totals, because NG volume was never in it.
+- **Consequence.** Every ADV, turnover or liquidity floor, and every "volume vs N-day average" signal
+  built on `ohlcv.volume` has a level break at 2026-07-06.
+  - Post-break liquidity reads about 1.5–2× higher on volume that a retail order can't trade against.
+  - Windows that span the break fire spuriously.
+  - Broker-flow lots (`broker_flow`) are regular-market only and unaffected.
+- **Rule (research, effective now; not retroactive).**
+  1. New studies take ADV and liquidity floors from **regular-market volume**: `(max buy_lot + max
+     sell_lot) × 100` from the minute bars on dates ≥ 2026-07-06, and `ohlcv.volume` before.
+     - The frozen function `adv_regular` is due from the volume-basis task
+       (`research/volume-basis-2026-10`).
+     - Until it is frozen, a study must disclose its basis.
+  2. Any study whose sample spans 2026-07-06 must state its volume basis in the predeclaration.
+  3. **Past verdicts are not recomputed.** The few post-break events in D-077/D-079/D-080 used
+     consolidated ADV. None is near a margin that would change its verdict (HYP-PM-0018 stays below its
+     n ≥ 20 stop either way).
+- **Production.** No change by this entry.
+  - ZCode's `0001-flow-capture-alert.patch` (`3bacdcc`) is proposed only.
+  - The production consumers (volume-surge signals, liquidity tiers) are being mapped in the
+    volume-basis task. Any production fix is a separate owner-approved change plus a restart.
+
+**Amendment.** Only by a superseding D-entry.
+
+### D-082 · Cost model: `cost_realised` (Roll on ticks) replaces D-059's Abdi-Ranaldo spread for new studies
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** Methodology rule ·
+**Approval authority:** Owner, 2026-10-09: "file it". The evidence is
+`research/data-audits-2026-10` @ `3bacdcc`, `P-M/cost_audit/` (`COST_AUDIT.md`, `COST_AUDIT.json`).
+
+- **Finding.** On 24.45M tick prints (2026-04-18 → 10-08), the D-059 Abdi-Ranaldo spread overstates the
+  realised Roll spread by **1.5–2.4×**, worst in the liquid buckets (confirming D-059's own suspicion).
+  - Round-trip cost, D-059 → realised, on normal days:
+
+    | ADV bucket | D-059 | Realised |
+    |---|---|---|
+    | 1–2bn | 3.42% | 2.86% |
+    | 2–5bn | 3.00% | 2.44% |
+    | 5–20bn | 2.35% | 1.96% |
+    | 20–100bn | 1.83% | 1.47% |
+    | >100bn | 1.62% | 1.13% |
+
+  - Realised spreads in liquid names do **not** widen on stress days. The stress basket's 2.03% is about
+    1.5pp real cost plus 0.35–0.55pp AR overstatement.
+- **Rule (effective now; not retroactive).**
+  1. New studies use `P-M/cost_audit/cost_realised.py` (sha256 `65051253…`; API
+     `realised_spread(adv, daytype)`, `d059_cost_realised(adv, sigma_d, daytype, q)`, valid at ADV ≥ Rp
+     1bn). Studies cite the path, the commit and the sha256.
+  2. D-059's function stays frozen, and is used only to reproduce past results.
+  3. **No past verdict is recomputed.**
+     - HYP-PM-0019 (D-079) fails at zero cost (gross ≈ −0.09%).
+     - HYP-PM-0018 (D-080): a corrected floor likely adds one event (PTRO-2022 missed by 0.02pp), giving
+       13 < 20, so the stop rule is unchanged.
+     - D-059's own T1 = FRICTION reading is not reopened by this entry.
+- **Limits.**
+  - Roll is a spread estimator without quotes; Lee-Ready can't be used, since the corpus has no quote
+    midpoint.
+  - The tick sample is only 2026-04 → 10. Earlier years inherit the bucket ratios.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
