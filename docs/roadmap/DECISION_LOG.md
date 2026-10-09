@@ -3009,6 +3009,39 @@ for G1 approval. The draft is `P-M/data_acquisition/08_RETAIL_PATHS_1_4_FEASIBIL
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-085 · HYP-PM-0020 (retail ownership, KSEI) G1 NULL — FAILED (F2); {OC} slots 1–2 consumed
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** G1 result filing ·
+**Approval authority:** Owner, 2026-10-09: "file it". The result is branch
+`research/retail-ownership-2026-10` @ `c4f97c6` (`RESULT_20261009T075700Z.json`, `VERDICT.md`).
+
+- **Run.** One G1 run at N = 611, bar 3.2987. The sidecar, both snapshots and the KSEI hashes were
+  verified before any outcome. A1 used 209 formations and A2 used 208.
+- **Every frozen condition fails for both arms:**
+
+  | Arm | Net / month | NW t | H1 | H2 | FM coef (t) |
+  |---|---|---|---|---|---|
+  | A1 level | −1.14% | −2.61 | −1.19% | −1.10% | −0.0009 (−0.61) |
+  | A2 flow | −2.61% | −7.35 | −1.89% | −3.32% | −0.0001 (−0.08) |
+
+- **Reading (report-only).**
+  - **No gross spread:** A1 −0.30% (t −0.71), A2 −0.05% (t −0.13), against an MDE of 1.68% a month.
+  - The negative net is trading cost only: A2 turns over almost fully each month, at about 2.6% a month
+    across both legs.
+  - Avoidance book +0.00%. The listed-shares denominator gives the same NULL. No era carries a
+    consistent sign.
+- **Verdict: FAILED (F2), a determinate NULL.** Not F4, since there was no gross edge to destroy.
+  - Retail ownership measured from KSEI monthly holdings does not predict IDX returns at a monthly
+    horizon over 2009–2026, as a level or as a flow.
+  - Recorded as FAIL-PM-0020. HYP-PM-0020 → FAILED. {OC} has 1 member, FAILED.
+- **Census:** stays at **611** (X8).
+- **Open (not affected):**
+  - Path 1, online-retail broker imbalance at weekly horizons. Its backfill is running, and it needs its
+    own mechanism D-entry.
+  - Paths 3 and 4 (margin list, notation-X board) are data-gated.
+  - Any KSEI variant is a new registration.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
