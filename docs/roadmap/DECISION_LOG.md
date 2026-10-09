@@ -3181,6 +3181,32 @@ for G1 approval. The draft is `P-M/data_acquisition/08_RETAIL_PATHS_1_4_FEASIBIL
 
 ---
 
+### D-090 · HYP-PM-0021 (daily OIB continuation) registered in P-M {I5,I6,I7,I12}, G0 frozen at N=612; G1 approved
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** Registration + G0 freeze + G1 approval ·
+**Approval authority:** Owner, 2026-10-09: "OIB G1 approved". The G0 is branch
+`research/oib-continuation-2026-10` @ `cdabad9` (mechanism D-088).
+
+- **Family and census.**
+  - P-M {I5,I6,I7,I12}, I7 cell: the family's 5th registered member (HYP-PM-0001, -0003, -0007,
+    -0009 before it; D-089 reclassifications never reduce the count, X8).
+  - The census was 611 after D-085 (D-087 withdrew before registration); this arm makes **612**, bar
+    **3.2991** (bar_v2 `e_max_abs_z(612)` = 3.299147). Counted from registration (X8).
+- **Frozen study.** PREDECLARATION sha256 `28c3eff2…`; sidecar re-verified OK before this entry
+  (predeclaration, `oib.py`, `outcomes.py`, `g0_census.py`, `g1_run.py`, `extract_daily.py`,
+  `test_pit_oib.py`, verbatim `ownership.py` `856afe18…` and `cost_realised.py` `65051253…`).
+  - Snapshots: walkforward `a2d7e675…`, history_long `7d298068…` (prices end 2026-09-24); daily-totals
+    cache `73a06abf…` (MAX of the cumulative counters, built from the snapshot, so the D-089 in-place
+    recompute of the live table does not touch it).
+  - 384 testable days 2025-01-02 → 2026-09-23 (halves 230 / 154), median universe 377, quintile 75.
+  - Pass (all): S_cc NW t ≥ bar; both halves > 0; FM OIB coefficient over same-day return, log ADV
+    and Parkinson-60 with NW t ≥ 2.0; S_oc > 0; 5-session block net of cost_realised > 0.
+  - Stop rule not fired: MDE 0.118%/day, power 57.8% at 0.10%/day.
+- **G1:** one run, `OIB_G1_APPROVED=1`. The verdict comes from the computed booleans only.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
