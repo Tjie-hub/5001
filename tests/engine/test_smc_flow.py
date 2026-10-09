@@ -90,13 +90,14 @@ def test_intraday_positive_delta_confirms(tmp_path):
     conn = sqlite3.connect(db)
     conn.executemany(
         "INSERT INTO stockbit_flow_bars VALUES (?,?,?,?,?,?,?,?,?,?)",
+        # lots/freq/delta are cumulative session totals (per-minute deltas +300, +100)
         [('BBCA', '2026-05-03', '09:00', 500, 200, 5, 2, 100, 4000.0, 300),
-         ('BBCA', '2026-05-03', '09:01', 400, 300, 4, 3, 90, 4010.0, 100)])
+         ('BBCA', '2026-05-03', '09:01', 900, 500, 9, 5, 90, 4010.0, 400)])
     conn.commit(); conn.close()
     r = confirm_sweep_flow('BBCA', '2026-05-03', db_path=db)
     assert r['confirmed'] is True
     assert r['source'] == 'intraday'
-    assert r['score'] == 400.0  # 300 + 100
+    assert r['score'] == 400.0  # final running delta = 300 + 100
 
 
 def test_intraday_negative_delta_rejects(tmp_path):

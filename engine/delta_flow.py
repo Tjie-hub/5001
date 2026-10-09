@@ -3,6 +3,14 @@
 Reads stockbit_flow_bars (1-min granularity, ~28-day rolling history from
 2026-04-20). delta = buy_lot - sell_lot. Granularity is 1-minute, NOT
 tick-level — delta_by_price is a 1-min approximation of a footprint.
+
+The stored buy_lot/sell_lot/buy_freq/sell_freq (and so the stored delta) are
+CUMULATIVE session totals through bar_time; net_value is per-minute. Until
+2026-10-09 this module treated the running totals as per-minute flow, so CVD was
+a cumsum of a cumsum, delta bars/footprint/imbalances showed running levels and
+session_delta_stats summed running totals (~100-200x, early-weighted).
+load_bars() now de-cumulates once, the same way as flow_filter._per_minute
+(audit docs/audit/FLOW_CUMULATIVE_COUNTER_AUDIT_2026-10-09.md).
 """
 import sqlite3
 import numpy as np
@@ -11,10 +19,22 @@ from config import DB_PATH
 from data.db import connect as db_connect
 
 EARLIEST_DATE = '2026-04-20'
+_CUMULATIVE = ('buy_lot', 'sell_lot', 'buy_freq', 'sell_freq')
+
+
+def _per_minute(df: pd.DataFrame) -> pd.DataFrame:
+    """Session running totals -> per-minute flow; delta recomputed from the
+    increments. A negative step (vendor revision) is clamped to 0."""
+    for c in _CUMULATIVE:
+        x = df[c].astype('int64')
+        df[c] = x.diff().fillna(x).clip(lower=0).astype('int64')
+    df['delta'] = df['buy_lot'] - df['sell_lot']
+    return df
 
 
 def load_bars(ticker: str, date: str, db_path: str = DB_PATH) -> pd.DataFrame:
-    """Return the session's 1-min bars for ticker/date, ordered by bar_time.
+    """Return the session's 1-min bars for ticker/date, ordered by bar_time,
+    with buy/sell lot and freq and delta as PER-MINUTE flow (de-cumulated).
     Empty DataFrame if none."""
     conn = db_connect(db_path)
     try:
@@ -25,7 +45,7 @@ def load_bars(ticker: str, date: str, db_path: str = DB_PATH) -> pd.DataFrame:
             conn, params=(ticker.upper(), date))
     finally:
         conn.close()
-    return df
+    return _per_minute(df) if not df.empty else df
 
 
 def cvd(ticker: str, date: str, db_path: str = DB_PATH) -> list:
