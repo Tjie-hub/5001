@@ -1,0 +1,58 @@
+{
+  "register": "TRADE_BOOK_SEMANTIC_REGISTER_v1",
+  "date": "2026-10-09",
+  "authorized_by": "Owner, 2026-10-09 'Fix all' (DECISION_LOG D-089)",
+  "evidence": "docs/audit/FLOW_CUMULATIVE_COUNTER_AUDIT_2026-10-09.md; 0 decreases in 177,688 consecutive-bar steps on 2026-10-08; engine/trade_flow.py (2026-09-04); research/studies/idx80_flow_study.py",
+  "fields": {
+    "stockbit_flow_bars.buy_lot / sell_lot": {
+      "meaning": "CUMULATIVE session total of buy-/sell-aggressor lots through bar_time (monotone within a session)",
+      "status": "VERIFIED",
+      "research_use": "day total = MAX (last bar); per-minute flow = consecutive difference (clamp negative steps to 0); window flow = end minus start. NEVER sum, average, or ratio per bar."
+    },
+    "stockbit_flow_bars.buy_freq / sell_freq": {
+      "meaning": "CUMULATIVE session trade counts through bar_time",
+      "status": "VERIFIED",
+      "research_use": "same as buy_lot / sell_lot"
+    },
+    "stockbit_flow_bars.delta": {
+      "meaning": "buy_lot - sell_lot of the cumulative series, i.e. the running net through bar_time",
+      "status": "VERIFIED",
+      "research_use": "day net = value at the last bar; per-minute delta = recompute from de-cumulated buy/sell. NEVER cumsum or sum."
+    },
+    "stockbit_flow_bars.net_value": {
+      "meaning": "per-minute net aggressor value (correlates 1.000 with the minute increments)",
+      "status": "VERIFIED",
+      "research_use": "sum freely"
+    },
+    "stockbit_flow.net_value": {
+      "meaning": "daily sum of per-minute net_value",
+      "status": "VALID for all dates"
+    },
+    "stockbit_flow.buy_lot / sell_lot / net_lot / buy_freq / sell_freq": {
+      "meaning": "before 2026-10-09: SUM of cumulative counters (~100-200x the day's total, early-weighted); from 2026-10-09 (fix 47ff225): the day's final total",
+      "status": "INVALID before 2026-10-09",
+      "research_use": "do not use rows dated before 2026-10-09; recompute from the bars with MAX instead"
+    },
+    "stockbit_flow.composite_score / verdict / smart_money": {
+      "meaning": "flow_filter._analyze labels; before 2026-10-09 computed on running totals as if per-minute (verdict differed for 51% of tickers on 2026-10-08)",
+      "status": "OLD DEFINITION before 2026-10-09",
+      "research_use": "not a research input for dates before 2026-10-09"
+    },
+    "views_v1.buy_lot_sum / sell_lot_sum / delta_sum / sb_buy_lot / sb_sell_lot / sb_two_sided_lot / sb_net_lot / sb_lot_over_volume": {
+      "meaning": "sums of cumulative counters, or the pre-fix daily table",
+      "status": "INVALID",
+      "research_use": "use net_value_sum / sb_net_value only; views_v1 stays frozen and unedited"
+    }
+  },
+  "affected_records": {
+    "INVALID_data": ["FAIL-PM-0001 (HYP-PM-0001)", "FAIL-PM-0009 (HYP-PM-0009)"],
+    "control_misspecified": ["FAIL-PM-0005-G1 NF control (C7 check 4)"],
+    "exploratory_affected": [
+      "Flow Edge Study 2026-07 (tested the pre-fix labels)",
+      "Sprint 2026-09-15 D1 lot-share and run_intraday.py lot-based features",
+      "pattern_scan/sweepflow.py lot and label rows",
+      "g1_harness nf_validate.py / freq_probe.py baselines",
+      "Exhaustion study order-flow overlay 2026-09-25 (code not found: unverifiable, treat as suspect)"
+    ]
+  }
+}

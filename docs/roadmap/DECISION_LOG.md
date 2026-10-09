@@ -3137,6 +3137,50 @@ for G1 approval. The draft is `P-M/data_acquisition/08_RETAIL_PATHS_1_4_FEASIBIL
 
 ---
 
+### D-089 · Cumulative trade-book counters: FAIL-PM-0001 and FAIL-PM-0009 reclassified INVALID (data); FAIL-PM-0005-G1 annotated; trade-book semantic rule
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** Superseding classification + research data rule ·
+**Approval authority:** Owner, 2026-10-09: "Fix all" (on the proposed actions of
+`docs/audit/FLOW_CUMULATIVE_COUNTER_AUDIT_2026-10-09.md`, commit `97ea0dd`).
+
+- **Premise.** The trade-book minute series `buy_lot`, `sell_lot`, `buy_freq`, `sell_freq` and the
+  stored `delta` in `stockbit_flow_bars` (and every copy, incl. `flow_bars_v004`) are **cumulative
+  session totals** (0 decreases in 177,688 steps on 2026-10-08). `net_value` is per-minute.
+- **FAIL-PM-0001 (HYP-PM-0001): F2 → INVALID · data.** `run_exp_pm_0001.py` computed
+  `OFI_t = delta / (buy_lot + sell_lot)` per bar. Both terms are running totals, so the instrument was
+  the session's running imbalance ratio, not one minute's order flow. The registered M1.1 (I5)
+  construct was never measured; the F2 verdict is void as evidence about the mechanism.
+- **FAIL-PM-0009 (HYP-PM-0009): F2 → INVALID · data.** `run_exp_pm_0009.py` formed segment net
+  buying as `SUM(buy_lot) − SUM(sell_lot)` over 09:00–09:59 and 14:50–15:49. A sum of running totals
+  over a segment ≈ segment length × the running net level, not the segment's own flow, so "late vs
+  early execution" was not measured.
+- **Both stay counted** in P-M {I5,I6,I7,I12} (X8; slots permanent, PG-3/OS-10). Neither is re-run
+  or rescued here: INVALID means *no evidence either way*, the FAIL-PM-0007 precedent (D-063). A
+  correctly measured I5 or intraday-timing I7 test is a NEW registration (T12) with its own bar.
+- **FAIL-PM-0005-G1: annotated, classification unchanged.** The primary (C3 breadth, `broker_flow`)
+  is unaffected and stays NOT CONFIRMED. Its NF control (C7 check 4) was a ratio of summed running
+  totals from the daily `stockbit_flow` table — an early-weighted imbalance, not the day's — so that
+  control is recorded as mis-specified.
+- **Failure-mode distribution:** F2 9 → 7; INVALID · data 1 → 3.
+- **Research rule (binding from today), recorded in
+  `docs/research_programs/P-M/TRADE_BOOK_SEMANTIC_REGISTER_v1.json`:**
+  - Trade-book lot / freq / delta values are used only as the day's MAX (final total), consecutive
+    differences (per-minute flow), or window end minus start. Never summed, averaged or ratio'd per
+    bar.
+  - `stockbit_flow.buy_lot / sell_lot / net_lot / buy_freq / sell_freq` and the
+    `composite_score / verdict / smart_money` labels written **before 2026-10-09** are the old
+    definition and are not used as research inputs; `stockbit_flow.net_value` is valid throughout.
+  - `views_v1` columns `buy_lot_sum`, `delta_sum` are invalid; use `net_value_sum` or the MAX.
+- **Production (same authority):** `engine/delta_flow.py` de-cumulated (chart CVD, delta bars,
+  footprint, session stats, imbalances; feeds `smc_flow`'s intraday tier). Live after the owner's
+  5001 restart, like `47ff225`.
+- **Not changed:** the census (611; reclassification never reduces it), the Flow Edge Study's
+  archived conclusion (it stands as a statement about the production labels as they were; a
+  correctly computed verdict is untested), and every other registry entry (audit §2–3).
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
