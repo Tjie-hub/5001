@@ -3042,6 +3042,42 @@ for G1 approval. The draft is `P-M/data_acquisition/08_RETAIL_PATHS_1_4_FEASIBIL
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-086 · Mechanism accepted: online-retail broker imbalance — new family Retail-Flow {RF}; run on the liquid panel
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** Mechanism acceptance (D-070 §1) ·
+**Approval authority:** Owner, 2026-10-09: "accept path 1, run it on the 96-name panel". The draft is
+`P-M/data_acquisition/08_RETAIL_PATHS_1_4_FEASIBILITY_2026-10-09.md`, item 1.
+
+- **Mechanism: liquidity provision to retail demand (not price prediction).**
+  - The aggregated orders of online-retail clients are noise demand. Whoever absorbs that demand is
+    paid in subsequent returns (Barber, Odean and Zhu 2009; Kelley and Tetlock 2013).
+  - **Pre-declared sign:** retail net buying is followed by *lower* returns. The Kaniel-Saar-Titman
+    sign is not tested; a positive result is not a rescue.
+- **Distinct from earlier failures.**
+  - FAIL-PM-0007 used the market-wide broker net, which is zero by identity. A group net is not
+    (sd 0.20 per stock-day).
+  - FAIL-PM-0001 (I5 inventory) and FAIL-PM-0003 (I7 adverse selection) used all-broker
+    constructions. The G0 reports this signal's correlation with the foreign-net imbalance and the
+    prior-week return, pre-outcome.
+  - FAIL-PM-0020 (KSEI ownership, monthly holdings) is a stock, not a flow. Its NULL bounds this
+    test's prior only loosely.
+- **Family:** new **Retail-Flow {RF}**, slot 1, opened by this entry.
+- **Frozen inputs (from the 08 memo).**
+  - **Retail group** R = {XL, XC, YP, PD, KK}, by value per trade ≤ Rp 6M over 2025-01-02 → 03-31.
+  - That window is excluded from every test.
+- **Scope (owner).** The ~96-name liquid panel that `broker_flow` covers continuously from 2025-01, a
+  fixed set. The test runs from 2025-04-01 to the snapshot.
+  - The breadth backfill (2025-01 → 2026-03, ~764 more names) is **not** used.
+  - A later breadth test is a new registration.
+- **Design constraints for the G0.**
+  - Weekly cross-section, with the PIT rule frozen at G0.
+  - Liquidity on the D-081 basis; costs from D-082.
+  - The bar at the census + arms.
+  - Tradeability (net of cost) is a required condition.
+  - Power is reported honestly: about 78 weeks on about 96 names. A stop rule applies if power is
+    hopeless.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
