@@ -2793,6 +2793,92 @@ close was computed.
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-079 · HYP-PM-0019 (market-stress reversal) G1 NULL — FAILED (F2); Price-Reversal slot 3 consumed
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** Result filing · **Approval authority:** Owner,
+2026-10-09: "file it". G1 approved under D-078; run on branch `research/market-stress-reversal-2026-10`,
+result commit `82e8afa`.
+
+- **Run.** One frozen run (`RESULT_20261009T020022Z.json`, runtime 11 min) at N = 608, bar **3.2973**.
+  Before any outcome, ZCode verified the sidecar (`23979b75…`), both snapshots (`a2d7e675…`,
+  `7d298068…`) and the fingerprint (`9c26e0df…`).
+- **Result: falsified on the primary clause; every secondary condition is negative.**
+
+  | Measure | Result |
+  |---|---|
+  | S1, n 63 | mean R **−2.12%**, t **−6.18** |
+  | E1 2007–2020 (n 46) | −1.66% |
+  | E2 2021-07→ (n 17) | −3.37% |
+  | Entry at the close of t+1 | −2.01% |
+  | Parkinson-60-matched excess | −2.41% |
+  | Controls: ex-big-4 / ex-ex-date | −2.11% / −2.15%, no sign flip |
+
+  - The beta-adjusted **gross** excess is ≈ −0.09%: there is no edge before cost.
+  - S2, the market level, is −1.37%: continuation, not reversal.
+  - No events fall in 2021-H1.
+- **Cost note.** The modelled cost averages 2.03% per round trip on names with ADV ≥ Rp 10bn. That is
+  high for that liquidity. It is not material here, because the result is null gross, but the D-059
+  cost model's level for liquid names is flagged for a check before it is reused.
+- **Filing.**
+  - HYP-PM-0019 → **FAILED (F2)**; FAILURE_REGISTRY **FAIL-PM-0019**.
+  - No forward recorder.
+  - Price-Reversal {R1, R2, R3} keeps the slot (X8).
+- **Reading for the program.** D-075's honest prior held. On IDX, even forced selling on market-wide
+  stress days continues for at least a week. With this, every price-based reversal formulation tested
+  is null or negative, including the one conditioned on liquidity. The only surviving reversal record is
+  HYP-PM-0014, the big-4 bank climax low, which is in its forward test.
+
+**Amendment.** Only by a superseding D-entry.
+
+### D-080 · HYP-PM-0018 (tender-offer floor) registered in {SE}, G0 frozen at N=609; stop rule fired — no G1, dormant
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** Registration + G0 freeze + stop-rule filing ·
+**Approval authority:** Owner, 2026-10-09: "go for D-074", then "file it". The G0 is branch
+`research/tender-offer-floor-2026-10` @ `d53ba8c`, frozen from brief `f86d272`.
+
+- **Family and census.**
+  - {SE}, slot **2** (D-076).
+  - The census was 608 after D-078; this 1 arm makes **609**, bar **3.2978** (exact
+    `e_max_abs_z(609)` = 3.297758). D-074's "602 / 3.2945" is superseded.
+  - The arm counts from registration even though no G1 runs (D-074 stop rule, X8).
+- **Study (frozen).** PREDECLARATION sha256 `237ffa72…`; the sidecar covers the predeclaration, drivers
+  and PIT tests.
+  - **Entry:** the close before `tender_start`. The offer is treated as public then, since the offer
+    statement is published before the window (POJK 9/2018). `tender_created` is audited only: 104 of 165
+    are on or before the start, 61 after, and 18 on or after the end.
+  - **Population:** ADV20 ≥ Rp 1bn in true rupiah; spread to the **split-rescaled** offer price ≥ 0.60%
+    plus the D-059 cost. The basis check found `tender_price` is **as announced** (LPGI, PTRO, EDGE), the
+    opposite of `dividend_value`. Every vendor field needs its own basis test.
+  - **Arm:** market exit at the `tender_end` close; month-clustered t.
+- **Stop rule: FIRED.** Only **12** events are eligible, below the floor of 20.
+  - The waterfall from 165 rows:
+    - 35 fail rule 1 (34 before price coverage, plus KEJU with start ≥ end)
+    - 4 still open
+    - 1 has no entry bar
+    - 28 have zero volume at entry
+    - 60 are offered at or below the market
+    - 16 are under the true-ADV floor
+    - 9 have a spread below the cost
+    - **12 remain**
+  - The planner's 26 is fully reconciled to these frozen conventions.
+  - The minimum detectable effect is 8.70% at n 12, larger than the median spread of 4.32%, so even full
+    convergence could not be detected.
+  - The deliverable is `SPREAD_LEDGER.md` (pre-entry facts only). `g1_run.py` is frozen and refuses to
+    run while the stop holds.
+- **Status: REGISTERED — dormant.** Not WITHDRAWN: that state is pre-registration and uncounted, while
+  this arm is registered and counted. Not FAILED: no claim was tested. A G1 may run later under the same
+  frozen rules if the eligible count reaches 20 through new settled offers. That needs owner approval
+  and a census recomputed at the time.
+- **Mandatory vs voluntary:** no rule is possible, because `event_note` is empty on all 165 rows. The
+  full/partial cut is degenerate: the maximum `tender_percentage` is 90%.
+- **Forward recorder (D-074 §3; no census arm).**
+  - Every new offer is logged at `tender_start` (spread, ADV) and at `tender_end` (convergence).
+  - Lineage: the D-064 ex-date monitor `scripts/check_issuance_windows.py`.
+  - First case: DOOH (offer 148, 2026-10-05 → 11-03).
+  - Not built yet; owner-gated.
+- **Program state after D-077/D-079/D-080.** Every mechanism accepted under D-070 §1 has now been tested
+  or stopped. The census ledger is **609**. The next study needs a new mechanism D-entry.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
