@@ -90,3 +90,13 @@ No registry, result or production code was changed by this audit.
 | 5 | Pre-2026-10-09 `stockbit_flow` rows recomputed from the stored bars by `scripts/recompute_flow_history.py` (totals = MAX, labels = fixed `_analyze`; `net_value`, `last_price`, `updated_at` untouched) | 19:41–20:01 WIB. Checked first against the 266 rows the fixed 18:30 job wrote (266/266 identical). 395,302 rows: **319,224 recomputed**, 76,078 without bars left as the old definition. Verdict changed on 157,448 (49%), smart_money on 135,973 (43%). Re-run dry: 0 changes. Backup of all 395,302 prior rows: `~/scratch/stockbit_flow_pre_d089_2026-10-09.db` (table `stockbit_flow_pre_d089`, sha256 `0126a7ab…`) |
 
 Not changed: frozen research snapshots (pinned by sha), `views_v1`, the archived exploratory scripts.
+
+**Follow-up, 21:10 WIB.**
+- **What happened:** the 20:15 Broker Flow Fetch ran inside the gunicorn process, which still had
+  pre-47ff225 code until the 20:39 restart. It rewrote 651 of the 958 `stockbit_flow` rows for
+  2026-10-09 with summed totals and old labels. No other date was touched.
+- **Repair:**
+  - The 958 rows were first copied to the same backup file, as table `stockbit_flow_1009_2015`.
+  - The 829 rows that have stored bars were recomputed with `recompute_flow_history.recompute`.
+    Afterwards 0 rows differ from the bar MAX.
+- **No repeat:** the process now runs the fixed code.
