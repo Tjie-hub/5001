@@ -1,0 +1,969 @@
+{
+ "rule": "COUNTS ONLY: no return/price after any event's entry close was computed, printed or stored (D-074 G0 mode; D-070 rule 1)",
+ "snapshot": {
+  "path": "/home/tjiesar/scratch/g0_snapshots_2026-10-08/walkforward_snapshot_2026-10-08.db",
+  "sha256": "a2d7e675e5c66387446b888287ebbe7cef563b278c48f1518a88c797bc4bbc47",
+  "dataset_fingerprint": {
+   "max_date": "2026-10-07",
+   "total_rows": 1102829,
+   "sha256": "9c26e0df2fdd4e4bec378ff9d38b4d4ccbbdeaa9a6176ca71b3fdb955f137c03"
+  },
+  "reuse_decision": "reuses the 2026-10-08 walkforward snapshot: the live DB's tenderoffer rows are logically identical (165=165, same (ticker,event_id,event_date,raw_json) sets; newest event_date 2026-10-02) - nothing newer than the snapshot"
+ },
+ "panel": {
+  "first_session": "2021-07-05",
+  "last_session": "2026-10-07",
+  "tickers": 959
+ },
+ "waterfall": {
+  "S0_rows": 165,
+  "S1_rule1": 35,
+  "S2_settled": 4,
+  "S3_entry": 1,
+  "S4_prebars": 0,
+  "S5_volume": 28,
+  "S6_above": 60,
+  "S7_adv": 16,
+  "S8_spread": 9,
+  "S9_guard": 0,
+  "eligible": 12
+ },
+ "waterfall_fail_detail": {
+  "S5_volume": [
+   {
+    "ticker": "ABDA",
+    "event_id": "311"
+   },
+   {
+    "ticker": "CNTX",
+    "event_id": "355"
+   },
+   {
+    "ticker": "CNTX",
+    "event_id": "360"
+   },
+   {
+    "ticker": "CNTX",
+    "event_id": "362"
+   },
+   {
+    "ticker": "CNTX",
+    "event_id": "374"
+   },
+   {
+    "ticker": "EDGE",
+    "event_id": "416"
+   },
+   {
+    "ticker": "EDGE",
+    "event_id": "422"
+   },
+   {
+    "ticker": "EDGE",
+    "event_id": "427"
+   },
+   {
+    "ticker": "FORU",
+    "event_id": "336"
+   },
+   {
+    "ticker": "HITS",
+    "event_id": "376"
+   },
+   {
+    "ticker": "HITS",
+    "event_id": "377"
+   },
+   {
+    "ticker": "IBST",
+    "event_id": "349"
+   },
+   {
+    "ticker": "IBST",
+    "event_id": "418"
+   },
+   {
+    "ticker": "IBST",
+    "event_id": "424"
+   },
+   {
+    "ticker": "IBST",
+    "event_id": "429"
+   },
+   {
+    "ticker": "KARW",
+    "event_id": "333"
+   },
+   {
+    "ticker": "META",
+    "event_id": "332"
+   },
+   {
+    "ticker": "META",
+    "event_id": "334"
+   },
+   {
+    "ticker": "META",
+    "event_id": "339"
+   },
+   {
+    "ticker": "META",
+    "event_id": "354"
+   },
+   {
+    "ticker": "NINE",
+    "event_id": "389"
+   },
+   {
+    "ticker": "OCAP",
+    "event_id": "328"
+   },
+   {
+    "ticker": "OCAP",
+    "event_id": "337"
+   },
+   {
+    "ticker": "OCAP",
+    "event_id": "347"
+   },
+   {
+    "ticker": "RONY",
+    "event_id": "370"
+   },
+   {
+    "ticker": "STAR",
+    "event_id": "399"
+   },
+   {
+    "ticker": "SUPR",
+    "event_id": "423"
+   },
+   {
+    "ticker": "SUPR",
+    "event_id": "426"
+   }
+  ],
+  "S1_rule1": [
+   {
+    "ticker": "ACST",
+    "event_id": "2"
+   },
+   {
+    "ticker": "AIMS",
+    "event_id": "176"
+   },
+   {
+    "ticker": "AKSI",
+    "event_id": "166"
+   },
+   {
+    "ticker": "AYLS",
+    "event_id": "276"
+   },
+   {
+    "ticker": "BBHI",
+    "event_id": "277"
+   },
+   {
+    "ticker": "BLTZ",
+    "event_id": "70"
+   },
+   {
+    "ticker": "BNLI",
+    "event_id": "275"
+   },
+   {
+    "ticker": "DWGL",
+    "event_id": "231"
+   },
+   {
+    "ticker": "ERTX",
+    "event_id": "267"
+   },
+   {
+    "ticker": "GHON",
+    "event_id": "180"
+   },
+   {
+    "ticker": "GOLD",
+    "event_id": "188"
+   },
+   {
+    "ticker": "GOLD",
+    "event_id": "50"
+   },
+   {
+    "ticker": "HDFA",
+    "event_id": "266"
+   },
+   {
+    "ticker": "IGAR",
+    "event_id": "51"
+   },
+   {
+    "ticker": "JAWA",
+    "event_id": "171"
+   },
+   {
+    "ticker": "KEJU",
+    "event_id": "280"
+   },
+   {
+    "ticker": "LPPF",
+    "event_id": "281"
+   },
+   {
+    "ticker": "META",
+    "event_id": "179"
+   },
+   {
+    "ticker": "MITI",
+    "event_id": "283"
+   },
+   {
+    "ticker": "MYTX",
+    "event_id": "167"
+   },
+   {
+    "ticker": "PYFA",
+    "event_id": "271"
+   },
+   {
+    "ticker": "SAME",
+    "event_id": "284"
+   },
+   {
+    "ticker": "SCPI",
+    "event_id": "49"
+   },
+   {
+    "ticker": "SIPD",
+    "event_id": "4"
+   },
+   {
+    "ticker": "SMRU",
+    "event_id": "173"
+   },
+   {
+    "ticker": "SQMI",
+    "event_id": "233"
+   },
+   {
+    "ticker": "SRTG",
+    "event_id": "193"
+   },
+   {
+    "ticker": "TIFA",
+    "event_id": "273"
+   },
+   {
+    "ticker": "TOBA",
+    "event_id": "91"
+   },
+   {
+    "ticker": "TPMA",
+    "event_id": "263"
+   },
+   {
+    "ticker": "TRAM",
+    "event_id": "175"
+   },
+   {
+    "ticker": "TRIL",
+    "event_id": "48"
+   },
+   {
+    "ticker": "VRNA",
+    "event_id": "192"
+   },
+   {
+    "ticker": "WICO",
+    "event_id": "177"
+   },
+   {
+    "ticker": "ZBRA",
+    "event_id": "286"
+   }
+  ],
+  "S6_above": [
+   {
+    "ticker": "AMMS",
+    "event_id": "396"
+   },
+   {
+    "ticker": "ASLI",
+    "event_id": "402"
+   },
+   {
+    "ticker": "AYLS",
+    "event_id": "404"
+   },
+   {
+    "ticker": "BEEF",
+    "event_id": "319"
+   },
+   {
+    "ticker": "BEEF",
+    "event_id": "324"
+   },
+   {
+    "ticker": "BFIN",
+    "event_id": "300"
+   },
+   {
+    "ticker": "BOGA",
+    "event_id": "395"
+   },
+   {
+    "ticker": "BPFI",
+    "event_id": "313"
+   },
+   {
+    "ticker": "CAKK",
+    "event_id": "312"
+   },
+   {
+    "ticker": "CASH",
+    "event_id": "383"
+   },
+   {
+    "ticker": "CASS",
+    "event_id": "340"
+   },
+   {
+    "ticker": "CENT",
+    "event_id": "278"
+   },
+   {
+    "ticker": "CNKO",
+    "event_id": "363"
+   },
+   {
+    "ticker": "DATA",
+    "event_id": "373"
+   },
+   {
+    "ticker": "DGIK",
+    "event_id": "293"
+   },
+   {
+    "ticker": "EDGE",
+    "event_id": "279"
+   },
+   {
+    "ticker": "FITT",
+    "event_id": "397"
+   },
+   {
+    "ticker": "FUTR",
+    "event_id": "366"
+   },
+   {
+    "ticker": "FUTR",
+    "event_id": "388"
+   },
+   {
+    "ticker": "GPSO",
+    "event_id": "391"
+   },
+   {
+    "ticker": "INPS",
+    "event_id": "412"
+   },
+   {
+    "ticker": "INRU",
+    "event_id": "375"
+   },
+   {
+    "ticker": "IPAC",
+    "event_id": "310"
+   },
+   {
+    "ticker": "IRSX",
+    "event_id": "381"
+   },
+   {
+    "ticker": "KEJU",
+    "event_id": "384"
+   },
+   {
+    "ticker": "KETR",
+    "event_id": "331"
+   },
+   {
+    "ticker": "KETR",
+    "event_id": "425"
+   },
+   {
+    "ticker": "KETR",
+    "event_id": "428"
+   },
+   {
+    "ticker": "KMDS",
+    "event_id": "353"
+   },
+   {
+    "ticker": "KRYA",
+    "event_id": "385"
+   },
+   {
+    "ticker": "LABA",
+    "event_id": "351"
+   },
+   {
+    "ticker": "LAPD",
+    "event_id": "401"
+   },
+   {
+    "ticker": "MBSS",
+    "event_id": "292"
+   },
+   {
+    "ticker": "MEJA",
+    "event_id": "406"
+   },
+   {
+    "ticker": "MENN",
+    "event_id": "378"
+   },
+   {
+    "ticker": "MGLV",
+    "event_id": "408"
+   },
+   {
+    "ticker": "MINA",
+    "event_id": "359"
+   },
+   {
+    "ticker": "MORA",
+    "event_id": "407"
+   },
+   {
+    "ticker": "NATO",
+    "event_id": "400"
+   },
+   {
+    "ticker": "NAYZ",
+    "event_id": "338"
+   },
+   {
+    "ticker": "OLIV",
+    "event_id": "403"
+   },
+   {
+    "ticker": "PACK",
+    "event_id": "364"
+   },
+   {
+    "ticker": "PADA",
+    "event_id": "413"
+   },
+   {
+    "ticker": "PADI",
+    "event_id": "380"
+   },
+   {
+    "ticker": "PGJO",
+    "event_id": "382"
+   },
+   {
+    "ticker": "PIPA",
+    "event_id": "390"
+   },
+   {
+    "ticker": "PKPK",
+    "event_id": "291"
+   },
+   {
+    "ticker": "PORT",
+    "event_id": "350"
+   },
+   {
+    "ticker": "PTRO",
+    "event_id": "335"
+   },
+   {
+    "ticker": "RIGS",
+    "event_id": "296"
+   },
+   {
+    "ticker": "SINI",
+    "event_id": "314"
+   },
+   {
+    "ticker": "SMKM",
+    "event_id": "387"
+   },
+   {
+    "ticker": "SOFA",
+    "event_id": "398"
+   },
+   {
+    "ticker": "SOUL",
+    "event_id": "365"
+   },
+   {
+    "ticker": "TCID",
+    "event_id": "410"
+   },
+   {
+    "ticker": "TEBE",
+    "event_id": "371"
+   },
+   {
+    "ticker": "TOTL",
+    "event_id": "348"
+   },
+   {
+    "ticker": "TRIM",
+    "event_id": "299"
+   },
+   {
+    "ticker": "VISI",
+    "event_id": "421"
+   },
+   {
+    "ticker": "YELO",
+    "event_id": "294"
+   }
+  ],
+  "S7_adv": [
+   {
+    "ticker": "BINO",
+    "event_id": "344"
+   },
+   {
+    "ticker": "BMAS",
+    "event_id": "316"
+   },
+   {
+    "ticker": "ENAK",
+    "event_id": "357"
+   },
+   {
+    "ticker": "KLIN",
+    "event_id": "369"
+   },
+   {
+    "ticker": "LPGI",
+    "event_id": "320"
+   },
+   {
+    "ticker": "MFMI",
+    "event_id": "282"
+   },
+   {
+    "ticker": "MITI",
+    "event_id": "315"
+   },
+   {
+    "ticker": "MMLP",
+    "event_id": "317"
+   },
+   {
+    "ticker": "MMLP",
+    "event_id": "341"
+   },
+   {
+    "ticker": "PANI",
+    "event_id": "289"
+   },
+   {
+    "ticker": "PNGO",
+    "event_id": "420"
+   },
+   {
+    "ticker": "SMDM",
+    "event_id": "356"
+   },
+   {
+    "ticker": "SONA",
+    "event_id": "415"
+   },
+   {
+    "ticker": "SOSS",
+    "event_id": "321"
+   },
+   {
+    "ticker": "SUPR",
+    "event_id": "287"
+   },
+   {
+    "ticker": "VOKS",
+    "event_id": "329"
+   }
+  ],
+  "S8_spread": [
+   {
+    "ticker": "COCO",
+    "event_id": "298"
+   },
+   {
+    "ticker": "KETR",
+    "event_id": "419"
+   },
+   {
+    "ticker": "LINK",
+    "event_id": "308"
+   },
+   {
+    "ticker": "LUCY",
+    "event_id": "305"
+   },
+   {
+    "ticker": "PALM",
+    "event_id": "309"
+   },
+   {
+    "ticker": "PTRO",
+    "event_id": "307"
+   },
+   {
+    "ticker": "RANC",
+    "event_id": "290"
+   },
+   {
+    "ticker": "RSGK",
+    "event_id": "295"
+   },
+   {
+    "ticker": "TRJA",
+    "event_id": "326"
+   }
+  ],
+  "S2_settled": [
+   {
+    "ticker": "DOOH",
+    "event_id": "432"
+   },
+   {
+    "ticker": "MBSS",
+    "event_id": "430"
+   },
+   {
+    "ticker": "NAYZ",
+    "event_id": "433"
+   },
+   {
+    "ticker": "SUPR",
+    "event_id": "431"
+   }
+  ],
+  "S3_entry": [
+   {
+    "ticker": "UANG",
+    "event_id": "285"
+   }
+  ]
+ },
+ "tender_created_audit": {
+  "rows_with_start_end": 165,
+  "created_le_start": 104,
+  "created_after_start": 61,
+  "created_ge_end": 18,
+  "created_dates_shared_gt50": {},
+  "note": "tender_created is a vendor stamp, used for THIS audit only; PIT rule: the offer is public at the close before tender_start (POJK 9/2018 - the offer statement precedes the window); example artefact ZBRA created 2021-09-23 for window 2021-04-30..05-29"
+ },
+ "basis_check": {
+  "rule_frozen": "as_announced_rescale",
+  "rescale": "adj_price = tender_price / f_cum(split-class factors with ex-date strictly after the entry session)",
+  "discriminating_events_f_ge_1.05": [
+   {
+    "ticker": "BEEF",
+    "event_id": "319",
+    "d_entry": "2023-05-09",
+    "close_entry": 63.21,
+    "f_cum": 1.1549,
+    "r_stored": 0.965,
+    "r_asannounced": 0.8356
+   },
+   {
+    "ticker": "BEEF",
+    "event_id": "324",
+    "d_entry": "2023-11-27",
+    "close_entry": 207.82,
+    "f_cum": 1.1549,
+    "r_stored": 0.5919,
+    "r_asannounced": 0.5125
+   },
+   {
+    "ticker": "EDGE",
+    "event_id": "279",
+    "d_entry": "2021-08-25",
+    "close_entry": 6400.0,
+    "f_cum": 5.0,
+    "r_stored": 2.0198,
+    "r_asannounced": 0.404
+   },
+   {
+    "ticker": "LPGI",
+    "event_id": "320",
+    "d_entry": "2023-05-23",
+    "close_entry": 627.5,
+    "f_cum": 10.0,
+    "r_stored": 10.4191,
+    "r_asannounced": 1.0419
+   },
+   {
+    "ticker": "MEJA",
+    "event_id": "406",
+    "d_entry": "2026-03-17",
+    "close_entry": 78.0,
+    "f_cum": 1.1667,
+    "r_stored": 0.8462,
+    "r_asannounced": 0.7253
+   },
+   {
+    "ticker": "PTRO",
+    "event_id": "307",
+    "d_entry": "2022-08-24",
+    "close_entry": 306.0,
+    "f_cum": 10.0,
+    "r_stored": 10.1895,
+    "r_asannounced": 1.019
+   },
+   {
+    "ticker": "PTRO",
+    "event_id": "335",
+    "d_entry": "2024-04-29",
+    "close_entry": 570.0,
+    "f_cum": 10.0,
+    "r_stored": 6.2158,
+    "r_asannounced": 0.6216
+   }
+  ],
+  "finding": "as-announced: LPGI 2023 r_stored 10.42 vs r_asannounced 1.042; PTRO 2022 10.19 vs 1.019; EDGE 2021 2.02 vs 0.404 - stored-basis ratios of 6-10x are impossible spreads; dividend_value by contrast IS pre-scaled (stress G0)"
+ },
+ "mandatory_voluntary": {
+  "rule": "NONE - event_note is empty for all 165 rows and no stored field classifies; left unreported (brief: don't guess)",
+  "full_partial_cut": 99.0,
+  "full_partial": "tender_percentage max is 90.0 -> under the >=99 full cut ALL events are partial; reported as such, no guessing"
+ },
+ "eligible_per_year": {
+  "2022": 3,
+  "2023": 2,
+  "2024": 1,
+  "2025": 2,
+  "2026": 4
+ },
+ "eligible_events": [
+  {
+   "ticker": "OASA",
+   "event_id": "297",
+   "start": "2022-02-08",
+   "end": "2022-03-09",
+   "d_entry": "2022-02-07",
+   "d_exit": "2022-03-09",
+   "close_entry": 141.55,
+   "price_raw": 224.0,
+   "f_cum_entry": 1.0,
+   "price_adj": 224.0,
+   "spread": 0.5824,
+   "adv20_idrbn": 1.969,
+   "cost": 0.0484,
+   "window_sessions": 20
+  },
+  {
+   "ticker": "TBIG",
+   "event_id": "304",
+   "start": "2022-06-22",
+   "end": "2022-07-22",
+   "d_entry": "2022-06-21",
+   "d_exit": "2022-07-22",
+   "close_entry": 2940.0,
+   "price_raw": 3200.0,
+   "f_cum_entry": 1.0,
+   "price_adj": 3200.0,
+   "spread": 0.0884,
+   "adv20_idrbn": 68.342,
+   "cost": 0.0194,
+   "window_sessions": 23
+  },
+  {
+   "ticker": "TOWR",
+   "event_id": "306",
+   "start": "2022-08-04",
+   "end": "2022-09-02",
+   "d_entry": "2022-08-03",
+   "d_exit": "2022-09-02",
+   "close_entry": 1210.0,
+   "price_raw": 1300.0,
+   "f_cum_entry": 1.0,
+   "price_adj": 1300.0,
+   "spread": 0.0744,
+   "adv20_idrbn": 103.105,
+   "cost": 0.0106,
+   "window_sessions": 21
+  },
+  {
+   "ticker": "SMMT",
+   "event_id": "323",
+   "start": "2023-11-23",
+   "end": "2023-12-22",
+   "d_entry": "2023-11-22",
+   "d_exit": "2023-12-22",
+   "close_entry": 1260.0,
+   "price_raw": 1306.0,
+   "f_cum_entry": 1.0,
+   "price_adj": 1306.0,
+   "spread": 0.0365,
+   "adv20_idrbn": 2.968,
+   "cost": 0.0131,
+   "window_sessions": 22
+  },
+  {
+   "ticker": "TBIG",
+   "event_id": "322",
+   "start": "2023-12-14",
+   "end": "2024-01-12",
+   "d_entry": "2023-12-13",
+   "d_exit": "2024-01-12",
+   "close_entry": 2100.0,
+   "price_raw": 2300.0,
+   "f_cum_entry": 1.0,
+   "price_adj": 2300.0,
+   "spread": 0.0952,
+   "adv20_idrbn": 9.424,
+   "cost": 0.0177,
+   "window_sessions": 19
+  },
+  {
+   "ticker": "SILO",
+   "event_id": "345",
+   "start": "2024-08-05",
+   "end": "2024-09-03",
+   "d_entry": "2024-08-02",
+   "d_exit": "2024-09-03",
+   "close_entry": 2730.0,
+   "price_raw": 2850.0,
+   "f_cum_entry": 1.0,
+   "price_adj": 2850.0,
+   "spread": 0.044,
+   "adv20_idrbn": 4.413,
+   "cost": 0.0177,
+   "window_sessions": 22
+  },
+  {
+   "ticker": "ANJT",
+   "event_id": "379",
+   "start": "2025-08-26",
+   "end": "2025-09-24",
+   "d_entry": "2025-08-25",
+   "d_exit": "2025-09-24",
+   "close_entry": 1780.0,
+   "price_raw": 1813.0,
+   "f_cum_entry": 1.0,
+   "price_adj": 1813.0,
+   "spread": 0.0185,
+   "adv20_idrbn": 1.813,
+   "cost": 0.0123,
+   "window_sessions": 21
+  },
+  {
+   "ticker": "MMLP",
+   "event_id": "386",
+   "start": "2025-11-25",
+   "end": "2025-12-24",
+   "d_entry": "2025-11-24",
+   "d_exit": "2025-12-24",
+   "close_entry": 565.0,
+   "price_raw": 580.0,
+   "f_cum_entry": 1.0,
+   "price_adj": 580.0,
+   "spread": 0.0265,
+   "adv20_idrbn": 2.803,
+   "cost": 0.0168,
+   "window_sessions": 22
+  },
+  {
+   "ticker": "SGRO",
+   "event_id": "392",
+   "start": "2026-01-21",
+   "end": "2026-02-19",
+   "d_entry": "2026-01-20",
+   "d_exit": "2026-02-19",
+   "close_entry": 7700.0,
+   "price_raw": 7903.0,
+   "f_cum_entry": 1.0,
+   "price_adj": 7903.0,
+   "spread": 0.0264,
+   "adv20_idrbn": 8.258,
+   "cost": 0.0183,
+   "window_sessions": 20
+  },
+  {
+   "ticker": "IATA",
+   "event_id": "409",
+   "start": "2026-04-22",
+   "end": "2026-06-03",
+   "d_entry": "2026-04-21",
+   "d_exit": "2026-06-03",
+   "close_entry": 91.0,
+   "price_raw": 99.0,
+   "f_cum_entry": 1.0,
+   "price_adj": 99.0,
+   "spread": 0.0879,
+   "adv20_idrbn": 14.021,
+   "cost": 0.043,
+   "window_sessions": 25
+  },
+  {
+   "ticker": "MAPI",
+   "event_id": "414",
+   "start": "2026-06-18",
+   "end": "2026-07-17",
+   "d_entry": "2026-06-17",
+   "d_exit": "2026-07-17",
+   "close_entry": 1500.0,
+   "price_raw": 1550.0,
+   "f_cum_entry": 1.0,
+   "price_adj": 1550.0,
+   "spread": 0.0333,
+   "adv20_idrbn": 96.428,
+   "cost": 0.0129,
+   "window_sessions": 22
+  },
+  {
+   "ticker": "MTEL",
+   "event_id": "417",
+   "start": "2026-07-03",
+   "end": "2026-07-10",
+   "d_entry": "2026-07-02",
+   "d_exit": "2026-07-10",
+   "close_entry": 494.0,
+   "price_raw": 515.0,
+   "f_cum_entry": 1.0,
+   "price_adj": 515.0,
+   "spread": 0.0425,
+   "adv20_idrbn": 18.565,
+   "cost": 0.0361,
+   "window_sessions": 6
+  }
+ ],
+ "bar": {
+  "N": 609,
+  "bar_exact_609": 3.29775843984798,
+  "bar_frozen_609": 3.2978,
+  "ledger_decomposition": "608 after D-078 (605 after D-071/D-072 + 2 exploratory arms + 4 NR7 post-mortem comparisons + HYP-PM-0017's 2 arms + HYP-PM-0019's 1 arm) + THIS arm = 609",
+  "which": "609: D-074's stale 602/3.2945 is superseded (owner 2026-10-09; brief census line wins on this one point); exact bar_v2.e_max_abs_z(609)",
+  "source": "docs/research_programs/deflation_audit/bar_v2.py e_max_abs_z"
+ },
+ "stop_rule": {
+  "threshold": 20,
+  "n_eligible": 12,
+  "decision": "STOP: n < 20 -> spread ledger, no G1"
+ },
+ "power": {
+  "n_events": 12,
+  "median_preentry_sigma_d": 0.019585782195658423,
+  "median_sigma_scaled_to_window": 0.09139505952979816,
+  "mde_at_bar": 0.08700633590186489,
+  "optimistic_bound_median_spread": 0.043233082706766957,
+  "optimistic_bound_mean_spread": 0.09634617715109285,
+  "window_sessions_median": 21.5,
+  "window_sessions_min": 6,
+  "window_sessions_max": 25
+ },
+ "generated_utc": "2026-10-09T02:29:24.901607+00:00",
+ "runtime_minutes": 2.6
+}
