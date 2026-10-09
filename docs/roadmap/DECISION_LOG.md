@@ -3078,6 +3078,34 @@ for G1 approval. The draft is `P-M/data_acquisition/08_RETAIL_PATHS_1_4_FEASIBIL
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-087 · {RF} liquid-panel G0: stop rule fired — WITHDRAWN before registration (uncounted); breadth-panel G0 next
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** G0 stop + withdrawal ·
+**Approval authority:** Owner, 2026-10-09: "a" (withdraw). The G0 is branch
+`research/retail-broker-imbalance-2026-10` @ `1675231`.
+
+- **G0 (D-086 scope):** 98 liquid names; R = {XL, XC, YP, PD, KK}; weekly RI; 76 testable weeks
+  (2025-04-11 → 2026-09-18).
+  - Bar 3.2991 had it registered at N = 612.
+  - No outcome was read, and no G1 runner was shipped.
+- **Stop rule (frozen before power was computed): FIRED.**
+  - The pre-sample (2023–2024) random weekly spread has σ 1.82% with legs of about 18 names.
+  - MDE 0.86% a week; **power at 0.30% a week is 3.1%**, against the 20% minimum.
+- **Pre-outcome facts kept:**
+  - RI's Spearman correlation is −0.37 with the foreign imbalance and −0.36 with the formation-week
+    return (retail buys losers).
+  - R-broker presence 99.3%.
+  - `history_long` has no bars on 2026-07-24.
+- **Status: WITHDRAWN.** The arm was never registered, so it is **not counted**. The census stays at
+  **611**, and no HYPOTHESIS_REGISTRY row is added.
+  - The {RF} family opened by D-086 stays open, with no members.
+- **Next:** a new G0 under D-086's mechanism on the **breadth panel**, once the research-side backfill
+  (`~/idx_external/broker_flow`, 764 names, 2025-01 → 2026-03) completes.
+  - Legs of about 160 names.
+  - Backfill files pinned by sha256.
+  - The same stop rule, recomputed.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
