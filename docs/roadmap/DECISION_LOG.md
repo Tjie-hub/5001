@@ -2722,6 +2722,77 @@ close was computed.
 
 **Amendment.** Only by a superseding D-entry.
 
+
+### D-077 · HYP-PM-0017 (dividend clientele) G1 NULL — FAILED (F2); {SE} slot 1 consumed
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** Result filing (predeclared null handling) ·
+**Approval authority:** Owner, 2026-10-09: "file it". G1 approved under D-076; run on branch
+`research/dividend-clientele-2026-10`, result commit `89c3af9`.
+
+- **Run.** One frozen run (`RESULT_20261008T085015Z.json`) at N = 607, bar **3.2968**. Snapshot
+  `a2d7e675…` and fingerprint `9c26e0df…` were verified before any outcome. The populations match the G0
+  census (D1 547, D2 324).
+- **D1, pre-cum run-up: FAIL on every condition.**
+  - Mean **−0.51%**, primary t −1.90 (month t −0.93), win rate 42%.
+  - Halves −0.32% (2021-07..2023) and −0.65% (2024→). Parkinson control −0.44%.
+  - There is no pre-cum run-up in liquid IDX dividends 2021-07..2026-09.
+- **D2, ex-day capture (yield ≥ 2%): FAIL on strength and halves; the controls pass.**
+  - Net mean **+1.33%** at the 0.9 tax factor (gross +2.00%), primary t +1.81 (month t +2.02), against
+    the bar of 3.2968.
+  - Halves **+3.67% → −0.19%**, a sign flip.
+  - By year: 2021 +10.3%, 2022 +1.9%, 2023 +4.7%, 2024 +0.4%, 2025 −0.6%, 2026 −0.3%.
+  - The ex-drop median is 0.69 of the dividend, so the clientele direction is real but has decayed to
+    about zero after tax and cost.
+  - Terciles: +0.09% / +0.33% / +3.57%.
+- **Filing.**
+  - HYP-PM-0017 → **FAILED (F2)**; FAILURE_REGISTRY **FAIL-PM-0017**. The classification is F2, not F9:
+    the registered prediction failed at its own pooled gate, and the decay is the reading.
+  - No forward test (PREDECLARATION §8). The D-064 ex-date monitor stays detection-only.
+  - {SE} keeps the slot (X8). The census already counted both arms (ledger 607).
+- **Reading for the program.** D-073's honest prior held: D1 was null, and D2 was the real test. D2 is
+  another IDX effect that was large in 2021–23 and gone by 2024–26, the same decay pattern as VOLEX
+  and NR7. D-074 (tender offers) is not affected; it stays NOT NOW unless the owner reorders.
+
+**Amendment.** Only by a superseding D-entry.
+
+### D-078 · HYP-PM-0019 (market-stress reversal) registered; Price-Reversal widened to {R1, R2, R3}; G0 frozen at N=608
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** Registration + family widening (D-028, PG-3/PG-6)
++ G0 freeze · **Approval authority:** Owner, 2026-10-09: "approve stress". The G0 is branch
+`research/market-stress-reversal-2026-10` @ `fa78700`, which re-freezes the first G0 `843e562`.
+
+- **Why admitted.** D-075 accepted the liquidity-provision mechanism (D-070 §1) and ordered this G0
+  after D-073's. D-073's G0 was approved (D-076) and run (D-077).
+- **Family.** **Price-Reversal {R1, R2} → {R1, R2, R3}**, widened by formal amendment. R3 is market-stress
+  liquidity provision: the first −2.5σ day of an episode in the EW liquid market, with the losers' basket
+  bought at the close. HYP-PM-0019 takes slot **3** and inherits the family's multiplicity. The family
+  may be widened, never narrowed or split.
+- **Census.** The ledger stands at 607: 605 (D-076) plus HYP-PM-0017's 2 arms. This arm makes it
+  **608**. The frozen primary bar is **3.2973** (exact `e_max_abs_z(608)` = 3.297294). D-074 is not
+  registered, so the contingency at 609 does not apply.
+- **Study (frozen).** PREDECLARATION sha256 `23979b75…`; the sidecar covers the predeclaration, drivers,
+  synthetic fixture and PIT tests.
+  - **Arm S1:** the liquid names in the bottom quintile of day-t return (ADV20 ≥ Rp 10bn in true rupiah,
+    known by t−1; zero-volume ARB names excluded).
+  - **Outcome:** close t → close t+5, total return, minus β (trailing-250) × the EW liquid market, net of
+    the D-059 modelled cost.
+  - **Inference:** one observation per episode, t = mean / sd × √n.
+  - **Pass:** mean > 0 and t ≥ 3.2973. Also both halves > 0 (E1 2007–2020, n 46; E2 2021-07→, n 17),
+    entry at the close of t+1 > 0, and the Parkinson-60-decile-matched excess > 0.
+  - **Controls (reported):** excluding the big-4 banks; excluding names with an ex-date in the window.
+- **Data.**
+  - The E1 panel is `history_long` (built from yfinance; `adj_close` ≡ `close`, so dividends are added
+    back from `corporate_action_events`). The E2 panel is 5001 `ohlcv`.
+  - On their overlap the two panels' stress flags disagree on 6.9% of flagged days, inside the 20% limit.
+  - The 15:49 pre-close flag agrees with the close flag on 5 of 7 days in 2025+; both misses are
+    borderline days.
+  - The snapshots and fingerprint are pinned at G0, and G1 verifies them before any outcome.
+- **Power.** The minimum detectable effect is about 1.4% at n = 63. Honest prior (D-075): a NULL is
+  likely, and a pass in E1 only would read as decayed.
+- **G1.** One run with `STRESS_G1_APPROVED=1`, then RESULT, VERDICT and HANDOFF, then STOP.
+- **Forward test.** Only if S1 passes: every new first-day stress episode after the G1 date, recorded at
+  t and t+5, about 3–6 a year. A verdict would take years.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
