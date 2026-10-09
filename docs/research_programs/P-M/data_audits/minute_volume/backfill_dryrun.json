@@ -1,0 +1,134 @@
+[
+ {
+  "ticker": "BBCA",
+  "date": "2026-07-14",
+  "fetched_total_lots": 1598688,
+  "fetched_bars": 335,
+  "fetched_vs_ohlcv": 0.7168,
+  "stored_total_lots": 1598688,
+  "stored_bars": 335,
+  "stored_vs_ohlcv": 0.7168,
+  "identical_totals": true
+ },
+ {
+  "ticker": "BBCA",
+  "date": "2026-08-24",
+  "fetched_total_lots": 812956,
+  "fetched_bars": 335,
+  "fetched_vs_ohlcv": 0.6888,
+  "stored_total_lots": 812956,
+  "stored_bars": 335,
+  "stored_vs_ohlcv": 0.6888,
+  "identical_totals": true
+ },
+ {
+  "ticker": "BBCA",
+  "date": "2026-10-06",
+  "fetched_total_lots": 1521734,
+  "fetched_bars": 335,
+  "fetched_vs_ohlcv": 1.0817,
+  "stored_total_lots": 1521734,
+  "stored_bars": 335,
+  "stored_vs_ohlcv": 1.0817,
+  "identical_totals": true
+ },
+ {
+  "ticker": "TLKM",
+  "date": "2026-07-14",
+  "fetched_total_lots": 1185655,
+  "fetched_bars": 335,
+  "fetched_vs_ohlcv": 0.6907,
+  "stored_total_lots": 1185655,
+  "stored_bars": 335,
+  "stored_vs_ohlcv": 0.6907,
+  "identical_totals": true
+ },
+ {
+  "ticker": "TLKM",
+  "date": "2026-08-24",
+  "fetched_total_lots": 463211,
+  "fetched_bars": 335,
+  "fetched_vs_ohlcv": 0.7647,
+  "stored_total_lots": 463211,
+  "stored_bars": 335,
+  "stored_vs_ohlcv": 0.7647,
+  "identical_totals": true
+ },
+ {
+  "ticker": "TLKM",
+  "date": "2026-10-06",
+  "fetched_total_lots": 1624615,
+  "fetched_bars": 335,
+  "fetched_vs_ohlcv": 0.6375,
+  "stored_total_lots": 1624615,
+  "stored_bars": 335,
+  "stored_vs_ohlcv": 0.6375,
+  "identical_totals": true
+ },
+ {
+  "ticker": "BMRI",
+  "date": "2026-07-14",
+  "fetched_total_lots": 1869373,
+  "fetched_bars": 335,
+  "fetched_vs_ohlcv": 0.5758,
+  "stored_total_lots": 1869373,
+  "stored_bars": 335,
+  "stored_vs_ohlcv": 0.5758,
+  "identical_totals": true
+ },
+ {
+  "ticker": "BMRI",
+  "date": "2026-08-24",
+  "fetched_total_lots": 860461,
+  "fetched_bars": 335,
+  "fetched_vs_ohlcv": 0.5861,
+  "stored_total_lots": 860461,
+  "stored_bars": 335,
+  "stored_vs_ohlcv": 0.5861,
+  "identical_totals": true
+ },
+ {
+  "ticker": "BMRI",
+  "date": "2026-10-06",
+  "fetched_total_lots": 902580,
+  "fetched_bars": 335,
+  "fetched_vs_ohlcv": 0.6572,
+  "stored_total_lots": 902580,
+  "stored_bars": 335,
+  "stored_vs_ohlcv": 0.6572,
+  "identical_totals": true
+ },
+ {
+  "ticker": "ACES",
+  "date": "2026-07-14",
+  "fetched_total_lots": 126294,
+  "fetched_bars": 335,
+  "fetched_vs_ohlcv": 0.5796,
+  "stored_total_lots": 126294,
+  "stored_bars": 335,
+  "stored_vs_ohlcv": 0.5796,
+  "identical_totals": true
+ },
+ {
+  "ticker": "ACES",
+  "date": "2026-08-24",
+  "fetched_total_lots": 236666,
+  "fetched_bars": 335,
+  "fetched_vs_ohlcv": 0.7493,
+  "stored_total_lots": 236666,
+  "stored_bars": 335,
+  "stored_vs_ohlcv": 0.7493,
+  "identical_totals": true
+ },
+ {
+  "ticker": "ACES",
+  "date": "2026-10-06",
+  "fetched_total_lots": 235648,
+  "fetched_bars": 335,
+  "fetched_vs_ohlcv": 0.6998,
+  "stored_total_lots": 235648,
+  "stored_bars": 335,
+  "stored_vs_ohlcv": 0.6998,
+  "identical_totals": true
+ }
+]

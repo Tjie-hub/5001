@@ -1,0 +1,235 @@
+{
+ "snapshot": {
+  "path": "/home/tjiesar/scratch/g0_snapshots_2026-10-08/walkforward_snapshot_2026-10-08.db",
+  "note": "pinned 2026-10-08 walkforward snapshot, read-only"
+ },
+ "ticks_window": [
+  "2026-04-18",
+  "2026-10-08"
+ ],
+ "n_ticks_sessions": 115,
+ "estimator": "Roll (1984) on 1-minute tick prints, D-059's own validation convention (cost_by_adv validate/roll_spread/day_autocov imported from the frozen module); Lee-Ready NOT used - no quotes in corpus",
+ "wide_range_rule": "top decile of daily EW-market |r| (all names volume>0) over the ticks window; 12 days: 2026-04-24, 2026-05-19, 2026-05-21, 2026-06-03, 2026-06-04, 2026-06-05, 2026-06-08, 2026-06-09, 2026-06-10, 2026-06-12, 2026-06-15, 2026-09-28",
+ "stress_days_in_window": [
+  "2026-05-08",
+  "2026-05-21",
+  "2026-06-03"
+ ],
+ "buckets": "D-059 BUCKETS; adv20 = TRUE rupiah (close x f_cum x volume, 20 bars, known at t-1); naive adv reported alongside in cells",
+ "cells": {
+  "1-2bn|normal": {
+   "name_days": 7277,
+   "names_roll": 344,
+   "s_roll_median": 0.007767,
+   "s_ar_median": 0.013318,
+   "tick_floor_median": 0.007937,
+   "sigma_d_median": 0.02994,
+   "impact_median": 0.015871,
+   "cost_ar_rt": 0.034189,
+   "cost_realised_rt": 0.028638,
+   "ar_overstatement_ratio": 1.71
+  },
+  "1-2bn|stress": {
+   "name_days": 104,
+   "names_roll": 11,
+   "s_roll_median": 0.011329,
+   "s_ar_median": 0.01217,
+   "tick_floor_median": 0.007843,
+   "sigma_d_median": 0.032021,
+   "impact_median": 0.016688,
+   "cost_ar_rt": 0.033858,
+   "cost_realised_rt": 0.033017,
+   "ar_overstatement_ratio": 1.07
+  },
+  "1-2bn|wide": {
+   "name_days": 708,
+   "names_roll": 76,
+   "s_roll_median": 0.008457,
+   "s_ar_median": 0.012265,
+   "tick_floor_median": 0.008333,
+   "sigma_d_median": 0.041645,
+   "impact_median": 0.0223,
+   "cost_ar_rt": 0.039565,
+   "cost_realised_rt": 0.035757,
+   "ar_overstatement_ratio": 1.45
+  },
+  "2-5bn|normal": {
+   "name_days": 8337,
+   "names_roll": 342,
+   "s_roll_median": 0.007782,
+   "s_ar_median": 0.013333,
+   "tick_floor_median": 0.007937,
+   "sigma_d_median": 0.032994,
+   "impact_median": 0.01163,
+   "cost_ar_rt": 0.029964,
+   "cost_realised_rt": 0.024413,
+   "ar_overstatement_ratio": 1.71
+  },
+  "2-5bn|stress": {
+   "name_days": 143,
+   "names_roll": 23,
+   "s_roll_median": 0.007688,
+   "s_ar_median": 0.012346,
+   "tick_floor_median": 0.007634,
+   "sigma_d_median": 0.037349,
+   "impact_median": 0.013523,
+   "cost_ar_rt": 0.030869,
+   "cost_realised_rt": 0.026211,
+   "ar_overstatement_ratio": 1.61
+  },
+  "2-5bn|wide": {
+   "name_days": 685,
+   "names_roll": 72,
+   "s_roll_median": 0.007436,
+   "s_ar_median": 0.011895,
+   "tick_floor_median": 0.007692,
+   "sigma_d_median": 0.044216,
+   "impact_median": 0.01614,
+   "cost_ar_rt": 0.033035,
+   "cost_realised_rt": 0.028577,
+   "ar_overstatement_ratio": 1.6
+  },
+  "20-100bn|normal": {
+   "name_days": 7254,
+   "names_roll": 198,
+   "s_roll_median": 0.00631,
+   "s_ar_median": 0.009935,
+   "tick_floor_median": 0.005025,
+   "sigma_d_median": 0.033387,
+   "impact_median": 0.0034,
+   "cost_ar_rt": 0.018335,
+   "cost_realised_rt": 0.01471,
+   "ar_overstatement_ratio": 1.57
+  },
+  "20-100bn|stress": {
+   "name_days": 109,
+   "names_roll": 20,
+   "s_roll_median": 0.004151,
+   "s_ar_median": 0.009901,
+   "tick_floor_median": 0.005319,
+   "sigma_d_median": 0.036564,
+   "impact_median": 0.003927,
+   "cost_ar_rt": 0.018828,
+   "cost_realised_rt": 0.013078,
+   "ar_overstatement_ratio": 2.38
+  },
+  "20-100bn|wide": {
+   "name_days": 576,
+   "names_roll": 64,
+   "s_roll_median": 0.004404,
+   "s_ar_median": 0.008811,
+   "tick_floor_median": 0.004717,
+   "sigma_d_median": 0.042078,
+   "impact_median": 0.004189,
+   "cost_ar_rt": 0.018,
+   "cost_realised_rt": 0.013593,
+   "ar_overstatement_ratio": 2.0
+  },
+  "5-20bn|normal": {
+   "name_days": 10797,
+   "names_roll": 324,
+   "s_roll_median": 0.007538,
+   "s_ar_median": 0.011485,
+   "tick_floor_median": 0.007143,
+   "sigma_d_median": 0.034814,
+   "impact_median": 0.007043,
+   "cost_ar_rt": 0.023528,
+   "cost_realised_rt": 0.019581,
+   "ar_overstatement_ratio": 1.52
+  },
+  "5-20bn|stress": {
+   "name_days": 176,
+   "names_roll": 34,
+   "s_roll_median": 0.007561,
+   "s_ar_median": 0.010311,
+   "tick_floor_median": 0.006536,
+   "sigma_d_median": 0.03881,
+   "impact_median": 0.007795,
+   "cost_ar_rt": 0.023106,
+   "cost_realised_rt": 0.020356,
+   "ar_overstatement_ratio": 1.36
+  },
+  "5-20bn|wide": {
+   "name_days": 964,
+   "names_roll": 112,
+   "s_roll_median": 0.007493,
+   "s_ar_median": 0.00939,
+   "tick_floor_median": 0.007299,
+   "sigma_d_median": 0.043387,
+   "impact_median": 0.008994,
+   "cost_ar_rt": 0.023384,
+   "cost_realised_rt": 0.021488,
+   "ar_overstatement_ratio": 1.25
+  },
+  ">100bn|normal": {
+   "name_days": 3565,
+   "names_roll": 70,
+   "s_roll_median": 0.004861,
+   "s_ar_median": 0.009709,
+   "tick_floor_median": 0.003968,
+   "sigma_d_median": 0.037041,
+   "impact_median": 0.001478,
+   "cost_ar_rt": 0.016187,
+   "cost_realised_rt": 0.011338,
+   "ar_overstatement_ratio": 2.0
+  },
+  ">100bn|stress": {
+   "name_days": 54,
+   "names_roll": 10,
+   "s_roll_median": 0.003766,
+   "s_ar_median": 0.007274,
+   "tick_floor_median": 0.004228,
+   "sigma_d_median": 0.043887,
+   "impact_median": 0.001786,
+   "cost_ar_rt": 0.014059,
+   "cost_realised_rt": 0.010551,
+   "ar_overstatement_ratio": 1.93
+  },
+  ">100bn|wide": {
+   "name_days": 334,
+   "names_roll": 38,
+   "s_roll_median": 0.003783,
+   "s_ar_median": 0.007407,
+   "tick_floor_median": 0.003968,
+   "sigma_d_median": 0.062881,
+   "impact_median": 0.002429,
+   "cost_ar_rt": 0.014836,
+   "cost_realised_rt": 0.011212,
+   "ar_overstatement_ratio": 1.96
+  }
+ },
+ "liquid_ge10bn": {
+  "normal": {
+   "names": 312,
+   "name_days": 15865,
+   "s_roll_median": 0.006411,
+   "s_ar_median": 0.010103,
+   "impact_median": 0.003439,
+   "fees": 0.005,
+   "cost_ar_rt": 0.018543,
+   "cost_realised_rt": 0.01485
+  },
+  "wide": {
+   "names": 159,
+   "name_days": 1332,
+   "s_roll_median": 0.006025,
+   "s_ar_median": 0.008634,
+   "impact_median": 0.004175,
+   "fees": 0.005,
+   "cost_ar_rt": 0.017809,
+   "cost_realised_rt": 0.0152
+  },
+  "stress": {
+   "names": 51,
+   "name_days": 246,
+   "s_roll_median": 0.005868,
+   "s_ar_median": 0.009394,
+   "impact_median": 0.004017,
+   "fees": 0.005,
+   "cost_ar_rt": 0.01841,
+   "cost_realised_rt": 0.014885
+  }
+ },
+ "generated_utc": "2026-10-09T03:57:51.596274+00:00",
+ "runtime_minutes": 5.9
+}

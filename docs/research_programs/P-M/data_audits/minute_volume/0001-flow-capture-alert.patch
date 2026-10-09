@@ -1,0 +1,38 @@
+--- a/stockbit_fetcher.py
++++ b/stockbit_fetcher.py
+@@ -988,7 +988,35 @@
+         except Exception as e:
+             log(f"  ✗ {e}")
+         time.sleep(RATE_LIMIT_DELAY)
+     broker_empty = _retry_broker_flow(conn, token, broker_missing, date) if broker_missing else []
++    # --- flow/ohlcv capture sanity check (data-audits 2026-10-09) ----------
++    # stockbit_flow_bars counters are REGULAR-MARKET-only; ohlcv.volume is
++    # CONSOLIDATED (incl. negotiated) since the vendor change of 2026-07-06
++    # (permanent 07-10): expected capture ~1.0 before, ~0.55-0.70 after.
++    # Warn outside [0.35, 1.25] so a NEW definition change surfaces in a day.
++    # See docs/research_programs/P-M/data_audits/minute_volume/DIAGNOSIS.md.
++    try:
++        d_last = conn.execute(
++            "SELECT MAX(b.trade_date) FROM stockbit_flow_bars b"
++            " JOIN ohlcv o ON o.ticker=b.ticker AND o.date=b.trade_date"
++            " AND COALESCE(o.is_final,1)=1 AND o.volume>0").fetchone()[0]
++        caps = [r[0] for r in conn.execute(
++            "SELECT (MAX(b.buy_lot)+MAX(b.sell_lot))*100.0/MAX(o.volume)"
++            " FROM stockbit_flow_bars b JOIN ohlcv o"
++            " ON o.ticker=b.ticker AND o.date=b.trade_date"
++            " WHERE b.trade_date=? AND COALESCE(o.is_final,1)=1 AND o.volume>0"
++            " GROUP BY b.ticker HAVING MAX(b.buy_lot)+MAX(b.sell_lot) > 0",
++            (d_last,))]
++        if caps:
++            import statistics as _st
++            _med = _st.median(caps)
++            if not (0.35 <= _med <= 1.25):
++                log(f"  [WARN] flow/ohlcv capture median {_med:.3f} on {d_last}"
++                    " outside [0.35, 1.25] -- vendor volume definition may have"
++                    " changed (regular vs consolidated; see"
++                    " docs/research_programs/P-M/data_audits/minute_volume/DIAGNOSIS.md)")
++    except Exception as _ce:
++        log(f"  [WARN] capture check error: {_ce}")
+     conn.close()
+     log(f"\nDONE: {success}/{len(tickers)} success")
+     if success == len(tickers):
