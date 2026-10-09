@@ -3106,6 +3106,35 @@ for G1 approval. The draft is `P-M/data_acquisition/08_RETAIL_PATHS_1_4_FEASIBIL
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-088 · Mechanism accepted: daily order-flow imbalance (OIB) continuation — P-M {I5, I6, I7, I12}, I7 cell
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** Mechanism acceptance (D-070 §1) ·
+**Approval authority:** Owner, 2026-10-09: "accept OIB". The planner runs the study.
+
+- **Mechanism (order flow, not price shape).**
+  - A stock's daily signed aggressor imbalance is OIB = (B − S) / (B + S). B and S are the session's
+    final cumulative buy- and sell-aggressor lots from the trade-book tape, correctly read (fix
+    `47ff225`).
+  - It measures net demand that liquidity suppliers absorb. Large orders split over days, so the
+    pressure persists: imbalance is followed by continuation (Chordia and Subrahmanyam 2004).
+  - **Pre-declared sign:** high OIB → higher next-day return.
+- **Family: P-M {I5, I6, I7, I12}**, the family scoped as "order-flow imbalance + liquidity/toxicity"
+  (D-028). This is the **I7** cell (persistent / informed-flow continuation).
+  - It is a new member, not a re-test. **HYP-PM-0001** tested a 1-minute → 15-minute *reversal* (I5).
+    HYP-PM-0003 and HYP-PM-0009 tested I7 on broker-flow and intraday-timing instruments. None used
+    daily aggressor imbalance at a next-day horizon.
+- **Why now:** the 2026-10-09 flow fix found that the trade-book lot counters are cumulative. Every
+  earlier production flow feature, and research built on it, measured running totals. A correctly
+  computed OIB has never been tested.
+- **Design constraints for the G0.**
+  - Daily cross-section over the ~800-name minute-bar universe (2025-01 →).
+  - Liquidity on the D-081 basis; costs from D-082.
+  - Incremental over the same-day return, size and volatility.
+  - A tradeable lower-turnover block (next-open entry) must be net > 0.
+  - A stop rule on power, frozen before power is computed.
+  - The bar at the census + arms.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
