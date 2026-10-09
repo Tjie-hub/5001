@@ -2987,6 +2987,28 @@ for G1 approval. The draft is `P-M/data_acquisition/08_RETAIL_PATHS_1_4_FEASIBIL
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-084 · HYP-PM-0020 (retail ownership, KSEI) registered in {OC}, G0 frozen at N=611; G1 approved
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** Registration + G0 freeze + G1 approval ·
+**Approval authority:** Owner, 2026-10-09: "approve G1". The G0 is branch
+`research/retail-ownership-2026-10` @ `b7f84ac`.
+
+- **Family and census.**
+  - {OC}, slots 1–2 (D-083): A1 level and A2 flow.
+  - The census was 609 after D-080; these 2 arms make **611**, bar **3.2987** (exact 3.298685).
+  - Both arms count from registration (X8).
+- **Frozen study.** PREDECLARATION sha256 `601c7a9d…`; the sidecar covers the predeclaration, the
+  modules, the tests, the KSEI manifest and the fetch/parse scripts.
+  - Snapshots: history_long `7d298068…` and walkforward `a2d7e675…`.
+  - KSEI: manifest `ae06e4a2…`, CSV `38c8a90b…`.
+  - 209 monthly formations, 2009-04 → 2026-08. The formation is the 5th session after the file date,
+    delayed past a late zip stamp (4 of 210).
+  - Universe: median 150 names.
+  - Pass: NW t ≥ bar, both halves > 0, and FM incremental over VOLEX (t ≤ −2).
+  - MDE 1.68% a month (optimistic); stated in advance.
+- **G1:** one run, `OC_G1_APPROVED=1`. The verdict comes from the computed booleans only.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
