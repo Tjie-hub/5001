@@ -3207,6 +3207,26 @@ for G1 approval. The draft is `P-M/data_acquisition/08_RETAIL_PATHS_1_4_FEASIBIL
 
 ---
 
+### D-091 · HYP-PM-0021 (daily OIB continuation) G1 — FAILED (F2)
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** G1 outcome ·
+**Approval authority:** the frozen pass conditions (D-090); computed booleans only.
+
+- **Run.** Once, 2026-10-09 13:40 UTC, `research/oib-continuation-2026-10` @ `21955e2`,
+  `RESULT_20261009T134014Z.json` (sha256 `2a881571…`); sidecar and snapshot hashes verified first.
+- **Outcome.** S_cc −0.171%/day, NW t −3.29 (wrong sign; |t| also below 3.2991); halves −0.135% /
+  −0.227%; FM OIB coefficient −0.135%, t −6.46; S_oc +0.075%, t 1.70 (the only condition met);
+  5-day block net −2.93% (gross +0.02%). **FAIL.**
+- **Classification: F2.** The predicted continuation is refuted on a correctly measured instrument
+  (MAX of the cumulative counters). The negative close-to-close spread sits in the close→open gap and
+  is not tradeable from the next open; it is recorded as a reading, not a rescue — a reversal claim
+  would be a new registration.
+- **Census** stays 612 (the arm counted from registration, X8). P-M {I5,I6,I7,I12} has 5 members: 0001
+  INVALID (data), 0003 F2→INVALID-DATA, 0007 INVALID (data), 0009 INVALID (data), 0021 FAILED F2.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
