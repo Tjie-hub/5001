@@ -1,0 +1,1161 @@
+{
+ "study": "online-retail broker imbalance {RF}, D-086",
+ "generated_utc": "2026-10-09T08:34:47.451649+00:00",
+ "snapshots": {
+  "history_long": "7d298068fbc5633277ef0c032ed0257f935c9ef902068b16daa75ac0ba5e5714",
+  "walkforward": "a2d7e675e5c66387446b888287ebbe7cef563b278c48f1518a88c797bc4bbc47",
+  "verified": true
+ },
+ "census": {
+  "ledger_before": 611,
+  "arms": 1,
+  "N": 612,
+  "bar_exact": 3.299147,
+  "bar_frozen": 3.2991
+ },
+ "panel": {
+  "tickers": 98,
+  "r_group": [
+   "XL",
+   "XC",
+   "YP",
+   "PD",
+   "KK"
+  ],
+  "formation_window_excluded": [
+   "2025-01-02",
+   "2025-03-31"
+  ]
+ },
+ "weeks": {
+  "total": 77,
+  "testable": 76,
+  "first_k": "2025-04-11",
+  "last_testable_k": "2026-09-18",
+  "h1_le_2025_12_31": 38,
+  "h2": 38,
+  "blocks_4w": 19,
+  "block_spreads_testable": 18
+ },
+ "universe": {
+  "median": 91,
+  "min": 0,
+  "max": 96,
+  "quintile_median": 18,
+  "drop_totals": {
+   "no_bar": 103,
+   "no_flow": 361,
+   "adv": 198,
+   "price": 0,
+   "hist": 0
+  }
+ },
+ "signal": {
+  "ri_quantiles": {
+   "p5": -0.1391,
+   "p25": -0.0463,
+   "p50": 0.0111,
+   "p75": 0.0683,
+   "p95": 0.1587
+  },
+  "r_broker_presence_mean": 0.9933,
+  "spearman_ri_vs_foreign_imbalance": -0.3689,
+  "spearman_ri_vs_formation_week_return": -0.3582
+ },
+ "power": {
+  "pre_sample": [
+   "2023-01-02",
+   "2024-12-31"
+  ],
+  "weeks": 102,
+  "sd_random_weekly_spread": 0.01819,
+  "n_test_weeks": 76,
+  "mde_weekly_at_bar_80pct": 0.00864,
+  "power_at_0p30pct_week": 0.0313
+ },
+ "stop_rule": {
+  "rule": "power at 0.30%/week < 20% -> no G1",
+  "fired": true
+ },
+ "per_week": [
+  {
+   "k": "2025-04-11",
+   "sessions": 4,
+   "universe": 93,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 2,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9876
+  },
+  {
+   "k": "2025-04-17",
+   "sessions": 4,
+   "universe": 93,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 2,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9903
+  },
+  {
+   "k": "2025-04-25",
+   "sessions": 5,
+   "universe": 92,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 2,
+    "adv": 4,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9948
+  },
+  {
+   "k": "2025-05-02",
+   "sessions": 4,
+   "universe": 92,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 2,
+    "adv": 4,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9913
+  },
+  {
+   "k": "2025-05-09",
+   "sessions": 5,
+   "universe": 90,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 4,
+    "adv": 4,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9942
+  },
+  {
+   "k": "2025-05-16",
+   "sessions": 3,
+   "universe": 91,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 4,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.989
+  },
+  {
+   "k": "2025-05-23",
+   "sessions": 5,
+   "universe": 92,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 4,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.997
+  },
+  {
+   "k": "2025-05-28",
+   "sessions": 3,
+   "universe": 92,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 4,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9978
+  },
+  {
+   "k": "2025-06-05",
+   "sessions": 4,
+   "universe": 92,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 4,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9918
+  },
+  {
+   "k": "2025-06-13",
+   "sessions": 4,
+   "universe": 92,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 4,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9886
+  },
+  {
+   "k": "2025-06-20",
+   "sessions": 5,
+   "universe": 92,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 4,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9887
+  },
+  {
+   "k": "2025-06-26",
+   "sessions": 4,
+   "universe": 92,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 4,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9918
+  },
+  {
+   "k": "2025-07-04",
+   "sessions": 5,
+   "universe": 91,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 2,
+    "no_flow": 4,
+    "adv": 1,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9938
+  },
+  {
+   "k": "2025-07-11",
+   "sessions": 5,
+   "universe": 91,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 5,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9943
+  },
+  {
+   "k": "2025-07-18",
+   "sessions": 5,
+   "universe": 92,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 4,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9913
+  },
+  {
+   "k": "2025-07-25",
+   "sessions": 5,
+   "universe": 91,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 4,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9943
+  },
+  {
+   "k": "2025-08-01",
+   "sessions": 5,
+   "universe": 91,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 4,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9934
+  },
+  {
+   "k": "2025-08-08",
+   "sessions": 5,
+   "universe": 90,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 5,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9924
+  },
+  {
+   "k": "2025-08-15",
+   "sessions": 5,
+   "universe": 90,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 5,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9889
+  },
+  {
+   "k": "2025-08-22",
+   "sessions": 4,
+   "universe": 90,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 5,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.995
+  },
+  {
+   "k": "2025-08-29",
+   "sessions": 5,
+   "universe": 90,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 1,
+    "no_flow": 5,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9911
+  },
+  {
+   "k": "2025-09-04",
+   "sessions": 4,
+   "universe": 91,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 5,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9929
+  },
+  {
+   "k": "2025-09-12",
+   "sessions": 5,
+   "universe": 91,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 5,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.993
+  },
+  {
+   "k": "2025-09-19",
+   "sessions": 5,
+   "universe": 91,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 5,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9903
+  },
+  {
+   "k": "2025-09-26",
+   "sessions": 5,
+   "universe": 92,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 5,
+    "adv": 1,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9917
+  },
+  {
+   "k": "2025-10-03",
+   "sessions": 5,
+   "universe": 92,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 5,
+    "adv": 1,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.99
+  },
+  {
+   "k": "2025-10-10",
+   "sessions": 5,
+   "universe": 91,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 1,
+    "no_flow": 5,
+    "adv": 1,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9912
+  },
+  {
+   "k": "2025-10-17",
+   "sessions": 5,
+   "universe": 91,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 1,
+    "no_flow": 5,
+    "adv": 1,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9916
+  },
+  {
+   "k": "2025-10-24",
+   "sessions": 5,
+   "universe": 91,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 5,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9969
+  },
+  {
+   "k": "2025-10-31",
+   "sessions": 5,
+   "universe": 91,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 5,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9916
+  },
+  {
+   "k": "2025-11-07",
+   "sessions": 5,
+   "universe": 88,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 8,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9932
+  },
+  {
+   "k": "2025-11-14",
+   "sessions": 5,
+   "universe": 88,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 8,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9914
+  },
+  {
+   "k": "2025-11-21",
+   "sessions": 5,
+   "universe": 87,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 8,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9922
+  },
+  {
+   "k": "2025-11-28",
+   "sessions": 5,
+   "universe": 87,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 8,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9922
+  },
+  {
+   "k": "2025-12-05",
+   "sessions": 5,
+   "universe": 87,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 8,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9936
+  },
+  {
+   "k": "2025-12-12",
+   "sessions": 5,
+   "universe": 88,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 8,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.995
+  },
+  {
+   "k": "2025-12-19",
+   "sessions": 5,
+   "universe": 88,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 8,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9936
+  },
+  {
+   "k": "2025-12-24",
+   "sessions": 3,
+   "universe": 88,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 8,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9939
+  },
+  {
+   "k": "2026-01-02",
+   "sessions": 3,
+   "universe": 88,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 8,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9955
+  },
+  {
+   "k": "2026-01-09",
+   "sessions": 5,
+   "universe": 87,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 8,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9936
+  },
+  {
+   "k": "2026-01-15",
+   "sessions": 4,
+   "universe": 88,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 8,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9909
+  },
+  {
+   "k": "2026-01-23",
+   "sessions": 5,
+   "universe": 88,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 8,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9927
+  },
+  {
+   "k": "2026-01-30",
+   "sessions": 5,
+   "universe": 87,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 8,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.994
+  },
+  {
+   "k": "2026-02-06",
+   "sessions": 5,
+   "universe": 86,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 9,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9935
+  },
+  {
+   "k": "2026-02-13",
+   "sessions": 5,
+   "universe": 86,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 9,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9944
+  },
+  {
+   "k": "2026-02-20",
+   "sessions": 3,
+   "universe": 86,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 9,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9946
+  },
+  {
+   "k": "2026-02-27",
+   "sessions": 5,
+   "universe": 86,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 9,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9944
+  },
+  {
+   "k": "2026-03-06",
+   "sessions": 5,
+   "universe": 86,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 9,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9907
+  },
+  {
+   "k": "2026-03-13",
+   "sessions": 5,
+   "universe": 86,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 9,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9977
+  },
+  {
+   "k": "2026-03-17",
+   "sessions": 2,
+   "universe": 86,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 9,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9942
+  },
+  {
+   "k": "2026-03-27",
+   "sessions": 3,
+   "universe": 86,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 9,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9946
+  },
+  {
+   "k": "2026-04-02",
+   "sessions": 4,
+   "universe": 86,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 9,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9977
+  },
+  {
+   "k": "2026-04-10",
+   "sessions": 5,
+   "universe": 86,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 9,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9907
+  },
+  {
+   "k": "2026-04-17",
+   "sessions": 5,
+   "universe": 86,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 9,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9963
+  },
+  {
+   "k": "2026-04-24",
+   "sessions": 5,
+   "universe": 87,
+   "quintile": 17,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 8,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9936
+  },
+  {
+   "k": "2026-04-30",
+   "sessions": 4,
+   "universe": 95,
+   "quintile": 19,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9968
+  },
+  {
+   "k": "2026-05-08",
+   "sessions": 5,
+   "universe": 96,
+   "quintile": 19,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9971
+  },
+  {
+   "k": "2026-05-13",
+   "sessions": 3,
+   "universe": 96,
+   "quintile": 19,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9917
+  },
+  {
+   "k": "2026-05-22",
+   "sessions": 5,
+   "universe": 96,
+   "quintile": 19,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9933
+  },
+  {
+   "k": "2026-05-29",
+   "sessions": 3,
+   "universe": 96,
+   "quintile": 19,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.991
+  },
+  {
+   "k": "2026-06-05",
+   "sessions": 4,
+   "universe": 96,
+   "quintile": 19,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9937
+  },
+  {
+   "k": "2026-06-12",
+   "sessions": 5,
+   "universe": 96,
+   "quintile": 19,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9929
+  },
+  {
+   "k": "2026-06-19",
+   "sessions": 4,
+   "universe": 96,
+   "quintile": 19,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 2,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9953
+  },
+  {
+   "k": "2026-06-26",
+   "sessions": 5,
+   "universe": 95,
+   "quintile": 19,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9954
+  },
+  {
+   "k": "2026-07-03",
+   "sessions": 5,
+   "universe": 94,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 4,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9945
+  },
+  {
+   "k": "2026-07-10",
+   "sessions": 5,
+   "universe": 94,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 4,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9928
+  },
+  {
+   "k": "2026-07-17",
+   "sessions": 5,
+   "universe": 94,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 4,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9928
+  },
+  {
+   "k": "2026-07-24",
+   "sessions": 5,
+   "universe": 0,
+   "quintile": 0,
+   "drop": {
+    "no_bar": 98,
+    "no_flow": 0,
+    "adv": 0,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": null
+  },
+  {
+   "k": "2026-07-31",
+   "sessions": 5,
+   "universe": 95,
+   "quintile": 19,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9937
+  },
+  {
+   "k": "2026-08-07",
+   "sessions": 5,
+   "universe": 94,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 4,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9932
+  },
+  {
+   "k": "2026-08-14",
+   "sessions": 5,
+   "universe": 95,
+   "quintile": 19,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9949
+  },
+  {
+   "k": "2026-08-21",
+   "sessions": 4,
+   "universe": 95,
+   "quintile": 19,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9937
+  },
+  {
+   "k": "2026-08-28",
+   "sessions": 5,
+   "universe": 95,
+   "quintile": 19,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9974
+  },
+  {
+   "k": "2026-09-04",
+   "sessions": 5,
+   "universe": 94,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 4,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9954
+  },
+  {
+   "k": "2026-09-11",
+   "sessions": 5,
+   "universe": 95,
+   "quintile": 19,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9926
+  },
+  {
+   "k": "2026-09-18",
+   "sessions": 5,
+   "universe": 94,
+   "quintile": 18,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 0,
+    "adv": 4,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9949
+  },
+  {
+   "k": "2026-09-24",
+   "sessions": 4,
+   "universe": 71,
+   "quintile": 14,
+   "drop": {
+    "no_bar": 0,
+    "no_flow": 24,
+    "adv": 3,
+    "price": 0,
+    "hist": 0
+   },
+   "r_present_mean": 0.9944
+  }
+ ],
+ "runtime_s": 305.2
+}
