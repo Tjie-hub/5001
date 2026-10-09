@@ -79,3 +79,14 @@ No registry, result or production code was changed by this audit.
    register.
 5. **Optional:** recompute pre-10-09 `stockbit_flow` totals and labels from the stored bars (a
    production-data write).
+
+## 6. Actions taken (owner, 2026-10-09: "Fix all")
+
+| # | Action | Record |
+|---|---|---|
+| 1–2 | FAIL-PM-0001 and FAIL-PM-0009 reclassified INVALID (data); FAIL-PM-0005-G1 NF control annotated | D-089, `4092b2a` (superseding rows; originals verbatim) |
+| 3 | `engine/delta_flow.py` de-cumulated in `load_bars()`; test fixtures rewritten in cumulative form; suite 3,589 passed | `416efad` (live after the 5001 restart) |
+| 4 | Research rule | `docs/research_programs/P-M/TRADE_BOOK_SEMANTIC_REGISTER_v1.json` |
+| 5 | Pre-2026-10-09 `stockbit_flow` rows recomputed from the stored bars by `scripts/recompute_flow_history.py` (totals = MAX, labels = fixed `_analyze`; `net_value`, `last_price`, `updated_at` untouched) | 19:41–20:01 WIB. Checked first against the 266 rows the fixed 18:30 job wrote (266/266 identical). 395,302 rows: **319,224 recomputed**, 76,078 without bars left as the old definition. Verdict changed on 157,448 (49%), smart_money on 135,973 (43%). Re-run dry: 0 changes. Backup of all 395,302 prior rows: `~/scratch/stockbit_flow_pre_d089_2026-10-09.db` (table `stockbit_flow_pre_d089`, sha256 `0126a7ab…`) |
+
+Not changed: frozen research snapshots (pinned by sha), `views_v1`, the archived exploratory scripts.

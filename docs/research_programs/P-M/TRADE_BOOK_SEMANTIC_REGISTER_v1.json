@@ -31,12 +31,14 @@
     "stockbit_flow.buy_lot / sell_lot / net_lot / buy_freq / sell_freq": {
       "meaning": "before 2026-10-09: SUM of cumulative counters (~100-200x the day's total, early-weighted); from 2026-10-09 (fix 47ff225): the day's final total",
       "status": "INVALID before 2026-10-09",
-      "research_use": "do not use rows dated before 2026-10-09; recompute from the bars with MAX instead"
+      "research_use": "use only rows whose (ticker, trade_date) has stockbit_flow_bars, or recompute from the bars; frozen snapshots taken before 2026-10-09 20:01 WIB hold the old values",
+      "recompute_2026-10-09": "rows with stored bars (319,224 of 395,302 pre-fix rows) recomputed in place by scripts/recompute_flow_history.py; the 76,078 rows without bars keep the old definition and stay excluded. Prior values: ~/scratch/stockbit_flow_pre_d089_2026-10-09.db"
     },
     "stockbit_flow.composite_score / verdict / smart_money": {
       "meaning": "flow_filter._analyze labels; before 2026-10-09 computed on running totals as if per-minute (verdict differed for 51% of tickers on 2026-10-08)",
       "status": "OLD DEFINITION before 2026-10-09",
-      "research_use": "not a research input for dates before 2026-10-09"
+      "research_use": "use only rows whose (ticker, trade_date) has stockbit_flow_bars, or recompute from the bars; frozen snapshots taken before 2026-10-09 20:01 WIB hold the old values",
+      "recompute_2026-10-09": "rows with stored bars (319,224 of 395,302 pre-fix rows) recomputed in place by scripts/recompute_flow_history.py; the 76,078 rows without bars keep the old definition and stay excluded. Prior values: ~/scratch/stockbit_flow_pre_d089_2026-10-09.db"
     },
     "views_v1.buy_lot_sum / sell_lot_sum / delta_sum / sb_buy_lot / sb_sell_lot / sb_two_sided_lot / sb_net_lot / sb_lot_over_volume": {
       "meaning": "sums of cumulative counters, or the pre-fix daily table",
@@ -45,8 +47,13 @@
     }
   },
   "affected_records": {
-    "INVALID_data": ["FAIL-PM-0001 (HYP-PM-0001)", "FAIL-PM-0009 (HYP-PM-0009)"],
-    "control_misspecified": ["FAIL-PM-0005-G1 NF control (C7 check 4)"],
+    "INVALID_data": [
+      "FAIL-PM-0001 (HYP-PM-0001)",
+      "FAIL-PM-0009 (HYP-PM-0009)"
+    ],
+    "control_misspecified": [
+      "FAIL-PM-0005-G1 NF control (C7 check 4)"
+    ],
     "exploratory_affected": [
       "Flow Edge Study 2026-07 (tested the pre-fix labels)",
       "Sprint 2026-09-15 D1 lot-share and run_intraday.py lot-based features",
