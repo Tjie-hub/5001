@@ -2956,6 +2956,37 @@ independently by the planner the same day.
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-083 · Mechanism accepted: retail ownership (KSEI) — new family Ownership-Clientele {OC}
+**Status:** RECORDED · **Date:** 2026-10-09 · **Type:** Mechanism acceptance (D-070 §1) ·
+**Approval authority:** Owner, 2026-10-09. Asked "run the study myself instead of handing it to
+ZCode?", the owner answered "Yes, run it": D-entry, then a G0 freeze with no returns read, then stop
+for G1 approval. The draft is `P-M/data_acquisition/08_RETAIL_PATHS_1_4_FEASIBILITY_2026-10-09.md`
+§Draft mechanism D-entries, item 2.
+
+- **Mechanism (not price prediction).** It concerns clientele demand.
+  - Stocks held mostly by individuals carry lottery-like retail demand and trade above value
+    (Kumar 2009; Han and Kumar 2013; NBER w29543 on retail lottery amplification). They underperform
+    after the holding is observed.
+  - A month's rise in the individual share (retail inflow) is the same demand arriving. It too is
+    followed by underperformance.
+- **Data.** KSEI public month-end holding composition, by investor type × local/foreign, for 211
+  months (2009-03 → 2026-09) with no gaps. The data is outside the repo at `~/idx_external/ksei/` and
+  is hash-pinned in the G0.
+- **Family.** A new family, **Ownership-Clientele {OC}**, opened by this entry. Slot 1 is A1 (level)
+  and slot 2 is A2 (flow).
+  - It is not {SE}: there is no discrete event. It is not {V}: the volatility exclusion is a required
+    control, not the mechanism.
+  - Incrementality over VOLEX (FWD-PM-VOLEX-001) is a pass condition.
+- **Design constraints for the G0.**
+  - Monthly cross-section, with the PIT rule frozen at G0.
+  - Liquidity on the D-081 basis; costs from D-082 `cost_realised`.
+  - The bar at the census + 2.
+  - Both halves (2009–2017, 2018–2026) must carry the predicted sign (the era-flip lesson, D-070).
+- **Honest prior.** The individual share has doubled since 2016 (median 14% → 27%), so the clientele
+  changed over the sample. An era split is plausible, and a NULL is plausible.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
