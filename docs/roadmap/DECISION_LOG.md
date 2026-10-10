@@ -3227,6 +3227,30 @@ for G1 approval. The draft is `P-M/data_acquisition/08_RETAIL_PATHS_1_4_FEASIBIL
 
 ---
 
+### D-092 · {RF} breadth-panel G0 not pursued: frozen stop rule would fire; {RF} closed with no members; research backfill stopped
+**Status:** RECORDED · **Date:** 2026-10-10 · **Type:** Feasibility stop (pre-registration) ·
+**Approval authority:** Owner, 2026-10-10: "Go".
+
+- **Check (pre-outcome, prices only).** D-087's breadth G0 would use the 872 names with `broker_flow`
+  rows in the walkforward snapshot `a2d7e675…`. The frozen D-086/D-087 power routine
+  (`retail_broker/g0_census.power`, 2023-01-02 → 2024-12-31 random weekly quintile spreads, ADV ≥ Rp 1bn,
+  close ≥ 50) on that panel: σ **1.447%**/week (102 weeks). At N = 613 (bar 3.2996) and 76 test weeks:
+  MDE 0.687%/week, **power at 0.30%/week 6.8%** against the 20% minimum. The wider panel does not help:
+  the thin names add more noise than the larger legs remove (liquid panel σ 1.82%, power 3.1%).
+  No broker signal and no test-period return were read.
+- **Decision.** The breadth G0 is not run; nothing is registered; **census stays 612**. The {RF} family
+  opened by D-086 closes with **no members**. A daily or otherwise re-specified retail-flow design is a
+  new mechanism entry (D-070), not a continuation; note D-091 (daily aggressor imbalance reverses
+  overnight, untradeable).
+- **Backfill stopped.** The `~/idx_external/broker_flow` 22:30 cron line was removed and the running
+  process stopped 2026-10-10 08:47 WIB. It had reached 1,589 of 211,767 ticker-days, at ~500
+  calls per 3 hours (vendor empty replies forcing back-off), i.e. months, not a weekend. The files
+  collected are kept, unpinned, outside the repo.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
