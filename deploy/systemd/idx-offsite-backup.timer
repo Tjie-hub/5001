@@ -1,0 +1,10 @@
+# Sunday 11:00: after the 09:00 restore drill has finished with the same backup.
+[Unit]
+Description=Timer for IDX weekly off-SSD backup copy
+
+[Timer]
+OnCalendar=Sun *-*-* 11:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

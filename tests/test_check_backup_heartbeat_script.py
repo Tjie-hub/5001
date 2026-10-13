@@ -38,7 +38,7 @@ def test_all_fresh_does_not_alarm(tmp_path, monkeypatch):
 def test_default_checks_cover_all_three_backup_jobs():
     names = [name for name, _, _ in chk.DEFAULT_CHECKS]
     assert names == ["nightly DB backup", "nightly research.db backup (R-5)",
-                      "weekly restore drill"]
+                      "weekly restore drill", "weekly off-SSD backup copy"]
 
 
 def test_stale_backup_alarms(tmp_path, monkeypatch):

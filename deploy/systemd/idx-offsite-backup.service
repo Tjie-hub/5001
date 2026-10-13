@@ -1,0 +1,9 @@
+# IDX — weekly off-SSD copy of the newest verified nightly backup (2026-10-13).
+# Install as a --user unit: see deploy/systemd/README.md.
+[Unit]
+Description=IDX weekly off-SSD backup copy (USB archive drive)
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/idx-walkforward-5001
+ExecStart=%h/idx-walkforward-5001/scripts/cron_wrap.sh offsite_backup venv/bin/python3 -m scripts.offsite_backup

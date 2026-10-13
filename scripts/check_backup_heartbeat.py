@@ -47,6 +47,9 @@ DEFAULT_CHECKS = (
     ("weekly restore drill",
      os.path.join(_REPO_ROOT, "logs", "cron_db_restore_drill.log"),
      8 * 24 * 60),
+    ("weekly off-SSD backup copy",
+     os.path.join(_REPO_ROOT, "logs", "cron_offsite_backup.log"),
+     9 * 24 * 60),
 )
 
 

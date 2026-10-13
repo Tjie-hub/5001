@@ -104,7 +104,7 @@ def test_wrapper_blackout_exempts_backup_and_heartbeat_jobs(tmp_path):
     Backup, restore-drill and heartbeat failures still alert through it."""
     (tmp_path / "TELEGRAM_OFF").touch()
     for job in ("db_backup", "db_backup_research", "db_restore_drill",
-                "backup_heartbeat_check", "heartbeat_check", "disk_guard"):
+                "backup_heartbeat_check", "heartbeat_check", "disk_guard", "offsite_backup"):
         _run_wrap(tmp_path, job, "false")
         log = (tmp_path / f"cron_{job}.log").read_text()
         assert "globally OFF" not in log, job
