@@ -3251,6 +3251,49 @@ for G1 approval. The draft is `P-M/data_acquisition/08_RETAIL_PATHS_1_4_FEASIBIL
 
 ---
 
+### D-093 · Mechanism accepted: intra-broker crossing (manufactured two-way volume) — new family Market-Integrity {MI}
+**Status:** RECORDED · **Date:** 2026-10-13 · **Type:** Mechanism acceptance (D-070 §1) ·
+**Approval authority:** Owner, 2026-10-13: "draft the crossing index D-entry and run G0" (after the
+NeoBDM review of the same day; the G0 is run by the planner).
+
+- **Mechanism: manufactured volume ahead of distribution (avoidance, not entry).**
+  - A party that controls a broker account trades with itself through that broker (crosses or
+    round-trips within days). This prints volume and an apparent "accumulation" with no change in
+    beneficial ownership. Its purpose is to attract outside demand, which the party then sells
+    into: wash trading and pump-and-dump (Aggarwal and Wu 2006; Imisiker and Tas, wash trades on
+    Borsa Istanbul). The outside buyers pay for the volume in subsequent returns.
+  - Source of the idea: NeoBDM's "crossing index" (a high-crossing label voids its accumulation
+    reading; examples BKSL, APLN, KPIG, NEST). The vendor's formula is not public; this entry
+    defines its own instrument and borrows nothing but the idea.
+  - **Pre-declared sign:** high crossing share is followed by *lower* returns. A positive result
+    is not a rescue.
+- **Instrument (measurable; verified 2026-10-13 before any outcome).** `broker_flow` stores, per
+  broker-day, the net (`value`) and the gross of the listed side (`value_total`). The broker's gross
+  on the other side is `value_total − |value|` (per-ticker-day gross buy and gross sell reconcile,
+  e.g. BBCA 2026-10-09 Rp 526.10bn vs 526.09bn). The crossing share over a formation week is
+  `CX = Σ_b 2·min(GB_b, GS_b) / Σ_b (GB_b + GS_b)`, with each broker's gross summed over the week.
+  - The frozen online-retail group R = {XL, XC, YP, PD, KK} (D-086) is excluded from both sums.
+    Retail platforms net many unrelated clients, and that two-way flow is not arranged.
+- **Distinct from earlier failures.** Every P-M flow member and {RF} used a *net* (imbalance)
+  construct; CX is built from the gross two-way overlap that a net throws away. FAIL-PM-0007's
+  zero-sum identity does not apply.
+- **Family:** new **Market-Integrity {MI}**, slot 1, opened by this entry (D-028, PG-3). Scope:
+  measures of non-economic or arranged trading (crossing, wash, concentration in rarely-used
+  brokers). A NeoBDM-style "zombie broker" share would be a later member of the same family.
+- **Design constraints for the G0.**
+  - Weekly cross-section on every name with `broker_flow` data in the formation week (the panel is
+    ~96 names to 2026-03, ~870 from 2026-04, as stored). Liquidity on the D-081 basis; costs from
+    D-082; tradeability (net of cost) is a required condition.
+  - The bar at the census + arms. Pre-outcome distinctness against the retail share, formation-week
+    return, volume surge, size and volatility.
+  - Power is reported honestly, with the D-086 stop rule (0.30%/week, 20%) frozen before power is
+    computed.
+- **Census:** unchanged by this entry (612). It counts only at registration.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
