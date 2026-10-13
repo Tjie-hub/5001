@@ -1,0 +1,9 @@
+[Unit]
+Description=Timer for IDX repo log rotation
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

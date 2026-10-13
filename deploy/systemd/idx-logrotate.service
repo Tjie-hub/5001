@@ -1,0 +1,9 @@
+# IDX — rotate logs/cron_*.log (2026-10-13). Install as a --user unit: see
+# deploy/systemd/README.md.
+[Unit]
+Description=IDX repo log rotation
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/idx-walkforward-5001
+ExecStart=/usr/sbin/logrotate -s %h/idx-walkforward-5001/logs/.logrotate.state deploy/logrotate/idx-logs.conf
