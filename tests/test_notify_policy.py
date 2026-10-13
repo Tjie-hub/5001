@@ -64,6 +64,16 @@ def test_off_blocks_everything_including_alerts(hermetic, tmp_path):
         assert action == "suppress" and reason == "global OFF"
 
 
+def test_off_lets_backup_and_scheduler_dead_through(hermetic, tmp_path):
+    """Owner 2026-10-13: the blackout hid 3 failed nightly backups in a row
+    (10-10, 10-12 08:20, 10-12 21:30). Backup/heartbeat failures pass it."""
+    (tmp_path / "TELEGRAM_OFF").touch()
+    for event in ("system.backup_dead", "system.scheduler_dead"):
+        action, _ = np.decide(event, msg="x")
+        assert action == "send", event
+    assert np.BLACKOUT_EXEMPT <= set(np.EVENTS)
+
+
 def test_no_off_file_allows_send(hermetic, tmp_path):
     assert not os.path.exists(tmp_path / "TELEGRAM_OFF")
     action, _ = np.decide("risk.circuit_breaker", msg="x")

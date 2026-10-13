@@ -1,0 +1,9 @@
+# IDX — hourly disk-space guard (2026-10-13). Install as a --user unit: see
+# deploy/systemd/README.md.
+[Unit]
+Description=IDX disk-space guard (warn 85%, critical 90%)
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/idx-walkforward-5001
+ExecStart=%h/idx-walkforward-5001/scripts/cron_wrap.sh disk_guard venv/bin/python3 scripts/check_disk_space.py

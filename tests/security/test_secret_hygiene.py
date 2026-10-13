@@ -24,7 +24,7 @@ def test_no_hardcoded_secret_literals():
     offenders = []
     for py in REPO.rglob("*.py"):
         rel = py.relative_to(REPO).as_posix()
-        if rel.startswith(("venv/", "tests/", "_archive/", "scratchpad/",
+        if rel.startswith(("venv/", "venv-", "tests/", "_archive/", "scratchpad/",
                            "research_reports/", "chart-viewer/", ".deepseek/")):
             continue
         for i, line in enumerate(py.read_text(errors="ignore").splitlines(), 1):

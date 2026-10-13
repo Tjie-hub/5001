@@ -168,3 +168,30 @@ def test_restore_apply_swaps_db_and_keeps_previous_aside(src_db, tmp_path):
     conn.close()
     aside = list(tmp_path.glob("live.db.pre_restore_*"))
     assert len(aside) == 1 and aside[0].read_bytes() == b"OLD"
+
+
+def test_backup_refuses_up_front_when_disk_is_too_full(src_db, tmp_path, monkeypatch):
+    """2026-10-12: the disk filled mid-snapshot and left a partial file. Check free
+    space first and fail with a clear message instead."""
+    import collections
+    Usage = collections.namedtuple("Usage", "total used free")
+    monkeypatch.setattr(db_backup.shutil, "disk_usage",
+                        lambda p: Usage(10**12, 10**12 - 10, 10))
+    dest = tmp_path / "backups"
+    with pytest.raises(db_backup.InsufficientSpace) as e:
+        db_backup.run_backup(src_db, dest)
+    assert "free" in str(e.value) and "need" in str(e.value)
+    assert not list(dest.glob("*.db*")) if dest.exists() else True
+
+
+def test_backup_runs_when_space_is_ample(src_db, tmp_path):
+    out = db_backup.run_backup(src_db, tmp_path / "backups")
+    assert out.exists()
+
+
+def test_main_returns_1_on_insufficient_space(src_db, tmp_path, monkeypatch):
+    import collections
+    Usage = collections.namedtuple("Usage", "total used free")
+    monkeypatch.setattr(db_backup.shutil, "disk_usage",
+                        lambda p: Usage(10**12, 10**12 - 10, 10))
+    assert db_backup.main(["--db", str(src_db), "--dest", str(tmp_path / "b")]) == 1

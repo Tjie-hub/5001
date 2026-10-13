@@ -92,6 +92,25 @@ def test_wrapper_missing_script_is_a_loud_failure(tmp_path):
     assert "ALERT SKIPPED (no telegram creds)" in log
 
 
+def test_wrapper_blackout_silences_ordinary_jobs(tmp_path):
+    (tmp_path / "TELEGRAM_OFF").touch()
+    _run_wrap(tmp_path, "failjob", "false")
+    log = (tmp_path / "cron_failjob.log").read_text()
+    assert "ALERT SKIPPED (telegram globally OFF)" in log
+
+
+def test_wrapper_blackout_exempts_backup_and_heartbeat_jobs(tmp_path):
+    """Owner 2026-10-13: the blackout hid 3 failed nightly backups in a row.
+    Backup, restore-drill and heartbeat failures still alert through it."""
+    (tmp_path / "TELEGRAM_OFF").touch()
+    for job in ("db_backup", "db_backup_research", "db_restore_drill",
+                "backup_heartbeat_check", "heartbeat_check", "disk_guard"):
+        _run_wrap(tmp_path, job, "false")
+        log = (tmp_path / f"cron_{job}.log").read_text()
+        assert "globally OFF" not in log, job
+        assert "ALERT SKIPPED (no telegram creds)" in log, job
+
+
 class _CapturingHandler(http.server.BaseHTTPRequestHandler):
     """Minimal mock Telegram API: records the POST body, always 200s."""
     captured = []

@@ -27,7 +27,9 @@ SKIP_DIRS = {"tests", "migrations", "venv", "logs", ".git", "docs",
 
 def _send_telegram_calls():
     for dirpath, dirnames, filenames in os.walk(REPO_ROOT):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        # venv-py314 etc.: any virtualenv dir, not only the one named "venv"
+        dirnames[:] = [d for d in dirnames
+                       if d not in SKIP_DIRS and not d.startswith("venv")]
         for fn in filenames:
             if not fn.endswith(".py"):
                 continue

@@ -38,6 +38,28 @@ logger = logging.getLogger("db_backup")
 DEFAULT_DB = Path(__file__).resolve().parents[1] / "data" / "walkforward.db"
 DEFAULT_DEST = Path.home() / "backups" / "idx-walkforward-5001"
 
+# Peak need is the uncompressed snapshot (~DB size) plus its compressed copy
+# (~20%); 1.3x leaves slack. On 2026-10-12 a full disk left a half-written
+# snapshot and three nights of failed backups, so refuse up front instead.
+SPACE_FACTOR = 1.3
+
+
+class InsufficientSpace(RuntimeError):
+    """Not enough free disk to take a snapshot safely."""
+
+
+def check_space(db_path: Path, dest_dir: Path) -> None:
+    probe = dest_dir
+    while not probe.exists() and probe != probe.parent:
+        probe = probe.parent
+    need = int(db_path.stat().st_size * SPACE_FACTOR)
+    free = shutil.disk_usage(probe).free
+    if free < need:
+        raise InsufficientSpace(
+            f"only {free / 1e9:.1f} GB free on {probe}, need ~{need / 1e9:.1f} GB "
+            f"for the snapshot -- free some disk space")
+
+
 def _backup_re(prefix: str) -> re.Pattern:
     return re.compile(rf"^{re.escape(prefix)}-(\d{{8}})-(\d{{6}})\.db\.(zst|gz)$")
 
@@ -155,6 +177,7 @@ def run_backup(db_path: Path, dest_dir: Path, keep_daily: int = 7,
                keep_weekly: int = 4, prefix: str = "walkforward") -> Path:
     """Full cycle: snapshot → verify → meta → compress → prune."""
     logger.info("backup starting: %s → %s", db_path, dest_dir)
+    check_space(db_path, dest_dir)
     snap = snapshot(db_path, dest_dir, prefix=prefix)
     try:
         meta = verify(snap)

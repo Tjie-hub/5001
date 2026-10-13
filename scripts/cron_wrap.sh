@@ -25,7 +25,15 @@ if [ "$rc" -ne 0 ]; then
     # but deduped once per job per day, and the global logs/TELEGRAM_OFF
     # blackout suppresses them entirely. State lives under this wrapper's own
     # LOG_DIR (CRON_WRAP_LOG_DIR override included) so tests stay hermetic.
-    if [ -f "$LOG_DIR/TELEGRAM_OFF" ]; then
+    # Backup, restore-drill and heartbeat failures alert through the blackout
+    # (owner 2026-10-13: it hid three failed nightly backups in a row).
+    # Matches utils/notify_policy.BLACKOUT_EXEMPT.
+    case "$JOB" in
+        db_backup|db_backup_research|db_restore_drill|backup_heartbeat_check|heartbeat_check|disk_guard)
+            BLACKOUT_EXEMPT=1 ;;
+        *) BLACKOUT_EXEMPT=0 ;;
+    esac
+    if [ -f "$LOG_DIR/TELEGRAM_OFF" ] && [ "$BLACKOUT_EXEMPT" -eq 0 ]; then
         echo "[$(date '+%F %T')] ALERT SKIPPED (telegram globally OFF) for $JOB" >> "$LOG"
         exit "$rc"
     fi

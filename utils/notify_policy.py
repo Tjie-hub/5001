@@ -85,6 +85,12 @@ DIGEST_DIR = os.path.join(_LOG_DIR, "digest_buffer")
 # Global kill switch (2026-10-05 blackout) — same file utils.telegram checks.
 OFF_FILE = os.path.join(_LOG_DIR, "TELEGRAM_OFF")
 
+# Events that still send while OFF_FILE exists. Owner 2026-10-13: the blackout
+# hid three failed nightly backups in a row (10-10, 10-12 08:20, 10-12 21:30)
+# after the disk filled. scripts/cron_wrap.sh keeps the matching job list.
+BLACKOUT_EXEMPT = frozenset({"system.backup_dead", "system.scheduler_dead",
+                            "system.disk_low"})
+
 # Dedup rules. ("none",) means the call site already guarantees singularity
 # (state-transition guard, upstream rate limiter, or owner-initiated action).
 RULE_NONE = ("none",)
@@ -103,6 +109,7 @@ EVENTS = {
     "system.job_register_fail":           (TIER_SEND, RULE_NONE),  # once per process start
     "system.scheduler_dead":              (TIER_SEND, RULE_DAILY),
     "system.backup_dead":                 (TIER_SEND, RULE_DAILY),
+    "system.disk_low":                    (TIER_SEND, RULE_DAILY),  # subject=mount:level
     "system.fail_open":                   (TIER_SEND, RULE_DAILY),  # subject=source
     "system.report_build_error":          (TIER_SEND, RULE_DAILY),  # subject=report name
     "system.provisional_bars":            (TIER_SEND, RULE_DAILY),
@@ -605,7 +612,7 @@ def decide(event: Optional[str], subject: Optional[str] = None,
                     event, reason, str(msg).replace("\n", " "))
         return _DECISION_DIGEST, "tier2 digest"
 
-    if os.path.exists(OFF_FILE):
+    if os.path.exists(OFF_FILE) and event not in BLACKOUT_EXEMPT:
         logger.info("[telegram] suppressed (global OFF): %.80s",
                     str(msg).replace("\n", " "))
         return _DECISION_SUPPRESS, "global OFF"
