@@ -19,6 +19,8 @@ POLICY = {
     "/": VIEWER, "/backtest/multi": VIEWER, "/screener": VIEWER,
     "/signal-scanner": VIEWER, "/portfolio": VIEWER, "/dashboard": VIEWER,
     "/sector": VIEWER, "/dive/<ticker>": VIEWER, "/metrics": VIEWER,
+    # --- broker-flow context screen (NeoBDM-style, read-only, D-094) ---
+    "/bdm": VIEWER, "/api/bdm/screener": VIEWER, "/api/bdm/ticker/<ticker>": VIEWER,
     # --- frontend/ SPA stop-gap serving (ADR-005/U-8 still undecided) ---
     "/assets/<path:filename>": PUBLIC, "/favicon.svg": PUBLIC,
     "/<path:path>": VIEWER,

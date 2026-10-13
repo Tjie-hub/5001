@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}BDM — Broker Flow Context — IDX Suite{% endblock %}
+{% block head %}
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  .bdm { padding:16px; display:flex; flex-direction:column; gap:14px; }
+  .bdm .panel { background:var(--surface,#0e1320); border:1px solid var(--border,#1b2233); border-radius:12px; overflow:hidden; }
+  .bdm .panel-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border,#1b2233); flex-wrap:wrap; }
+  .bdm .panel-head h2 { margin:0; font-size:14px; }
+  .bdm .muted { font-size:11px; color:var(--text-mute,#7a8499); }
+  .bdm .warn { font-size:11.5px; color:#fbbf24; background:rgba(251,191,36,.08); border:1px solid rgba(251,191,36,.25); border-radius:8px; padding:8px 12px; }
+  .bdm .filters { display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:12px; }
+  .bdm .filters input, .bdm .filters select { background:#0b0f19; color:inherit; border:1px solid var(--border,#1b2233); border-radius:6px; padding:4px 6px; font-size:12px; }
+  .bdm .tbl-wrap { max-height:520px; overflow:auto; }
+  table.bdm-t { width:100%; border-collapse:collapse; }
+  table.bdm-t th, table.bdm-t td { padding:6px 9px; font-size:12px; border-bottom:1px solid var(--border,#1b2233); white-space:nowrap; }
+  table.bdm-t th { position:sticky; top:0; background:var(--surface,#0e1320); color:var(--text-mute,#7a8499); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; cursor:pointer; text-align:right; }
+  table.bdm-t th:first-child, table.bdm-t td:first-child { text-align:left; }
+  table.bdm-t td { text-align:right; font-family:var(--mono,monospace); }
+  table.bdm-t tbody tr { cursor:pointer; } table.bdm-t tbody tr:hover { background:rgba(255,255,255,.03); }
+  .pos { color:var(--green,#10b981); } .neg { color:var(--red,#ef4444); }
+  .chip { font-size:9.5px; padding:1px 6px; border-radius:4px; margin-left:3px; font-family:var(--sans,inherit); }
+  .chip.cx { color:#f97316; background:rgba(249,115,22,.14); } .chip.zb { color:#ec4899; background:rgba(236,72,153,.14); } .chip.nf { color:#7a8499; background:rgba(122,132,153,.14); }
+  .m-bandar { color:#facc15; } .m-nonretail { color:#b45309; } .m-sultan { color:#60a5fa; } .m-foreign { color:#a78bfa; }
+  .detail-grid { display:grid; grid-template-columns: 2fr 1fr; gap:14px; padding:14px; }
+  @media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
+  #bdm-chart { height:380px; } #bdm-sub { height:120px; margin-top:6px; }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:4px 12px; font-size:12px; }
+  .kv span:nth-child(odd) { color:var(--text-mute,#7a8499); }
+  .bar { display:flex; height:10px; border-radius:5px; overflow:hidden; margin:6px 0 10px; }
+  .legend { display:flex; gap:10px; flex-wrap:wrap; font-size:11px; margin-bottom:6px; }
+  .legend label { cursor:pointer; user-select:none; }
+  .sec { margin-top:12px; font-size:11px; color:var(--text-mute,#7a8499); text-transform:uppercase; letter-spacing:.05em; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="bdm">
+  <div class="warn">Context only. These broker-flow readings come from our own data, using NeoBDM's ideas. None of them has passed a test here (D-091, D-092, D-094). "Fit" shows which flow line has tracked price <b>in the past</b>; it does not predict.</div>
+
+  <div class="panel" id="detail-panel" style="display:none">
+    <div class="panel-head"><h2 id="d-title">—</h2><span class="muted" id="d-asof"></span></div>
+    <div class="detail-grid">
+      <div>
+        <div class="legend" id="d-legend"></div>
+        <div id="bdm-chart"></div>
+        <div class="muted" style="margin-top:6px">Daily crossing share (orange, same broker on both sides; retail excluded) · zombie share of gross (pink)</div>
+        <div id="bdm-sub"></div>
+      </div>
+      <div>
+        <div class="sec">Fit (last 60 sessions)</div><div class="kv" id="d-fit"></div>
+        <div class="sec">Participation (20d gross)</div><div class="bar" id="d-part"></div><div class="kv" id="d-part-kv"></div>
+        <div class="sec">Accumulation % (bandar net / value)</div><div class="kv" id="d-acc"></div>
+        <div class="sec">Top brokers (20d net)</div><div class="kv" id="d-top"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Market summary <span class="muted" id="s-asof"></span></h2>
+      <div class="filters">
+        <input id="f-ticker" placeholder="Ticker…" size="7">
+        <label>Value 20d ≥ <select id="f-val"><option value="0">any</option><option value="1e9" selected>Rp 1bn</option><option value="5e9">Rp 5bn</option><option value="2e10">Rp 20bn</option></select></label>
+        <label>Fit <select id="f-fit"><option value="">any</option><option>bandar</option><option>nonretail</option><option>sultan</option><option>foreign</option><option value="none">no fit</option></select></label>
+        <label><input type="checkbox" id="f-acc"> W1 &amp; W2 accumulation &gt; 0</label>
+        <label><input type="checkbox" id="f-clean" checked> hide crossing / zombie flags</label>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table class="bdm-t">
+        <thead><tr>
+          <th data-k="ticker">Ticker</th><th data-k="close">Close</th><th data-k="ret_5d">5d %</th><th data-k="value_20d">Value 20d</th>
+          <th data-k="acc.d1">D1</th><th data-k="acc.d2">D2</th><th data-k="acc.d4">D4</th><th data-k="acc.w1">W1</th><th data-k="acc.w2">W2</th><th data-k="acc.w4">W4</th>
+          <th data-k="net.foreign">Foreign 5d</th><th data-k="net.nonretail">Non-retail 5d</th>
+          <th data-k="crossing_5d">Cross 5d</th><th data-k="zombie_share">Zombie 5d</th><th data-k="fitscore">Fit</th>
+        </tr></thead>
+        <tbody id="s-body"><tr><td colspan="15" class="muted" style="text-align:center;padding:30px">Loading… (the first load after new data takes ~20s)</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block view_init %}
+<script>
+const MCOL = {bandar:'#facc15', nonretail:'#b45309', sultan:'#60a5fa', foreign:'#a78bfa'};
+const GCOL = {foreign:'#a78bfa', retail:'#34d399', institution:'#60a5fa', zombie:'#ec4899'};
+let ROWS = [], SORT = {k:'value_20d', dir:-1};
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function fmtRp(v){ if(v==null) return '—'; const a=Math.abs(v); const s=v<0?'-':''; if(a>=1e12) return s+(a/1e12).toFixed(2)+'T'; if(a>=1e9) return s+(a/1e9).toFixed(1)+'B'; if(a>=1e6) return s+(a/1e6).toFixed(0)+'M'; return s+a.toFixed(0); }
+function sgn(v, txt){ if(v==null) return '—'; return `<span class="${v>0?'pos':v<0?'neg':''}">${txt??v}</span>`; }
+function pct(v){ return v==null?'—':sgn(v, (v>0?'+':'')+v.toFixed(1)); }
+function get(r,k){ if(k.startsWith('acc.')) return r.acc_pct[k.slice(4)]; if(k.startsWith('net.')) return r.net_5d[k.slice(4)]; if(k==='fitscore') return r.fit.best? r.fit.scores[r.fit.best] : -9; return r[k]; }
+
+function render(){
+  const ft=document.getElementById('f-ticker').value.trim().toUpperCase(), fv=+document.getElementById('f-val').value,
+        ff=document.getElementById('f-fit').value, fa=document.getElementById('f-acc').checked, fc=document.getElementById('f-clean').checked;
+  let rs = ROWS.filter(r => (!ft || r.ticker.startsWith(ft)) && r.value_20d>=fv
+     && (!ff || (ff==='none' ? !r.fit.best : r.fit.best===ff))
+     && (!fa || ((r.acc_pct.w1||0)>0 && (r.acc_pct.w2||0)>0))
+     && (!fc || !r.flags.some(f => f==='high_crossing' || f==='zombie_heavy')));
+  rs.sort((a,b)=>{ const x=get(a,SORT.k), y=get(b,SORT.k); if(x==null) return 1; if(y==null) return -1; return (x>y?1:x<y?-1:0)*SORT.dir; });
+  document.getElementById('s-body').innerHTML = rs.slice(0,400).map(r => {
+    const chips = r.flags.map(f => f==='high_crossing'?'<span class="chip cx">CROSS</span>':f==='zombie_heavy'?'<span class="chip zb">ZOMBIE</span>':'').join('');
+    const fit = r.fit.best ? `<span class="m-${r.fit.best}">${r.fit.best} ${(r.fit.scores[r.fit.best]*100).toFixed(0)}%</span>` : '<span class="chip nf">no fit</span>';
+    const a = r.acc_pct;
+    return `<tr data-t="${esc(r.ticker)}"><td>${esc(r.ticker)}${chips}</td><td>${r.close??'—'}</td><td>${pct(r.ret_5d)}</td><td>${fmtRp(r.value_20d)}</td>
+      <td>${pct(a.d1)}</td><td>${pct(a.d2)}</td><td>${pct(a.d4)}</td><td>${pct(a.w1)}</td><td>${pct(a.w2)}</td><td>${pct(a.w4)}</td>
+      <td>${sgn(r.net_5d.foreign, fmtRp(r.net_5d.foreign))}</td><td>${sgn(r.net_5d.nonretail, fmtRp(r.net_5d.nonretail))}</td>
+      <td>${r.crossing_5d==null?'—':(r.crossing_5d*100).toFixed(0)+'%'}</td><td>${r.zombie_share==null?'—':(r.zombie_share*100).toFixed(1)+'%'}</td><td>${fit}</td></tr>`;
+  }).join('') || '<tr><td colspan="15" class="muted" style="text-align:center;padding:20px">No rows</td></tr>';
+}
+
+async function loadScreener(){
+  try {
+    const d = await fetch('/api/bdm/screener').then(r=>r.json());
+    if (d.error) throw new Error(d.error);
+    ROWS = d.rows || [];
+    document.getElementById('s-asof').textContent = d.as_of ? `· ${d.as_of} · ${ROWS.length} names` : '';
+    render();
+  } catch(e) {
+    document.getElementById('s-body').innerHTML = `<tr><td colspan="15" class="muted" style="text-align:center;padding:20px">Failed: ${esc(e.message)}</td></tr>`;
+  }
+}
+
+let chart, sub, priceS, lineS = {}, subS = {};
+async function loadTicker(t){
+  const d = await fetch('/api/bdm/ticker/'+encodeURIComponent(t)).then(r=>r.json());
+  const p = document.getElementById('detail-panel');
+  p.style.display='';
+  if (d.error){ document.getElementById('d-title').textContent = d.error; return; }
+  document.getElementById('d-title').textContent = d.ticker;
+  document.getElementById('d-asof').textContent = `${d.sessions} sessions to ${d.as_of}`;
+  const el = document.getElementById('bdm-chart'), el2 = document.getElementById('bdm-sub');
+  if (chart) { chart.remove(); sub.remove(); }
+  const opt = {layout:{background:{color:'transparent'}, textColor:'#9aa4b8'}, grid:{vertLines:{color:'#141a28'}, horzLines:{color:'#141a28'}},
+               timeScale:{borderColor:'#1b2233'}, rightPriceScale:{borderColor:'#1b2233'}, leftPriceScale:{visible:true, borderColor:'#1b2233'}};
+  chart = LightweightCharts.createChart(el, {...opt, width: el.clientWidth, height: 380});
+  sub = LightweightCharts.createChart(el2, {...opt, width: el2.clientWidth, height: 120, leftPriceScale:{visible:false}});
+  priceS = chart.addLineSeries({color:'#e5e7eb', lineWidth:2, priceScaleId:'right', title:'close'});
+  priceS.setData(d.series.filter(x=>x.close!=null).map(x=>({time:x.date, value:x.close})));
+  lineS = {};
+  const best = d.fit.best;
+  document.getElementById('d-legend').innerHTML = Object.keys(MCOL).map(m =>
+    `<label style="color:${MCOL[m]}"><input type="checkbox" data-m="${m}" ${m===best||(!best&&m==='bandar')?'checked':''}> ${m}${m===best?' ★':''}</label>`).join('');
+  for (const m of Object.keys(MCOL)) {
+    const s = chart.addLineSeries({color:MCOL[m], lineWidth: m===best?2:1, priceScaleId:'left', visible: m===best||(!best&&m==='bandar'), title:m,
+                                   priceFormat:{type:'custom', formatter: fmtRp, minMove: 1}});
+    s.setData(d.series.map(x=>({time:x.date, value:x.cum[m]})));
+    lineS[m] = s;
+  }
+  document.querySelectorAll('#d-legend input').forEach(cb => cb.onchange = () => lineS[cb.dataset.m].applyOptions({visible: cb.checked}));
+  subS.cx = sub.addLineSeries({color:'#f97316', lineWidth:1, priceFormat:{type:'percent'}});
+  subS.cx.setData(d.series.filter(x=>x.crossing!=null).map(x=>({time:x.date, value:100*x.crossing})));
+  subS.zb = sub.addLineSeries({color:'#ec4899', lineWidth:1, priceFormat:{type:'percent'}});
+  subS.zb.setData(d.series.filter(x=>x.zombie_share!=null).map(x=>({time:x.date, value:100*x.zombie_share})));
+  chart.timeScale().fitContent(); sub.timeScale().fitContent();
+  chart.timeScale().subscribeVisibleLogicalRangeChange(r => r && sub.timeScale().setVisibleLogicalRange(r));
+
+  const sc = d.fit.scores;
+  document.getElementById('d-fit').innerHTML = (best ? `<span>Best</span><span class="m-${best}">${best}</span>` : `<span>Best</span><span>no line fits (all &lt; 50%)</span>`) +
+    Object.keys(MCOL).map(m => `<span class="m-${m}">${m}</span><span>${sc[m]==null?'—':(sc[m]*100).toFixed(0)+'%'}</span>`).join('');
+  const last20 = d.series.slice(-20), gs = {foreign:0, retail:0, institution:0, zombie:0};
+  let tot = 0; last20.forEach(x => { for (const g in gs) { const v = (x.group_share[g]||0)*x.value*2; gs[g]+=v; tot+=v; } });
+  document.getElementById('d-part').innerHTML = Object.keys(gs).map(g => `<div title="${g}" style="width:${tot? (100*gs[g]/tot):0}%;background:${GCOL[g]}"></div>`).join('');
+  document.getElementById('d-part-kv').innerHTML = Object.keys(gs).map(g => `<span style="color:${GCOL[g]}">${g}</span><span>${tot? (100*gs[g]/tot).toFixed(1):'—'}%</span>`).join('');
+  document.getElementById('d-acc').innerHTML = Object.entries(d.acc_pct).map(([k,v]) => `<span>${k.toUpperCase()}</span><span>${pct(v)}</span>`).join('');
+  const tb = d.top_brokers, lab = b => `${b.broker} <span class="muted">${b.group}${b.sultan?' · sultan':''}</span>`;
+  document.getElementById('d-top').innerHTML =
+    tb.buyers.slice(0,5).map(b => `<span>${lab(b)}</span><span class="pos">${fmtRp(b.net)}</span>`).join('') +
+    tb.sellers.slice(0,5).map(b => `<span>${lab(b)}</span><span class="neg">${fmtRp(b.net)}</span>`).join('');
+  p.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+document.querySelectorAll('table.bdm-t th').forEach(th => th.onclick = () => {
+  const k = th.dataset.k; SORT = {k, dir: SORT.k===k ? -SORT.dir : -1}; render(); });
+['f-ticker','f-val','f-fit','f-acc','f-clean'].forEach(id => document.getElementById(id).addEventListener('input', render));
+document.getElementById('f-ticker').addEventListener('keydown', e => { if (e.key==='Enter' && e.target.value.trim()) loadTicker(e.target.value.trim()); });
+document.getElementById('s-body').addEventListener('click', e => { const tr = e.target.closest('tr[data-t]'); if (tr) loadTicker(tr.dataset.t); });
+const qs = new URLSearchParams(location.search).get('t'); if (qs) loadTicker(qs);
+loadScreener();
+</script>
+{% endblock %}
