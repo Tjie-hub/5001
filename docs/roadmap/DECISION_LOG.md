@@ -3294,6 +3294,34 @@ NeoBDM review of the same day; the G0 is run by the planner).
 
 ---
 
+### D-094 · {MI} crossing G0: stop rule fired — WITHDRAWN before registration (uncounted); {MI} open with no members
+**Status:** RECORDED · **Date:** 2026-10-13 · **Type:** G0 stop + withdrawal ·
+**Approval authority:** Owner, 2026-10-13: "a". The G0 is branch `research/crossing-index-2026-10`
+@ `6d58790` (freeze `4d1e683`, mechanism D-093).
+
+- **G0 (D-093 scope).** Weekly CX ex-R, X1.
+  - 75 testable weeks (2025-04-11 → 2026-09-18): 51 on the 108-name pre-breadth panel, 24 on the
+    872-name breadth panel. Median universe 94 / 376.
+  - Bar 3.2996 had it registered at N = 613. No outcome was read, and `outcomes.py` was never run.
+- **Stop rule (D-086 rule, frozen before power was computed): FIRED.**
+  - Pre-sample (2023–2024) random weekly spread σ: 1.98% (A) and 1.43% (B).
+  - MDE 0.87% a week; **power at 0.30% a week 3.05%**, against the 20% minimum.
+  - About 99 more breadth weeks would be needed (information only).
+- **Pre-outcome facts kept.**
+  - Median CX 0.67; 82% of stock-weeks ≥ 0.5. Week-summed two-way trading is the norm.
+  - Spearman 0.45 with Parkinson-60, so a later design must be incremental to the VOLEX exclusion.
+- **Status: WITHDRAWN.** The arm was never registered, so it is **not counted**. The census stays at
+  **612**. {MI} (D-093) stays open with no members.
+  - A daily or same-day crossing construct, or a zombie-broker share, is a new G0 under D-093, with
+    its own power check.
+- **Production use, decided separately by the owner the same day:** a NeoBDM-style broker-flow
+  context screen in 5001. It is descriptive only and carries no evidence status. Its crossing and
+  zombie readings are flags, never a gate or a signal.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
