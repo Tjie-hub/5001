@@ -88,8 +88,13 @@ OFF_FILE = os.path.join(_LOG_DIR, "TELEGRAM_OFF")
 # Events that still send while OFF_FILE exists. Owner 2026-10-13: the blackout
 # hid three failed nightly backups in a row (10-10, 10-12 08:20, 10-12 21:30)
 # after the disk filled. scripts/cron_wrap.sh keeps the matching job list.
-BLACKOUT_EXEMPT = frozenset({"system.backup_dead", "system.scheduler_dead",
-                            "system.disk_low"})
+BLACKOUT_EXEMPT = frozenset({
+    "system.backup_dead", "system.scheduler_dead", "system.disk_low",
+    # Data pipeline failures + the self-heal outcome (owner 2026-10-13: failures
+    # must alert, then backfill, so nothing needs manual auditing).
+    "data.token_expired", "data.token_refresh_failed", "data.flow_fetch_failed",
+    "data.flow_gap", "data.flow_coverage", "data.eod_degraded",
+    "data.broker_period_failed", "data.heal_repaired", "data.heal_failed"})
 
 # Dedup rules. ("none",) means the call site already guarantees singularity
 # (state-transition guard, upstream rate limiter, or owner-initiated action).
@@ -110,6 +115,8 @@ EVENTS = {
     "system.scheduler_dead":              (TIER_SEND, RULE_DAILY),
     "system.backup_dead":                 (TIER_SEND, RULE_DAILY),
     "system.disk_low":                    (TIER_SEND, RULE_DAILY),  # subject=mount:level
+    "data.heal_repaired":                 (TIER_SEND, RULE_DAILY),  # nightly self-heal fixed a gap
+    "data.heal_failed":                   (TIER_SEND, RULE_DAILY),  # gap remains / cannot repair
     "system.fail_open":                   (TIER_SEND, RULE_DAILY),  # subject=source
     "system.report_build_error":          (TIER_SEND, RULE_DAILY),  # subject=report name
     "system.provisional_bars":            (TIER_SEND, RULE_DAILY),

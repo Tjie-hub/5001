@@ -1,0 +1,11 @@
+# 22:45: after the 18:00-22:30 window where bulk vendor calls are avoided and
+# after the 21:30 backups have finished.
+[Unit]
+Description=Timer for IDX nightly data self-heal
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 22:45:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

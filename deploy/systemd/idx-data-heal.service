@@ -1,0 +1,10 @@
+# IDX — nightly data self-heal (2026-10-13). Install as a --user unit: see
+# deploy/systemd/README.md.
+[Unit]
+Description=IDX nightly data self-heal (backfill recent gaps)
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/idx-walkforward-5001
+TimeoutStartSec=2h
+ExecStart=%h/idx-walkforward-5001/scripts/cron_wrap.sh data_heal venv/bin/python3 -m scripts.data_heal

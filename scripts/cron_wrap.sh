@@ -29,7 +29,7 @@ if [ "$rc" -ne 0 ]; then
     # (owner 2026-10-13: it hid three failed nightly backups in a row).
     # Matches utils/notify_policy.BLACKOUT_EXEMPT.
     case "$JOB" in
-        db_backup|db_backup_research|db_restore_drill|backup_heartbeat_check|heartbeat_check|disk_guard|offsite_backup)
+        db_backup|db_backup_research|db_restore_drill|backup_heartbeat_check|heartbeat_check|disk_guard|offsite_backup|auto_token|stockbit_ohlcv|stockbit_flow|data_heal)
             BLACKOUT_EXEMPT=1 ;;
         *) BLACKOUT_EXEMPT=0 ;;
     esac
