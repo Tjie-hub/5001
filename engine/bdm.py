@@ -22,7 +22,10 @@ What is rebuilt (the vendor's code and output are not used; only the ideas, from
 
 Data semantics (verified 2026-10-13): per broker-day `value` is the signed net in Rp and
 `value_total` the gross of the listed side; the broker's other-side gross is value_total - |value|.
-The vendor lists the top 25 net brokers per side, so a broker outside both lists is unobserved.
+The vendor lists the top 25 net brokers per side, so a broker outside both lists is unobserved;
+in practice the lists capture nearly all volume: lots rebuilt this way equal the trade-book
+regular volume (median 1.000, 98% of 551 names within +-5% on 2026-10-09), and the bandar sign
+agrees with the vendor's own top-5 acc/dist label (100% of 226). Re-check: tools/check_bdm.py.
 `investor_type` classifies the BROKER (Asing / Lokal / Pemerintah), not the investor -- "foreign"
 here means foreign-type brokers excluding the retail platforms, a proxy for NeoBDM's investor-
 citizenship foreign flow.

@@ -143,3 +143,21 @@ def test_routes(tmp_path, monkeypatch):
     assert r.status_code == 200 and r.get_json()["rows"][0]["ticker"] == "AAA"
     assert cl.get("/api/bdm/ticker/aaa").get_json()["ticker"] == "AAA"
     assert cl.get("/api/bdm/ticker/ZZZ").status_code == 404
+
+
+def test_check_tool_reconstruction(tmp_path):
+    """tools/check_bdm.py: rebuilt lots == trade-book volume when lot_value is the listed-side gross."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("check_bdm", "tools/check_bdm.py")
+    cb = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cb)
+    p, c = _mk_db(tmp_path)
+    c.execute("CREATE TABLE stockbit_flow (ticker TEXT, trade_date TEXT, buy_lot INTEGER, sell_lot INTEGER)")
+    d = "2026-10-09"
+    # AA buys 3000 lots, sells 1000 (net +2000); BB sells 2000 net, buys nothing -> 3000 lots traded
+    c.execute("INSERT INTO broker_flow VALUES ('T',?, 'AA','BUY', 2000, 300000, 0, 0, 100, 1, 'Lokal')", (d,))
+    c.execute("INSERT INTO broker_flow VALUES ('T',?, 'BB','SELL', -2000, 200000, 0, 0, 100, 1, 'Lokal')", (d,))
+    c.execute("INSERT INTO stockbit_flow VALUES ('T', ?, 1500, 1500)", (d,))
+    c.commit()
+    r = cb.reconstruction(c, d)
+    assert len(r) == 1 and abs(r[0] - 1.0) < 1e-12
