@@ -98,7 +98,9 @@ BLACKOUT_EXEMPT = frozenset({
     # 2026-10-13: five jobs died on FD exhaustion at 16:23-16:40 and the blackout hid
     # every alert (the only signal was the scheduler heartbeat). Already limited to
     # one alert per job per hour by scheduler/__init__.
-    "system.scheduler_job_error"})
+    "system.scheduler_job_error",
+    # 2026-10-14: ~/watch.sh internet/DNS outage recovery summary (scripts/net_alert.py).
+    "system.net_outage"})
 
 # Dedup rules. ("none",) means the call site already guarantees singularity
 # (state-transition guard, upstream rate limiter, or owner-initiated action).
@@ -119,6 +121,7 @@ EVENTS = {
     "system.scheduler_dead":              (TIER_SEND, RULE_DAILY),
     "system.backup_dead":                 (TIER_SEND, RULE_DAILY),
     "system.disk_low":                    (TIER_SEND, RULE_DAILY),  # subject=mount:level
+    "system.net_outage":                  (TIER_SEND, RULE_NONE),   # watcher sends once per outage; subject=internet|dns
     "data.heal_repaired":                 (TIER_SEND, RULE_DAILY),  # nightly self-heal fixed a gap
     "data.heal_failed":                   (TIER_SEND, RULE_DAILY),  # gap remains / cannot repair
     "system.fail_open":                   (TIER_SEND, RULE_DAILY),  # subject=source
