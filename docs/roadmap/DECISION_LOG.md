@@ -3320,6 +3320,57 @@ NeoBDM review of the same day; the G0 is run by the planner).
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-095 · Shadow forward test: outage cohorts 2026-10-09 and 2026-10-12 recorded as data gaps; exclude from analysis
+**Status:** RECORDED · **Date:** 2026-10-14 · **Type:** data-gap record ·
+**Approval authority:** Owner, 2026-10-14: "append it" (draft reviewed).
+
+- **Scope.** The production shadow forward test (`forward_testing/`, `ft_*` tables, nightly 18:30
+  Forward-Test Cycle). It is not a P-M hypothesis and nothing here changes a census, bar or registry.
+- **What happened.**
+  - **2026-10-12 (Mon): the cycle never ran.** No `_job_sentinel` row, no `ft_run` row, and none of
+    that day's 392 `scheduled_signals` were ingested into `ft_signal`.
+    - The cause is **not proven**. The 5001 `app.log` has no entries between 16:27 and 21:25 WIB, and
+      the disk was at ~99% that day (the nightly backups failed with "database or disk is full" at
+      08:20 and 21:30). The most likely cause is the disk-full condition. That is an inference.
+  - **2026-10-13 (Tue): the cycle failed part-way.** At 18:30:06 the 5001 worker had exhausted its
+    1024 open-file limit (unclosed SQLite connections on Python 3.14; fixed in `ed029e5`, limit raised
+    in `44f34a1`). 113 signals and their 112 state/transition rows were written, then every DB open
+    failed. No `ft_run` row was written.
+  - **Catch-up run: 2026-10-14 08:42:45 WIB** (run_date `2026-10-13`), before the 09:00 open and
+    therefore before the signals' fill bar (10-14 open) existed. The cycle's ingestion is idempotent
+    ("re-runs return 0"); it ingested the remaining 95 signals (207 total, 207 states), then ran the
+    position manager. The `_job_sentinel` row for that date was deleted first and re-created by the run.
+- **Consequences (counted from the database, 2026-10-14).**
+  - **Signal date 2026-10-09: 104 of 108 signals ARCHIVED as `entry-window-expired`** at the 10-13
+    run. Their fill bar was the 10-12 open, and with no 10-12 cycle the engine's entry-timeliness
+    guard (`shadow_manager._maybe_open`: "only exits backfill") correctly refused to open them at a
+    later, backdated price. The other 4 are `OPENED` (3) / `EXITED` (1).
+  - **Signal date 2026-10-12: not ingested.** Ingesting it now could only archive it
+    (`entry_date < run_date`), so it **cannot be backfilled** without breaking the timeliness rule.
+  - **Signal date 2026-10-13: valid, late-ingested.** 207 signals in `GENERATED`; they open at the
+    10-14 open in the 10-14 cycle. Ingestion happened before the fill bar existed, so there is no
+    look-ahead.
+  - **Exits on 2026-10-12 were evaluated one session late** (the 10-13 exit pass handled both days:
+    144 TIME and 17 TRAIL exits). Whether any exit price differs from what a timely 10-12 pass would
+    have produced is **not verified**.
+- **Decision proposed.**
+  1. Record 2026-10-09 (entries) and 2026-10-12 (ingestion) as **outage-affected cohorts**. Exclude
+     them from any forward-test performance analysis, and do not pool them with unaffected days.
+  2. Treat the 2026-10-13 cohort as valid, with the late-ingestion time noted.
+  3. Do **not** re-open, re-ingest or edit the archived 10-09 signals or the missing 10-12 cohort.
+  4. Exits executed on 10-13 for positions that should have been checked on 10-12 are flagged as
+     "one session late" in any trade-level analysis of that window.
+- **Prevention (already in place).** Connections now always close (`data.db.transaction()` /
+  `ft_txn()`, with a CI source-scan guard); 5001 runs with `LimitNOFILE=65536`; scheduler job errors,
+  data-pipeline failures, backup, disk and self-heal alerts bypass the Telegram blackout; an hourly
+  disk guard and a nightly data self-heal run.
+- **Related gap found while drafting (outside this entry, owner to decide).**
+  `research_fwd_volex` (FWD-PM-VOLEX-001, Monday 07:30) has **no run on 2026-10-12**: its log's last
+  entry is 2026-10-05. Its protocol is frozen, so whether a late formation is permissible is the
+  owner's call. The other forward recorders (regime, fade, bank) ran on 10-12 and 10-13 with rc=0.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
