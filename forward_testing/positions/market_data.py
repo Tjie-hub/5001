@@ -3,7 +3,7 @@
 ATR is reimplemented locally (SMA convention, identical to engine.indicators.calc_atr)
 so forward_testing stays stdlib-only — no pandas dependency.
 """
-from forward_testing.storage.db import ft_get_db
+from forward_testing.storage.db import ft_get_db, ft_txn
 
 
 def atr_sma(rows, period=14):
@@ -35,7 +35,7 @@ class MarketDataResolver:
 
     def _rows(self, ticker):
         if ticker not in self._cache:
-            with ft_get_db(self.db_path) as c:
+            with ft_txn(self.db_path) as c:
                 # Exclude all-NULL/incomplete bars: prod ohlcv carries empty rows for
                 # non-trading/suspended days. A complete bar needs open/high/low/close.
                 self._cache[ticker] = [

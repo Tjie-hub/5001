@@ -14,7 +14,7 @@ DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 
 from utils.telegram import send_telegram  # noqa: E402
 from utils.logging_config import redact_and_truncate  # noqa: E402
-from data.db import connect as db_connect  # noqa: E402
+from data.db import connect as db_connect, transaction  # noqa: E402
 from scheduler.state import _regime_clf_cache  # noqa: E402  — dict; _sector_scores_cache handled inside _get_sector_scores_cached via scheduler.state ref
 from scheduler.utils import get_all_tickers, _load_ohlcv_bulk, fetch_latest  # noqa: E402
 
@@ -115,7 +115,7 @@ def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
     """
     db = _db_path or DB_PATH
     try:
-        with db_connect(db) as conn:
+        with transaction(db) as conn:
             row = conn.execute(
                 'SELECT fetch_date FROM stockbit_keystats WHERE ticker=? ORDER BY fetch_date DESC LIMIT 1',
                 (ticker,)
@@ -156,7 +156,7 @@ def check_keystats_freshness(ticker: str, df, stale_threshold: int = 30,
         if not stats:
             logging.info(f"[keystats] {ticker} stale_shock:{stale_days}d — fetch empty, blocking")
             return False, f'stale_shock:{stale_days}d,fetch_empty'
-        with db_connect(db) as conn2:
+        with transaction(db) as conn2:
             save_keystats(conn2, stats)
             conn2.commit()
         logging.info(

@@ -15,7 +15,7 @@ DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB_PATH)
 
 from utils.telegram import send_telegram  # noqa: E402
 from utils.logging_config import redact_and_truncate  # noqa: E402
-from data.db import connect as db_connect  # noqa: E402
+from data.db import connect as db_connect, transaction  # noqa: E402
 from engine.heartbeat import write_heartbeat  # noqa: E402
 from engine.job_status import current_job  # noqa: E402
 
@@ -849,7 +849,7 @@ def run_eod_retry_job():
         return
     date_str = datetime.now(WIB).strftime("%Y-%m-%d")
     try:
-        with db_connect(DB_PATH) as _g:
+        with transaction(DB_PATH) as _g:
             _g.execute("CREATE TABLE IF NOT EXISTS _job_sentinel "
                        "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))")
             _g.execute("INSERT INTO _job_sentinel VALUES ('eod_retry', ?)", (date_str,))
@@ -1378,7 +1378,7 @@ def run_premarket_firm_scan():
     date_str = now.strftime('%Y-%m-%d')
 
     # Dedup guard — first INSERT wins; a systemd restart race never double-sends.
-    with db_connect(DB_PATH, timeout=5) as _g:
+    with transaction(DB_PATH, timeout=5) as _g:
         _g.execute(
             "CREATE TABLE IF NOT EXISTS _job_sentinel "
             "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))"
@@ -1509,7 +1509,7 @@ def run_premarket_firm_scan():
     # Run 2 targets ONLY the ticker set Run 1 (post_close) selected and stored —
     # it never re-selects or widens the pool (engine.agent_firm_daily contract).
     from engine import agent_firm_daily as _afd
-    with db_connect(DB_PATH) as _plan_conn:
+    with transaction(DB_PATH) as _plan_conn:
         _daily_plan = _afd.load_plan(_plan_conn, date_str)
     _selected_tickers = {p["ticker"] for p in _daily_plan}
     if not _selected_tickers:
@@ -1567,7 +1567,7 @@ def run_premarket_firm_scan():
         # (premarket). session_date matches Run 1's — the plan Run 1 produced
         # FOR today is exactly what this run adjusts.
         _tickers = [c.ticker for c in candidates]
-        with db_connect(DB_PATH) as _guard_conn:
+        with transaction(DB_PATH) as _guard_conn:
             _guard = _afd.begin_run(_guard_conn, date_str, _afd.RUN_PREMARKET, _tickers)
         if not _guard.should_call:
             # A SUCCESS already exists for this session (defense-in-depth backstop
@@ -1586,7 +1586,7 @@ def run_premarket_firm_scan():
                 d.ticker for d in decisions_rev
                 if d.ticker in _selected_tickers and d.action != _wl.ACTION_RETAIN
             }
-            with db_connect(DB_PATH) as _guard_conn:
+            with transaction(DB_PATH) as _guard_conn:
                 _afd.finish_run(
                     _guard_conn, _guard.run_id, status="success",
                     provider=",".join(sorted({p for d in decisions for p in d.providers_used})) or None,
@@ -1599,7 +1599,7 @@ def run_premarket_firm_scan():
         except Exception as e:
             logging.error(f"[premarket_firm] firm eval error: {e}")
             logger.warning(f"[{now_str}] Premarket firm eval error: {e}")
-            with db_connect(DB_PATH) as _guard_conn:
+            with transaction(DB_PATH) as _guard_conn:
                 _afd.finish_run(_guard_conn, _guard.run_id, status="failed", reason=str(e))
             return
 
@@ -1620,7 +1620,7 @@ def run_premarket_firm_scan():
         row["provenance"] = prov
 
     diff = None
-    with db_connect(DB_PATH) as _snap_conn:
+    with transaction(DB_PATH) as _snap_conn:
         try:
             ranked = tp.attach_provenance(_snap_conn, ranked, date_str,
                                           plan="premarket")
@@ -1691,7 +1691,7 @@ def run_eod_trade_plan():
     # OperationalError (RC1 F-3, 2026-07-28) — the 16:40 slot is more exposed to
     # exactly the lock-contention window that caused the 2026-07-24 08:35:30
     # premarket crash, so it gets the same guard premarket was patched with.
-    with db_connect(DB_PATH) as _g:
+    with transaction(DB_PATH) as _g:
         _g.execute("CREATE TABLE IF NOT EXISTS _job_sentinel "
                    "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))")
         try:
@@ -1752,7 +1752,7 @@ def run_eod_trade_plan():
     try:
         from engine import watchlist_report as wr
         reasons = {c["ticker"]: c["reason"] for c in cands if c.get("reason")}
-        with db_connect(DB_PATH) as _wl_conn:
+        with transaction(DB_PATH) as _wl_conn:
             wl_diff = wr.diff_snapshot(_wl_conn, date_str, cands)
             wr.record_snapshot(_wl_conn, date_str, cands, regime=regime[0])
         send_telegram(wr.build_message(date_str, wl_diff, len(cands), reasons=reasons),
@@ -1767,7 +1767,7 @@ def run_eod_trade_plan():
     if not top:
         # every candidate failed the directional pre-screen — ship an empty plan
         diff = None
-        with db_connect(DB_PATH) as _snap_conn:
+        with transaction(DB_PATH) as _snap_conn:
             try:
                 diff = tp.diff_watchlist(_snap_conn, date_str, "eod", [])
                 # An empty plan is still a published prediction and must be
@@ -1784,7 +1784,7 @@ def run_eod_trade_plan():
         pw_section = ""
         try:
             from engine import persistent_watchlist as pw
-            with db_connect(DB_PATH) as _pw_conn:
+            with transaction(DB_PATH) as _pw_conn:
                 pw_result = pw.update_watchlist(_pw_conn, date_str, set())
             pw_section = "\n\n" + pw.build_message(date_str, pw_result)
         except Exception as e:
@@ -1839,7 +1839,7 @@ def run_eod_trade_plan():
     # its ticker set under that same session_date the following morning.
     session_date = _afd.next_trading_session(now.date()).isoformat()
     _tickers = [c["ticker"] for c in top]
-    with db_connect(DB_PATH) as _guard_conn:
+    with transaction(DB_PATH) as _guard_conn:
         _guard = _afd.begin_run(_guard_conn, session_date, _afd.RUN_POST_CLOSE, _tickers)
 
     degraded = False
@@ -1860,7 +1860,7 @@ def run_eod_trade_plan():
                 ranked = tp.rank_approved(top, decisions)
             else:
                 ranked, degraded = tp.fallback_rank(top), True   # firm disabled/bypassed
-            with db_connect(DB_PATH) as _guard_conn:
+            with transaction(DB_PATH) as _guard_conn:
                 _afd.finish_run(
                     _guard_conn, _guard.run_id, status="success",
                     provider=",".join(sorted({p for d in decisions for p in d.providers_used})) or None,
@@ -1872,7 +1872,7 @@ def run_eod_trade_plan():
         except Exception as e:
             logging.error(f"[eod_trade_plan] firm eval error (fail-open): {e}")
             ranked, degraded = tp.fallback_rank(top), True
-            with db_connect(DB_PATH) as _guard_conn:
+            with transaction(DB_PATH) as _guard_conn:
                 _afd.finish_run(_guard_conn, _guard.run_id, status="failed", reason=str(e))
 
     # `degraded=True` on every path where `decisions` could be unbound (the
@@ -1884,7 +1884,7 @@ def run_eod_trade_plan():
     # report can show added/removed/upgraded/downgraded/rank+score deltas.
     # Reporting only — never feeds back into ranking/decisions.
     diff = None
-    with db_connect(DB_PATH) as _snap_conn:
+    with transaction(DB_PATH) as _snap_conn:
         try:
             # Stamp strategy attribution, OOS evidence, decision price and
             # entry rule before publishing, so the frozen base plan can be
@@ -1913,7 +1913,7 @@ def run_eod_trade_plan():
     pw_section = ""
     try:
         from engine import persistent_watchlist as pw
-        with db_connect(DB_PATH) as _pw_conn:
+        with transaction(DB_PATH) as _pw_conn:
             pw_result = pw.update_watchlist(
                 _pw_conn, date_str, {c["ticker"] for c in ranked})
         pw_section = "\n\n" + pw.build_message(date_str, pw_result)
@@ -2085,7 +2085,7 @@ def run_forward_test_cycle(db_path=None, run_date=None):
         # the same run_date. Placed inside this function's own try/except
         # (unlike the other two jobs) because run_forward_test_cycle's contract
         # is to never raise on any error, including a broken db_path.
-        with db_connect(db) as _g:
+        with transaction(db) as _g:
             _g.execute("CREATE TABLE IF NOT EXISTS _job_sentinel "
                        "(job TEXT, run_date TEXT, PRIMARY KEY(job, run_date))")
             try:
@@ -2107,7 +2107,7 @@ def run_forward_test_cycle(db_path=None, run_date=None):
         # must never take down the cycle.
         try:
             from engine import forward_window as _fw
-            with db_connect(db) as _wc:
+            with transaction(db) as _wc:
                 _win = _fw.check_all(_wc, event_date=rd)
             for _c, _r in _win.items():
                 if _r["action"] == "rolled":
@@ -2123,7 +2123,7 @@ def run_forward_test_cycle(db_path=None, run_date=None):
             logger.warning(f"[forward_test] window check error (fail-soft): {_fw_err}")
 
         def _trade_count():
-            with db_connect(db) as c:
+            with transaction(db) as c:
                 return c.execute("SELECT COUNT(*) FROM ft_shadow_trade").fetchone()[0]
 
         open_before = len(repo.get_open_shadow_positions())

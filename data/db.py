@@ -56,6 +56,25 @@ def connect(path=None, timeout=30, busy_timeout_ms=DEFAULT_BUSY_TIMEOUT_MS,
     return conn
 
 
+@contextmanager
+def transaction(path=None, **kw):
+    """`with transaction(path) as conn:` -- commit on success, rollback on error, ALWAYS close.
+
+    A bare `with` block around sqlite3.connect only commits/rolls back; it never closes. On
+    Python 3.14 those connections linger until the cyclic GC runs, so a loop of
+    hundreds of short calls pinned 1,012 handles on walkforward.db, hit the 1024
+    soft limit and broke every DB open in the worker (2026-10-13 incident). Use this
+    for any short-lived read or write; keep connect() for long-lived handles that
+    are closed explicitly.
+    """
+    conn = connect(path, **kw)
+    try:
+        with conn:
+            yield conn
+    finally:
+        conn.close()
+
+
 def get_db():
     conn = connect()
     conn.row_factory = sqlite3.Row

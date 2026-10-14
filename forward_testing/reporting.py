@@ -15,7 +15,7 @@ import html
 from typing import Any, Optional
 
 from forward_testing.positions.shadow_manager import _excursions
-from forward_testing.storage.db import ft_get_db
+from forward_testing.storage.db import ft_get_db, ft_txn
 
 MAX_ROWS = 10
 BEST_WORST_N = 3
@@ -25,7 +25,7 @@ BEST_WORST_N = 3
 
 def get_positions_opened_on(db_path: str, run_date: str) -> list[dict]:
     """ft_shadow_position rows whose entry (fill) date is run_date."""
-    with ft_get_db(db_path) as c:
+    with ft_txn(db_path) as c:
         return [dict(r) for r in c.execute(
             "SELECT * FROM ft_shadow_position WHERE entry_date=? ORDER BY ticker",
             (run_date,)).fetchall()]
@@ -33,7 +33,7 @@ def get_positions_opened_on(db_path: str, run_date: str) -> list[dict]:
 
 def get_trades_closed_on(db_path: str, run_date: str) -> list[dict]:
     """ft_shadow_trade rows whose exit date is run_date."""
-    with ft_get_db(db_path) as c:
+    with ft_txn(db_path) as c:
         return [dict(r) for r in c.execute(
             "SELECT * FROM ft_shadow_trade WHERE exit_date=? ORDER BY ticker",
             (run_date,)).fetchall()]
@@ -41,7 +41,7 @@ def get_trades_closed_on(db_path: str, run_date: str) -> list[dict]:
 
 def get_all_closed_trades(db_path: str) -> list[dict]:
     """Every ft_shadow_trade row to date, oldest first — the all-time scoreboard."""
-    with ft_get_db(db_path) as c:
+    with ft_txn(db_path) as c:
         return [dict(r) for r in c.execute(
             "SELECT * FROM ft_shadow_trade ORDER BY exit_date").fetchall()]
 
@@ -105,7 +105,7 @@ def _ensure_job_sentinel_table(c) -> None:
 
 
 def report_exists(db_path: str, run_date: str) -> bool:
-    with ft_get_db(db_path) as c:
+    with ft_txn(db_path) as c:
         _ensure_job_sentinel_table(c)
         row = c.execute(
             "SELECT 1 FROM _job_sentinel WHERE job='forward_test_cycle' AND run_date=?",
@@ -115,7 +115,7 @@ def report_exists(db_path: str, run_date: str) -> bool:
 
 
 def latest_report_date(db_path: str) -> Optional[str]:
-    with ft_get_db(db_path) as c:
+    with ft_txn(db_path) as c:
         _ensure_job_sentinel_table(c)
         row = c.execute(
             "SELECT MAX(run_date) FROM _job_sentinel WHERE job='forward_test_cycle'"

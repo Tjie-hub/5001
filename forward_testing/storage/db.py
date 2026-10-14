@@ -6,6 +6,8 @@ open across long computation. WAL is persistent on the db file (set by
 init_ft_tables via _ensure_wal); busy_timeout is set per-connection.
 """
 import sqlite3
+from contextlib import contextmanager
+
 from data.db import connect as db_connect
 
 
@@ -19,13 +21,29 @@ def _default_db_path():
 def ft_get_db(db_path=None):
     """Open a short-lived FT connection: Row factory + busy_timeout.
 
-    Caller is responsible for closing promptly (use `with ft_get_db(...) as c:`).
+    Caller is responsible for closing promptly (use ft_txn(), which also closes).
     """
     conn = db_connect(db_path or _default_db_path(), timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout=30000")
     conn.execute("PRAGMA foreign_keys=ON")  # enforce REFERENCES (off by default in sqlite)
     return conn
+
+
+@contextmanager
+def ft_txn(db_path=None):
+    """`with ft_txn(path) as c:` -- ft_get_db() connection that commits/rolls back AND closes.
+
+    A bare `with` on an ft_get_db() connection never closed it (sqlite3's context manager
+    only ends the transaction), which leaked ~1,000 handles per Forward-Test Cycle on
+    Python 3.14 (2026-10-13 incident).
+    """
+    conn = ft_get_db(db_path)
+    try:
+        with conn:
+            yield conn
+    finally:
+        conn.close()
 
 
 def _ensure_wal(db_path):

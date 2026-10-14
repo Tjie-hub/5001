@@ -348,7 +348,7 @@ def test_run_premarket_firm_scan_fails_open_on_sentinel_db_lock(monkeypatch, cap
     import scheduler.jobs as jobs_mod
 
     monkeypatch.setattr(jobs_mod, "_holiday_skip", lambda name: False)
-    monkeypatch.setattr(jobs_mod, "db_connect", lambda *a, **k: _LockedSentinelConn())
+    monkeypatch.setattr(jobs_mod, "transaction", lambda *a, **k: _LockedSentinelConn())
 
     def _must_not_run(*a, **k):
         raise AssertionError(
@@ -398,7 +398,7 @@ def test_run_premarket_firm_scan_marks_skipped_on_duplicate_run(monkeypatch):
     from unittest.mock import MagicMock
 
     monkeypatch.setattr(jobs_mod, "_holiday_skip", lambda name: False)
-    monkeypatch.setattr(jobs_mod, "db_connect", lambda *a, **k: _DuplicateSentinelConn())
+    monkeypatch.setattr(jobs_mod, "transaction", lambda *a, **k: _DuplicateSentinelConn())
     fake_handle = MagicMock()
     monkeypatch.setattr(jobs_mod, "current_job", lambda: fake_handle)
 
@@ -412,7 +412,7 @@ def test_run_premarket_firm_scan_marks_skipped_on_dedup_guard_error(monkeypatch,
     from unittest.mock import MagicMock
 
     monkeypatch.setattr(jobs_mod, "_holiday_skip", lambda name: False)
-    monkeypatch.setattr(jobs_mod, "db_connect", lambda *a, **k: _LockedSentinelConn())
+    monkeypatch.setattr(jobs_mod, "transaction", lambda *a, **k: _LockedSentinelConn())
     fake_handle = MagicMock()
     monkeypatch.setattr(jobs_mod, "current_job", lambda: fake_handle)
 

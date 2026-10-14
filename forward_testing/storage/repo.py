@@ -7,7 +7,7 @@ read-then-write within a method is race-free in practice.
 """
 import os
 
-from forward_testing.storage.db import ft_get_db
+from forward_testing.storage.db import ft_get_db, ft_txn
 
 
 class FTRepo:
@@ -23,7 +23,7 @@ class FTRepo:
 
         Returns the signal id (existing id on duplicate).
         """
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             c.execute(
                 """INSERT INTO ft_signal
                    (signal_date, ticker, strategy, strategy_version_id, track,
@@ -44,7 +44,7 @@ class FTRepo:
             return row["id"]
 
     def get_signal_state(self, signal_id):
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             row = c.execute(
                 "SELECT state FROM ft_signal_state WHERE signal_id=?",
                 (signal_id,),
@@ -53,7 +53,7 @@ class FTRepo:
 
     def init_signal_state(self, signal_id, state):
         """Create the state row if absent (PK = signal_id). Idempotent."""
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             c.execute(
                 """INSERT INTO ft_signal_state (signal_id, state, since)
                    VALUES (?,?, datetime('now','localtime'))
@@ -69,7 +69,7 @@ class FTRepo:
         Use only for LEGAL transitions that actually change state. For rejected
         attempts, use log_violation() (which does not advance state).
         """
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             c.execute(
                 """INSERT INTO ft_transition_log
                    (signal_id, from_state, to_state, actor, reason, run_date, violation)
@@ -88,7 +88,7 @@ class FTRepo:
     def log_violation(self, signal_id, from_state, attempted_to, run_date,
                       actor=None, reason=None):
         """Log an illegal transition ATTEMPT. Does NOT change ft_signal_state."""
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             c.execute(
                 """INSERT INTO ft_transition_log
                    (signal_id, from_state, to_state, actor, reason, run_date, violation)
@@ -98,7 +98,7 @@ class FTRepo:
             c.commit()
 
     def count_transitions(self, signal_id):
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             return c.execute(
                 "SELECT COUNT(*) AS n FROM ft_transition_log WHERE signal_id=?",
                 (signal_id,),
@@ -106,7 +106,7 @@ class FTRepo:
 
     # ---- run bookkeeping ----
     def create_run(self, run_date, kind="EOD"):
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             cur = c.execute(
                 "INSERT INTO ft_run (run_date, kind, started_at, status, pid) "
                 "VALUES (?,?, datetime('now','localtime'),'RUNNING',?)",
@@ -116,7 +116,7 @@ class FTRepo:
             return cur.lastrowid
 
     def finish_run(self, run_id, status):
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             c.execute(
                 "UPDATE ft_run SET status=?, finished_at=datetime('now','localtime') "
                 "WHERE id=?",
@@ -130,7 +130,7 @@ class FTRepo:
 
         Each row exposes: id, signal_date, ticker, strategy, direction, track.
         """
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             sql = ("SELECT s.id, s.signal_date, s.ticker, s.strategy, s.direction, s.track "
                    "FROM ft_signal s JOIN ft_signal_state st ON st.signal_id = s.id "
                    "WHERE st.state = ?")
@@ -153,7 +153,7 @@ class FTRepo:
         entry_price is cost-adjusted (drives net P&L); raw_entry_price is the
         pre-cost fill, kept for gross price-excursion metrics (MAE/MFE).
         """
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             c.execute(
                 """INSERT INTO ft_shadow_position
                    (signal_id, ticker, strategy, direction, signal_date, entry_date,
@@ -168,14 +168,14 @@ class FTRepo:
             c.commit()
 
     def get_shadow_position(self, signal_id):
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             row = c.execute(
                 "SELECT * FROM ft_shadow_position WHERE signal_id=?", (signal_id,)
             ).fetchone()
             return dict(row) if row else None
 
     def get_open_shadow_positions(self):
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             return [dict(r) for r in c.execute(
                 "SELECT * FROM ft_shadow_position WHERE status='OPEN' ORDER BY signal_id"
             ).fetchall()]
@@ -183,7 +183,7 @@ class FTRepo:
     def update_shadow_position(self, signal_id, highest_seen, lowest_seen, hold_days,
                                last_eval_date):
         """Update running extremes + hold-days + eval watermark. One transaction."""
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             c.execute(
                 """UPDATE ft_shadow_position
                    SET highest_seen=?, lowest_seen=?, hold_days=?, last_eval_date=?,
@@ -194,7 +194,7 @@ class FTRepo:
             c.commit()
 
     def close_shadow_position(self, signal_id, exit_date, exit_price, exit_reason):
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             c.execute(
                 """UPDATE ft_shadow_position
                    SET status='CLOSED', exit_date=?, exit_price=?, exit_reason=?,
@@ -209,7 +209,7 @@ class FTRepo:
                             entry_date, entry_price, exit_date, exit_price, exit_reason,
                             pnl_pct, r_multiple, hold_days, mae_pct, mfe_pct):
         """Idempotent closed round-trip (PK = signal_id)."""
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             c.execute(
                 """INSERT INTO ft_shadow_trade
                    (signal_id, ticker, strategy, direction, signal_date, entry_date,
@@ -224,7 +224,7 @@ class FTRepo:
             c.commit()
 
     def get_shadow_trade(self, signal_id):
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             row = c.execute(
                 "SELECT * FROM ft_shadow_trade WHERE signal_id=?", (signal_id,)
             ).fetchone()

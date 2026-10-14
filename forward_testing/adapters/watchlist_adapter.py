@@ -32,7 +32,7 @@ import json
 import sqlite3
 
 from forward_testing.lifecycle.states import SignalState
-from forward_testing.storage.db import ft_get_db
+from forward_testing.storage.db import ft_get_db, ft_txn
 
 SHADOW = "SHADOW"
 COHORTS = ("eod", "premarket")
@@ -73,7 +73,7 @@ _META_TRIGGERS = (
 
 
 def ensure_meta_table(db_path: str) -> None:
-    with ft_get_db(db_path) as c:
+    with ft_txn(db_path) as c:
         c.execute(SIGNAL_META_DDL)
         for name, event in _META_TRIGGERS:
             c.execute(
@@ -104,7 +104,7 @@ class WatchlistAdapter:
         cached = self._vcache.get(key)
         if cached is not None:
             return cached
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             got = sv.resolve(c, key)
         self._vcache[key] = got
         return got
@@ -146,7 +146,7 @@ class WatchlistAdapter:
 
     def _published_rows(self, run_date, cohort):
         """Latest published revision of `cohort`'s plan for `run_date`."""
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             try:
                 rev = c.execute(
                     "SELECT MAX(revision) FROM watchlist_snapshot_log "
@@ -174,7 +174,7 @@ class WatchlistAdapter:
         except (ValueError, TypeError):
             prov = {}
         rev_block = prov.get("premarket_revision") or {}
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             c.execute(
                 "INSERT OR IGNORE INTO ft_signal_meta "
                 "(signal_id, cohort, plan_date, revision, source_tags, confluence, "

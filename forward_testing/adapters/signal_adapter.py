@@ -14,7 +14,7 @@ were NULL on all 3,033 pre-existing rows; those stay NULL rather than being
 back-filled with a version they did not run under.
 """
 from forward_testing.lifecycle.states import SignalState
-from forward_testing.storage.db import ft_get_db
+from forward_testing.storage.db import ft_get_db, ft_txn
 
 SHADOW = "SHADOW"
 
@@ -30,7 +30,7 @@ class SignalAdapter:
         if cached is not None:
             return cached
         from engine import strategy_version as sv
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             got = sv.resolve(c, strategy)
         self._vcache[strategy] = got
         return got
@@ -67,7 +67,7 @@ class SignalAdapter:
 
     def _read_source_signals(self, run_date):
         # scan_time is stored as "YYYY-MM-DD HH:MM"; match by date prefix.
-        with ft_get_db(self.db_path) as c:
+        with ft_txn(self.db_path) as c:
             return c.execute(
                 """SELECT id, ticker, strategies, flow_score, signal_direction
                    FROM scheduled_signals
