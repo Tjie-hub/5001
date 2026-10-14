@@ -32,6 +32,9 @@ ExecStart=/home/tjiesar/idx-walkforward-current/venv/bin/python -m gunicorn -c g
 # If it never does, the start FAILS and Restart=always retries.
 ExecStartPost=/home/tjiesar/idx-walkforward-current/scripts/wait_for_health.sh
 Restart=always
+# 2026-10-13: default soft limit 1024 was exhausted (EMFILE) and killed the worker
+# mid-afternoon; every DB open failed until gunicorn respawned it.
+LimitNOFILE=65536
 RestartSec=5
 TimeoutStartSec=180
 TimeoutStopSec=45

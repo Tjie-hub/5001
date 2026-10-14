@@ -171,3 +171,10 @@ def test_valid_release_manifest_passes(good_env, monkeypatch, tmp_path):
     ok.write_text('{"version": "v", "git_sha": "s", "built_at": "t"}')
     monkeypatch.setattr(cfg, "_RELEASE_MANIFEST", ok)
     cfg.validate_config()
+
+
+def test_service_unit_raises_the_open_file_limit():
+    """2026-10-13: the worker hit the default 1024-fd soft limit (EMFILE) and every
+    DB open failed until gunicorn respawned it."""
+    unit = (ROOT / "deploy" / "idx-walkforward.service").read_text()
+    assert "LimitNOFILE=65536" in unit

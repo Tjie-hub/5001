@@ -491,3 +491,9 @@ def test_tier2_items_still_buffer_while_global_off(hermetic, tmp_path):
                                msg="IHSG under blackout (repeat scan)")
     assert action == "suppress" and "on_change" in reason
     assert len(list((tmp_path / "digest_buffer").glob("*.jsonl"))) == n_before
+
+
+def test_scheduler_job_errors_survive_the_blackout():
+    """2026-10-13: five scheduler jobs died on EMFILE and the blackout hid every alert."""
+    assert "system.scheduler_job_error" in np.BLACKOUT_EXEMPT
+    assert np.EVENTS["system.scheduler_job_error"][0] == np.TIER_SEND

@@ -94,7 +94,11 @@ BLACKOUT_EXEMPT = frozenset({
     # must alert, then backfill, so nothing needs manual auditing).
     "data.token_expired", "data.token_refresh_failed", "data.flow_fetch_failed",
     "data.flow_gap", "data.flow_coverage", "data.eod_degraded",
-    "data.broker_period_failed", "data.heal_repaired", "data.heal_failed"})
+    "data.broker_period_failed", "data.heal_repaired", "data.heal_failed",
+    # 2026-10-13: five jobs died on FD exhaustion at 16:23-16:40 and the blackout hid
+    # every alert (the only signal was the scheduler heartbeat). Already limited to
+    # one alert per job per hour by scheduler/__init__.
+    "system.scheduler_job_error"})
 
 # Dedup rules. ("none",) means the call site already guarantees singularity
 # (state-transition guard, upstream rate limiter, or owner-initiated action).
