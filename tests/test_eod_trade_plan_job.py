@@ -105,8 +105,8 @@ class TestWatchlistUpdateReportWiring:
         mock_firm, mock_cfg = _mock_firm_and_config()
         import engine.agent_firm as _pkg
         import sys
-        with patch.object(_pkg, "firm", mock_firm), \
-             patch.object(_pkg, "config", mock_cfg), \
+        with patch.object(_pkg, "firm", mock_firm, create=True), \
+             patch.object(_pkg, "config", mock_cfg, create=True), \
              patch.dict(sys.modules, {
                  "engine.agent_firm.firm": mock_firm,
                  "engine.agent_firm.config": mock_cfg,
@@ -291,8 +291,8 @@ class TestPersistentActiveWatchlistWiring:
         mock_firm, mock_cfg = _mock_firm_and_config()
         import engine.agent_firm as _pkg
         import sys
-        with patch.object(_pkg, "firm", mock_firm), \
-             patch.object(_pkg, "config", mock_cfg), \
+        with patch.object(_pkg, "firm", mock_firm, create=True), \
+             patch.object(_pkg, "config", mock_cfg, create=True), \
              patch.dict(sys.modules, {
                  "engine.agent_firm.firm": mock_firm,
                  "engine.agent_firm.config": mock_cfg,

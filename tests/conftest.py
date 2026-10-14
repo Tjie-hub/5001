@@ -70,12 +70,49 @@ _DB_PATH_ATTRS = [
 ]
 
 
+def _held_open_by_other_process(path: Path) -> bool:
+    """True when a process other than this one has `path` open (Linux /proc).
+
+    The guard compares size/mtime, so it cannot tell a test's write from the live
+    service (5001 holds data/walkforward.db open and writes it every few seconds).
+    That made the suite fail at random whenever it ran next to a live app
+    (2026-10-14). A file another process is holding open is changing for reasons
+    the test cannot be blamed for, so it is exempt; a file NOBODY else holds open,
+    or a new file, is still flagged. Trade-off: a test that writes the real DB
+    while the live app is also running is not caught -- CI has no live app."""
+    me = str(Path("/proc/self").resolve().name)
+    target = str(path)
+    try:
+        pids = [p for p in Path("/proc").iterdir() if p.name.isdigit() and p.name != me]
+    except OSError:
+        return False
+    for proc in pids:
+        try:
+            for fd in (proc / "fd").iterdir():
+                try:
+                    if str(fd.resolve()) == target:
+                        return True
+                except OSError:
+                    continue
+        except OSError:
+            continue
+    return False
+
+
+def _changed_by_tests(after: set, before: set) -> set:
+    """Entries that appeared or changed, minus files a live process is holding open."""
+    return {e for e in after - before
+            if not _held_open_by_other_process(_REPO_DATA_DIR / e[0])}
+
+
 def _real_db_files() -> set:
     if not _REPO_DATA_DIR.is_dir():
         return set()
     found = set()
     for p in _REPO_DATA_DIR.iterdir():
-        if p.is_file() and p.name.endswith(_DB_FILE_SUFFIXES):
+        # "-shm" is the WAL shared-memory index: ANY reader (even a read-only SELECT) touches
+        # its mtime, so it is not evidence of a write. The .db and -wal files carry the writes.
+        if p.is_file() and p.name.endswith(_DB_FILE_SUFFIXES) and not p.name.endswith("-shm"):
             st = p.stat()
             found.add((p.name, st.st_size, st.st_mtime_ns))
     return found
@@ -100,7 +137,7 @@ def _isolate_db_path(tmp_path, monkeypatch):
             monkeypatch.setattr(mod, attr, str(scratch))
     before = _real_db_files()
     yield
-    offenders = _real_db_files() - before
+    offenders = _changed_by_tests(_real_db_files(), before)
     assert not offenders, (
         f"this test created/modified real database file(s) under {_REPO_DATA_DIR}: "
         f"{sorted(name for name, _, _ in offenders)}; route DB writes through "
@@ -120,7 +157,7 @@ def pytest_sessionfinish(session, exitstatus):
     attribute afterwards (_pytest/main.py::wrap_session), so setting it here
     changes the status pytest returns to the shell.
     """
-    offenders = _real_db_files() - _SESSION_START_DB_FILES
+    offenders = _changed_by_tests(_real_db_files(), _SESSION_START_DB_FILES)
     if not offenders:
         return
     names = sorted(name for name, _, _ in offenders)

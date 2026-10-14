@@ -414,13 +414,28 @@ def _prod_db_has(table: str, db_path: str = 'data/walkforward.db') -> bool:
 class TestSweepFlowSignal:
     """Intraday/flow checks for Liquidity Sweep signal checker.
 
-    Skipped without the production DB: confirm_sweep_flow queries
-    stockbit_flow_bars directly (and currently crashes, rather than failing
-    open, when the table is absent — Phase 3 fail-open inventory item)."""
+    confirm_sweep_flow queries stockbit_flow_bars directly (and crashes, rather
+    than failing open, when the table is absent -- Phase 3 fail-open inventory
+    item). These tests used to skip unless the REAL data/walkforward.db had the
+    table, but the suite's DB isolation points the code at a scratch DB, so the
+    guard passed while the code under test hit a DB with no table. They now
+    create an empty table in the DB the code actually reads (hermetic)."""
+
+    @pytest.fixture(autouse=True)
+    def _flow_bars_table(self):
+        import sqlite3
+        from engine import smc_flow
+        conn = sqlite3.connect(smc_flow.DB_PATH)
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS stockbit_flow_bars ("
+            "ticker TEXT NOT NULL, trade_date TEXT NOT NULL, bar_time TEXT NOT NULL, "
+            "buy_lot INTEGER, sell_lot INTEGER, buy_freq INTEGER, sell_freq INTEGER, "
+            "net_value INTEGER, price INTEGER, delta INTEGER, "
+            "PRIMARY KEY (ticker, trade_date, bar_time))")
+        conn.commit()
+        conn.close()
 
     def test_sweep_flow_structure(self):
-        if not _prod_db_has('stockbit_flow_bars'):
-            pytest.skip('prod DB / stockbit_flow_bars not available')
         from engine.strategies import check_sweep_flow_signal
         df = _make_intraday_df(100)
         result = check_sweep_flow_signal(df, 'BRPT')
@@ -431,8 +446,6 @@ class TestSweepFlowSignal:
         assert isinstance(result['details'], dict)
 
     def test_sweep_flow_no_crash_on_missing_ticker(self):
-        if not _prod_db_has('stockbit_flow_bars'):
-            pytest.skip('prod DB / stockbit_flow_bars not available')
         from engine.strategies import check_sweep_flow_signal
         df = _make_intraday_df(100)
         # Non-existent ticker — should return clean "no signal" not crash
