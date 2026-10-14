@@ -3371,6 +3371,79 @@ NeoBDM review of the same day; the G0 is run by the planner).
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-096 · Mechanism proposed: single-broker forced selling → temporary price concession → short-horizon reversal
+**Status:** RECORDED · **Date:** 2026-10-14 · **Type:** Mechanism acceptance (D-070 §1) ·
+**Approval authority:** Owner, 2026-10-14: "append it" (draft reviewed). Mechanism only: no G0 has run, nothing is registered, census stays 612.
+
+- **Mechanism: immediacy demanded by one large seller (liquidity provision).**
+  - A single non-retail broker (a block or institutional seller) must sell a size that is large relative to
+    normal turnover on one day. The liquidity providers who take the other side demand a price concession for
+    holding the inventory, and the price falls by more than the information in the sale warrants. As the
+    inventory is worked off the concession reverses (Grossman and Miller 1988; the temporary component of
+    price impact in Kyle 1985; institutional-trade price behaviour in Chan and Lakonishok 1995).
+  - The signal is the **flow** (who sold and how much), not the shape of the candle. Price and volume enter
+    only as controls and filters (D-070 §1).
+  - **Pre-declared sign: the return after the event is higher** (reversal). A flat or negative result is not
+    rescued, and a continuation result is not claimed.
+  - **Known competing prediction, declared in advance.** Campbell, Grossman and Wang (1993) find that price
+    changes on HIGH volume reverse more, and on LOW volume tend to continue. The owner's chart reading
+    predicts the opposite (a low-volume fall reverts). The volume ratio is therefore a **pre-declared
+    secondary interaction, reported with its sign**, and is not part of the primary event.
+- **Instrument (measurable, from `broker_flow`; defined before any outcome).**
+  - For each ticker-day, `FS = (largest single-broker net sale) / ADV20`, where the net sale is
+    `|value|` on the SELL side and ADV20 is the prior 20-session average traded value (D-081 volume basis).
+  - **Excluded as sellers:** the online-retail group R = {XL, XC, YP, PD, KK} (D-086, D-093): retail platforms
+    net many unrelated clients, and their selling is not one party's immediacy demand.
+  - **Control:** the concentration share `top net sale / total net selling` (scale-free); the day return;
+    the volume ratio; the size and volatility of the stock.
+  - **Event:** `FS >= f*` and day return `<= r*`. The candidates `f* = 0.5`, `r* = -3%` are proposed from the
+    counts below; both are frozen at G0 from distribution counts only, before any forward return is read.
+  - Worked example (descriptive only, not evidence): MAPI 2026-10-12, BK net sale Rp 14.5bn at ~1446,
+    about 0.8 of ADV20, day return -7.4%, volume 1.1x its average.
+- **Feasibility gate (counts only; liquid names with ADV20 >= Rp 5bn, 2025-01-02 → 2026-10-13, retail group
+  excluded as sellers; 53,558 ticker-days, 416 tickers).**
+
+  | FS ≥ | day return ≤ | events | to 2026-03 | from 2026-04 | tickers | distinct dates |
+  |---|---|---|---|---|---|---|
+  | 0.25 | −3% | 1,462 | 843 | 619 | 215 | 338 |
+  | 0.25 | −5% | 736 | 372 | 364 | 197 | 231 |
+  | **0.5** | **−3%** | **500** | 279 | 221 | 144 | **215** |
+  | 0.5 | −5% | 280 | 146 | 134 | 131 | 143 |
+  | 1.0 | −3% | 143 | 67 | 76 | 77 | 77 |
+  | 1.0 | −5% | 88 | 42 | 46 | 58 | 58 |
+
+  FS quantiles over all liquid ticker-days: median 0.09, p90 0.32, p95 0.46, p99 1.00.
+- **Design constraints for the G0.**
+  - **Primary outcome:** the return from the next session's open (the signal is known at the close) to the
+    close of session t+5, **net of the D-082 cost (0.60% round trip)**, relative to the same-date equal-weight
+    cross-section. One horizon is primary; 3 and 10 sessions are not run unless the primary passes.
+  - **Increment, not reversal in general.** Short-term reversal after any large fall is known. The claim is the
+    *increment* of the forced-seller event over matched drop-only days (same-date, similar return, `FS < 0.1`).
+  - **Inference:** clustered by date (events cluster on market-wide sell-off days: 338 dates for 1,462 events).
+  - **Window:** 2025-01-02 onward (the flow-history floor). The broker panel is ~96 names to 2026-03 and
+    ~870 from 2026-04, as stored. Thresholds are frozen on the first half and judged on the second.
+  - **No pre-2021 holdout exists** for this instrument. The era-flip risk named in D-070 therefore cannot be
+    tested here and is a stated limit of any result.
+  - **Distinctness, shown before any outcome:** against HYP-PM-0003 and -0007 (broker flow), HYP-PM-0021 (daily
+    OIB, F2), the {RF} retail-broker work, and the bank climax-low liquidity-provision forward test
+    (HYP-PM-0014 / FWD-PM-BANK-001). This entry is not claimed to be distinct until that check is done.
+- **Power: expected to be thin, and stated now.**
+  - Rough pre-outcome arithmetic (assumption, to be measured from pre-event volatility at G0, not from event
+    outcomes): a 5-session return standard deviation of 5-6% and ~180 effective (date-clustered)
+    observations give a standard error of about 0.4%, a minimum detectable effect of about 1.5-2% at the
+    census bar, and low power at a 0.5% net effect.
+  - The **D-086 stop rule applies** (effect floor and 20% minimum power frozen before power is computed). If
+    it fires, the arm is WITHDRAWN before registration and uncounted, as in D-094.
+- **Family and census.** Proposed as a new member of **P-M {I5,I6,I7,I12}** (an order-flow reversal; widening
+  only, D-028). The census stays at **612**; it counts only at registration (next id HYP-PM-0022, N = 613,
+  bar 3.2996).
+- **Relation to the journal's zone study (for the record).** The entry-type comparison in the journal's
+  `PREREG_RULE_STUDY.md` round 3 tunes the sniper tool's rules; it does not claim an edge and is not registered
+  here. D-070 §1 closes edge studies built on daily OHLCV shape, so round 3 results must be read as
+  engineering of the tool, not as evidence for any pattern.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
