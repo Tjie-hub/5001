@@ -3444,6 +3444,29 @@ NeoBDM review of the same day; the G0 is run by the planner).
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-097 · Forced-seller reversal G0 (D-096): stop rule fired — WITHDRAWN before registration (uncounted)
+**Status:** RECORDED · **Date:** 2026-10-14 · **Type:** G0 stop + withdrawal ·
+**Approval authority:** Owner, 2026-10-14: "append it". The G0 is `docs/research_programs/P-M/forced_seller/`
+(freeze `4dee5ec`, result `0296817`); mechanism D-096.
+
+- **Frozen before any power number.** Event `FS >= 0.5` and day return `<= -3%` (liquid, ADV20 >= Rp 5bn,
+  retail group excluded as sellers); control `FS < 0.1` and the same drop; primary outcome next open to
+  close of t+5, net 0.60%, vs the same-date equal-weight cross-section; bar 3.2996 had it registered at N = 613.
+- **Stop rule (D-086, inherited unchanged): FIRED.**
+  - Pre-sample (2023-24, price-only drop days, no FS event outcome and no 2025+ return read): 9,083 days on
+    475 dates, sd of the 5-session excess return 11.6%.
+  - Event-minus-control SE 0.63%; MDE at 80% power 2.6%; **power at the 0.30% floor 0.24%**, against the
+    20% minimum. Second-half-only: SE 0.90%, power 0.15%. With the SE halved, power would still be about 1%.
+- **Pre-outcome facts kept (counts and correlations only).**
+  - 500 events on 215 dates (211 / 289 either side of 2025-12-10); top-5 dates hold 13.4%.
+  - FS is not a drop-size proxy (Spearman with day return -0.004) but is a volume proxy (0.63 with the
+    volume ratio; median 2.6 for events vs 0.53 for controls). The declared Campbell-Grossman-Wang
+    interaction therefore cannot be separated from the event itself.
+- **Status: WITHDRAWN.** The arm was never registered, so it is **not counted**. The census stays at **612**.
+  No outcome was read and no G1 runner was shipped. D-096's mechanism stays on record.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
