@@ -91,7 +91,7 @@ def api_vpin():
     date = request.args.get('date', dt_date.today().isoformat())
     if not ticker:
         return jsonify({'error': 'ticker required'}), 400
-    with db.get_conn() as conn:
+    with db.txn() as conn:
         actual_date = vpin_mod.get_latest_vpin_date(conn, ticker, date) or date
         result = vpin_mod.calc_vpin(conn, ticker, actual_date)
         result.pop('buckets', None)
@@ -104,7 +104,7 @@ def api_vpin_multi():
     date = request.args.get('date', dt_date.today().isoformat())
     if not ticker:
         return jsonify({'error': 'ticker required'}), 400
-    with db.get_conn() as conn:
+    with db.txn() as conn:
         actual_date = vpin_mod.get_latest_vpin_date(conn, ticker, date) or date
         result = vpin_multi.calc_vpin_multi(conn, ticker, actual_date)
     if result is None:
@@ -116,7 +116,7 @@ def api_vpin_multi():
 def api_vpin_scan():
     date = request.args.get('date', dt_date.today().isoformat())
     tickers = load_all_tickers()
-    with db.get_conn() as conn:
+    with db.txn() as conn:
         results = vpin_multi.scan_vpin_signals(conn, tickers, date)
     for r in results:
         r.pop('days_data', None)

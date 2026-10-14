@@ -68,7 +68,7 @@ def test_ft_repo_calls_do_not_leak(tmp_path):
 # Worker-reachable code must not use `with <connection factory>(...)`: it never closes.
 _WORKER_DIRS = ("scheduler", "forward_testing", "engine", "routes", "data", "screener")
 _WORKER_FILES = ("app.py", "monitor.py", "paper_trade.py")
-_PAT = re.compile(r"\bwith\s+(?:db_connect|connect|get_db|ft_get_db|_connect|sqlite3\.connect)\s*\(")
+_PAT = re.compile(r"\bwith\s+(?:db\.)?(?:db_connect|connect|get_db|ft_get_db|_connect|get_conn|_get_conn|sqlite3\.connect)\s*\(")
 
 
 def test_no_unclosed_with_connect_in_worker_code():
@@ -88,7 +88,8 @@ def test_no_unclosed_with_connect_in_worker_code():
 # The `with`-form scan above misses the other leak shape: `conn = connect(...)` in a function that
 # never closes it. On Python 3.14 such connections linger until cyclic GC, which is what exhausted
 # the 1024-fd limit on 2026-10-13. AST scan, because a regex cannot tell "closed later" from "never".
-_CONN_FACTORIES = {"db_connect", "connect", "get_db", "ft_get_db", "_connect", "sqlite3.connect"}
+_CONN_FACTORIES = {"db_connect", "connect", "get_db", "ft_get_db", "_connect", "get_conn", "_get_conn",
+                   "db.get_conn", "sqlite3.connect"}
 
 
 def _factory_name(node):
@@ -163,3 +164,33 @@ def test_no_unclosed_connection_variable_in_worker_code():
             offenders.append(f"{p.relative_to(ROOT).as_posix()}:{line}: {name} in {fn}()")
     assert not offenders, ("connection opened but never closed in worker code (fd leak) -- close it "
                            "in a finally, or use data.db.transaction()/ft_txn():\n" + "\n".join(offenders))
+
+
+def test_screener_txn_commits_rolls_back_and_closes(tmp_path, monkeypatch):
+    """screener.db.txn(): the 2026-10-14 OOM fix. The per-ticker loop opened ~3 connections per ticker."""
+    from screener import db as sdb
+    path = str(tmp_path / "s.db")
+    monkeypatch.setattr(sdb, "DB_PATH", path)
+    with sdb.txn() as c:
+        c.execute("CREATE TABLE t (x)")
+        c.execute("INSERT INTO t VALUES (1)")
+    with pytest.raises(sqlite3.ProgrammingError):
+        c.execute("SELECT 1")  # closed
+    with pytest.raises(RuntimeError):
+        with sdb.txn() as c2:
+            c2.execute("INSERT INTO t VALUES (2)")
+            raise RuntimeError("boom")
+    with sdb.txn() as c3:
+        assert [r[0] for r in c3.execute("SELECT x FROM t")] == [1]
+
+
+def test_screener_loop_does_not_leak_descriptors(tmp_path, monkeypatch):
+    from screener import db as sdb
+    path = str(tmp_path / "s.db")
+    monkeypatch.setattr(sdb, "DB_PATH", path)
+    sdb.init_screener_tables()
+    before = _fds()
+    for i in range(400):
+        sdb.get_avg_vol_from_db(f"T{i}", "2026-10-14")
+        sdb.log_run("x", 1, 0, 0.1)
+    assert _fds() - before <= 2

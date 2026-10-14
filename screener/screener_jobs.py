@@ -388,7 +388,7 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
     logger.info("[screener] Calculating VPIN...")
     tickers = load_all_tickers()
     vpin_ok = 0
-    with db.get_conn() as conn:
+    with db.txn() as conn:
         for ticker in tickers:
             try:
                 r = vpin_mod.calc_vpin(conn, ticker, trade_date)
@@ -468,7 +468,7 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
     # ── Reversal watchlist pre-scan: flag next-day liquid bounce/fade setups ──
     try:
         from screener.reversal_filter import scan_reversals, persist_watchlist
-        with db.get_conn() as rconn:
+        with db.txn() as rconn:
             rev = scan_reversals(rconn, trade_date)
             persist_watchlist(rconn, trade_date, rev)
         logger.info(f"[screener] Reversal watchlist: {len(rev)} setups for next session")

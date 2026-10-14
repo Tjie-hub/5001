@@ -2,6 +2,7 @@
 screener/db.py — Screener DB helpers using the shared walkforward.db
 """
 import sqlite3
+from contextlib import contextmanager
 
 from config import DB_PATH
 from data.db import connect as db_connect
@@ -15,8 +16,27 @@ def get_conn():
     return conn
 
 
+@contextmanager
+def txn():
+    """get_conn() as a context manager that commits, rolls back on error, and ALWAYS closes.
+
+    Using the connection itself as the context manager only commits -- it never closes. The screener's per-ticker loop
+    opened ~3 connections per ticker (958 tickers, 6 runs a day), and on Python 3.14 they linger until
+    cyclic GC: ~1.8 GB per run, so the worker was OOM-killed three times on 2026-10-14 (7.2 GB machine, other apps
+    use ~3.5 GB). Same failure class as the fd exhaustion of 10-13."""
+    conn = get_conn()
+    try:
+        yield conn
+        conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def init_screener_tables():
-    with get_conn() as conn:
+    with txn() as conn:
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS ticks (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -106,7 +126,7 @@ def init_screener_tables():
 def insert_ticks(rows: list):
     if not rows:
         return 0
-    with get_conn() as conn:
+    with txn() as conn:
         # OR REPLACE + UNIQUE(date,ticker,time): re-scraping the same minute updates
         # in place instead of appending a duplicate (the old OR IGNORE never fired
         # because idx_ticks was non-unique, which 3x-inflated the table).
@@ -118,7 +138,7 @@ def insert_ticks(rows: list):
 
 
 def get_ticks(date: str, ticker: str) -> list:
-    with get_conn() as conn:
+    with txn() as conn:
         rows = conn.execute(
             "SELECT * FROM ticks WHERE date=? AND ticker=? ORDER BY time",
             (date, ticker)
@@ -127,7 +147,7 @@ def get_ticks(date: str, ticker: str) -> list:
 
 
 def upsert_daily_screen(row: dict):
-    with get_conn() as conn:
+    with txn() as conn:
         conn.execute("""
             INSERT INTO daily_screen
                 (date, ticker, close, volume, avg_vol_20d, vol_ratio,
@@ -146,7 +166,7 @@ def upsert_daily_screen(row: dict):
 
 
 def get_screen_results(date: str) -> list:
-    with get_conn() as conn:
+    with txn() as conn:
         rows = conn.execute(
             "SELECT * FROM daily_screen WHERE date=? ORDER BY vol_ratio DESC", (date,)
         ).fetchall()
@@ -154,7 +174,7 @@ def get_screen_results(date: str) -> list:
 
 
 def get_avg_vol_from_db(ticker: str, before_date: str, days: int = 20):
-    with get_conn() as conn:
+    with txn() as conn:
         row = conn.execute(
             """SELECT AVG(volume) as avg_vol FROM daily_screen
                WHERE ticker=? AND date < ? ORDER BY date DESC LIMIT ?""",
@@ -164,7 +184,7 @@ def get_avg_vol_from_db(ticker: str, before_date: str, days: int = 20):
 
 
 def log_run(run_type: str, tickers_ok: int, tickers_err: int, duration_s: float, notes: str = ''):
-    with get_conn() as conn:
+    with txn() as conn:
         conn.execute(
             "INSERT INTO screen_run_log (run_type, tickers_ok, tickers_err, duration_s, notes) VALUES (?,?,?,?,?)",
             (run_type, tickers_ok, tickers_err, duration_s, notes)
@@ -172,7 +192,7 @@ def log_run(run_type: str, tickers_ok: int, tickers_err: int, duration_s: float,
 
 
 def get_run_log(limit: int = 20) -> list:
-    with get_conn() as conn:
+    with txn() as conn:
         rows = conn.execute(
             "SELECT * FROM screen_run_log ORDER BY id DESC LIMIT ?", (limit,)
         ).fetchall()
@@ -180,7 +200,7 @@ def get_run_log(limit: int = 20) -> list:
 
 
 def log_trade_alert(ticker: str, trade_id: int, alert_type: str, message: str):
-    with get_conn() as conn:
+    with txn() as conn:
         conn.execute(
             "INSERT INTO trade_alert_log (ticker, trade_id, alert_type, message) VALUES (?,?,?,?)",
             (ticker, trade_id, alert_type, message)
