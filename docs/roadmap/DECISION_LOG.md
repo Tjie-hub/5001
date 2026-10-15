@@ -3492,6 +3492,20 @@ NeoBDM review of the same day; the G0 is run by the planner).
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-099 · D-098 instrument fix: append-only event logs and full tape retention (definitions unchanged)
+**Status:** RECORDED · **Date:** 2026-10-15 · **Type:** Instrument correction (supersedes D-098's file hashes only) ·
+**Approval authority:** Owner approval of D-098 (2026-10-15) covers keeping its record; this entry records the fix.
+
+- **Defect found at freeze, before any event was used:** the monitor's state file keeps only the current day, and
+  the 16:15 summary job pruned `tape` rows older than 10 days. Either would have erased the record D-098 relies on.
+- **Fix (jurnal26 `a9c4499`):** every run with events appends one line to `bigplayer_events.jsonl`, and every
+  limit-watch event to `limit_watch_events.jsonl` (append-only, never rewritten); `tape` is no longer pruned.
+- **Event definitions and thresholds are unchanged.** New file hashes: `bigplayer_watch.py` `28407bc12e2997ae…`,
+  `limit_watch.py` `bb9fd2f6302bf736…`; `tape.py` unchanged `4cd0dfcee3d77ad3…`. Logged events carry version
+  `32703b1` (the frozen definitions). Recording counts from 2026-10-15 14:15 WIB (first recorded run).
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
