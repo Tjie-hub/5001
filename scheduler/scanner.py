@@ -532,6 +532,50 @@ def scan_momentum_signals():
     signals.sort(key=lambda x: x["wf_score"], reverse=True)
     return signals
 
+POST_CLOSE_FLOW_FROM = "15:50"   # continuous trading ends 15:49:59; a flow row written later has the whole session
+FLOW_WAIT_S = 45 * 60            # the 16:05 fetch saves ~22 min after it starts (958 names, 2026-10-15)
+
+
+def _wait_for_post_close_flow(db_path=None, today=None, timeout_s=FLOW_WAIT_S, poll_s=30, sleep=None):
+    """Wait until today's stockbit_flow rows come from the post-close fetch (updated_at >= 15:50).
+
+    2026-10-15: the 16:05 flow fetch saves all 958 names only at its end (16:27 that day), so the 16:00 scan's
+    BUY flow filter read the 15:37 intraday snapshot -- the last 13 minutes of continuous trading missing.
+    Returns True once fresh rows exist; False (fail-open, the scan proceeds) on timeout or if today has no rows
+    at all (holiday, flow outage: nothing to wait for)."""
+    import time as _time
+    sleep = sleep or _time.sleep
+    today = today or datetime.now(WIB).strftime("%Y-%m-%d")
+    waited = 0
+    while True:
+        conn = db_connect(db_path or DB_PATH, read_only=True)
+        try:
+            row = conn.execute("SELECT COUNT(*), MAX(updated_at) FROM stockbit_flow WHERE trade_date = ?",
+                               (today,)).fetchone()
+        except sqlite3.OperationalError:  # no flow table (fresh DB): nothing to wait for
+            return False
+        finally:
+            conn.close()
+        n, latest = row if row else (0, None)
+        if not n:
+            return False
+        if latest and latest[11:16] >= POST_CLOSE_FLOW_FROM:
+            return True
+        if waited >= timeout_s:
+            logger.warning(f"[scan] post-close flow not saved after {waited // 60} min "
+                           f"(latest {latest}); scanning on the intraday snapshot")
+            return False
+        sleep(poll_s)
+        waited += poll_s
+
+
+def daily_signal_scan_scheduled():
+    """The 16:00 scheduler entry: wait for the post-close flow save, then scan. Only the scheduled run waits --
+    a scan started from a route or the CLI runs at once on whatever flow is stored."""
+    _wait_for_post_close_flow()
+    return daily_signal_scan()
+
+
 def daily_signal_scan():
     """Job harian: fetch data lalu scan signal."""
     logger.info(f"[{datetime.now(WIB).strftime('%H:%M')}] Daily scan dimulai...")

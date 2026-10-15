@@ -51,6 +51,7 @@ from scheduler.scanner import (  # noqa: F401
     check_keystats_freshness,
     scan_momentum_signals,
     daily_signal_scan,
+    daily_signal_scan_scheduled,
     scheduled_multi_strategy_scan,
     get_ticker_best_strategies,
 )
@@ -243,7 +244,9 @@ def start_scheduler():
     scheduler = BackgroundScheduler(timezone=WIB)
 
     # Daily signal scan — Mon-Fri 16:00 WIB (market close, always send even if no signals)
-    _add_job(scheduler, daily_signal_scan, CronTrigger(
+    # Waits for the 16:05 flow fetch's post-close save (~16:27) before scanning: at 16:00 stockbit_flow still
+    # holds the 15:37 intraday snapshot (2026-10-15). Same job id, so APScheduler state carries over.
+    _add_job(scheduler, daily_signal_scan_scheduled, CronTrigger(
         day_of_week="mon-fri", hour=16, minute=0, timezone=WIB
     ), id="daily_scan", name="Signal Report 16:00")
 
