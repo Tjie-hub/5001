@@ -87,6 +87,7 @@ from scheduler.jobs import (  # noqa: F401
     _run_open_trade_monitor,
     _run_screener_intraday,
     _run_screener_eod,
+    run_post_close_sweep,
 )
 
 # Re-export reports

@@ -139,3 +139,11 @@ def test_no_1605_flow_slot_and_one_post_close_job():
     src = inspect.getsource(scheduler.start_scheduler) if hasattr(scheduler, "start_scheduler") else inspect.getsource(scheduler)
     assert "(16,5)" not in src
     assert "run_post_close_sweep" in src
+
+
+def test_post_close_sweep_is_reexported_for_start_scheduler():
+    # start_scheduler() is never run in this suite; a missing re-export only fails at boot (it did, 2026-10-15).
+    import scheduler
+    import scheduler.jobs as jobs
+
+    assert scheduler.run_post_close_sweep is jobs.run_post_close_sweep
