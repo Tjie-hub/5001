@@ -244,7 +244,8 @@ def start_scheduler():
     scheduler = BackgroundScheduler(timezone=WIB)
 
     # Daily signal scan — Mon-Fri 16:00 WIB (market close, always send even if no signals)
-    # Waits for the 16:05 flow fetch's post-close save (~16:27) before scanning: at 16:00 stockbit_flow still
+    # Waits for the 16:05 flow fetch's post-close save (~16:27 at the old 1.2 s pace, ~16:12 at 0.3 s) before
+    # scanning: at 16:00 stockbit_flow still
     # holds the 15:37 intraday snapshot (2026-10-15). Same job id, so APScheduler state carries over.
     _add_job(scheduler, daily_signal_scan_scheduled, CronTrigger(
         day_of_week="mon-fri", hour=16, minute=0, timezone=WIB

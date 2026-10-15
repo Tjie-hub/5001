@@ -3,6 +3,7 @@ import os
 import sqlite3
 import html
 import logging
+import threading
 from datetime import datetime
 from typing import Optional
 import pytz
@@ -66,7 +67,18 @@ def _holiday_skip(fn_name: str) -> bool:
 # refresh_wf_scores moved to research/jobs.py in M3 (spec §10-M3)
 
 
+# The flow fetch and the screener scrape each sweep Stockbit's trade-book/chart for all ~958 tickers on the one token.
+# Until 2026-10-15 they overlapped at 13:30/13:35, 14:30/14:35 and 16:05/16:15 (double load on the shared token,
+# the same window the jurnal26 monitors use). Scheduled sweeps now run one at a time; a late one waits its turn.
+_STOCKBIT_SWEEP = threading.Lock()
+
+
 def run_flow_fetch():
+    with _STOCKBIT_SWEEP:
+        _run_flow_fetch()
+
+
+def _run_flow_fetch():
     """Fetch flow data dari Stockbit dan simpan ke DB."""
     if _holiday_skip("run_flow_fetch"):
         return
@@ -827,7 +839,8 @@ def _run_open_trade_monitor():
 def _run_screener_intraday():
     try:
         from screener.screener_jobs import run_intraday
-        run_intraday(send_telegram=send_telegram)
+        with _STOCKBIT_SWEEP:
+            run_intraday(send_telegram=send_telegram)
     except Exception as e:
         logger.warning(f"[scheduler] Screener intraday error: {e}")
 
@@ -835,7 +848,8 @@ def _run_screener_intraday():
 def _run_screener_eod():
     try:
         from screener.screener_jobs import run_eod
-        run_eod(send_telegram=send_telegram)
+        with _STOCKBIT_SWEEP:
+            run_eod(send_telegram=send_telegram)
     except Exception as e:
         logger.warning(f"[scheduler] Screener EOD error: {e}")
 

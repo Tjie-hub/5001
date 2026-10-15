@@ -26,6 +26,10 @@ HEADERS_BASE = {
     "Origin": "https://stockbit.com",
     "Referer": "https://stockbit.com/",
 }
+# Seconds between trade-book requests in the batch run. Was 1.2 s (958 names took ~22 min, so the 16:05 post-close
+# save landed at ~16:27); the screener scrape sweeps the same endpoint at 0.3 s (screener/idx_scraper.DELAY) in
+# ~7 min with no 429 from 2026-09-25 to 2026-10-15, so the batch uses the same pace.
+FLOW_PACE = 0.3
 TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".stockbit_token")
 from config import DB_PATH as _DB_PATH
 
@@ -709,7 +713,7 @@ def main():
                     results.append(analysis)
         except Exception:
             pass
-        time.sleep(1.2)
+        time.sleep(FLOW_PACE)
 
     print(f"\r  Analyzed: {len(results)}/{len(tickers)} tickers")
 
