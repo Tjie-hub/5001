@@ -30,6 +30,7 @@ import json
 import time
 import sqlite3
 from data.db import connect as db_connect
+from data import tradebook_cache
 import requests
 import base64
 from datetime import datetime
@@ -591,6 +592,20 @@ def fetch_flow(token, ticker, date=None):
         "Origin": "https://stockbit.com",
         "Referer": "https://stockbit.com/",
     }
+    # Today's session: the 16:15 EOD scrape already downloaded the complete tape (post-trading ends 16:15);
+    # reuse it instead of sweeping all ~958 names a third time (data.tradebook_cache, 2026-10-15).
+    today = not date or date == datetime.now().strftime("%Y-%m-%d")
+    d = tradebook_cache.get(ticker, tradebook_cache.post_close()) if today else None
+    if d is None:
+        d = _request_tradebook(ticker, params, headers)
+        if d is None:
+            return None
+        if today:
+            tradebook_cache.put(ticker, d)
+    return _flow_from_tradebook(ticker, d, date)
+
+
+def _request_tradebook(ticker, params, headers):
     # The endpoint throttles after a burst of requests (HTTP 429). Back off and
     # retry so a full backfill/fetch survives the rate-limit wall instead of
     # silently dropping every ticker past the cap.
@@ -611,7 +626,10 @@ def fetch_flow(token, ticker, date=None):
         return None
     if r is None or r.status_code != 200:
         return None
-    d = r.json().get("data", {})
+    return r.json().get("data", {})
+
+
+def _flow_from_tradebook(ticker, d, date=None):
     buys = d.get("buy", [])
     sells = d.get("sell", [])
     net_vals = d.get("net_values", [])

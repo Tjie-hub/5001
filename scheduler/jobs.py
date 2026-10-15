@@ -854,6 +854,20 @@ def _run_screener_eod():
         logger.warning(f"[scheduler] Screener EOD error: {e}")
 
 
+def run_post_close_sweep():
+    """16:15 WIB: the day's one post-close trade-book sweep. The screener EOD pass fetches every ticker (final
+    bars) into data.tradebook_cache; the flow fetch then builds stockbit_flow from those payloads without new
+    requests, and the 18:30 cron reuses them for stockbit_flow_bars. Replaces the 16:05 flow fetch, which also
+    ran before post-trading ended at 16:15 (2026-10-15)."""
+    with _STOCKBIT_SWEEP:
+        try:
+            from screener.screener_jobs import run_eod
+            run_eod(send_telegram=send_telegram)
+        except Exception as e:
+            logger.warning(f"[scheduler] Screener EOD error: {e}")
+        _run_flow_fetch()   # a failed EOD scrape leaves cache misses; the flow fetch then requests them itself
+
+
 def run_eod_retry_job():
     """17:30 WIB: same-day retry of the 16:15 EOD finalisation (screener.run_eod_retry).
 

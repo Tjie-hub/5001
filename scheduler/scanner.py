@@ -533,7 +533,7 @@ def scan_momentum_signals():
     return signals
 
 POST_CLOSE_FLOW_FROM = "15:50"   # continuous trading ends 15:49:59; a flow row written later has the whole session
-FLOW_WAIT_S = 45 * 60            # the 16:05 fetch saves ~22 min after it starts (958 names, 2026-10-15)
+FLOW_WAIT_S = 45 * 60            # the 16:15 post-close sweep saves ~16:24; the cap leaves room for a token refresh
 
 
 def _wait_for_post_close_flow(db_path=None, today=None, timeout_s=FLOW_WAIT_S, poll_s=30, sleep=None):

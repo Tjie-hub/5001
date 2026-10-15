@@ -244,7 +244,7 @@ def start_scheduler():
     scheduler = BackgroundScheduler(timezone=WIB)
 
     # Daily signal scan — Mon-Fri 16:00 WIB (market close, always send even if no signals)
-    # Waits for the 16:05 flow fetch's post-close save (~16:27 at the old 1.2 s pace, ~16:12 at 0.3 s) before
+    # Waits for the post-close flow save (16:15 sweep, saved ~16:24) before
     # scanning: at 16:00 stockbit_flow still
     # holds the 15:37 intraday snapshot (2026-10-15). Same job id, so APScheduler state carries over.
     _add_job(scheduler, daily_signal_scan_scheduled, CronTrigger(
@@ -254,10 +254,10 @@ def start_scheduler():
     # WF score refresh / backtest cache / roller moved OFF the production
     # scheduler in M3 (spec §10-M3) — run via `python -m research.cli`.
 
-    # Flow fetch — hourly 09:30–15:15 WIB, plus a post-close fetch at 16:05
-    # (IDX closes 16:00; 16:05 captures the final pre-closing/closing-auction flow
-    # so the EOD reversal scan at 16:15 sees the *complete* day's smart-money flow).
-    for hour, minute in [(9,30),(10,30),(11,30),(12,30),(13,30),(14,30),(15,15),(16,5)]:
+    # Flow fetch — hourly 09:30–15:15 WIB. The post-close flow is built at 16:15 by run_post_close_sweep from
+    # the screener EOD sweep's payloads (data.tradebook_cache): one download of the day instead of three
+    # (16:05 flow, 16:15 scrape, 18:30 cron), and after post-trading ends at 16:15 (2026-10-15).
+    for hour, minute in [(9,30),(10,30),(11,30),(12,30),(13,30),(14,30),(15,15)]:
         _add_job(scheduler, run_flow_fetch, CronTrigger(
             day_of_week="mon-fri", hour=hour, minute=minute, timezone=WIB),
             id=f"flow_fetch_{hour:02d}{minute:02d}")
@@ -287,14 +287,14 @@ def start_scheduler():
             timezone=WIB, day_of_week="mon-fri"),
             id=f"screener_intraday_{hour:02d}{minute:02d}", name=f"Screener Intraday {label}")
 
-    # Screener EOD VPIN batch + reversal watchlist — 16:15 WIB
-    # Runs AFTER the 16:00 close (and after the 16:05 flow fetch) so the daily
+    # Screener EOD VPIN batch + reversal watchlist, then the post-close flow — 16:15 WIB
+    # Runs AFTER the 16:00 close and the 16:15 end of post-trading so the daily
     # close price, full-day order-flow delta, and smart-money flow are all final.
     # Running before the close used a mid-auction close and an incomplete tape,
     # which silently produced an empty/wrong next-day reversal watchlist.
-    _add_job(scheduler, _run_screener_eod, CronTrigger(
+    _add_job(scheduler, run_post_close_sweep, CronTrigger(
         day_of_week="mon-fri", hour=16, minute=15, timezone=WIB),
-        id="screener_eod", name="Screener EOD 16:15")
+        id="screener_eod", name="Post-close sweep 16:15 (screener EOD + flow)")
 
     # Open trade monitor — hourly at :05 during market hours (09:05–15:05) = 7×/day
     for hour in range(9, 16):

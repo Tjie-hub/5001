@@ -38,6 +38,14 @@ def pytest_configure(config):
 
 
 @pytest.fixture(autouse=True)
+def _isolate_tradebook_cache(tmp_path, monkeypatch):
+    # data.tradebook_cache is read by the 18:30 cron: a test that mocks a Stockbit response must never leave a
+    # fake payload for a real ticker in the live cache directory. Imported eagerly: it has no side effects.
+    from data import tradebook_cache
+    monkeypatch.setattr(tradebook_cache, "CACHE_DIR", tmp_path / "tradebook_cache")
+
+
+@pytest.fixture(autouse=True)
 def _redirect_module_log_files(tmp_path, monkeypatch):
     # Only modules already imported. Every test that exercises one imports it at module level
     # (collection time), so it is in sys.modules here. Importing them eagerly instead is worse:

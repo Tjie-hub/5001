@@ -11,6 +11,7 @@ import time
 import logging
 import sqlite3
 from data.db import connect as db_connect
+from data import tradebook_cache
 import requests
 from datetime import date as dt_date
 from data.fetcher import load_all_tickers
@@ -43,7 +44,9 @@ def _fetch_tradebook_status(ticker: str, token: str) -> tuple[int | None, dict |
         if r.status_code != 200:
             logger.info(f"[scraper] {ticker}: HTTP {r.status_code}")
             return r.status_code, None
-        return 200, r.json().get("data") or None
+        data = r.json().get("data") or None
+        tradebook_cache.put(ticker, data)
+        return 200, data
     except Exception as e:
         logger.error(f"[scraper] tradebook error {ticker}: {e}")
         return None, None
@@ -125,6 +128,7 @@ def fetch_all_stockbit(
     delay: float = DELAY,
     progress_cb=None,
     statuses: dict | None = None,
+    reuse_after=None,
 ) -> tuple[dict, dict]:
     """
     Fetch tradebook for all tickers in one pass.
@@ -133,6 +137,8 @@ def fetch_all_stockbit(
       ticks_all: {ticker: [tick, ...]}
     If `statuses` is a dict it is filled with {ticker: HTTP status or None}, so the EOD pass
     can tell a mid-run token revocation (401/403) from tickers that simply did not trade.
+    `reuse_after` (datetime): take a ticker's payload from data.tradebook_cache when it was fetched at or after
+    this, instead of requesting it again (intraday only; the FINAL pass always fetches).
     """
     if trade_date is None:
         trade_date = dt_date.today().isoformat()
@@ -143,7 +149,11 @@ def fetch_all_stockbit(
 
     for i, ticker in enumerate(tickers):
         logger.info(f"[scraper] {ticker} ({i+1}/{total})")
-        status, data = _fetch_tradebook_status(ticker, token)
+        cached = tradebook_cache.get(ticker, reuse_after) if reuse_after is not None else None
+        if cached is not None:
+            status, data = 200, cached
+        else:
+            status, data = _fetch_tradebook_status(ticker, token)
         if statuses is not None:
             statuses[ticker] = status
         if data:
@@ -154,7 +164,7 @@ def fetch_all_stockbit(
         ohlcv_all[ticker] = _ohlcv_from_ticks(ticks)
         if progress_cb:
             progress_cb(ticker, i + 1, total)
-        if i < total - 1:
+        if i < total - 1 and cached is None:
             time.sleep(delay)
 
     filled = sum(1 for v in ohlcv_all.values() if v.get('close'))

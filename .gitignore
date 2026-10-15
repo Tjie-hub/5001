@@ -113,3 +113,5 @@ atr_plan/
 data/ajaib_raw/
 # FUSE artifacts from WSL/NTFS interop (often open file handles -- never delete).
 .fuse_hidden*
+# shared Stockbit trade-book payloads, today only (data/tradebook_cache.py)
+data/tradebook_cache/

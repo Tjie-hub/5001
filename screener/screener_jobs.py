@@ -8,6 +8,7 @@ from datetime import date as dt_date
 
 import screener.db as db
 import screener.idx_scraper as scraper
+from data import tradebook_cache
 import screener.calculator as calc
 import screener.vpin as vpin_mod
 import screener.vpin_multi as vpin_multi
@@ -159,9 +160,13 @@ def run_intraday(trade_date: str = None, on_progress=None, send_telegram=None,
 
     logger.info(f"[screener] Fetching Stockbit tradebook for {total} tickers...")
     statuses = {}
+    if final:
+        tradebook_cache.prune()
     ohlcv_all, all_trades = scraper.fetch_all_stockbit(
         tickers=tickers, token=sb_token, trade_date=trade_date,
         progress_cb=_on_progress, statuses=statuses,
+        # intraday: reuse the flow fetch's sweep when it just ran (13:30 -> 13:35); FINAL always fetches
+        reuse_after=None if final else tradebook_cache.recent(),
     )
 
     filled = sum(1 for v in ohlcv_all.values() if v.get('close'))

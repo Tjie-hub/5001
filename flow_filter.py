@@ -17,6 +17,7 @@ import sys
 import time
 import sqlite3
 from data.db import connect as db_connect
+from data import tradebook_cache
 import requests
 from datetime import datetime, date
 
@@ -71,7 +72,9 @@ def _fetch_tradebook(token, ticker):
         )
         if r.status_code != 200:
             return None
-        return r.json().get("data")
+        data = r.json().get("data")
+        tradebook_cache.put(ticker, data)
+        return data
     except Exception:
         return None
 
@@ -701,11 +704,14 @@ def main():
 
     print(f"Fetching & analyzing {len(tickers)} tickers...")
     results = []
+    # A sweep that just ran (the 16:15 EOD scrape, or a scrape minutes ago) already holds every payload.
+    reuse_after = tradebook_cache.recent()
     for i, ticker in enumerate(tickers, 1):
         sys.stdout.write(f"\r  [{i}/{len(tickers)}] {ticker}...      ")
         sys.stdout.flush()
+        cached = tradebook_cache.get(ticker, reuse_after)
         try:
-            data = _fetch_tradebook(token, ticker)
+            data = cached if cached is not None else _fetch_tradebook(token, ticker)
             if data:
                 bars = _parse_bars(data)
                 analysis = _analyze(ticker, bars)
@@ -713,7 +719,8 @@ def main():
                     results.append(analysis)
         except Exception:
             pass
-        time.sleep(FLOW_PACE)
+        if cached is None:
+            time.sleep(FLOW_PACE)
 
     print(f"\r  Analyzed: {len(results)}/{len(tickers)} tickers")
 
