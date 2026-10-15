@@ -3467,6 +3467,31 @@ NeoBDM review of the same day; the G0 is run by the planner).
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-098 · Forward tape record frozen: the journal's tape-reading events are recorded, not read, until a G0
+**Status:** RECORDED · **Date:** 2026-10-15 · **Type:** Protocol freeze (forward recording; no hypothesis) ·
+**Approval authority:** Owner, 2026-10-15: "Approved". Protocol
+`docs/research_programs/P-M/tape_forward/PROTOCOL.md` (sha256 `a52cbfd2d582f0e3…`).
+
+- **What is frozen.** The event definitions of the jurnal26 tape-reading monitor at commit `32703b1`, by file hash:
+  `tape.py` `4cd0dfcee3d77ad3…`, `bigplayer_watch.py` `7bb6f27a2e9a75c6…`, `limit_watch.py` `f0d5db2a3b2892b5…`.
+  A changed threshold is a new event version; versions are never pooled.
+- **Events (one test each, none added later):** E1 ABSORB, E2 CAP, E3 close locked at ARB, E4 SWEEP ≥ Rp 250M,
+  E5 DIVERGE. **Outcome:** next session's open → close of t+5, net 0.60%, minus the equal-weight liquid
+  cross-section; signs pre-declared in the protocol §3; within-name control; inference clustered by date.
+- **No outcome is read** before 60 trading sessions or ≥ 100 events of a type, whichever is later. Then a G0
+  under the D-086 stop rule (floor and 20% minimum power frozen before power). A type that fails is withdrawn
+  uncounted; one that passes needs its own D-entry and registration before a G1.
+- **Stated limits:** the universe is the owner's watch list plus holdings (selection bias; the optional
+  fixed-panel control in protocol §4 was **not** taken); 5-minute polling; thresholds set on one day; prior
+  evidence runs against several events (shock absorption dead; HYP-PM-0003 and D-091 flow nulls; HYP-PM-0008 refused
+  with continuation predicted; post-drop continuation t −4.94).
+- **Census unchanged at 612.** A descriptive ARB close-lock count on 5001 daily OHLCV is allowed as context and cannot
+  be cited as evidence for E3 (protocol §6).
+- **Numbering note:** the PEAD mechanism draft (2026-10-15) had provisionally used "D-098"; it is renumbered at its
+  own approval (`P-M/pead/DECISION_DRAFT_PEAD_MECHANISM_2026-10-15.md`).
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
