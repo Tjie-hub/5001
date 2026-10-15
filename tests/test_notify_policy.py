@@ -497,3 +497,10 @@ def test_scheduler_job_errors_survive_the_blackout():
     """2026-10-13: five scheduler jobs died on EMFILE and the blackout hid every alert."""
     assert "system.scheduler_job_error" in np.BLACKOUT_EXEMPT
     assert np.EVENTS["system.scheduler_job_error"][0] == np.TIER_SEND
+
+
+def test_market_critical_passes_the_blackout_paper_trades_do_not():
+    # Owner 2026-10-15: only important alerts go through TELEGRAM_OFF.
+    assert "risk.market_critical" in np.BLACKOUT_EXEMPT
+    assert "trade.position_alert" not in np.BLACKOUT_EXEMPT
+    assert "trade.paper_closed" not in np.BLACKOUT_EXEMPT

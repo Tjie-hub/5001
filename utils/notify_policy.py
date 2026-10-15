@@ -100,7 +100,11 @@ BLACKOUT_EXEMPT = frozenset({
     # one alert per job per hour by scheduler/__init__.
     "system.scheduler_job_error",
     # 2026-10-14: ~/watch.sh internet/DNS outage recovery summary (scripts/net_alert.py).
-    "system.net_outage"})
+    "system.net_outage",
+    # Owner 2026-10-15 "only important notifications go through": the market-wide CRITICAL tier
+    # (engine/risk_alert). Never reached Jun-Oct 2026 (ORANGE 42, YELLOW 176), so it adds no noise.
+    # Paper-trade alerts stay muted; jurnal26 keeps its own list (notify.BLACKOUT_EXEMPT).
+    "risk.market_critical"})
 
 # Dedup rules. ("none",) means the call site already guarantees singularity
 # (state-transition guard, upstream rate limiter, or owner-initiated action).
