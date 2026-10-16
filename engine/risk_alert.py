@@ -23,6 +23,12 @@ _TIER_EMOJI = {
 }
 
 
+def _fmt(v) -> str:
+    """A component score, or 'n/a' for a sensor without data. 2026-10-16 11:05: the CRITICAL alert of the MSCI-shock
+    morning was logged but never sent -- VPIN had no data (None) and f"{None:.1f}" raised inside this function."""
+    return "n/a" if v is None else f"{v:.1f}"
+
+
 def _ensure_table(conn: sqlite3.Connection):
     conn.execute("""
         CREATE TABLE IF NOT EXISTS market_risk_log (
@@ -69,13 +75,16 @@ def route_risk_alert(
 
     if tier == 'CRITICAL':
         emoji = _TIER_EMOJI.get(tier, '⚠️')
+        c = lambda k: _fmt(components.get(k))
+        move = components.get('ihsg_move_pct')
+        shock = "" if move is None else (
+            f"IHSG today: {move:+.2f}%"
+            + (f" — floor {risk_result['shock_floor']}" if risk_result.get('shock_floor') else "") + "\n")
         msg = (
             f"{emoji} <b>Market Risk: {tier}</b> — Score {score:.1f}/100\n\n"
-            f"VPIN: {components.get('vpin', '?'):.1f} | "
-            f"AccDist: {components.get('accdist', '?'):.1f} | "
-            f"Breadth: {components.get('breadth', '?'):.1f}\n"
-            f"Technicals: {components.get('technicals', '?'):.1f} | "
-            f"Foreign-Broker: {components.get('foreign_flow', '?'):.1f}\n\n"
+            + shock
+            + f"VPIN: {c('vpin')} | AccDist: {c('accdist')} | Breadth: {c('breadth')}\n"
+            f"Technicals: {c('technicals')} | Foreign-Broker: {c('foreign_flow')}\n\n"
             f"<i>Immediate action may be required.</i>"
         )
         send_telegram(msg, event="risk.market_critical")

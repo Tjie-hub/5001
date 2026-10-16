@@ -108,3 +108,26 @@ def test_blackout_day_still_computes_and_routes_market_risk(monkeypatch):
     monkeypatch.setattr(ra, "route_risk_alert", lambda conn, risk, d, t: routed.append(risk['tier']))
     scanner.scheduled_multi_strategy_scan()
     assert routed == ['CRITICAL']
+
+
+def test_accdist_with_no_classified_tickers_is_missing_not_neutral():
+    # review 2026-10-16: 0 tickers (no flow yet today) read NEUTRAL = 40 and diluted the score
+    empty = dict(LIVE, accdist_summary={'label': 'NEUTRAL', 'dist_pct': 0.0, 'total': 0})
+    r = compute_market_risk_score(**empty)
+    assert r['components']['accdist'] is None
+    full = dict(LIVE, accdist_summary={'label': 'NEUTRAL', 'dist_pct': 0.0, 'total': 700})
+    assert compute_market_risk_score(**full)['components']['accdist'] == 40.0
+
+
+def test_critical_alert_is_sent_when_a_sensor_has_no_data(tmp_path, monkeypatch):
+    # 2026-10-16 11:05: CRITICAL 86.0 was logged but never sent -- f"{None:.1f}" raised on the missing VPIN.
+    import engine.risk_alert as ra
+
+    sent = []
+    monkeypatch.setattr(ra, "send_telegram", lambda msg, event=None, **k: sent.append((event, msg)))
+    risk = compute_market_risk_score(**LIVE, ihsg_day_move=-0.0801)
+    conn = sqlite3.connect(tmp_path / "r.db")
+    ra.route_risk_alert(conn, risk, "2026-10-16", "11:05")
+    assert sent and sent[0][0] == "risk.market_critical"
+    assert "VPIN: n/a" in sent[0][1] and "IHSG today: -8.01% — floor CRITICAL" in sent[0][1]
+    assert conn.execute("SELECT sent FROM market_risk_log").fetchone()[0] == 1

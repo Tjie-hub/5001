@@ -33,11 +33,13 @@ def api_run():
         trade_date = body.get('date', dt_date.today().isoformat())
 
     def _run():
+        from utils.stockbit_sweep import SWEEP_LOCK
         try:
-            if run_type == 'eod':
-                jobs.run_eod(trade_date)
-            else:
-                jobs.run_intraday(trade_date)
+            with SWEEP_LOCK:  # waits for a scheduled sweep instead of doubling the load (review 2026-10-16)
+                if run_type == 'eod':
+                    jobs.run_eod(trade_date)
+                else:
+                    jobs.run_intraday(trade_date)
         except Exception as e:
             logger.error(f"[screener/routes] Run error: {e}")
 

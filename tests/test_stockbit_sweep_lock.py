@@ -50,3 +50,15 @@ def test_batch_pace_matches_the_screener_scrape():
     from screener import idx_scraper
 
     assert flow_filter.FLOW_PACE == idx_scraper.DELAY
+
+
+def test_page_started_screener_run_and_eod_retry_share_the_lock():
+    # review 2026-10-16: both took no lock. One lock object for scheduler, retry and the screener page.
+    import inspect
+
+    import screener.routes as routes
+    from utils.stockbit_sweep import SWEEP_LOCK
+
+    assert jobs._STOCKBIT_SWEEP is SWEEP_LOCK
+    assert "with SWEEP_LOCK" in inspect.getsource(routes)
+    assert "with _STOCKBIT_SWEEP" in inspect.getsource(jobs.run_eod_retry_job)

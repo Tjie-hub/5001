@@ -148,7 +148,9 @@ def compute_market_risk_score(
     missing = lambda d: (d or {}).get('label') == 'INSUFFICIENT_DATA'
     comps = {
         'vpin': None if missing(vpin_summary) else _vpin_risk(vpin_summary),
-        'accdist': _accdist_risk(accdist_summary),
+        # 0 tickers classified = no flow yet (pre-open, outage): missing, not "NEUTRAL" (review 2026-10-16)
+        'accdist': None if (missing(accdist_summary) or (accdist_summary or {}).get('total') == 0)
+        else _accdist_risk(accdist_summary),
         'breadth': None if missing(breadth_summary) else _breadth_risk(breadth_summary),
         'technicals': None if missing(technicals) else _technicals_risk(technicals),
         'foreign_flow': _foreign_owned_brokerage_flow_risk(foreign_net_5d),

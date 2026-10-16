@@ -3,7 +3,6 @@ import os
 import sqlite3
 import html
 import logging
-import threading
 from datetime import datetime
 from typing import Optional
 import pytz
@@ -70,7 +69,7 @@ def _holiday_skip(fn_name: str) -> bool:
 # The flow fetch and the screener scrape each sweep Stockbit's trade-book/chart for all ~958 tickers on the one token.
 # Until 2026-10-15 they overlapped at 13:30/13:35, 14:30/14:35 and 16:05/16:15 (double load on the shared token,
 # the same window the jurnal26 monitors use). Scheduled sweeps now run one at a time; a late one waits its turn.
-_STOCKBIT_SWEEP = threading.Lock()
+from utils.stockbit_sweep import SWEEP_LOCK as _STOCKBIT_SWEEP  # noqa: E402  (shared with screener routes)
 
 
 def run_flow_fetch():
@@ -888,7 +887,8 @@ def run_eod_retry_job():
         logger.warning(f"[eod-retry] dedup guard error — skipped: {e}")
         return
     from screener.screener_jobs import run_eod_retry
-    result = run_eod_retry(trade_date=date_str, send_telegram=send_telegram, today=date_str)
+    with _STOCKBIT_SWEEP:   # a full re-fetch when the 16:15 pass was degraded (review 2026-10-16)
+        result = run_eod_retry(trade_date=date_str, send_telegram=send_telegram, today=date_str)
     logger.info(f"[eod-retry] {result}")
 
 
