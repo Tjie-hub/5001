@@ -3532,6 +3532,43 @@ NeoBDM review of the same day; the G0 is run by the planner).
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-101 · Mechanism accepted: industry momentum — new family Industry-Cross-Section {S}; family-map parking overridden for one arm
+**Status:** RECORDED · **Date:** 2026-10-16 · **Type:** Mechanism acceptance (D-070 §1) ·
+**Approval authority:** Owner, 2026-10-16: "approve" on the draft
+`docs/research_programs/P-M/sector_momentum/MECHANISM_DRAFT_2026-10-16.md` (`d9f9b49`), read as its option (a).
+
+- **Mechanism: slow diffusion of industry-wide news (not price prediction).** News that touches a whole sector
+  (commodities, regulation, rates, sector flows) is priced gradually, so past-winner sectors keep outperforming
+  past-loser sectors over the next month (Moskowitz and Grinblatt 1999; Hong, Torous and Valkanov 2007).
+  - **Pre-declared sign:** winners outperform. A reversal is not tested and is not a rescue.
+- **Override.** Family map v2 (2026-09-29, item E) parked `{S}` until REGIME-002's first read as
+  trend-correlated and negative-EV. The owner overrides that for **one arm**. Reasons on record: a sector-momentum
+  rule (`engine/sector_rotation.py`) already filters live candidates unvalidated; the arm does not read or touch
+  REGIME-002 (separate instrument and family).
+- **Family:** new **Industry-Cross-Section {S}**, opened by this entry; slot 1 = A1. Not {T1}: cross-sectional
+  across sectors with a sector-membership instrument; widening {T1}, which has a live forward test, was declined.
+- **A1 (frozen at G0, not here):** EW sector return over months t−6 … t−2; hold month t; long every liquid member
+  of the top 3 of 11 sectors, equal weight, against the EW liquid universe; long-only. A sector needs ≥ 3 liquid
+  members to be ranked.
+- **Data:** the extended panel inputs (pre-2021 yfinance history + settled `ohlcv`, splits as built 2026-09-19)
+  and the `ticker_sector` snapshot, hash-pinned in the G0.
+- **Design constraints for the G0.**
+  - Net of cost by D-082 `cost_realised.py` (sha256 `65051253…`) on each name's ADV, charged on turnover. This
+    supersedes the draft's 0.60% fallback (D-082 binds new studies; the universe floor ADV ≥ Rp 1bn is inside its
+    validity).
+  - Volume basis disclosed per D-081 (the sample spans 2026-07-06).
+  - Pass: NW t ≥ the bar at census + 1; both halves (2001–2013, 2014–2026) positive net; FM sector coefficient
+    t ≥ 2 incremental over own 6-1 return, 52-week-high proximity and Parkinson-60 vol; median monthly excess > 0.
+  - Stop rule, frozen before power is computed: random-label placebo (11 pseudo-sectors of the real sizes, 1,000
+    draws) gives σ; stop if power < 20% at 0.25% a month net. Survivorship must be bounded (members per sector per
+    year, coverage vs IDX listed counts); an unbounded bias is a stop reason.
+- **Honest prior.** Stock momentum died on the median test (factor zoo 2026-09-18); every price-pattern search since
+  D-070 has been NULL; yfinance sees ~70–73% of the IDX listed count in 2018–2020 and only 80 names in 2001. A NULL or
+  a stop is the likely outcome; either settles the unvalidated production rule.
+- **Census:** unchanged at **612** until registration (next id HYP-PM-0022, N = 613, bar 3.2996).
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
