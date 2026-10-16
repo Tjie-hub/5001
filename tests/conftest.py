@@ -7,8 +7,10 @@ files, and importing app.py (setup_logging() at import) attached a handler to th
 logs/app.log, so every log line emitted during the suite landed in production's app log.
 """
 import logging
+import os
 import sys
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -107,10 +109,80 @@ def _held_open_by_other_process(path: Path) -> bool:
     return False
 
 
+# Sidecar files of a SQLite DB. In WAL mode every write -- the live service's just as much as a
+# test's -- lands in -wal with the main .db unchanged, and with the service's short-lived
+# connections (ed029e5) there are moments when no other process holds the -wal fd open, so an
+# mtime change on a pre-existing sidecar proves nothing (the 2026-10-16 suite false positives:
+# 1-8 random setup ERRORs per run blaming walkforward.db-wal). Attribution of test writes moved
+# to the sqlite3.connect recorder below; the mtime sweep stays only for non-SQLite file changes.
+_DB_SIDE_SUFFIXES = ("-wal", "-shm", "-journal")
+
+
+def _main_db_name(name: str) -> str:
+    for s in _DB_SIDE_SUFFIXES:
+        if name.endswith(s):
+            return name[: -len(s)]
+    return name
+
+
+def _under_repo_data(target) -> bool:
+    """True when a sqlite3.connect() target resolves under the repo's real data/ dir.
+    Handles plain absolute, relative and file: URI ("file:...?mode=ro") forms."""
+    if target is None:
+        return False
+    t = target if isinstance(target, str) else str(target)
+    if t.startswith("file:"):
+        t = t[5:].split("?", 1)[0]
+    if not t:
+        return False
+    root = str(_REPO_DATA_DIR)
+    try:
+        abs_t = os.path.abspath(t)
+    except (TypeError, ValueError):
+        return False
+    return abs_t == root or abs_t.startswith(root + os.sep)
+
+
+@contextmanager
+def _record_real_db_opens():
+    """Record every in-process sqlite3.connect() whose target is under the real data/ dir.
+
+    data.db.connect routes through sqlite3.connect, so this one patch sees every SQLite open
+    the test process makes. The root conftest pins DB_PATH before config.py is imported, so a
+    well-behaved test never lands here; one that does has bypassed DB_PATH and fails its test
+    whatever it then does with the connection (read or write)."""
+    import sqlite3
+    real_opens = []
+    orig = sqlite3.connect
+
+    def _connect(target, *args, **kwargs):
+        if _under_repo_data(target):
+            real_opens.append(str(target))
+        return orig(target, *args, **kwargs)
+
+    sqlite3.connect = _connect
+    try:
+        yield real_opens
+    finally:
+        sqlite3.connect = orig
+
+
 def _changed_by_tests(after: set, before: set) -> set:
-    """Entries that appeared or changed, minus files a live process is holding open."""
-    return {e for e in after - before
-            if not _held_open_by_other_process(_REPO_DATA_DIR / e[0])}
+    """Entries that appeared or changed, minus files a live process is holding open,
+    and minus sidecars (-wal/-journal/-shm) of a database that already existed:
+    those carry the live service's WAL writes just as much as a test's, so an mtime
+    change on them is not attributable to anybody (see _DB_SIDE_SUFFIXES). A sidecar
+    with no pre-existing main .db is still flagged."""
+    pre = {_main_db_name(name) for name, _, _ in before}
+    out = set()
+    for e in after - before:
+        name, _, _ = e
+        if name != _main_db_name(name) and _main_db_name(name) in pre:
+            continue
+        if _held_open_by_other_process(_REPO_DATA_DIR / name):
+            continue
+        out.add(e)
+    return out
 
 
 def _real_db_files() -> set:
@@ -144,7 +216,12 @@ def _isolate_db_path(tmp_path, monkeypatch):
         if mod is not None and hasattr(mod, attr):
             monkeypatch.setattr(mod, attr, str(scratch))
     before = _real_db_files()
-    yield
+    with _record_real_db_opens() as real_opens:
+        yield
+    assert not real_opens, (
+        f"this test opened the real database file(s) {real_opens} under {_REPO_DATA_DIR}; "
+        "route DB access through db_path=/tmp_path instead (see _isolate_db_path in "
+        "tests/conftest.py)")
     offenders = _changed_by_tests(_real_db_files(), before)
     assert not offenders, (
         f"this test created/modified real database file(s) under {_REPO_DATA_DIR}: "
