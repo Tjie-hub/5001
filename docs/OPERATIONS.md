@@ -37,7 +37,7 @@ with version/git_sha/branch/built_at, shared mutable state — `.env`, `venv`,
 # release procedure
 git -C ~/idx-walkforward-5001 pull            # or merge the reviewed branch
 scripts/release.sh                            # build + switch `current`
-systemctl --user restart idx-walkforward      # activate (operator action)
+scripts/safe_restart.sh                       # activate: boot preflight first, restart only if it passes
 scripts/wait_for_health.sh                    # explicit post-deploy check
 curl -s localhost:5001/health | jq .version   # confirm the running version
 
@@ -54,6 +54,11 @@ scripts/rollback.sh             # previous release
 scripts/rollback.sh <version>   # a specific release
 systemctl --user restart idx-walkforward
 ```
+
+Prefer `scripts/safe_restart.sh` over a bare `systemctl --user restart`: it runs `scripts/preflight_boot.py`
+(imports the app and runs the real `start_scheduler()` on a throwaway DB) and leaves the running service up if the
+tree cannot boot. Added 2026-10-16 after a commit that could not boot (NameError in `start_scheduler`) was
+restarted straight into a 2.5-minute outage on 2026-10-15.
 
 Unit file source of truth: `deploy/idx-walkforward.service` (targets
 `~/idx-walkforward-current`) → copy to `~/.config/systemd/user/` +
