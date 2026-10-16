@@ -1342,15 +1342,10 @@ def scheduled_multi_strategy_scan():
         logger.info(f"[{time_str}] Pasar tutup: {_closed_reason} — scan skipped.")
         return
 
-    # Calendar blackout gate
-    _blackout, _bl_reason = is_blackout_day()
-    if _blackout:
-        logger.info(f"[{time_str}] BLACKOUT: {_bl_reason} — scan skipped.")
-        return
-
-    logger.info(f"[{time_str}] Starting multi-strategy scan...")
-
     # ── Composite market risk score ───────────────────────────────────────────
+    # Before the blackout gate: a blackout stops new signals, never risk monitoring. Until 2026-10-16 the scan
+    # returned first, so on the BI-meeting blackout days (10-14..16) no risk was computed or routed -- including
+    # the MSCI-shock morning (IHSG -8%, halt), when the CRITICAL alert was the one that mattered.
     _market_risk = None
     try:
         from flow_filter import get_market_accdist_summary as _get_accdist_rs
@@ -1376,8 +1371,10 @@ def scheduled_multi_strategy_scan():
             ).fetchone()[0] or 0
         except Exception:
             _rs_foreign = None
+        from engine.risk_score import ihsg_move as _ihsg_move
+        _market_risk = _compute_risk(_rs_vpin, _rs_accdist, _rs_breadth, _rs_tech, _rs_foreign,
+                                     ihsg_day_move=_ihsg_move(_rs_conn, date_str))
         _rs_conn.close()
-        _market_risk = _compute_risk(_rs_vpin, _rs_accdist, _rs_breadth, _rs_tech, _rs_foreign)
         logger.info(f"[{time_str}] Market risk score: {_market_risk['score']:.1f}/100 — {_market_risk['tier']}")
         # Route alert based on tier
         try:
@@ -1389,6 +1386,14 @@ def scheduled_multi_strategy_scan():
             logging.warning(f"[scan] risk alert routing error: {_ra_err}")
     except Exception as _rse:
         logging.warning(f"[scan] risk score error: {_rse}")
+
+    # Calendar blackout gate
+    _blackout, _bl_reason = is_blackout_day()
+    if _blackout:
+        logger.info(f"[{time_str}] BLACKOUT: {_bl_reason} — scan skipped.")
+        return
+
+    logger.info(f"[{time_str}] Starting multi-strategy scan...")
 
     # Market-wide sensors — log before scan so visible even on zero-signal days
     try:

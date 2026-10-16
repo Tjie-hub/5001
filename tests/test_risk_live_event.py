@@ -85,3 +85,26 @@ def test_event_guard_includes_the_shock_guard(monkeypatch):
     monkeypatch.setattr(scanner, "_shock_guard_active", lambda: True)
     on, mult = scanner._event_guard_active()
     assert on and mult > 0
+
+
+def test_blackout_day_still_computes_and_routes_market_risk(monkeypatch):
+    # 2026-10-16 was a BI-meeting blackout day: the scan returned before the risk block, so no CRITICAL alert.
+    import engine.calendar_filter as cf
+    import engine.risk_alert as ra
+    import engine.vpin as vp
+    import engine.breadth as br
+    import engine.technicals as te
+    import flow_filter as ff
+    import engine.risk_score as rs
+
+    monkeypatch.setattr(cf, "is_trading_day", lambda *a, **k: (True, ""))
+    monkeypatch.setattr(cf, "is_blackout_day", lambda *a, **k: (True, "H+1 after BI Rate RDG"))
+    monkeypatch.setattr(vp, "get_market_vpin_summary", lambda c, d: LIVE['vpin_summary'])
+    monkeypatch.setattr(ff, "get_market_accdist_summary", lambda d: LIVE['accdist_summary'])
+    monkeypatch.setattr(br, "get_market_breadth", lambda c, d: LIVE['breadth_summary'])
+    monkeypatch.setattr(te, "detect_ihsg_technicals", lambda c, d: LIVE['technicals'])
+    monkeypatch.setattr(rs, "ihsg_move", lambda c, d: -0.0801)
+    routed = []
+    monkeypatch.setattr(ra, "route_risk_alert", lambda conn, risk, d, t: routed.append(risk['tier']))
+    scanner.scheduled_multi_strategy_scan()
+    assert routed == ['CRITICAL']
