@@ -93,3 +93,36 @@ jurnal26 commits reviewed (`bf50036 a100237 f71b8d2 eada6b7 dbeb2de`): coherent 
 5. **macro_watch reg-topic noise** (opsen/crypto-tax) — candidate version bump, owner's call; miss-audit needs a longer window.
 6. **Saturday / Monday checks** — commands above; need manual runs or a new-session schedule.
 7. My week-review recommendation to give `accdist` the missing-sensor exclusion was already fixed by the planner in `094276f` (0 classified tickers = missing) — verified in `engine/risk_score.py`; nothing left.
+
+---
+
+## Evening verification 2026-10-16 21:10 WIB (scheduled run)
+
+**1. Post-close sweep + 16:00 report.** Journal: job "Post-close sweep 16:15 (screener EOD + flow)" ran **16:15:00 → 16:29:50** ("[screener] Fetching Stockbit tradebook for 958 tickers…" at 16:15:00, "executed successfully" 16:29:50). The flow save completed ≤ 16:30:12 — the 16:00 Signal Report job (fired 16:00:00) **waited for it exactly as designed** (`b7ee9b5` gate) and ran its scan at 16:30:12, sending at 16:30:36 ("Tidak ada sinyal Momentum hari ini" — log-only under TELEGRAM_OFF). Also at 16:30:00: **"[16:30] Circuit breaker OPEN: Market risk CRITICAL (score=86.0) — auto-trading paused"** — the shock floor closing the session at CRITICAL, as intended. (The table's `updated_at` for today's `stockbit_flow` now shows only the 20:15 run's writes, 958 rows 20:15:00–20:38:18; the 16:15 save stamp was overwritten.)
+
+**2. 20:15 broker run (one-run evening, cache-only).** 20:15:00 → **21:08:27** ("[21:08] Broker flow selesai. 632 tickers untuk 2026-10-16", incl. retry passes). Journal counts 20:15–21:00: **541** "✓ Broker:" summaries, **225** "broker summary empty (traded ticker) — queued for retry" (vs **757** on 10-15), **121** "no trades, broker summary skipped" (expected ~130), **0** trade-book fetch lines — the trade-book side came entirely from the 16:15 cache (`a1eef31` working as designed; retries recovered ~91 of the empties: 632 saved).
+
+**3. Z3.3 cache-bound verification — BLOCKED, stays OPEN (new vendor finding).** Between the broker run's end (21:08, endpoint working) and ~21:20, **Stockbit began rejecting the trade-book chart endpoint**: a direct probe (`api.stockbit.com/v2.1/order-trade/trade-book/chart`, symbol BBCA) returns HTTP **200 with body `{"error":"InvalidParameter","message":"Silahkan update aplikasi kamu ke versi terbaru…"}`**, and all 20 module-path re-fetches came back non-200. 828 tickers have cached payloads fetched ≥16:15 today, so the cached tape is intact — but the fresh comparison could not be made. Consequences to watch: **tomorrow's 16:15 sweep fetches this endpoint for all 958 names** (if the rejection persists it fails wholesale — the screener EOD and the flow table lose their source); jurnal26's 22:00 tape backfill uses a **different** endpoint (`exodus.stockbit.com/order-trade/running-trade`) and is not automatically affected. Re-try the 20-ticker diff when the endpoint recovers; if "update your app" is a persistent client-version gate, the endpoint's params/headers need a vendor-side refresh (owner call).
+
+**4. CRITICAL delivery.** `SELECT … FROM market_risk_log WHERE date='2026-10-16'`:
+```
+11:05 | CRITICAL | 86.0 | sent=0   (pre-fix: the None-format crash, fixed 094276f, live 11:45)
+13:35 | CRITICAL | 98.5 | sent=1
+14:35 | CRITICAL | 98.5 | sent=1
+```
+Log: `[telegram] send allowed (event=risk.market_critical, first today): 🚨 Market Risk: CRITICAL — Score 98.5/100  IHSG today: -8.01% — floor CRITICAL` (13:35), then `deduped … once_per_day (already sent today)` (14:35). One Telegram delivered, both rows marked sent — the policy's documented DB-sent-flag dedup.
+
+**5. Forward-window roll.** Exactly as predicted in the Z2 section: at 18:30:00 all three windows opened 2026-10-07 closed and successors opened:
+```
+38b08ac3|scanner    | CLOSE_CONTAMINATED | changes: ["paper_config.event_guard_windows: None -> '[{"id": …'"]
+76b32312|scanner    | OPEN (successor)
+62035b3c|eod        | CLOSE_CONTAMINATED | (same diff)   → 0105567b OPEN
+a24b1636|premarket  | CLOSE_CONTAMINATED | (same diff)   → 05c50f1e OPEN
+```
+The Forward-Test Cycle itself ran clean at 18:30:38 (`ingested=0 opened=2 closed=89 open_now=490`).
+
+**6. IHSG close + guard state.** 2026-10-16 close **5393.92 = −8.01%** vs 5863.78 (still `is_final=0` at 21:15). At ≤ −5% the **shock guard persists 5 sessions**; `/health`: `{"active": true, "size_mult": 0.5, "source": "shock rule: an IHSG session <= -5% within the last 5 sessions"}`.
+
+**7. Second full-suite run (Z1 done-when (b)).** `venv/bin/python -m pytest tests/ -q -p no:cacheprovider` → **`3716 passed, 4 skipped in 393.71s`, `PYTEST_EXIT:0`, zero DB-isolation-guard errors** (run during the live service, market closed). With run 1's two errors diagnosed and fixed in `a8a07af`, **Z1 is now fully done-when-met**. (3,716 vs 3,704 tests: the parallel session added tests during the afternoon.)
+
+**Evening additions to open items:** (8) the trade-book endpoint rejection of item 3 — retry the 20-ticker diff when it recovers and watch Monday's 16:15 sweep; (9) nothing else outstanding from tonight.
