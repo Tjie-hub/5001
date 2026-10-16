@@ -72,6 +72,41 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+
+# Dated event-guard windows, seeded into paper_config (2026-10-16 brief Z2). The June 2026
+# single window (paper_config event_guard_start/end, read by scheduler.scanner until
+# 2026-10-16) is migrated verbatim as the first entry; the rest are MSCI's published Index
+# Review calendar. Every start/end is a date from a primary MSCI source -- the "MSCI Announces
+# the Next Eight Index Review Dates" press release of 2026-08-12 (window = announcement date
+# through effective date, inclusive; no other dates are published to pad with). MSCI
+# "reserves the right to change these dates": when they do, edit this paper_config row --
+# the key is part of the forward-test frozen config (engine/forward_window._paper_config),
+# so an edit rolls open windows, which is the designed response to a signal-generation
+# regime change. NOT seeded (no published date): the 2026-10-15 Indonesia reclassification
+# consultation decision -- MSCI's release gives only "on or before June 30, 2027".
+DEFAULT_EVENT_GUARD_WINDOWS = [
+    {"id": "msci-2026-06-review", "start": "2026-06-15", "end": "2026-06-24", "size_mult": 0.5,
+     "source": "MSCI accessibility review 2026-06-18 + classification decision 2026-06-23, "
+               "buffered (migrated from event_guard_start/end)"},
+    {"id": "msci-ir-2026-11", "start": "2026-11-11", "end": "2026-12-01", "size_mult": 0.5,
+     "source": "MSCI IR calendar PR 2026-08-12: announcement 2026-11-11, effective 2026-12-01"},
+    {"id": "msci-ir-2027-02", "start": "2027-02-09", "end": "2027-03-01", "size_mult": 0.5,
+     "source": "MSCI IR calendar PR 2026-08-12: announcement 2027-02-09, effective 2027-03-01"},
+    {"id": "msci-ir-2027-05", "start": "2027-05-10", "end": "2027-05-28", "size_mult": 0.5,
+     "source": "MSCI IR calendar PR 2026-08-12: announcement 2027-05-10, effective 2027-05-28"},
+    {"id": "msci-ir-2027-08", "start": "2027-08-12", "end": "2027-09-01", "size_mult": 0.5,
+     "source": "MSCI IR calendar PR 2026-08-12: announcement 2027-08-12, effective 2027-09-01"},
+    {"id": "msci-ir-2027-11", "start": "2027-11-11", "end": "2027-12-01", "size_mult": 0.5,
+     "source": "MSCI IR calendar PR 2026-08-12: announcement 2027-11-11, effective 2027-12-01"},
+    {"id": "msci-ir-2028-02", "start": "2028-02-10", "end": "2028-03-01", "size_mult": 0.5,
+     "source": "MSCI IR calendar PR 2026-08-12: announcement 2028-02-10, effective 2028-03-01"},
+    {"id": "msci-ir-2028-05", "start": "2028-05-11", "end": "2028-06-01", "size_mult": 0.5,
+     "source": "MSCI IR calendar PR 2026-08-12: announcement 2028-05-11, effective 2028-06-01"},
+    {"id": "msci-ir-2028-08", "start": "2028-08-14", "end": "2028-09-01", "size_mult": 0.5,
+     "source": "MSCI IR calendar PR 2026-08-12: announcement 2028-08-14, effective 2028-09-01"},
+]
+
+
 def init_paper_table():
     conn = get_db()
     conn.executescript("""
@@ -99,6 +134,7 @@ def init_paper_table():
     """)
     # Default config
     configs = [
+        ("event_guard_windows", json.dumps(DEFAULT_EVENT_GUARD_WINDOWS)),  # INSERT OR IGNORE below: an owner edit always wins
         ("capital",    "50000000"),
         ("tp_pct",     "0.035"),
         ("sl_pct",     "0.025"),

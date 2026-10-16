@@ -152,3 +152,15 @@ def test_health_scheduler_running_reports_state_and_job_count(client, monkeypatc
     data = json.loads(resp.data)
     assert data["scheduler"] == {"state": "running", "job_count": 2}
     assert data["status"] == "ok"
+
+
+def test_health_event_guard_names_its_source(client):
+    # 2026-10-16: "active" alone said nothing about WHY the guard was on/off; the October
+    # MSCI shock passed with the guard silently off. The payload names the dated window
+    # (paper_config event_guard_windows) or the shock rule. This scratch DB has neither a
+    # paper_config table nor ohlcv: the guard must degrade to inactive-with-no-source.
+    c, _ = client
+    data = json.loads(c.get("/health").data)
+    eg = data["event_guard"]
+    assert set(eg) >= {"active", "size_mult", "source"}
+    assert eg["active"] is False and eg["source"] is None and eg["size_mult"] == 0.5

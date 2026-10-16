@@ -118,8 +118,10 @@ def _paper_config(conn) -> dict:
         rows = conn.execute("SELECT key, value FROM paper_config").fetchall()
     except sqlite3.Error:
         return {}
+    # event_guard_windows (2026-10-16): the dated event-guard calendar -- a change to it
+    # changes signal generation, so it must roll open windows like any other tuning key.
     keep = {"disabled_strategies", "event_guard_start", "event_guard_end",
-            "event_guard_size_mult"}
+            "event_guard_size_mult", "event_guard_windows"}
     return {k: v for k, v in rows if k in keep}
 
 

@@ -933,25 +933,57 @@ def _macro_panic_state() -> bool:
     return panic
 
 
-def _event_guard_active():
-    """Binary event-risk window (default: MSCI accessibility review Jun 18 +
-    classification decision Jun 23, 2026, with buffer). During the window all
-    new momentum-family entries are blocked and position size is multiplied
-    by event_guard_size_mult. Configurable via paper_config."""
-    import datetime as _dtm
+def _load_event_guard_windows():
+    """Dated event-guard windows from paper_config (key event_guard_windows, a JSON list of
+    {id, start, end, size_mult, source}), seeded at startup from primary sources
+    (paper_trade.DEFAULT_EVENT_GUARD_WINDOWS) and owner-editable. Bad rows are skipped,
+    never fatal: an unparseable list means NO windows, and only the shock rule remains.
+    The pre-2026-10-16 single-window keys event_guard_start/end are retired (the seeded
+    list carries the June 2026 window); their paper_config rows stay untouched because
+    open forward-test windows froze them (engine/forward_window._paper_config)."""
+    import json as _json
     try:
         from paper_trade import get_config
-        cfg = get_config()
+        raw = get_config().get("event_guard_windows")
+        rows = _json.loads(raw) if isinstance(raw, str) else (raw or [])
     except Exception:
-        cfg = {}
-    start = str(cfg.get('event_guard_start', '2026-06-15'))
-    end = str(cfg.get('event_guard_end', '2026-06-24'))
-    try:
-        mult = float(cfg.get('event_guard_size_mult', 0.5))
-    except Exception:
-        mult = 0.5
-    today = str(_dtm.date.today())
-    return (start <= today <= end or _shock_guard_active()), mult
+        rows = []
+    out = []
+    for r in rows if isinstance(rows, list) else []:
+        try:
+            out.append({"id": str(r["id"]), "start": str(r["start"]), "end": str(r["end"]),
+                        "size_mult": float(r.get("size_mult", 0.5)),
+                        "source": str(r.get("source", ""))})
+        except Exception:
+            continue
+    return out
+
+
+def _event_guard_status(today=None):
+    """Which window (or the shock rule) has the event guard on, and the size multiplier.
+    Overlapping windows: the most restrictive size_mult of the matching windows applies.
+    Returns {'active', 'size_mult', 'source'} -- source is None when inactive."""
+    import datetime as _dtm
+    today = today or str(_dtm.date.today())
+    matching = [w for w in _load_event_guard_windows() if w["start"] <= today <= w["end"]]
+    if matching:
+        first = min(matching, key=lambda w: w["start"])
+        return {"active": True,
+                "size_mult": min(w["size_mult"] for w in matching),
+                "source": f"{first['id']} ({first['start']}..{first['end']})"}
+    if _shock_guard_active():
+        return {"active": True, "size_mult": 0.5,
+                "source": "shock rule: an IHSG session <= -5% within the last 5 sessions"}
+    return {"active": False, "size_mult": 0.5, "source": None}
+
+
+def _event_guard_active():
+    """Binary event-risk window, dated-calendar form (2026-10-16): a list of dated windows in
+    paper_config (seeded from MSCI's published calendar; the June 2026 single window migrated)
+    plus the reactive shock rule. During a window all new momentum-family entries are blocked
+    and position size is multiplied by the window's size_mult. See _event_guard_status."""
+    status = _event_guard_status()
+    return status["active"], status["size_mult"]
 
 
 SHOCK_GUARD_MOVE = -0.05     # an IHSG day at or below this switches the guard on (2026-10-16: -8.01% open, halt)

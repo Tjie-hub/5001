@@ -105,9 +105,11 @@ def health():
         result["status"] = "error"
         result["db"] = str(e)
     try:
-        from scheduler.scanner import _event_guard_active, _macro_panic_state
-        _eg_on, _eg_mult = _event_guard_active()
-        result["event_guard"] = {"active": _eg_on, "size_mult": _eg_mult}
+        from scheduler.scanner import _event_guard_status, _macro_panic_state
+        # source names the dated window (paper_config event_guard_windows) or the shock rule
+        # that has the guard on -- the 2026-10-16 lesson: "active: true" alone says nothing
+        # about WHY, and the guard sat off through the October shock nobody could explain.
+        result["event_guard"] = _event_guard_status()
         result["macro_panic_state"] = _macro_panic_state()
     except Exception as e:
         result["event_guard"] = {"active": False, "error": str(e)}
