@@ -29,8 +29,10 @@ def get_risk_dashboard(db_path: str, date: str) -> dict[str, Any]:
         tech_s = _safe(detect_ihsg_technicals, conn, date) or _empty_tech(date)
 
         foreign_flow = _get_foreign_flow(conn, date)
+        from engine.risk_score import ihsg_move
         risk = compute_market_risk_score(
-            vpin_s, accdist_s, breadth_s, tech_s, foreign_flow.get('net_5d')
+            vpin_s, accdist_s, breadth_s, tech_s, foreign_flow.get('net_5d'),
+            ihsg_day_move=_safe(ihsg_move, conn, date),
         )
 
         ihsg = {

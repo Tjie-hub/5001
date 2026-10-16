@@ -103,12 +103,33 @@ def _score_to_tier(score: float) -> str:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+# Live-event lessons (2026-10-16, MSCI consultation: IHSG opened -8.01% and halted, 2% of names advancing) -- the
+# score read 57.2 ORANGE, LOWER than the day before, because (1) VPIN had no data yet and INSUFFICIENT_DATA scored
+# 0 = "safe" at a 30% weight, and (2) the index's own move was not an input at all.
+#   (1) a sensor without data is left out and the other weights are rescaled (missing is not safe);
+#   (2) the IHSG day move (provisional bar allowed) sets a tier FLOOR: the market already told us.
+# Floors are fixed by the IDX rulebook / the event, not fitted: -8% is the IDX trading-halt threshold.
+SHOCK_FLOORS = ((-0.08, 'CRITICAL', 86.0), (-0.05, 'RED', 71.0), (-0.03, 'ORANGE', 51.0))
+_WEIGHTS = {'vpin': 0.30, 'accdist': 0.20, 'breadth': 0.20, 'technicals': 0.15, 'foreign_flow': 0.15}
+
+
+def ihsg_move(conn, date_str: str):
+    """IHSG close-to-close change for the latest bar on or before date_str (a provisional intraday bar counts),
+    as a fraction; None without two bars."""
+    rows = conn.execute("SELECT close FROM ohlcv WHERE ticker='IHSG' AND date<=? ORDER BY date DESC LIMIT 2",
+                        (date_str,)).fetchall()
+    if len(rows) < 2 or not rows[0][0] or not rows[1][0]:
+        return None
+    return rows[0][0] / rows[1][0] - 1
+
+
 def compute_market_risk_score(
     vpin_summary: dict,
     accdist_summary: dict,
     breadth_summary: dict,
     technicals: dict,
     foreign_net_5d,
+    ihsg_day_move=None,
 ) -> dict:
     """Compute composite market risk score from sensor summaries.
 
@@ -124,32 +145,35 @@ def compute_market_risk_score(
 
     Returns dict with: score (0-100), tier, label (=tier), components dict.
     """
-    c_vpin = _vpin_risk(vpin_summary)
-    c_accdist = _accdist_risk(accdist_summary)
-    c_breadth = _breadth_risk(breadth_summary)
-    c_tech = _technicals_risk(technicals)
-    c_foreign = _foreign_owned_brokerage_flow_risk(foreign_net_5d)
-
-    score = round(
-        c_vpin * 0.30
-        + c_accdist * 0.20
-        + c_breadth * 0.20
-        + c_tech * 0.15
-        + c_foreign * 0.15,
-        1,
-    )
+    missing = lambda d: (d or {}).get('label') == 'INSUFFICIENT_DATA'
+    comps = {
+        'vpin': None if missing(vpin_summary) else _vpin_risk(vpin_summary),
+        'accdist': _accdist_risk(accdist_summary),
+        'breadth': None if missing(breadth_summary) else _breadth_risk(breadth_summary),
+        'technicals': None if missing(technicals) else _technicals_risk(technicals),
+        'foreign_flow': _foreign_owned_brokerage_flow_risk(foreign_net_5d),
+    }
+    present = {k: v for k, v in comps.items() if v is not None}
+    wsum = sum(_WEIGHTS[k] for k in present)
+    score = round(sum(v * _WEIGHTS[k] for k, v in present.items()) / wsum, 1) if wsum else 40.0
     score = max(0.0, min(100.0, score))
+
+    shock = None
+    if ihsg_day_move is not None:
+        for cut, _tier, floor in SHOCK_FLOORS:
+            if ihsg_day_move <= cut:
+                shock = _tier
+                score = max(score, floor)
+                break
     tier = _score_to_tier(score)
 
+    out_comps = {k: (round(v, 1) if v is not None else None) for k, v in comps.items()}
+    if ihsg_day_move is not None:
+        out_comps['ihsg_move_pct'] = round(ihsg_day_move * 100, 2)
     return {
         'score': score,
         'tier': tier,
         'label': tier,
-        'components': {
-            'vpin': round(c_vpin, 1),
-            'accdist': round(c_accdist, 1),
-            'breadth': round(c_breadth, 1),
-            'technicals': round(c_tech, 1),
-            'foreign_flow': round(c_foreign, 1),
-        },
+        'shock_floor': shock,
+        'components': out_comps,
     }

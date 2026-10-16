@@ -902,19 +902,22 @@ _macro_panic_cache = {}
 
 def _macro_panic_state() -> bool:
     """Daniel-Moskowitz panic-state gate: IHSG below its 200-day MA AND 20-day
-    realized vol above the 75th percentile of the trailing year. Cached per day."""
-    import datetime as _dtm
-    today = str(_dtm.date.today())
-    if today in _macro_panic_cache:
-        return _macro_panic_cache[today]
+    realized vol above the 75th percentile of the trailing year.
+
+    Cached per latest IHSG bar, not per calendar day: 2026-10-16 the first call (08:58, before the open) cached
+    False from the 10-15 close and held it all day while IHSG opened -8% and the provisional bar already made the
+    state True."""
     panic = False
     try:
         conn = db_connect(DB_PATH)
         rows = conn.execute(
-            "SELECT close FROM ohlcv WHERE ticker='IHSG' "
+            "SELECT close, date FROM ohlcv WHERE ticker='IHSG' "
             "ORDER BY date DESC LIMIT 260"
         ).fetchall()
         conn.close()
+        key = (rows[0][1], rows[0][0]) if rows else None
+        if key in _macro_panic_cache:
+            return _macro_panic_cache[key]
         closes = pd.Series([r[0] for r in reversed(rows)], dtype=float)
         if len(closes) >= 210:
             below_ma = closes.iloc[-1] < closes.rolling(200).mean().iloc[-1]
@@ -924,8 +927,9 @@ def _macro_panic_state() -> bool:
             panic = bool(below_ma and high_vol)
     except Exception as e:
         logging.warning(f"[panic_state] error: {e}")
+        return panic
     _macro_panic_cache.clear()
-    _macro_panic_cache[today] = panic
+    _macro_panic_cache[key] = panic
     return panic
 
 
@@ -947,7 +951,28 @@ def _event_guard_active():
     except Exception:
         mult = 0.5
     today = str(_dtm.date.today())
-    return (start <= today <= end), mult
+    return (start <= today <= end or _shock_guard_active()), mult
+
+
+SHOCK_GUARD_MOVE = -0.05     # an IHSG day at or below this switches the guard on (2026-10-16: -8.01% open, halt)
+SHOCK_GUARD_SESSIONS = 5     # ... for the shock session and the next 4
+
+
+def _shock_guard_active() -> bool:
+    """Event guard learned from the live event: the configured window only knew the June 2026 MSCI dates, so the
+    October consultation shock passed with the guard off. Any IHSG session (a provisional bar counts) at or below
+    SHOCK_GUARD_MOVE keeps momentum entries blocked for SHOCK_GUARD_SESSIONS sessions."""
+    try:
+        conn = db_connect(DB_PATH)
+        rows = conn.execute("SELECT close FROM ohlcv WHERE ticker='IHSG' ORDER BY date DESC LIMIT ?",
+                            (SHOCK_GUARD_SESSIONS + 1,)).fetchall()
+        conn.close()
+    except Exception as e:
+        logging.warning(f"[shock_guard] error: {e}")
+        return False
+    closes = [r[0] for r in rows]
+    return any(closes[i + 1] and closes[i] / closes[i + 1] - 1 <= SHOCK_GUARD_MOVE
+               for i in range(min(SHOCK_GUARD_SESSIONS, len(closes) - 1)))
 
 
 def adaptive_strategy_selector(ticker: str, df: pd.DataFrame,

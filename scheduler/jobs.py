@@ -932,7 +932,10 @@ def get_market_risk_for_circuit_breaker() -> dict:
             breadth_s = get_market_breadth(conn, today)
             tech_s = detect_ihsg_technicals(conn, today)
             foreign_net = None
-            return compute_market_risk_score(vpin_s, accdist_s, breadth_s, tech_s, foreign_net)
+            from engine.risk_score import ihsg_move
+            # today's provisional IHSG bar: a -8% open is CRITICAL whatever the slower sensors say (2026-10-16)
+            return compute_market_risk_score(vpin_s, accdist_s, breadth_s, tech_s, foreign_net,
+                                             ihsg_day_move=ihsg_move(conn, today))
         finally:
             conn.close()
     except Exception as _e:
@@ -1112,7 +1115,9 @@ def run_market_health_report():
             ).fetchone()[0] or 0
         except Exception:
             foreign_net = None
-        risk = compute_market_risk_score(vpin_s, accdist_s, breadth_s, tech_s, foreign_net)
+        from engine.risk_score import ihsg_move
+        risk = compute_market_risk_score(vpin_s, accdist_s, breadth_s, tech_s, foreign_net,
+                                         ihsg_day_move=ihsg_move(conn, date_str))
         health = build_market_health_report(date_str, risk, vpin_s, accdist_s, breadth_s, tech_s, foreign_net)
 
         # External macro (overnight global) — prepended. Fail-soft.

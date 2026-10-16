@@ -300,10 +300,15 @@ def api_market_risk():
         ).fetchone()[0] or 0
     except Exception:
         foreign_net = None
+    try:
+        from engine.risk_score import ihsg_move
+        move = ihsg_move(conn, query_date)
+    except Exception:
+        move = None
 
     conn.close()
 
-    risk = compute_market_risk_score(vpin_s, accdist_s, breadth_s, tech_s, foreign_net)
+    risk = compute_market_risk_score(vpin_s, accdist_s, breadth_s, tech_s, foreign_net, ihsg_day_move=move)
     risk['date'] = query_date
     risk['sensors'] = {
         'vpin': vpin_s, 'accdist': accdist_s,
