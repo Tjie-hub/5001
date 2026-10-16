@@ -147,3 +147,31 @@ def test_post_close_sweep_is_reexported_for_start_scheduler():
     import scheduler.jobs as jobs
 
     assert scheduler.run_post_close_sweep is jobs.run_post_close_sweep
+
+
+def _flow(ticker, lots, cached=True):
+    return {"ticker": ticker, "trade_date": "2026-10-15", "buy_lot": lots, "sell_lot": lots, "net_lot": 0,
+            "buy_freq": 0, "sell_freq": 0, "net_value": 0, "last_price": 100, "_raw_data": None, "_cached": cached}
+
+
+def test_run_flow_skips_broker_calls_and_pacing_for_untraded_cached_tickers(monkeypatch, tmp_path):
+    # 2026-10-16: marketdetectors soft-throttles after ~580 calls; 130/958 untraded names never have a summary.
+    import stockbit_fetcher as sf
+
+    monkeypatch.setattr(sf, "WALKFORWARD_DB", str(tmp_path / "wf.db"))
+    c = sf.init_flow_db()   # the production table also carries the scoring columns (added by flow_filter)
+    for col in ("composite_score INTEGER", "verdict TEXT", "smart_money TEXT"):
+        c.execute(f"ALTER TABLE stockbit_flow ADD COLUMN {col}")
+    c.commit()
+    c.close()
+    flows = {"BBCA": _flow("BBCA", 10), "ZINC": _flow("ZINC", 0), "MISS": _flow("MISS", 0, cached=False)}
+    monkeypatch.setattr(sf, "fetch_flow", lambda tok, t, d=None: flows[t])
+    called, sleeps = [], []
+    monkeypatch.setattr(sf, "fetch_broker_flow", lambda tok, t, d=None: called.append(t) or {"ticker": t})
+    monkeypatch.setattr(sf, "_save_broker_flow", lambda conn, bf: "ok")
+    monkeypatch.setattr(sf.time, "sleep", lambda s: sleeps.append(s))
+    logs = []
+    monkeypatch.setattr(sf, "log", lambda *a, **k: logs.append(a))
+    sf.run_flow("tok", ["BBCA", "ZINC", "MISS"])
+    assert called == ["BBCA"], logs           # untraded: no broker call
+    assert len(sleeps) == 2                   # BBCA (broker call) and MISS (trade-book was requested); not ZINC

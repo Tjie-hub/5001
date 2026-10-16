@@ -24,8 +24,11 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # OHLCV fetch — pre-market
 50 8 * * 1-5 cd $D && $W stockbit_ohlcv sh -c 'venv/bin/python3 stockbit_fetcher.py --token "$(cat .stockbit_token)"'
 
-# Flow fetch (EOD) — 18:30, after the APScheduler 16:05 run finishes (~16:25)
-30 18 * * 1-5 cd $D && $W stockbit_flow sh -c 'venv/bin/python3 stockbit_fetcher.py flow --token "$(cat .stockbit_token)"'
+# Flow fetch (EOD) — 18:30: RETIRED 2026-10-16. It ran the same run_flow as the APScheduler 20:15 Broker Flow
+# Fetch (trade-book + broker summary for every ticker). Its ~580 broker calls spent Stockbit's marketdetectors
+# quota, so the 20:15 run got 757/958 empty summaries (10-15). The 20:15 job is the one run; its trade-book
+# side reads data/tradebook_cache from the 16:15 sweep. Manual backfill: stockbit_fetcher.py flow --date D.
+# 30 18 * * 1-5 cd $D && $W stockbit_flow sh -c 'venv/bin/python3 stockbit_fetcher.py flow --token "$(cat .stockbit_token)"'
 
 # Scheduler heartbeat watchdog (dead-man's-switch, audit 3.7)
 */10 * * * * cd $D && $W heartbeat_check venv/bin/python3 scripts/check_scheduler_heartbeat.py

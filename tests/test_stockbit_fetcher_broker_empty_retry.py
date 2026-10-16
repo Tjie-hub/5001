@@ -72,7 +72,7 @@ def test_untraded_ticker_is_not_retried(tmp_path, monkeypatch):
 
     db_path, logs = _setup(tmp_path, monkeypatch, broker, flow)
     sf.run_flow("tok", ["ZBRA"], "2026-10-07")
-    assert calls == ["ZBRA"]
+    assert calls == []   # 2026-10-16: an untraded ticker is not even asked once (marketdetectors quota)
     assert not any("broker summary empty" in m for m in logs)
 
 

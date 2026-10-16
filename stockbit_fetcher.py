@@ -596,13 +596,16 @@ def fetch_flow(token, ticker, date=None):
     # reuse it instead of sweeping all ~958 names a third time (data.tradebook_cache, 2026-10-15).
     today = not date or date == datetime.now().strftime("%Y-%m-%d")
     d = tradebook_cache.get(ticker, tradebook_cache.post_close()) if today else None
+    cached = d is not None
     if d is None:
         d = _request_tradebook(ticker, params, headers)
         if d is None:
             return None
         if today:
             tradebook_cache.put(ticker, d)
-    return _flow_from_tradebook(ticker, d, date)
+    flow = _flow_from_tradebook(ticker, d, date)
+    flow["_cached"] = cached
+    return flow
 
 
 def _request_tradebook(ticker, params, headers):
@@ -942,6 +945,7 @@ def run_flow(token, tickers, date=None):
     broker_missing = []
     for i, ticker in enumerate(tickers, 1):
         log(f"[{i}/{len(tickers)}] {ticker}...")
+        flow, traded = None, True   # never pace off the previous ticker's values
         try:
             flow = fetch_flow(token, ticker, date)
             if flow:
@@ -999,11 +1003,17 @@ def run_flow(token, tickers, date=None):
                 # assumption that this endpoint had no historical param was
                 # wrong, so backfill mode no longer skips this block.
                 traded = (flow.get("buy_lot") or 0) + (flow.get("sell_lot") or 0) > 0
-                try:
-                    status = _save_broker_flow(conn, fetch_broker_flow(token, ticker, date))
-                except Exception as be:
-                    log(f"  [WARN] broker flow error: {be}")
-                    status = "error"
+                # An untraded ticker has no broker summary (2026-10-15: 130 of 958, 0 rows), and marketdetectors
+                # soft-throttles after ~580 calls (empty 200s): every call on one is quota the rest need.
+                if not traded:
+                    log("  - no trades, broker summary skipped")
+                    status = "skipped"
+                else:
+                    try:
+                        status = _save_broker_flow(conn, fetch_broker_flow(token, ticker, date))
+                    except Exception as be:
+                        log(f"  [WARN] broker flow error: {be}")
+                        status = "error"
                 if status in ("empty", "error") and traded:
                     if status == "empty":
                         log("  [WARN] broker summary empty (traded ticker) -- queued for retry")
@@ -1012,7 +1022,9 @@ def run_flow(token, tickers, date=None):
                 log(f"  ✗ No data")
         except Exception as e:
             log(f"  ✗ {e}")
-        time.sleep(RATE_LIMIT_DELAY)
+        # no request this ticker (cached trade-book, no broker call): nothing to pace
+        if not (flow and flow.get("_cached") and not traded):
+            time.sleep(RATE_LIMIT_DELAY)
     broker_empty = _retry_broker_flow(conn, token, broker_missing, date) if broker_missing else []
     conn.close()
     log(f"\nDONE: {success}/{len(tickers)} success")
