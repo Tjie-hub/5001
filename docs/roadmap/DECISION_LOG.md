@@ -3569,6 +3569,29 @@ NeoBDM review of the same day; the G0 is run by the planner).
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-102 · {S} industry-momentum G0: stop rule fired — WITHDRAWN before registration (uncounted); production sector block observe-only
+**Status:** RECORDED · **Date:** 2026-10-16 · **Type:** G0 stop + withdrawal ·
+**Approval authority:** Owner, 2026-10-16: "go" on the planner's recommendation to withdraw. The G0 is branch
+`research/sector-momentum-2026-10`: freeze `d7a29c2` (sidecar `PREDECLARATION.sha256`), stop-rule results `ded5797`
+(`CENSUS_G0.json`, `POWER_G0.json`, `HANDOFF_G0.md`).
+
+- **G0 (D-101 scope):** 311 formations, **260 testable** (2004-01-30 → 2026-07-31; H1 109, H2 151); universe median
+  133 liquid labelled names (min 28); book median 40.5 names, monthly churn 43%; median 9 rankable sectors.
+  Bar 3.2996 had it registered at N = 613. No outcome of the sector signal was computed or read.
+- **Stop rule 1, survivorship (frozen before computed): PASSED.** Liquid-name attrition 0.59%/yr (80 of 13,597
+  name-months, 2021-07 → 2025-08) → implied 9.7% missing at the median H1 formation (2009-06), against 25%.
+- **Stop rule 2, power (frozen before computed): FIRED.** Random-label placebo (1,000 draws, sizes preserved):
+  σ 2.11%/mo (p05–p95 1.92–2.31%) → **power 8.3%** at 0.25%/mo net, against the 20% minimum; MDE(80%) 0.54%/mo.
+- **Status: WITHDRAWN.** The arm was never registered, so it is **not counted**. The census stays at **612**; no
+  HYPOTHESIS_REGISTRY row. {S} (D-101) stays open with no members. A later {S} arm (e.g. a design with materially
+  more power) is a new G0 under D-101's mechanism.
+- **Production (owner, same day, option 2 of the planner's options):** the `engine/sector_rotation.py` UNDERWEIGHT
+  block is **observe-only by default** (`SECTOR_ROTATION_MODE=shadow`, hardening `0036ee1`, restarted 15:18 via
+  `safe_restart.sh`): logged as `[sector SHADOW] … would be blocked`, never applied; `enforce` restores it. The rule
+  remains unvalidated in both directions.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
