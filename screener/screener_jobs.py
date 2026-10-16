@@ -419,54 +419,58 @@ def run_eod(trade_date: str = None, send_telegram=None) -> dict:
     logger.info(f"[screener] VPIN: {vpin_ok} done, {len(signals)} signals")
 
     # ── Coverage fallback: insert neutral entries for tickers without daily_screen data today
+    # Its own connection: since 91bbf23 (2026-10-14) the VPIN block's `conn` is closed by here, and every run from
+    # 10-15 failed with "Cannot operate on a closed database". It also loaded the WHOLE ohlcv table into pandas --
+    # the memory class that OOM-killed the worker on 10-14 -- so only the missing tickers' last bars are read now.
     try:
-        existing = set(r[0] for r in conn.execute(
-            "SELECT ticker FROM daily_screen WHERE date=?", (trade_date,)
-        ).fetchall())
-        missing = [t for t in tickers if t not in existing]
-        if missing:
-            import pandas as _pd
-            import numpy as _np
-            ohlcv_all = _pd.read_sql(
-                'SELECT * FROM ohlcv ORDER BY ticker, date ASC', conn
-            )
-            for c in ['open', 'high', 'low', 'close', 'volume']:
-                ohlcv_all[c] = ohlcv_all[c].astype(float)
-            grouped = {t: grp.reset_index(drop=True) for t, grp in ohlcv_all.groupby('ticker')}
-            fallback_ok = 0
-            for ticker in missing:
-                try:
-                    df = grouped.get(ticker)
-                    if df is None or len(df) < 20:
-                        continue
-                    last = df.iloc[-1]
-                    avg_vol = df['volume'].tail(20).mean()
-                    vr = last['volume'] / avg_vol if avg_vol > 0 else None
-                    rng = last['high'] - last['low']
-                    delta_p = (last['close'] - last['open']) / rng * last['volume'] if rng > 0 else 0
-                    tp = (last['high'] + last['low'] + last['close']) / 3
-                    signal = 'neutral'
-                    if vr is not None and vr > 1.5:
-                        if delta_p > 0 and last['close'] > tp:
-                            signal = 'bullish'
-                        elif delta_p < 0 and last['close'] < tp:
-                            signal = 'bearish'
-                        else:
-                            signal = 'watch'
-                    conn.execute(
-                        "INSERT OR IGNORE INTO daily_screen "
-                        "(date, ticker, close, volume, avg_vol_20d, vol_ratio, vwap, delta, signal) "
-                        "VALUES (?,?,?,?,?,?,?,?,?)",
-                        (trade_date, ticker, int(last['close']), int(last['volume']),
-                         int(avg_vol), round(float(vr), 2) if vr else None,
-                         round(float(tp), 2), int(delta_p), signal)
-                    )
-                    fallback_ok += 1
-                except Exception:
-                    pass
-            conn.commit()
-            if fallback_ok:
-                logger.info(f"[screener] Coverage fallback: {fallback_ok}/{len(missing)} tickers inserted")
+        with db.txn() as conn:
+            existing = set(r[0] for r in conn.execute(
+                "SELECT ticker FROM daily_screen WHERE date=?", (trade_date,)
+            ).fetchall())
+            missing = [t for t in tickers if t not in existing]
+            if missing:
+                import pandas as _pd
+                import numpy as _np
+                ohlcv_all = _pd.concat([_pd.read_sql(
+                    'SELECT * FROM (SELECT * FROM ohlcv WHERE ticker = ? ORDER BY date DESC LIMIT 25) ORDER BY date ASC',
+                    conn, params=(t,)) for t in missing], ignore_index=True)
+                for c in ['open', 'high', 'low', 'close', 'volume']:
+                    ohlcv_all[c] = ohlcv_all[c].astype(float)
+                grouped = {t: grp.reset_index(drop=True) for t, grp in ohlcv_all.groupby('ticker')}
+                fallback_ok = 0
+                for ticker in missing:
+                    try:
+                        df = grouped.get(ticker)
+                        if df is None or len(df) < 20:
+                            continue
+                        last = df.iloc[-1]
+                        avg_vol = df['volume'].tail(20).mean()
+                        vr = last['volume'] / avg_vol if avg_vol > 0 else None
+                        rng = last['high'] - last['low']
+                        delta_p = (last['close'] - last['open']) / rng * last['volume'] if rng > 0 else 0
+                        tp = (last['high'] + last['low'] + last['close']) / 3
+                        signal = 'neutral'
+                        if vr is not None and vr > 1.5:
+                            if delta_p > 0 and last['close'] > tp:
+                                signal = 'bullish'
+                            elif delta_p < 0 and last['close'] < tp:
+                                signal = 'bearish'
+                            else:
+                                signal = 'watch'
+                        conn.execute(
+                            "INSERT OR IGNORE INTO daily_screen "
+                            "(date, ticker, close, volume, avg_vol_20d, vol_ratio, vwap, delta, signal) "
+                            "VALUES (?,?,?,?,?,?,?,?,?)",
+                            (trade_date, ticker, int(last['close']), int(last['volume']),
+                             int(avg_vol), round(float(vr), 2) if vr else None,
+                             round(float(tp), 2), int(delta_p), signal)
+                        )
+                        fallback_ok += 1
+                    except Exception:
+                        pass
+                conn.commit()
+                if fallback_ok:
+                    logger.info(f"[screener] Coverage fallback: {fallback_ok}/{len(missing)} tickers inserted")
     except Exception as _fe:
         logger.error(f"[screener] Coverage fallback error: {_fe}")
 
