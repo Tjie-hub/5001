@@ -3506,6 +3506,32 @@ NeoBDM review of the same day; the G0 is run by the planner).
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-100 · Forward record FWD-PM-HALTARB-001: names at ARB on IHSG trading-halt days (recorded, not read)
+**Status:** RECORDED · **Date:** 2026-10-16 · **Type:** Protocol freeze (forward recording; no hypothesis, no census arm) ·
+**Approval authority:** Owner, 2026-10-16: "backtest this ARB type, many rebound after that", then
+"Forward recorder (Recommended)". Protocol `docs/research_programs/P-M/forward_halt_arb/PROTOCOL.md`
+(sha256 `d1be101407308ced…`), recorder `run_recorder.py` (`abf6d629b81932eb…`).
+
+- **Why not a backtest.** The idea came from 2026-10-16: IHSG opened −8.01% after MSCI's Standalone consultation,
+  trading was halted 09:00–09:28, and many names rebounded off ARB after the resume (TOWR 382 → 424). Only
+  **4** halt-threshold days exist in the data (2025-03-18, 2025-04-08, 2026-01-28, 2026-01-29; IHSG from 2021-07).
+  Names on one day move together, so the effective sample is 4 dates: no result could clear the bar (3.30) and
+  the D-074/D-080 floor is 20 events. No outcome on those days was read. Prior evidence runs the other way
+  (D-079: close-entry after market stress, −2.12%, t −6.18); the intraday bounce off ARB was not tested there.
+- **Frozen.** Event day: settled IHSG low ≤ −8% vs the prior close (IDX halt level, Kep-00002/BEI/04-2025).
+  Names: liquid ex-ante (ADV20 ≥ Rp 1bn, price ≥ 50) with low ≤ ARB = prior close × 0.85 rounded up to the IDX
+  tick (the rounding reproduces the 2026-10-16 live floors of BBRI, TLKM, BBCA, TOWR). Legs: from the ARB price and
+  from the close of D to D's close, t+1 and t+5; benchmarks IHSG and the equal-weight liquid set; void rows kept
+  with a reason. Never back-filled; 2026-10-16 refused as the motivating case.
+- **Gate.** No outcome is read before **20 event days**; then a G0 under the D-086 stop rule. A test needs its own
+  D-entry and a family decision: Price-Reversal's slots are used (D-079 took slot 3), so it needs a widening
+  amendment (PG-3/PG-6/R7.5) or a new mechanism family. At ~1 halt day a year, 20 may take many years; stated so
+  the wait is not mistaken for neglect.
+- **Context, not evidence:** jurnal26 `macro_watch.py --halt` (halt/resume alerts with a 20-big-cap snapshot).
+- **Census unchanged at 612.** Cron: weekdays 09:50 WIB (after the settled-bar write).
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)

@@ -1,0 +1,9 @@
+{
+ "spec_id": "FWD-PM-HALTARB-001",
+ "protocol": "PROTOCOL.md",
+ "decision": "D-100",
+ "opened_utc": "2026-10-16T09:00:00+00:00",
+ "_comment": "Append-only. event_days: one object per IHSG halt-threshold day (low <= -8% vs prior close) on or after opened_utc, written when its t+5 leg closes; 2026-10-16 refused (motivating case). rows: one object per liquid ARB-touch name on an event day. Never back-filled. No outcome field is read before 20 event days (PROTOCOL.md section 5).",
+ "event_days": [],
+ "rows": []
+}

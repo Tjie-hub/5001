@@ -143,3 +143,5 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 # docs/research_programs/P-M/forward_bank/ledger.json only when its 10-session
 # window closes with every leg present; read-only against the DB; refuses back-fill.
 40 9 * * * cd $D && $W fwd_bank_recorder venv/bin/python3 docs/research_programs/P-M/forward_bank/run_recorder.py
+# FWD-PM-HALTARB-001 (D-100): names at ARB on IHSG halt days; records only, nothing read before 20 event days
+50 9 * * 1-5 cd $D && $W fwd_halt_arb_recorder venv/bin/python3 docs/research_programs/P-M/forward_halt_arb/run_recorder.py
