@@ -212,7 +212,20 @@ def _get_sector_scores_cached():
 #   off     → internal sector_rotation only (legacy behavior)
 #   shadow  → internal decides; log when sectors.app disagrees
 #   enforce → both must agree to greenlight
+# SECTOR_ROTATION_MODE: shadow (default) | enforce
+#   The UNDERWEIGHT block from engine/sector_rotation.py has never been validated. Its research test (D-101,
+#   industry momentum {S}) was stopped at G0 on 2026-10-16: power 8.3% < 20%, so there is no evidence either way.
+#   Owner 2026-10-16: observe-only until tested. shadow = compute and log the verdict, never block; enforce = the
+#   old behaviour.
 def _sector_verdict(ticker, scored):
+    ok, reason = _sector_verdict_raw(ticker, scored)
+    if ok or os.getenv("SECTOR_ROTATION_MODE", "shadow").strip().lower() == "enforce":
+        return ok, reason
+    logging.info(f"[sector SHADOW] {ticker} would be blocked: {reason}")
+    return True, f"{reason} (observe-only, untested)"
+
+
+def _sector_verdict_raw(ticker, scored):
     mode = os.getenv("SECTORS_APP_MODE", "off").strip().lower()
     if mode == "off":
         from engine.sector_rotation import is_sector_tradeable
