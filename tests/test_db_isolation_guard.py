@@ -78,15 +78,42 @@ def test_recorder_flags_connects_under_real_data(tmp_path, monkeypatch):
     monkeypatch.setattr(cf, "_REPO_DATA_DIR", tmp_path)
     with cf._record_real_db_opens() as opens:
         sqlite3.connect(tmp_path / "w.db").close()
-        sqlite3.connect(f"file:{tmp_path / 'w.db'}?mode=ro", uri=True).close()
+        sqlite3.connect(f"file:{tmp_path / 'w.db'}?mode=ro", uri=True).close()   # exempt: verified ro
         work = tmp_path / "sub"
         work.mkdir()
         sqlite3.connect(work / "scratch.db").close()
-    assert len(opens) == 3 and all(str(tmp_path) in o for o in opens)
+    assert len(opens) == 2 and all(str(tmp_path) in o for o in opens)
     with cf._record_real_db_opens() as opens:
         elsewhere = tmp_path.parent / "outside.db"
         sqlite3.connect(elsewhere).close()
     assert opens == []
+
+
+def test_recorder_exempts_verified_read_only_opens(tmp_path, monkeypatch):
+    """A deliberate live-data test may READ the real DB by opening it mode=ro -- SQLite
+    refuses writes on such a connection, so the recorder treats it as verified read-only
+    (2026-10-16: TestTFBContextFilterLive's plain connect was a true positive)."""
+    import sqlite3
+    monkeypatch.setattr(cf, "_REPO_DATA_DIR", tmp_path)
+    sqlite3.connect(tmp_path / "w.db").close()          # create it (mode=ro/rw never create)
+    with cf._record_real_db_opens() as opens:
+        sqlite3.connect(f"file:{tmp_path / 'w.db'}?mode=ro", uri=True).close()
+    assert opens == []
+    with cf._record_real_db_opens() as opens:      # rw URI form is still flagged
+        sqlite3.connect(f"file:{tmp_path / 'w.db'}?mode=rw", uri=True).close()
+    assert len(opens) == 1
+
+
+def test_changed_main_file_of_preexisting_db_is_not_flagged(tmp_path, monkeypatch):
+    """The 2026-10-16 12:0x suite error: the live service rewrote walkforward.db itself
+    during test teardown (nobody holding it open at that instant), and the mtime sweep
+    blamed the test. Pre-existing DB files are exempt; the sqlite3.connect recorder is
+    the attribution layer for writes."""
+    monkeypatch.setattr(cf, "_REPO_DATA_DIR", tmp_path)
+    (tmp_path / "w.db").write_text("one")
+    before = cf._real_db_files()
+    (tmp_path / "w.db").write_text("written by the live service, not the test")
+    assert cf._changed_by_tests(cf._real_db_files(), before) == set()
 
 
 def test_a_real_write_still_fails_the_guard(tmp_path):

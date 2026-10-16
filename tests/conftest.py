@@ -143,20 +143,28 @@ def _under_repo_data(target) -> bool:
     return abs_t == root or abs_t.startswith(root + os.sep)
 
 
+def _is_read_only_uri(target) -> bool:
+    """True for sqlite file: URIs opened mode=ro -- SQLite itself refuses writes on them,
+    so the recorder treats them as verified read-only (the deliberate live-data tests)."""
+    return isinstance(target, str) and target.startswith("file:") \
+        and "mode=ro" in target[5:].split("?", 1)[-1]
+
+
 @contextmanager
 def _record_real_db_opens():
-    """Record every in-process sqlite3.connect() whose target is under the real data/ dir.
+    """Record every in-process sqlite3.connect() whose target is under the real data/ dir,
+    except verified read-only (mode=ro) opens.
 
     data.db.connect routes through sqlite3.connect, so this one patch sees every SQLite open
     the test process makes. The root conftest pins DB_PATH before config.py is imported, so a
     well-behaved test never lands here; one that does has bypassed DB_PATH and fails its test
-    whatever it then does with the connection (read or write)."""
+    whatever it then does with the connection."""
     import sqlite3
     real_opens = []
     orig = sqlite3.connect
 
     def _connect(target, *args, **kwargs):
-        if _under_repo_data(target):
+        if _under_repo_data(target) and not _is_read_only_uri(target):
             real_opens.append(str(target))
         return orig(target, *args, **kwargs)
 
@@ -168,16 +176,21 @@ def _record_real_db_opens():
 
 
 def _changed_by_tests(after: set, before: set) -> set:
-    """Entries that appeared or changed, minus files a live process is holding open,
-    and minus sidecars (-wal/-journal/-shm) of a database that already existed:
-    those carry the live service's WAL writes just as much as a test's, so an mtime
-    change on them is not attributable to anybody (see _DB_SIDE_SUFFIXES). A sidecar
-    with no pre-existing main .db is still flagged."""
-    pre = {_main_db_name(name) for name, _, _ in before}
+    """Files under data/ that did not exist before the test/session.
+
+    (2026-10-16) PRE-EXISTING database files are exempt outright: the live 5001 service writes
+    walkforward.db and its -wal continuously through short-lived connections, so there are
+    instants where nobody else holds them open and an mtime change proves nothing -- the
+    per-test and session guards each span minutes and blamed random tests (walkforward.db-wal
+    all morning, then the main file itself at 12:0x: 'test created/modified walkforward.db').
+    Attribution of test WRITES is the sqlite3.connect recorder's job: it fails any non-read-only
+    open of the real data/ dir, and SQLite enforces mode=ro. The filesystem layer keeps only
+    what it alone can see: files that did not exist before (stray artifacts, whole-DB copies)."""
+    pre = {name for name, _, _ in before} | {_main_db_name(name) for name, _, _ in before}
     out = set()
     for e in after - before:
         name, _, _ = e
-        if name != _main_db_name(name) and _main_db_name(name) in pre:
+        if name in pre or _main_db_name(name) in pre:
             continue
         if _held_open_by_other_process(_REPO_DATA_DIR / name):
             continue

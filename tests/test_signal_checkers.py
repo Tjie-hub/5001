@@ -400,7 +400,9 @@ def _prod_db_has(table: str, db_path: str = 'data/walkforward.db') -> bool:
     if not os.path.exists(db_path):
         return False
     try:
-        conn = sqlite3.connect(db_path)
+        # mode=ro: this is a deliberate read-only live-data check, and the DB-isolation guard
+        # in tests/conftest.py exempts verified read-only opens (SQLite refuses writes on them).
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
         ok = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
             (table,),
@@ -465,7 +467,9 @@ class TestTFBContextFilterLive:
         if not _prod_db_has('ohlcv', db_path):
             pytest.skip('prod DB / ohlcv not available')
 
-        conn = sqlite3.connect(db_path)
+        # mode=ro: deliberate read-only live-data test; the DB-isolation guard exempts
+        # verified read-only opens (2026-10-16: the plain connect was flagged by the recorder).
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
         rows = conn.execute(
             "SELECT date, open, high, low, close, volume FROM ohlcv "
             "WHERE ticker='BRPT' ORDER BY date"
