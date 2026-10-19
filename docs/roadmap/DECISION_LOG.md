@@ -3592,6 +3592,27 @@ NeoBDM review of the same day; the G0 is run by the planner).
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-103 · D-098 instrument correction: the big-player alert builder crashed whenever a split-order algo ran (definitions unchanged)
+**Status:** RECORDED · **Date:** 2026-10-19 · **Type:** Instrument correction (supersedes D-099's `bigplayer_watch.py` hash only) ·
+**Approval authority:** Owner, 2026-10-19: "fix all" on the full audit (`docs/audit/IDX_FULL_AUDIT_2026-10-19.md`, F2).
+
+- **Defect.** `bigplayer_watch.message()` held the absorption read in `a` and then reused `a` as the loop variable
+  over the running algos. Whenever an algo was running, the absorption section read an algo record and raised
+  `KeyError 'sold'`. Crashes inside the recording window (from 2026-10-15 14:15): **2026-10-16 11:20** (BRPT ALGO)
+  and **2026-10-16 15:00** (ARNA ALGO); one more at 2026-10-15 14:30, before recording began.
+- **Effect on the record.** The event line was appended before the crash, so those two events are in
+  `bigplayer_events.jsonl`. The crash then skipped saving that ticker's state and every ticker after it
+  (alphabetically) in that run. **Instrument-gap windows:** the 11:20 and 15:00 runs of 2026-10-16 for the tickers
+  after BRPT and after ARNA respectively — a G0 treats them as data gaps (the D-095 pattern), and de-duplicates any
+  event the next run re-logged for the crashing ticker.
+- **Fix (jurnal26 `5fc8b93`).** The loop variable is renamed; nothing else changes. **Event definitions, thresholds
+  and the logged `version` (`32703b1`) are unchanged.** New file hash: `bigplayer_watch.py` `8618183215762237…`;
+  `tape.py` `4cd0dfcee3d77ad3…` and `limit_watch.py` `bb9fd2f6302bf736…` unchanged. Regression tests: an algo alone,
+  and an algo with an absorption, both render.
+- **Census unchanged at 612.** No outcome was read.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
