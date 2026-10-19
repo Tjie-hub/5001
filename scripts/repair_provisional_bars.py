@@ -193,6 +193,18 @@ def basis_factor(conn, ticker: str, date: str, bars: dict[str, dict]):
             all_factors.append(None)
     if not factors:
         return None, "no reference session"
+    # The nearest settled session on EACH side of the target decides first (2026-10-19, AHAP 2026-10-12): a corporate
+    # action BEFORE both of them (rights issue ex 10-09, yfinance TERP-adjusted history 1.2194) leaves both at the
+    # same basis, so the target shares it -- the median of all references (seven pre-event at 1.2194) outvoted them.
+    # If the two disagree, the basis changes between them and the target's side is unknown: refuse.
+    usable = [((rd, rc), fx) for (rd, rc), fx in zip(refs, all_factors) if fx is not None]
+    before = [fx for (rd, _), fx in usable if rd < date]
+    after = [fx for (rd, _), fx in usable if rd > date]
+    if before and after:
+        b, a = before[-1], after[0]
+        if abs(b / a - 1) <= FACTOR_AGREEMENT:
+            return (b + a) / 2, 2
+        return None, f"basis changes inside the bracket of the session ({b:.4f} before, {a:.4f} after)"
     if len(factors) == 1:
         return None, "only one reference session (cannot confirm basis)"
     # use the tightest-agreeing pair around the median

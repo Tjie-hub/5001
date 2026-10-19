@@ -94,3 +94,30 @@ def test_ihsg_is_never_rebased():
     assert "IHSG" in rpb.NO_REBASE
     src = Path(ROOT / "scripts" / "repair_provisional_bars.py").read_text()
     assert '(1.0, "index") if t in NO_REBASE else basis_factor(' in src
+
+
+def _ahap_like(tmp_path, after_factor=1.0):
+    """AHAP 2026-10-12: rights issue ex 10-09 (7:5 @50) -> yfinance history before 10-09 is TERP-adjusted
+    (factor 1.2194 on 7 refs), 1.0 from 10-09 on. The median of all refs (1.2194) outvoted the bracketing refs."""
+    before = [("2026-09-30", 90.0), ("2026-10-01", 91.0), ("2026-10-02", 92.0), ("2026-10-05", 94.0),
+              ("2026-10-06", 96.0), ("2026-10-07", 93.0), ("2026-10-08", 88.0)]
+    after = [("2026-10-09", 78.0), ("2026-10-13", 71.0), ("2026-10-14", 66.0), ("2026-10-15", 59.0),
+             ("2026-10-16", 51.0)]
+    conn = _db(tmp_path, before + after)
+    bars = {d: {"close": c / 1.2194} for d, c in before}
+    bars.update({d: {"close": c} for d, c in after})
+    bars["2026-10-13"] = {"close": 71.0 / after_factor}
+    bars["2026-10-12"] = {"close": 70.0}
+    return conn, bars
+
+
+def test_bracketing_references_decide_when_an_event_precedes_both(tmp_path):
+    conn, bars = _ahap_like(tmp_path)
+    f, n = rpb.basis_factor(conn, "X", "2026-10-12", bars)
+    assert abs(f - 1.0) < 1e-9 and n == 2
+
+
+def test_refuses_when_the_basis_changes_between_the_bracketing_references(tmp_path):
+    conn, bars = _ahap_like(tmp_path, after_factor=1.15)  # an event between 10-09 and 10-13: side unknown
+    f, info = rpb.basis_factor(conn, "X", "2026-10-12", bars)
+    assert f is None and "bracket" in info
