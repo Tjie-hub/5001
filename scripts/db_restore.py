@@ -20,6 +20,7 @@ import datetime
 import gzip
 import json
 import logging
+import os
 import shutil
 import sqlite3
 import subprocess
@@ -30,6 +31,28 @@ from pathlib import Path
 from scripts.db_backup import DEFAULT_DB, verify
 
 logger = logging.getLogger("db_restore")
+
+# Scratch for the decompressed copy. Not /tmp: since the Ubuntu 26.04 upgrade (2026-10-13) /tmp is a 3.6 GB
+# tmpfs and the ~15 GB DB cannot fit -- the 2026-10-11 and 2026-10-18 weekly drills both died mid-decompress
+# ("No space left on device" / "Disk quota exceeded") and left the partial file behind. /var/tmp is disk-backed.
+DEFAULT_WORK_PARENT = Path(os.environ.get("IDX_RESTORE_WORK_DIR", "/var/tmp"))
+SPACE_FACTOR = 1.1          # need ~the uncompressed size; 10% slack
+UNKNOWN_RATIO = 6           # no meta: assume the .zst expands ~6x (observed 3.06 GB -> 15.2 GB = 5x)
+
+
+def need_bytes(backup_file: Path, meta: dict | None) -> int:
+    size = (meta or {}).get("size_bytes") or backup_file.stat().st_size * UNKNOWN_RATIO
+    return int(size * SPACE_FACTOR)
+
+
+def check_scratch(work_parent: Path, need: int) -> None:
+    probe = work_parent
+    while not probe.exists() and probe != probe.parent:
+        probe = probe.parent
+    free = shutil.disk_usage(probe).free
+    if free < need:
+        raise RuntimeError(f"only {free / 1e9:.1f} GB free on {probe}, need ~{need / 1e9:.1f} GB to decompress "
+                           f"-- pass --work-dir on a larger disk or set IDX_RESTORE_WORK_DIR")
 
 
 def decompress(backup_file: Path, work_dir: Path) -> Path:
@@ -99,11 +122,19 @@ def main(argv=None) -> int:
                     help="scratch dir for decompression (default: temp dir)")
     args = ap.parse_args(argv)
 
-    work = args.work_dir or Path(tempfile.mkdtemp(prefix="db_restore_"))
-    work.mkdir(parents=True, exist_ok=True)
+    meta = load_meta(args.backup)
+    own_work = args.work_dir is None
+    work = None
     try:
+        parent = args.work_dir or DEFAULT_WORK_PARENT
+        check_scratch(parent, need_bytes(args.backup, meta))  # before writing a byte
+        if own_work:
+            DEFAULT_WORK_PARENT.mkdir(parents=True, exist_ok=True)
+            work = Path(tempfile.mkdtemp(prefix="db_restore_", dir=DEFAULT_WORK_PARENT))
+        else:
+            work = args.work_dir
+            work.mkdir(parents=True, exist_ok=True)
         restored = decompress(args.backup, work)
-        meta = load_meta(args.backup)
         verify_restore(restored, meta)
         if args.apply:
             apply_restore(restored, args.db)
@@ -114,6 +145,9 @@ def main(argv=None) -> int:
     except Exception as e:
         logger.error("restore failed: %s", e)
         return 1
+    finally:
+        if own_work and work is not None:
+            shutil.rmtree(work, ignore_errors=True)  # never leave a 15 GB partial behind
     return 0
 
 

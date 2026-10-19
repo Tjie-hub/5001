@@ -86,6 +86,11 @@ def snapshot(db_path: Path, dest_dir: Path, now: datetime.datetime | None = None
     return out
 
 
+def _drop_sidecars(db_file: Path) -> None:
+    for ext in ("-wal", "-shm"):
+        db_file.with_name(db_file.name + ext).unlink(missing_ok=True)
+
+
 def verify(db_file: Path) -> dict:
     """PRAGMA integrity_check + per-table row counts. Raises on corruption."""
     conn = sqlite3.connect(f"file:{db_file}?mode=ro", uri=True)
@@ -185,9 +190,13 @@ def run_backup(db_path: Path, dest_dir: Path, keep_daily: int = 7,
         snap.unlink(missing_ok=True)
         logger.error("backup FAILED verification — snapshot deleted")
         raise
+    _drop_sidecars(snap)  # verify() opened the WAL-mode snapshot; its -shm/-wal outlived the .zst
     compressed = compress(snap)
     write_meta(compressed, meta)
     prune(dest_dir, keep_daily=keep_daily, keep_weekly=keep_weekly, prefix=prefix)
+    for orphan in [*dest_dir.glob("*.db-shm"), *dest_dir.glob("*.db-wal")]:  # left by older runs
+        if not orphan.with_name(orphan.name[:-4]).exists():
+            orphan.unlink(missing_ok=True)
     logger.info("backup complete: %s", compressed.name)
     return compressed
 

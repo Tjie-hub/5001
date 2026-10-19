@@ -195,3 +195,59 @@ def test_main_returns_1_on_insufficient_space(src_db, tmp_path, monkeypatch):
     monkeypatch.setattr(db_backup.shutil, "disk_usage",
                         lambda p: Usage(10**12, 10**12 - 10, 10))
     assert db_backup.main(["--db", str(src_db), "--dest", str(tmp_path / "b")]) == 1
+
+
+# ── 2026-10-18 drill failure: /tmp became a 3.6 GB tmpfs (Ubuntu 26.04, 2026-10-13) and the 15 GB DB
+# could not be decompressed there ("Disk quota exceeded"); the half-written file was left behind.
+
+def test_restore_default_scratch_is_the_configured_disk_dir_and_is_cleaned(src_db, tmp_path, monkeypatch):
+    scratch = tmp_path / "disk_scratch"
+    monkeypatch.setattr(db_restore, "DEFAULT_WORK_PARENT", scratch)
+    backup = db_backup.run_backup(src_db, tmp_path / "backups")
+    assert db_restore.main([str(backup)]) == 0
+    assert scratch.exists() and not any(scratch.iterdir())  # its own temp dir was removed
+
+
+def test_restore_default_parent_is_not_tmpfs_tmp():
+    assert not str(db_restore.DEFAULT_WORK_PARENT).startswith("/tmp")
+
+
+def test_restore_refuses_up_front_when_scratch_is_too_small(src_db, tmp_path, monkeypatch):
+    import collections
+    Usage = collections.namedtuple("Usage", "total used free")
+    backup = db_backup.run_backup(src_db, tmp_path / "backups")  # before the patch: shutil is shared
+    monkeypatch.setattr(db_restore, "DEFAULT_WORK_PARENT", tmp_path / "s")
+    monkeypatch.setattr(db_restore.shutil, "disk_usage", lambda p: Usage(10**12, 10**12 - 10, 10))
+    called = []
+    monkeypatch.setattr(db_restore, "decompress", lambda *a: called.append(a))
+    assert db_restore.main([str(backup)]) == 1
+    assert called == []  # never started writing
+
+
+def test_restore_auto_scratch_removed_even_on_failure(src_db, tmp_path, monkeypatch):
+    scratch = tmp_path / "s"
+    monkeypatch.setattr(db_restore, "DEFAULT_WORK_PARENT", scratch)
+    backup = db_backup.run_backup(src_db, tmp_path / "backups")
+    meta_path = backup.parent / (backup.name.split(".db")[0] + ".meta.json")
+    meta = json.loads(meta_path.read_text())
+    meta["tables"]["ohlcv"] = 999
+    meta_path.write_text(json.dumps(meta))
+    assert db_restore.main([str(backup)]) == 1
+    assert not any(scratch.iterdir())
+
+
+def test_backup_leaves_no_wal_shm_side_files(tmp_path):
+    """Verifying a snapshot of a WAL-mode DB creates -shm/-wal next to it; they outlived the compressed backup
+    (dozens of orphans in ~/backups by 2026-10-19)."""
+    src = tmp_path / "wal.db"
+    c = sqlite3.connect(src)
+    c.execute("PRAGMA journal_mode=WAL")
+    c.execute("CREATE TABLE t (x)")
+    c.execute("INSERT INTO t VALUES (1)")
+    c.commit()
+    c.close()
+    dest = tmp_path / "backups"
+    (dest).mkdir()
+    (dest / "walkforward-20260101-000000.db-shm").write_bytes(b"x")   # an old orphan with no backup
+    db_backup.run_backup(src, dest)
+    assert not list(dest.glob("*.db-shm")) and not list(dest.glob("*.db-wal"))
