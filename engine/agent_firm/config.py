@@ -39,7 +39,11 @@ FIRM_ENABLED = _env_bool("AGENT_FIRM_ENABLED", False)
 FIRM_ENFORCE = _env_bool("AGENT_FIRM_ENFORCE", False)
 
 DAILY_SPEND_CAP_USD = float(os.getenv("AGENT_FIRM_DAILY_CAP", "5.0"))
-KILL_SWITCH_FILE = Path(os.getenv("AGENT_FIRM_KILL_FILE", "/tmp/agent_firm.disable"))
+# Persistent default (audit 2026-10-19 F16): since the Ubuntu 26.04 upgrade /tmp is a tmpfs, so a switch set at the
+# old /tmp path vanished at reboot and silently re-enabled the firm. The legacy path is still honoured.
+KILL_SWITCH_FILE = Path(os.getenv("AGENT_FIRM_KILL_FILE",
+                                  str(Path(__file__).resolve().parents[2] / "data" / "agent_firm.disable")))
+LEGACY_KILL_SWITCH_FILE = Path("/tmp/agent_firm.disable")
 
 MODEL_ID = os.getenv("AGENT_FIRM_MODEL", "glm-5.3-flash")
 
@@ -200,6 +204,6 @@ def is_active() -> bool:
     enabled = _runtime["enabled"] if _runtime is not None else FIRM_ENABLED
     if not enabled:
         return False
-    if KILL_SWITCH_FILE.exists():
+    if KILL_SWITCH_FILE.exists() or LEGACY_KILL_SWITCH_FILE.exists():
         return False
     return True

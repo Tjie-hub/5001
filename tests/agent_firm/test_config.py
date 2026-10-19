@@ -33,6 +33,7 @@ def test_enabled_via_env(monkeypatch, tmp_path):
     monkeypatch.setattr("engine.agent_firm.config.KILL_SWITCH_FILE", tmp_path / "missing")
     cfg = reload_config()
     monkeypatch.setattr(cfg, "KILL_SWITCH_FILE", tmp_path / "missing")
+    monkeypatch.setattr(cfg, "LEGACY_KILL_SWITCH_FILE", tmp_path / "missing-legacy")  # hermetic: not the real /tmp
     assert cfg.FIRM_ENABLED is True
     assert cfg.is_active() is True
 
@@ -181,3 +182,22 @@ def test_explicit_env_var_wins_over_dotenv(monkeypatch, tmp_path):
     monkeypatch.setenv("AGENT_FIRM_MODEL", "from-real-env")
     cfg = reload_config()
     assert cfg.MODEL_ID == "from-real-env"
+
+
+def test_kill_switch_default_survives_reboot(monkeypatch):
+    """Audit 2026-10-19 F16: /tmp is a tmpfs since the Ubuntu 26.04 upgrade, so a kill switch set there vanished at
+    reboot and silently re-enabled the firm. The default lives under data/ now."""
+    monkeypatch.delenv("AGENT_FIRM_KILL_FILE", raising=False)
+    cfg = reload_config()
+    assert not str(cfg.KILL_SWITCH_FILE).startswith("/tmp")
+    assert cfg.KILL_SWITCH_FILE.name == "agent_firm.disable" and cfg.KILL_SWITCH_FILE.parent.name == "data"
+
+
+def test_legacy_tmp_kill_switch_is_still_honoured(monkeypatch, tmp_path):
+    monkeypatch.setenv("AGENT_FIRM_ENABLED", "true")
+    cfg = reload_config()
+    monkeypatch.setattr(cfg, "KILL_SWITCH_FILE", tmp_path / "missing")
+    legacy = tmp_path / "legacy.disable"
+    legacy.write_text("")
+    monkeypatch.setattr(cfg, "LEGACY_KILL_SWITCH_FILE", legacy)
+    assert cfg.is_active() is False
