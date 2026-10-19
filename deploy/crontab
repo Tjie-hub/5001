@@ -20,6 +20,9 @@ W=/home/tjiesar/idx-walkforward-5001/scripts/cron_wrap.sh
 
 # Stockbit token refresh (24h JWT) — pre-market
 40 8 * * 1-5 cd $D && $W auto_token venv/bin/python3 auto_token.py
+# Weekend token for jurnal26's 22:00 tape backfill (audit 2026-10-19 F15): the weekday 08:40 token
+# expires Saturday morning, so Sat/Sun nights died on "token rejected". Outside trading hours.
+40 21 * * 6,0 cd $D && $W auto_token venv/bin/python3 auto_token.py
 
 # OHLCV fetch — pre-market
 50 8 * * 1-5 cd $D && $W stockbit_ohlcv sh -c 'venv/bin/python3 stockbit_fetcher.py --token "$(cat .stockbit_token)"'
