@@ -67,3 +67,38 @@ through `cron_wrap` on the latest backup. Result appended below.
 Checked before the restart (F7): every 5001 client found uses loopback. jurnal26 calls `http://127.0.0.1:5001`
 (`server.PROD_URL`, also used by `position_alerts`; `JURNAL_PROD_URL` unset), and no nginx, `/var/www` or crontab
 entry addresses 5001 over the network.
+
+## 5. Strategy logic check (owner question, 2026-10-19)
+
+The owner asked whether the logic of the tested strategies was checked. Sections 1–2 did not: passing tests show
+the code does what its tests expect, not that a rule matches its spec. This section checks each forward-tested
+rule against its frozen protocol and reference script, and each live rule the owner acts on. **No forward-test
+outcome was read:** only formation lists, row counts, metadata and pre-forward history were used.
+
+### 5.1 Live rules the owner acts on
+
+| # | Finding | Status |
+|---|---|---|
+| L1 | **The held-position ARB alert could never fire.** One symmetric 2023 table (20/25/35% by price) served both bands, but ARB has been a flat 15% since 2025-04-08, so the alert needed a one-day fall of 19.5% or more, which the floor rules out. BMTR (held) closed on its 63 floor on 2026-10-16 with no alert. | **Fixed** jurnal26 `37f443e`: floor = previous close × 0.85 rounded up to the tick, tested as a price (BMTR's floor is −13.7% after rounding). |
+| L2 | **The screener's "close not at the ARA/ARB band" rule let ARB closes through** (same table). | **Fixed** `37f443e`: the rule as written, not a tuning. |
+| L3 | 5001 `engine/exits/price_limits.py` (paper trades and backtests) still uses the symmetric table; the research foundation (`dataset_b/foundation.py`) already models the 15% ARB from 2025-04-08. Effect: a paper-trade stop between −15% and the stale floor is not capped. | **Owner decision** (production behaviour). |
+| L4 | Sniper zones use 250 raw bars. After a split, the target and 52-week high come from pre-split prices (RAJA window max 8,100 vs 490 now; MLPT 225,700 vs 740), inflating R:R. No current pick is affected: those names have no support zone. | **Recommended:** cut the window at the last price step. |
+
+### 5.2 Forward-tested rules against their frozen protocols
+
+| # | Test | Finding | Recorded rows affected | Next step |
+|---|---|---|---|---|
+| T1 | REGIME-002 (HYP-PM-0010) | **The recorder lacks the §2 contamination guard** ("exclude any trade whose window contains a split or a ±35% session") that its reference backtest applies (`scripts/ref002.py` line 26). A split trips the 3×ATR stop and would record a fake −80% trade; trend names are the ones that split (RAJA, RMKE, MLPT in July). | 0 of 105 (checked without reading returns) | **Owner:** add the guard (conformance to the frozen §2, deviation entry). Rights issues in November (MGLV, CBRE, BMAS) and splits listed to December. |
+| T2 | FADE-001 (HYP-PM-0012) | **The guard window is backward:** `s.shift(-1).rolling(h)` covers sessions t−18 … t+1, not the protocol's t+1 … t+20. The same line is in the frozen script and in `forward_regime/scripts/panel.py` (about 15 research scripts). Re-run on the registered in-sample data: −1.46%, t −8.16 becomes −1.49%, t −8.35 (immaterial; the bug was slightly conservative). | none yet; the first rows land 2026-10-20 09:35 | **Owner:** fix the recorder to the protocol's window (deviation entry), or apply it at read time. Voided rows are not stored, so either route recovers them. |
+| T3 | BANK-001 (HYP-PM-0014) | The bank leg is voided on splits, rights, bonus and reverse splits; **the equal-weight book is not.** Over 2021–26, 41% of windows hold a contaminated member. Mean effect −0.001 pp, worst −1.85 pp (July 2026: RAJA, RMKE, MLPT splits; COCO, BNBR, PADI rights). A contaminated book biases the excess upward. | none yet; the first row lands 2026-10-23 09:40 | **Owner:** screen book members with the protocol's own void rule, or accept it (mean ≈ 0). |
+| T4 | VOLEX-001 | Rupiah traded value = split-adjusted close × raw volume, so a recent split understates liquidity by the split factor for the top-200 ranking. | neither formation (09-15, 10-01) changes | **Owner:** fix before the 2026-11-02 formation. |
+| T5 | HALTARB-001 | IHSG's t+1/t+5 benchmark legs are not stored. | none | None: recomputable from settled bars at read time. |
+| T6 | all recorders | Sessions are counted by rows, so a missing bar stretches a window by one session (BNBR, COCO, PADI and SPMA have no 2026-07-09 row). The finalisation check cannot see per-ticker gaps. | not measured | Recommended: a per-ticker gap check. |
+
+**Checked and consistent:**
+- **BANK:** rule, de-dup and entry/exit match the protocol and jurnal26's live bank alert. Void labels match the database (`stocksplit`, `stock_reverse`, `rightissue`, `bonus`, keyed by ex-date).
+- **FADE:** signal, universe, fills, costs and benchmarks match the protocol. The frozen script reproduces the registered numbers.
+- **REGIME:** features (EMA20 slope, ER, participation, ATR as the mean of high−low) match the reference script.
+- **VOLEX:** the DEV-002 completeness wait is applied, and a split inside the holding window is back-adjusted.
+- **HALTARB:** the floor reproduces BBCA 5,175 and BBRI 2,640 on 10-16.
+- **5001 exit evaluator:** stop before target on a conflict bar, gap fills at the open, trail anchored to the prior high.
