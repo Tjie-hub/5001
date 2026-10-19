@@ -706,9 +706,15 @@ def main():
     results = []
     # A sweep that just ran (the 16:15 EOD scrape, or a scrape minutes ago) already holds every payload.
     reuse_after = tradebook_cache.recent()
+    # A carriage-return progress bar only on a terminal: under the service, journald stored the \r-joined run
+    # as one "[17.8K blob data]" line that swallowed the next log line ("Flow fetch selesai", 2026-10-19 audit).
+    tty = sys.stdout.isatty()
     for i, ticker in enumerate(tickers, 1):
-        sys.stdout.write(f"\r  [{i}/{len(tickers)}] {ticker}...      ")
-        sys.stdout.flush()
+        if tty:
+            sys.stdout.write(f"\r  [{i}/{len(tickers)}] {ticker}...      ")
+            sys.stdout.flush()
+        elif i % 200 == 0:
+            print(f"  [{i}/{len(tickers)}]", flush=True)
         cached = tradebook_cache.get(ticker, reuse_after)
         try:
             data = cached if cached is not None else _fetch_tradebook(token, ticker)
@@ -722,7 +728,7 @@ def main():
         if cached is None:
             time.sleep(FLOW_PACE)
 
-    print(f"\r  Analyzed: {len(results)}/{len(tickers)} tickers")
+    print(f"{chr(13) if tty else ''}  Analyzed: {len(results)}/{len(tickers)} tickers", flush=True)
 
     if results:
         # Save to DB only in batch (no-arg) mode — quick tests stay read-only
