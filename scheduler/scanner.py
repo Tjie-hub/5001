@@ -432,7 +432,7 @@ def scan_momentum_signals():
             try:
                 import sqlite3 as _sqlite3
                 from engine.vpin import calc_vpin_multi as _calc_vpin_multi
-                _vpin_conn = _db_connect(DB_PATH)
+                _vpin_conn = db_connect(DB_PATH, read_only=True)
                 _vpin_multi = _calc_vpin_multi(_vpin_conn, ticker, _today_str)
                 _vpin_conn.close()
                 _vpin_signal = _vpin_multi['signal'] if _vpin_multi else 'NO_SIGNAL'
