@@ -20,16 +20,37 @@ from engine.exits.price_limits import (
 
 # ── the shared model ─────────────────────────────────────────────────────
 
-@pytest.mark.parametrize("price,pct", [
+TIERS = [
     (50, 0.35), (200, 0.35),          # tier 1 boundary inclusive
     (200.01, 0.25), (5000, 0.25),     # tier 2
     (5000.01, 0.20), (50_000, 0.20),  # tier 3
-])
-def test_tier_table_matches_live_rule(price, pct):
-    lv = ara_arb_levels(price)
+]
+
+
+@pytest.mark.parametrize("price,pct", TIERS)
+def test_tier_table_is_symmetric_before_2025_04_08(price, pct):
+    lv = ara_arb_levels(price, "2025-04-07")
     assert lv["ara_pct"] == pct and lv["arb_pct"] == pct
     assert lv["ara_price"] == pytest.approx(price * (1 + pct))
     assert lv["arb_price"] == pytest.approx(price * (1 - pct))
+
+
+@pytest.mark.parametrize("price,pct", TIERS)
+def test_arb_is_a_flat_15pct_from_2025_04_08(price, pct):
+    """SK Direksi BEI Kep-00003/BEI/04-2025 (research LC-PM-0009). The symmetric table was applied to every session
+    until 2026-10-19 (strategy logic check)."""
+    for session in ("2025-04-08", "2026-10-16", None):   # None = today, the live path
+        lv = ara_arb_levels(price, session)
+        assert lv["ara_pct"] == pct and lv["arb_pct"] == 0.15
+        assert lv["ara_price"] == pytest.approx(price * (1 + pct))
+        assert lv["arb_price"] == pytest.approx(price * 0.85)
+
+
+def test_session_must_be_an_iso_date():
+    import datetime as _dt
+    with pytest.raises(ValueError):
+        ara_arb_levels(1000.0, _dt.date)   # a shadowed `date` name must not silently pick a regime
+    assert ara_arb_levels(1000.0, pd.Timestamp("2024-06-03"))["arb_pct"] == 0.25
 
 
 def test_live_path_delegates_to_the_same_authority():
@@ -39,10 +60,17 @@ def test_live_path_delegates_to_the_same_authority():
 
 
 def test_cap_levels_pulls_levels_inside_the_band():
-    out = cap_levels(1000.0, tp_price=1300.0, sl_price=700.0)   # ±25% tier
+    out = cap_levels(1000.0, tp_price=1300.0, sl_price=700.0, session="2024-06-03")   # ±25% tier (R3)
     assert out["tp_capped"] and out["sl_capped"]
     assert out["tp_price"] == pytest.approx(1250.0 * (1 - ARA_ARB_SAFETY))
     assert out["sl_price"] == pytest.approx(750.0 * (1 + ARA_ARB_SAFETY))
+
+
+def test_cap_levels_uses_the_15pct_floor_from_2025_04_08():
+    out = cap_levels(1000.0, tp_price=1300.0, sl_price=820.0, session="2026-10-16")
+    assert out["sl_capped"] and out["sl_price"] == pytest.approx(850.0 * (1 + ARA_ARB_SAFETY))
+    assert out["tp_capped"] and out["tp_price"] == pytest.approx(1250.0 * (1 - ARA_ARB_SAFETY))
+    assert not cap_levels(1000.0, sl_price=820.0, session="2025-04-07")["sl_capped"]   # -18% inside ±25% (R3)
 
 
 def test_cap_levels_noop_when_fillable():

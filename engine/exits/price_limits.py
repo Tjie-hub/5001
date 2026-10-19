@@ -9,9 +9,15 @@ VWMA BP, Volume Profile POC), which trades exactly the volatility most likely
 to press a level against the band. This module is the shared model: the same
 tier table, the same safety margin, one definition of "this level cannot fill".
 
-Tier table per BEI Peng-00009/BEI.POP/03-2023 (symmetric), referenced to the
-entry fill — the same reference live open_trade uses, so backtest and live
-produce identical capped levels for identical entries.
+Tier table per BEI Peng-00009/BEI.POP/03-2023, referenced to the entry fill —
+the same reference live open_trade uses, so backtest and live produce identical
+capped levels for identical entries. The bands are REGIME-dependent (research
+LC-PM-0009, docs/research_programs/P-M/dataset_b/foundation.py): from
+2025-04-08 the lower band (ARB) is a flat 15% at every tier (SK Direksi BEI
+Kep-00003/BEI/04-2025) while the upper band (ARA) keeps the tiers. Sessions
+before that keep the symmetric table (R3; older regimes are not modelled, as
+before). Until 2026-10-19 the symmetric table served every session, so a stop
+between -15% and the tier floor counted as fillable on the entry day.
 
 What this model deliberately does NOT capture (documented, not silent):
 
@@ -28,17 +34,36 @@ What this model deliberately does NOT capture (documented, not silent):
 """
 from __future__ import annotations
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 # Stay 0.5% inside the band — the same safety margin paper_trade.open_trade
 # has always applied, so the live path's behavior is the definition here.
 ARA_ARB_SAFETY = 0.005
 
+# R4 (see the module docstring): flat lower band from this session on.
+ARB_FLAT_FROM = "2025-04-08"
+ARB_FLAT_PCT = 0.15
 
-def ara_arb_levels(price: float) -> dict:
-    """Auto-rejection bands around `price`.
 
-    Tier: <=200 -> +-35%; 200-5000 -> +-25%; >5000 -> +-20% (symmetric).
-    Sub-Rp50 treated as tier 1 (IDX board convention). Returns
-    {ara_pct, arb_pct, ara_price, arb_price}.
+def _session(session) -> str:
+    """ISO date of the session a band applies to; None = today in WIB (the live path)."""
+    if session is None:
+        return datetime.now(ZoneInfo("Asia/Jakarta")).date().isoformat()
+    s = str(session)[:10]
+    # Fail closed: a non-date (e.g. a shadowed `date` class, "<class 'd") would compare
+    # above "2025-04-08" and silently pick a regime.
+    if len(s) != 10 or s[4] != "-" or s[7] != "-" or not (s[:4] + s[5:7] + s[8:]).isdigit():
+        raise ValueError(f"session must be an ISO date, got {session!r}")
+    return s
+
+
+def ara_arb_levels(price: float, session=None) -> dict:
+    """Auto-rejection bands around `price` on `session` (ISO date; None = today).
+
+    ARA tier: <=200 -> 35%; 200-5000 -> 25%; >5000 -> 20%. ARB: the same tier
+    before 2025-04-08, a flat 15% from then on. Sub-Rp50 treated as tier 1 (IDX
+    board convention). Returns {ara_pct, arb_pct, ara_price, arb_price}.
     """
     if price <= 200:
         pct = 0.35
@@ -46,25 +71,27 @@ def ara_arb_levels(price: float) -> dict:
         pct = 0.25
     else:
         pct = 0.20
+    arb = ARB_FLAT_PCT if _session(session) >= ARB_FLAT_FROM else pct
     return {
         "ara_pct":   pct,
-        "arb_pct":   pct,
+        "arb_pct":   arb,
         "ara_price": price * (1 + pct),
-        "arb_price": price * (1 - pct),
+        "arb_price": price * (1 - arb),
     }
 
 
 def cap_levels(entry_price: float, tp_price: float | None = None,
-               sl_price: float | None = None) -> dict:
+               sl_price: float | None = None, session=None) -> dict:
     """Cap LONG TP/SL to what the price-limit band lets fill.
 
     TP above ARA cannot fill (the market halts at the ceiling); SL below ARB
     cannot fill (the market halts at the floor). Both are pulled just inside
     the band with the shared safety margin. Returns
     {tp_price, sl_price, tp_capped, sl_capped, ara_price, arb_price}; the
-    *_capped flags say whether each level actually moved.
+    *_capped flags say whether each level actually moved. `session` is the
+    entry session (backtests pass the bar date; None = today, the live path).
     """
-    ar = ara_arb_levels(entry_price)
+    ar = ara_arb_levels(entry_price, session)
     tp_capped = sl_capped = False
     if tp_price is not None and tp_price >= ar["ara_price"]:
         tp_price = ar["ara_price"] * (1 - ARA_ARB_SAFETY)

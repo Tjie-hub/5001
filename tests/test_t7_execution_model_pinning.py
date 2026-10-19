@@ -94,6 +94,16 @@ APPROVAL-TIME provenance and is not updated when the source later changes;
 test_nr7_bull_manifests_pin_the_approval_time_hash guards both manifests
 against exactly that mistake (an earlier version of the P4-2 commit
 overwrote v1's hash, which also left v1 and v2 disagreeing).
+
+--------------------------------------------------------------------------
+AMENDED 2026-10-19 — strategy logic check (docs/audit/IDX_FULL_AUDIT_2026-10-19.md
+§5 L3) changed strategy_nr7_breakout's source deliberately: its cap_levels call
+now passes the entry bar's date (`session=date`), because the auto-rejection
+bands are regime-dependent and the lower band (ARB) has been a flat 15% since
+2025-04-08. Before that date the capped levels are identical to the P4-2 model;
+from that date a stop between -15% and the old tier floor is capped. Entry
+timing, triggers and fills are UNCHANGED. NR7_BULL is RETIRED (D-066), so
+nothing live is affected; the manifests keep their approval-time hash.
 """
 import hashlib
 import inspect
@@ -125,7 +135,7 @@ def test_nr7_backtest_source_matches_pinned_manifest_config_hash():
 
 # The hash of strategy_nr7_breakout's source as of the P4-2 fillability fix
 # (2026-10-01). Recomputed at that time; do not copy from a manifest.
-_NR7_BACKTEST_HASH = "a87badb0c138722e9fee33df7d8c4ccc9202993de15b10507597b2e9afacada1"
+_NR7_BACKTEST_HASH = "fed4097231fca2572bad1d6d5a0f0c01d5405b2a488176a37a211f1f08c83968"
 
 _NR7_LIVE_CHECKER_HASH = "3efae1a0615b4ce56ef550f65c4a1c343ed54813f2354eda1b8418ad75c42861"
 

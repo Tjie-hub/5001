@@ -239,7 +239,7 @@ def run_strategy(df: pd.DataFrame, signals: pd.Series,
             # ignore the SL override by design; trail fills stay at prices the
             # market printed). Sizing follows the capped stop, as live does.
             _lv0 = policy.initial_levels('LONG', entry_price, entry_atr)
-            _cap = cap_levels(entry_price, _lv0.tp_price, _lv0.sl_price)
+            _cap = cap_levels(entry_price, _lv0.tp_price, _lv0.sl_price, session=date)
             if not capped_rr_ok(entry_price, _cap['tp_price'], _cap['sl_price'],
                                 policy.min_rr):
                 equity.append(capital)
@@ -537,7 +537,7 @@ def _run_vwma_bp(df: pd.DataFrame, signals: pd.Series,
                 continue
             # P4-2: cap to the ARA/ARB band (live open_trade's rule); the
             # native min-TP-distance gate re-evaluates the capped level.
-            _cap = cap_levels(entry_price, tp_level, sl_level)
+            _cap = cap_levels(entry_price, tp_level, sl_level, session=date)
             tp_level, sl_level = _cap['tp_price'], _cap['sl_price']
             sl_pct_eff = (entry_price - sl_level) / entry_price
             # Min TP distance 1.5% untuk layak risk/reward
@@ -764,7 +764,7 @@ def strategy_volume_profile_poc(df: pd.DataFrame, capital: float = 50_000_000,
                 continue
             # P4-2: cap to the ARA/ARB band (live open_trade's rule); the
             # native min-TP-distance gate re-evaluates the capped level.
-            _cap = cap_levels(entry_price, tp_level, sl_level)
+            _cap = cap_levels(entry_price, tp_level, sl_level, session=date)
             tp_level, sl_level = _cap['tp_price'], _cap['sl_price']
             sl_pct_eff = (entry_price - sl_level) / entry_price
             # Min TP distance 1.5% untuk layak risk/reward
@@ -857,7 +857,7 @@ def strategy_inside_bar_breakout(df: pd.DataFrame, capital: float = 50_000_000,
             tp_level = max(swing_hi, atr_tp)
             # P4-2: cap to the ARA/ARB band (live open_trade's rule); the
             # native gates below re-evaluate the capped levels.
-            _cap = cap_levels(entry_price, tp_level, sl_level)
+            _cap = cap_levels(entry_price, tp_level, sl_level, session=date)
             tp_level, sl_level = _cap['tp_price'], _cap['sl_price']
             sl_pct = (entry_price - sl_level) / entry_price
             if sl_pct <= 0.002:
@@ -951,7 +951,7 @@ def strategy_nr7_breakout(df: pd.DataFrame, capital: float = 50_000_000,
             # P4-2: cap levels to the ARA/ARB band — the same rule live
             # open_trade applies. A TP beyond ARA can never fill; the native
             # admission gates below re-evaluate the capped levels.
-            _cap = cap_levels(entry_price, tp_level, sl_level)
+            _cap = cap_levels(entry_price, tp_level, sl_level, session=date)
             tp_level, sl_level = _cap['tp_price'], _cap['sl_price']
             sl_pct = (entry_price - sl_level) / entry_price
             if sl_pct <= 0.002:
@@ -1155,7 +1155,7 @@ def strategy_orb(df: pd.DataFrame, capital: float = 50_000_000,
             # P4-2: cap to the ARA/ARB band, then re-evaluate the native
             # admission gates on the capped levels (a capped TP may no longer
             # clear the +2% floor; a capped SL tightens sl_pct).
-            _cap = cap_levels(entry_price, tp_level, sl_level)
+            _cap = cap_levels(entry_price, tp_level, sl_level, session=date)
             tp_level, sl_level = _cap['tp_price'], _cap['sl_price']
             sl_pct = (entry_price - sl_level) / entry_price
             if sl_pct <= 0.005 or sl_pct > 0.08:
@@ -2260,7 +2260,7 @@ def strategy_crash_recovery(df: pd.DataFrame, capital: float = 50_000_000,
             # deep crash the entry is low relative to recent history, so the
             # retracement target can sit beyond ARA(entry) — unfillable; the
             # native +2% gate below re-evaluates the capped level.
-            _cap = cap_levels(ep, tp_price, sl_price)
+            _cap = cap_levels(ep, tp_price, sl_price, session=date)
             tp_price, sl_price = _cap['tp_price'], _cap['sl_price']
             sl_pct = (ep - sl_price) / ep if ep > sl_price else 0.02
             if tp_price > ep * 1.02:
@@ -2517,7 +2517,7 @@ def strategy_panic_rebound(df: pd.DataFrame, capital: float = 50_000_000,
             # native +2% gate re-evaluates the capped level; the SL is a
             # sizing input only here (no hard SL by design), capped the same
             # way live open_trade would cap it.
-            _cap = cap_levels(ep, pend_tp, sl_price)
+            _cap = cap_levels(ep, pend_tp, sl_price, session=date)
             pend_tp, sl_price = _cap['tp_price'], _cap['sl_price']
             sl_pct = (ep - sl_price) / ep if ep > sl_price else 0.02
             if pend_tp > ep * 1.02:
