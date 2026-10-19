@@ -26,10 +26,11 @@ if [ "$rc" -ne 0 ]; then
     # blackout suppresses them entirely. State lives under this wrapper's own
     # LOG_DIR (CRON_WRAP_LOG_DIR override included) so tests stay hermetic.
     # Backup, restore-drill and heartbeat failures alert through the blackout
-    # (owner 2026-10-13: it hid three failed nightly backups in a row).
+    # (owner 2026-10-13: it hid three failed nightly backups in a row). The 09:00 provisional-bars check too
+    # (audit 2026-10-19: it failed daily for days, a wrong VKTR close stayed invisible).
     # Matches utils/notify_policy.BLACKOUT_EXEMPT.
     case "$JOB" in
-        db_backup|db_backup_research|db_restore_drill|backup_heartbeat_check|heartbeat_check|disk_guard|offsite_backup|auto_token|stockbit_ohlcv|stockbit_flow|data_heal)
+        db_backup|db_backup_research|db_restore_drill|backup_heartbeat_check|heartbeat_check|disk_guard|offsite_backup|auto_token|stockbit_ohlcv|stockbit_flow|data_heal|provisional_bars_check)
             BLACKOUT_EXEMPT=1 ;;
         *) BLACKOUT_EXEMPT=0 ;;
     esac

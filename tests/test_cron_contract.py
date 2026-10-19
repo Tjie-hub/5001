@@ -99,6 +99,15 @@ def test_wrapper_blackout_silences_ordinary_jobs(tmp_path):
     assert "ALERT SKIPPED (telegram globally OFF)" in log
 
 
+def test_wrapper_blackout_exempts_the_provisional_bars_check(tmp_path):
+    """Audit 2026-10-19: the 09:00 finalisation check failed daily from >= 10-16 (VKTR 2026-10-12 stored 595 vs
+    settled 635) and every alert was swallowed by the blackout. A stranded session is a data failure."""
+    (tmp_path / "TELEGRAM_OFF").touch()
+    _run_wrap(tmp_path, "provisional_bars_check", "false")
+    log = (tmp_path / "cron_provisional_bars_check.log").read_text()
+    assert "globally OFF" not in log and "ALERT SKIPPED (no telegram creds)" in log
+
+
 def test_wrapper_blackout_exempts_backup_and_heartbeat_jobs(tmp_path):
     """Owner 2026-10-13: the blackout hid 3 failed nightly backups in a row.
     Backup, restore-drill and heartbeat failures still alert through it."""
