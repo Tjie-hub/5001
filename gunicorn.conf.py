@@ -7,8 +7,12 @@ previous Flask-server threading behavior. Do not add workers without first
 moving the scheduler out of the web process.
 """
 import logging
+import os
 
-bind = "0.0.0.0:5001"
+# Localhost only (audit 2026-10-19 F7): with AUTH_MODE off, 0.0.0.0 left every viewer/operator route open to the
+# home LAN, while the one real client -- the jurnal26 server on this host -- calls http://127.0.0.1:5001 (one 5001
+# UI page load in two weeks). Set GUNICORN_BIND=0.0.0.0:5001 in .env to serve the LAN again, deliberately.
+bind = os.environ.get("GUNICORN_BIND", "127.0.0.1:5001")
 workers = 1
 threads = 8
 worker_class = "gthread"

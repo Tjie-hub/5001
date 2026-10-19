@@ -301,4 +301,4 @@ def init_runtime():
 
 if __name__ == "__main__":
     init_runtime()
-    app.run(host="0.0.0.0", port=5001, debug=False)
+    app.run(host=os.getenv("APP_HOST", "127.0.0.1"), port=5001, debug=False)  # localhost: see gunicorn.conf.py

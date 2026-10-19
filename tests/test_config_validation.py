@@ -178,3 +178,13 @@ def test_service_unit_raises_the_open_file_limit():
     DB open failed until gunicorn respawned it."""
     unit = (ROOT / "deploy" / "idx-walkforward.service").read_text()
     assert "LimitNOFILE=65536" in unit
+
+
+def test_gunicorn_binds_localhost_by_default(monkeypatch):
+    """Audit 2026-10-19 F7: 5001 listened on 0.0.0.0 with AUTH_MODE off (viewer/operator routes open to the LAN).
+    Its only client is jurnal26 on the same host (JURNAL_PROD_URL=http://127.0.0.1:5001); one UI page load in
+    two weeks. GUNICORN_BIND restores LAN access deliberately."""
+    monkeypatch.delenv("GUNICORN_BIND", raising=False)
+    assert _load_gunicorn_conf().bind == "127.0.0.1:5001"
+    monkeypatch.setenv("GUNICORN_BIND", "0.0.0.0:5001")
+    assert _load_gunicorn_conf().bind == "0.0.0.0:5001"
