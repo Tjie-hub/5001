@@ -38,6 +38,27 @@ def run_scheduler_heartbeat():
 from scheduler.utils import get_all_tickers, _load_ohlcv_bulk  # noqa: E402
 
 
+def run_macro_fetch_job():
+    """Global + Indonesian macro series into macro_daily (data/macro.py).
+
+    Deliberately NOT holiday-skipped: Wall Street, Asia, oil and the rupiah trade on IDX
+    holidays, and those are exactly the days whose overnight move the next open inherits.
+    Re-fetches a 10-day window each run so a provisional last bar is overwritten by the
+    settled close next time. Fail-soft: logs and alerts, never raises.
+    """
+    from data.macro import run_macro_fetch
+    try:
+        res = run_macro_fetch(DB_PATH)
+        logger.info(f"[macro] {res['rows']} rows, {res['series']} series, failed={res['failed']}")
+        if res["failed"]:
+            send_telegram(f"⚠️ Macro fetch: {len(res['failed'])} series failed: "
+                          f"{', '.join(res['failed'])}", event="data.macro_fetch_partial", subject="macro")
+    except Exception as e:
+        logger.exception(f"[macro] fetch failed: {e}")
+        send_telegram(f"🔴 Macro fetch GAGAL: {redact_and_truncate(str(e), 200)}",
+                      event="data.macro_fetch_fail", subject="macro")
+
+
 def _holiday_skip(fn_name: str) -> bool:
     """Return True when IDX is closed today (holiday or weekend) — caller should return."""
     try:

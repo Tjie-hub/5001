@@ -158,6 +158,10 @@ EVENTS = {
     "data.corporate_actions_failed":      (TIER_SEND, RULE_DAILY),
     "data.ownership_failed":              (TIER_SEND, RULE_DAILY),
     "data.insider_failed":                (TIER_SEND, RULE_DAILY),
+    # data/macro.py (2026-10-20). Not BLACKOUT_EXEMPT: a context feed, nothing trades on it,
+    # so while TELEGRAM_OFF stands these stay log-only.
+    "data.macro_fetch_partial":           (TIER_SEND, RULE_DAILY),
+    "data.macro_fetch_fail":              (TIER_SEND, RULE_DAILY),
     "data.screener_fetch_failed":         (TIER_SEND, RULE_DAILY),
     "data.news_fetch_failed":             (TIER_SEND, RULE_DAILY),
     "data.premover_scan_failed":          (TIER_SEND, RULE_DAILY),

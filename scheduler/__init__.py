@@ -88,6 +88,7 @@ from scheduler.jobs import (  # noqa: F401
     _run_screener_intraday,
     _run_screener_eod,
     run_post_close_sweep,
+    run_macro_fetch_job,
 )
 
 # Re-export reports
@@ -302,6 +303,15 @@ def start_scheduler():
         _add_job(scheduler, _run_open_trade_monitor, CronTrigger(
             day_of_week="mon-fri", hour=hour, minute=5, timezone=WIB),
             id=f"trade_monitor_{hour:02d}05")
+
+    # Macro series (data/macro.py) — 06:00 WIB after the US close (Tue-Sat carry Mon-Fri's
+    # US session), and 17:00 Mon-Fri after the Asian closes. Not holiday-gated: see the job.
+    _add_job(scheduler, run_macro_fetch_job, CronTrigger(
+        day_of_week="tue-sat", hour=6, minute=0, timezone=WIB),
+        id="macro_fetch_us", name="Macro Fetch 06:00 (after US close)")
+    _add_job(scheduler, run_macro_fetch_job, CronTrigger(
+        day_of_week="mon-fri", hour=17, minute=0, timezone=WIB),
+        id="macro_fetch_asia", name="Macro Fetch 17:00 (after Asia close)")
 
     # News mentions fetch — pre-market 08:00 WIB
     _add_job(scheduler, run_news_fetch, CronTrigger(
