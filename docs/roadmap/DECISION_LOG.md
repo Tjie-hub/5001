@@ -3697,6 +3697,33 @@ the study. The owner approved the run before the census existed, so G1 stayed co
 
 ---
 
+### D-106 · HYP-PM-0022 (closing-window LATE continuation) G1 — FAILED (F2)
+**Status:** RECORDED · **Date:** 2026-10-20 · **Type:** G1 outcome ·
+**Approval authority:** the frozen pass conditions (D-105); computed booleans only.
+
+- **Run.** Once, 2026-10-20 04:09 UTC, `research/closing-tape-2026-10` @ `b895300`,
+  `RESULT_20261020T040905Z.json` (sha256 `c25878df…`). The sidecar, snapshot and window-cache hashes were verified
+  first. Verdict and result are at `c0b79e5`.
+- **Outcome.** All four conditions fail. **FAIL.**
+  - S_cc **−0.541%/day, NW t −9.95** (wrong sign).
+  - Halves −0.484% / −0.626%.
+  - FM LATE coefficient −0.148%, t −7.78, net of the pre-window OIB, day return, window return, size and vol.
+  - Long-only Q5 − universe: gross −0.233%/day, net −1.96%/day (cost 1.72%/day).
+- **Report only.**
+  - Close → open −0.531%, t −11.05. Open → close −0.012%, t −0.24.
+  - 20 of 21 months negative.
+- **Classification: F2.** Late-window continuation is refuted on a correctly measured instrument.
+  - The negative spread is the overnight gap: late aggressor pressure moves the close, and the next open gives it
+    back. HYP-PM-0021 showed the same direction at a weaker strength.
+  - This is recorded as a reading, not a rescue. A reversal claim would be a new registration, and it faces a
+    modelled cost about three times the gross gap.
+- **Census** stays **613** (the arm counts from registration, X8). P-M {I5,I6,I7,I12} has 6 members:
+  0001/0003/0007/0009 INVALID (data), 0021 FAILED F2, 0022 FAILED F2.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
