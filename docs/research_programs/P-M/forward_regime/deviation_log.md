@@ -82,3 +82,31 @@ schema. **The §3 rule remains the only decision.**
 PASS while the modeled-cost mean is ≤ +0.30%/trade (the §3 FAIL floor), record the read as **"PASS under
 the frozen rule; not tradeable under modeled cost (D-059)."** Realised fills, once they exist, supersede
 the model (PROTOCOL §2).
+
+---
+
+## DEV-003 · 2026-10-20 · recorder brought into line with the frozen §2 contamination guard (conformance)
+
+**What changed.** `run_formation.py` now applies PROTOCOL §2's contamination guard: "exclude any trade
+whose window contains a split or a single-session move beyond ±35%". `load_panel()` reads the recorded
+splits (`corporate_actions`, `action = 'split'`), `features()` marks `bad` (split or |close-to-close| >
+35%, the `scripts/panel.py` definition), and `closed_trades()` skips a trade with any `bad` session in
+entry+1 .. exit: the reference backtest's own line (`scripts/ref002.py` line 26). Each run prints the
+number excluded. Tests: `tests/test_forward_regime_recorder.py`.
+
+**Why.** Owner question 2026-10-19 ("did you check the logic from the tested strategy"), strategy logic
+check in `docs/audit/IDX_FULL_AUDIT_2026-10-19.md` §5 (T1): the recorder never implemented the guard, so
+a split inside a window trips the 3×ATR stop and records a fake −80% trade. Trend names are the ones
+that split (RAJA, RMKE, MLPT in July 2026). Owner approved the fix ("fix", 2026-10-19).
+
+**Was any outcome visible?** No return, excess, exit reason or holding length was looked at. The 105
+recorded trades were checked by a script that used each row's ticker and entry/exit dates to test the
+window and printed only counts: **0 of 105 are contaminated**, so no recorded row is affected and the
+ledger is unchanged. A dry run on 2026-10-20 07:20 WIB (no ledger write; counts and metadata only) found
+the guard excludes **one** closed trade not yet in the ledger: **MGNA**, whose window holds a session
+move beyond 35% on 2026-10-01 (no recorded split). Without this change it would have been appended at
+the 09:30 run.
+
+**What did NOT change.** Specification, thresholds, universe, entry/exit rule, costs, endpoint, the
+observability attributes, ledger schema and every recorded row. The guard is §2 as frozen; this entry
+records that the code now does what §2 already said. Related: D-104.

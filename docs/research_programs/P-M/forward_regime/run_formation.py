@@ -13,6 +13,11 @@ backtest fitted to 9 BULL episodes.
 Run daily after the settled-bar write. Never back-fills: a trade whose entry
 predates `opened_utc` is refused, because replaying the backtest into this
 ledger would convert in-sample discovery into an apparent forward record.
+
+Contamination guard (PROTOCOL.md section 2; deviation_log DEV-003, 2026-10-19): a trade
+whose window (entry+1 .. exit) holds a recorded split or a session move beyond ±35% is
+excluded, exactly as the reference backtest `scripts/ref002.py` excludes it. Until
+2026-10-19 this recorder omitted the guard; no recorded trade was affected (0 of 105).
 """
 import json, sys, hashlib
 from datetime import datetime, timezone
@@ -37,6 +42,12 @@ def load_panel(conn):
         "SELECT ticker,date,open,high,low,close,volume FROM ohlcv "
         "WHERE is_final=1 AND close>0 AND volume>=0", conn)
     df["date"] = pd.to_datetime(df["date"])
+    # recorded splits feed the section 2 contamination guard (panel.py / ref002.py convention)
+    sp = pd.read_sql("SELECT DISTINCT ticker, date FROM corporate_actions WHERE action = 'split'", conn)
+    sp["date"] = pd.to_datetime(sp["date"])
+    sp["is_split"] = 1
+    df = df.merge(sp, on=["ticker", "date"], how="left")
+    df["is_split"] = df["is_split"].fillna(0)
     return df.sort_values(["ticker", "date"]).reset_index(drop=True)
 
 def features(df):
@@ -53,6 +64,8 @@ def features(df):
     df["pa"] = g.apply(lambda x: (x.close > x.ema20).rolling(20, min_periods=20).mean(),
                        include_groups=False).reset_index(level=0, drop=True)
     df["n"] = g.cumcount()
+    # section 2 contamination guard input: a split or a session move beyond ±35% (panel.py's `bad`)
+    df["bad"] = ((g["close"].pct_change().abs() > 0.35) | (df["is_split"] > 0)).astype(int)
     # 002 traded-days guard: a suspended IDX name prints a zero-volume carry-forward bar,
     # which drives Kaufman ER toward 1.0 because the denominator stops growing.
     df["nz"] = (df.volume > 0).astype(int)
@@ -116,13 +129,13 @@ def weekly_at(weeks, entry_date):
     return prior[-1] if prior else None
 
 
-def closed_trades(df, ihsg, opened, regimes, weeks):
+def closed_trades(df, ihsg, opened, regimes, weeks, stats=None):
     out = []
     for tk, x in df.groupby("ticker", sort=False):
         up, lq = x.UP.values, x.liq.values
         if not up.any():
             continue
-        cl, hi, at, dt = x.close.values, x.high.values, x.atr14.values, x.date.values
+        cl, hi, at, dt, bad = x.close.values, x.high.values, x.atr14.values, x.date.values, x.bad.values
         N = len(x)
         starts = np.where(up & ~np.r_[False, up[:-1]] & lq & ~np.isnan(at))[0]
         for i in starts:
@@ -140,6 +153,10 @@ def closed_trades(df, ihsg, opened, regimes, weeks):
                     j, why = i + CAP, "cap_60"
                 else:
                     continue                        # still open, not a closed trade
+            if bad[i + 1:j + 1].sum() > 0:          # section 2 guard (DEV-003), as ref002.py line 26
+                if stats is not None:
+                    stats["excluded"] = stats.get("excluded", 0) + 1
+                continue
             ie, ix = ihsg.get(pd.Timestamp(dt[i])), ihsg.get(pd.Timestamp(dt[j]))
             if ie is None or ix is None:
                 continue
@@ -170,7 +187,10 @@ def main():
     ih = df[df.ticker == "IHSG"].set_index("date")["close"].to_dict()
     df = df[df.ticker != "IHSG"]
     have = {(t["ticker"], t["entry_date"]) for t in led["trades"]}
-    new = [t for t in closed_trades(df, ih, opened, regimes, weeks) if (t["ticker"], t["entry_date"]) not in have]
+    stats = {}
+    new = [t for t in closed_trades(df, ih, opened, regimes, weeks, stats)
+           if (t["ticker"], t["entry_date"]) not in have]
+    print(f"excluded (section 2 contamination guard): {stats.get('excluded', 0)}")
     if not new:
         print("no new closed trades")
         return
