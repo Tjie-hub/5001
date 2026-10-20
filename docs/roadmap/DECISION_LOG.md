@@ -3724,6 +3724,47 @@ the study. The owner approved the run before the census existed, so G1 stayed co
 
 ---
 
+### D-107 · ARB 7% from 2026-10-19 to 2026-12-31 modelled everywhere; D-098 limit_watch floor follows the rule in force; FWD-PM-HALTARB-001 DEV-001
+**Status:** RECORDED · **Date:** 2026-10-20 · **Type:** Exchange-rule update + instrument correction ·
+**Approval authority:** Owner, 2026-10-20: "complete 7% ARB". It supersedes D-104 only where D-104 modelled the ARB as
+a flat 15% with no end.
+
+- **The rule.**
+  - SK Direksi BEI **Kep-00157/BEI/10-2026** (2026-10-19, after the 2026-10-16 MSCI shock): ARB **7%** on the
+    regular and cash markets, **2026-10-19 → 2026-12-31**. ARA keeps the tiers (35/25/20%).
+  - **Kep-00158/BEI/10-2026** (from 2026-10-20): names at Rp 11–14 may fall **Rp 1**. 7% rounded up to the tick
+    left them no room on 10-19 (14 × 0.93 = 13.02 → 14). Rp 1–10 move Rp 1, as before.
+  - The acceleration and full-call-auction boards keep their own **10%** band.
+  - BEI will review the rule before year end; a new SK moves the end date in code.
+  - **Verified on our bars:** TOWR's 2026-10-19 low 362 = 388 × 0.93 rounded up to the tick, from the open. Every
+    2026-10-19 fall beyond 8% was −9% to −10%, the special boards' band (HBAT, IDEA, PACK …).
+  - Sources: the SK numbers as reported by IDXChannel and Antara (19 Oct) and by IDXChannel and Bareksa (20 Oct).
+    The SK text itself was not retrieved from idx.co.id.
+- **5001.**
+  - `engine/exits/price_limits.py` returns 7% for sessions in the window. The live paper path (session None = today
+    WIB) caps stops at −7% from 2026-10-19.
+  - The Rp 11–14 rule is not modelled there (levels are not tick-rounded).
+  - Tests in `tests/test_price_limit_fillability.py`. The NR7 backtest pin is unchanged.
+- **jurnal26 (`fe8d283`).** `bands.py` holds every regime by session, the Rp 1 rules, and a step tolerance that
+  allows the special boards' 10%. These now use it:
+  - the held-position ARB alert, passing the bar date
+  - the screener's ARA/ARB-close reject
+  - `macro_watch`'s pre-open "near a limit" share and its halt-time big-cap ARB snapshot
+- **D-098 instrument correction (`limit_watch.py`).**
+  - The pre-open read looked for the sell queue at a fixed 15% floor (TOWR 318 instead of 348). The close message's
+    next-day floor also assumed 15%.
+  - Both now take the floor in force from `bands`.
+  - The **lock, re-lock and queue-drain definitions are unchanged**: they read the order book, not a percentage.
+  - New file hash `3f3723e1751a6cbd…`. As with D-103, this is not a new event version: the floor is an exchange
+    parameter, not a tuned threshold.
+- **FWD-PM-HALTARB-001 DEV-001.**
+  - The recorder's ARB touch uses the floor in force on the event day. PROTOCOL §2 says "the ARB in force".
+  - `run_recorder.py` `abf6d629…` → `1349121b…`. The ledger holds 0 event days, so no outcome was visible.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
