@@ -15,7 +15,8 @@ An event is written only when its 10-session window has closed and every leg is 
 (the ledger is append-only and could not be repaired). It is VOIDED -- not written -- if the
 window holds a session with |ret| > 35%, a split, or a rights/bonus/reverse-split event
 (price steps that are not returns). Benchmarks: the equal-weight liquid book (ADV20 >= Rp 10 B,
-same next-open/h-close convention) and IHSG.
+same next-open/h-close convention) and IHSG. Since DEV-001 (2026-10-20) a book member is left out
+under the same void rule, so a member's split does not enter the benchmark as a -80% return.
 """
 import hashlib
 import json
@@ -87,17 +88,24 @@ def load(conn):
                     "WHERE is_final = 1 AND close > 0", conn)
     ihsg = d[d.ticker == "IHSG"].set_index("date")
     d = d[d.ticker != "IHSG"].sort_values(["ticker", "date"])
-    # Equal-weight liquid book: next-open in, close h sessions later out, per signal date.
-    g = d.groupby("ticker", sort=False)
-    adv = (d.close * d.volume).groupby(d.ticker).transform(lambda s: s.rolling(20, min_periods=15).mean().shift(1))
-    fwd = g["close"].shift(-H) / g["open"].shift(-1) - 1
-    book = fwd[adv >= BOOK_ADV].groupby(d.loc[adv >= BOOK_ADV, "date"]).mean().to_dict()
-    ih = {("open", k): v for k, v in ihsg["open"].items()}
-    ih.update({("close", k): v for k, v in ihsg["close"].items()})
     ca = pd.read_sql("SELECT ticker, event_date FROM corporate_action_events WHERE action_type IN (%s)"
                      % ",".join("?" * len(PRICE_STEP_EVENTS)), conn, params=PRICE_STEP_EVENTS)
     sp = pd.read_sql("SELECT ticker, date AS event_date FROM corporate_actions WHERE action = 'split'", conn)
     voids = pd.concat([ca, sp]).dropna()
+    # Equal-weight liquid book: next-open in, close h sessions later out, per signal date.
+    g = d.groupby("ticker", sort=False)
+    adv = (d.close * d.volume).groupby(d.ticker).transform(lambda s: s.rolling(20, min_periods=15).mean().shift(1))
+    fwd = g["close"].shift(-H) / g["open"].shift(-1) - 1
+    # DEV-001 (2026-10-20): the bank leg's void rule (PROTOCOL section 2) applied to the book as well -- a member
+    # whose window t+1..t+H holds a price-step event or a >35% session is left out; a step is not a return.
+    step = pd.Series(pd.MultiIndex.from_frame(d[["ticker", "date"]]).isin(
+        pd.MultiIndex.from_frame(voids[["ticker", "event_date"]])), index=d.index)
+    bad = (step | (g["close"].pct_change().abs() > CONTAM_MOVE)).astype(float)
+    bad_fwd = bad.groupby(d.ticker).transform(lambda s: s.shift(-H).rolling(H, min_periods=1).sum()) > 0
+    keep = (adv >= BOOK_ADV) & ~bad_fwd
+    book = fwd[keep].groupby(d.loc[keep, "date"]).mean().to_dict()
+    ih = {("open", k): v for k, v in ihsg["open"].items()}
+    ih.update({("close", k): v for k, v in ihsg["close"].items()})
     return d, book, ih, {t: set(v.event_date) for t, v in voids.groupby("ticker")}
 
 

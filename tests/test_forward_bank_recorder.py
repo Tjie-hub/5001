@@ -47,3 +47,36 @@ def test_event_row_pending_void_and_cost():
     jump = closes[:]
     jump[8] = 160.0                    # |ret| > 35% inside the window
     assert rec.event_row("BBCA", dates, opens, jump, 5, book, ihsg, set()) == "void"
+
+
+def _book_db():
+    """A, B flat; C climbs then splits 5:1 on day 35 (recorded). All liquid (ADV20 >= Rp 10 B)."""
+    import sqlite3
+
+    import pandas as pd
+
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE ohlcv (ticker TEXT, date TEXT, open REAL, high REAL, low REAL, close REAL, "
+                "volume REAL, is_final INTEGER)")
+    con.execute("CREATE TABLE corporate_actions (ticker TEXT, date TEXT, action TEXT, value REAL)")
+    con.execute("CREATE TABLE corporate_action_events (ticker TEXT, action_type TEXT, event_date TEXT)")
+    days = [d.strftime("%Y-%m-%d") for d in pd.bdate_range("2026-03-02", periods=50)]
+    paths = {"A": [1000.0] * 50, "B": [2000.0] * 50, "IHSG": [7000.0] * 50,
+             "C": [1000.0 + 10 * k for k in range(35)] + [200.0] * 15}
+    for t, path in paths.items():
+        for d, c in zip(days, path):
+            con.execute("INSERT INTO ohlcv VALUES (?, ?, ?, ?, ?, ?, 2e7, 1)", (t, d, c, c, c, c))
+    con.execute("INSERT INTO corporate_actions VALUES ('C', ?, 'split', 5)", (days[35],))
+    return con, days
+
+
+def test_book_leaves_out_a_member_whose_window_holds_a_price_step():
+    """DEV-001 (2026-10-20): the bank leg was voided on price steps, the EW book was not, so a member's split
+    entered the benchmark as a -80% 'return' and lifted the bank's excess (July 2026: up to -1.85 pp)."""
+    import pytest
+
+    con, days = _book_db()
+    _, book, _, voids = rec.load(con)
+    assert book[days[20]] == pytest.approx((1300 / 1210 - 1) / 3)   # C clean: in the book
+    assert book[days[28]] == pytest.approx(0.0)                     # C's window holds the split: left out
+    assert voids == {"C": {days[35]}}
