@@ -27,7 +27,11 @@ convention.  A partial row is never written.
 Signal computation, constants and conventions are reused verbatim from
 scripts/fade_failed_breakdown.py (SHA256SUMS-pinned 2026-09-21); this file
 adds ONLY the ledger / append / back-fill layer.  It does not modify
-PROTOCOL.md, the frozen script, or any other ledger.
+PROTOCOL.md, the frozen script, or any other ledger.  One exception
+(deviation_log DEV-002, 2026-10-20): the contamination window.  The frozen
+line `s.shift(-1).rolling(h)` sums sessions t-h+2 .. t+1 (pandas rolling is
+right-aligned), i.e. the sessions BEFORE the signal; the protocol's window is
+the holding window t+1 .. t+h, which is `s.shift(-h).rolling(h)`.
 """
 import json, sys, hashlib
 from datetime import datetime, timezone
@@ -72,7 +76,7 @@ def load(conn):
 
 
 def build(d, splits):
-    # verbatim from scripts/fade_failed_breakdown.py (frozen 2026-09-20 v1)
+    # verbatim from scripts/fade_failed_breakdown.py (frozen 2026-09-20 v1), except the bad_h window (DEV-002)
     g = d.groupby("ticker", sort=False)
     d["ret"] = g["close"].pct_change()
     d["n"] = g.cumcount()
@@ -98,9 +102,10 @@ def build(d, splits):
     for h in HORIZONS:
         d[f"exit_close_{h}"] = g["close"].shift(-h)
         d[f"exit_date_{h}"] = g["date"].shift(-h)
-        # contamination anywhere in [signal+1 .. signal+h]
+        # contamination anywhere in [signal+1 .. signal+h] (DEV-002: shift(-h); the frozen
+        # shift(-1) form summed t-h+2 .. t+1, the sessions before the signal)
         d[f"bad_{h}"] = g["bad"].transform(
-            lambda s: s.shift(-1).rolling(h, min_periods=1).sum())
+            lambda s, h=h: s.shift(-h).rolling(h, min_periods=1).sum())
         # equal-weight liquid-book forward return under the SAME entry/exit
         # convention (next-open in, h-session close out), for the fair
         # (non-IHSG) benchmark -- computed on every liquid row, not just signals

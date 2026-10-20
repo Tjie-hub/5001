@@ -57,3 +57,33 @@ and tested on synthetic ledgers only.
   not confirmed on the gross contrast under overlap-robust inference."**
 - Any action on that disagreement, including whether the signal may enter BOOK_OVERLAY_POLICY, is a
   separate Owner decision.
+
+---
+
+## DEV-002 · 2026-10-20 · contamination guard measured over the holding window, as §2 states (recorder only)
+
+**Authority.** DECISION_LOG D-104. Owner instruction 2026-10-19 ("fix") on the strategy logic check
+(`docs/audit/IDX_FULL_AUDIT_2026-10-19.md` §5, T2).
+
+**What changed.** `run_recorder.py` computes `bad_{h}` with `s.shift(-h).rolling(h, min_periods=1).sum()`,
+which sums sessions t+1 .. t+h: the holding window §2 names ("any session in its holding window"). The
+frozen line `s.shift(-1).rolling(h, min_periods=1).sum()` is right-aligned, so it summed t−h+2 .. t+1: the
+h−2 sessions before the signal, the signal day and the entry day. A split on day 12 of the holding window
+was therefore kept and one 5 sessions before the signal voided the signal. Test:
+`tests/test_forward_fade_recorder.py` (h = 5 flags rows 15–19 for a bad row 20; the frozen form flags 19–23).
+
+**Why.** §2 defines the window in words, and the frozen script's own comment says "contamination anywhere
+in [signal+1 .. signal+h]": the code contradicted both. The same line sits in the frozen
+`scripts/fade_failed_breakdown.py` and in `P-M/forward_regime/scripts/panel.py` (about 15 research
+scripts reuse it); "three independent implementations agree" (PROTOCOL §1, §2) were copies of this line.
+
+**Was any outcome visible?** No. `ledger.json` holds **0 signals** (sha256 `cb2de076…`). On the registered
+in-sample data (through 2026-07-29, the frozen script re-run 2026-10-19) the protocol window moves the
+h=20 result from −1.46%, t −8.16 to −1.49%, t −8.35 vs the EW book, and from −1.44%, t −5.61 to −1.48%,
+t −5.73 vs IHSG: 43 contaminated signals had been kept (mean +5.9%, mostly >35% up-moves) and 56 clean
+ones voided. The registered evidence stands; the frozen script and its SHA256SUMS are untouched. A dry run
+on 2026-10-20 (counts only): 570 signals since opening, 21 with a closed h=20 window, 0 voided under either
+window, so the first rows (09:35 today) are identical either way.
+
+**What did NOT change.** Signal, universe, entry/exit, horizons, cost, benchmarks, inference, decision
+rule, ledger schema and the frozen script. Voided signals are not stored, so nothing needs re-writing.
