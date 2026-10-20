@@ -3650,6 +3650,53 @@ NeoBDM review of the same day; the G0 is run by the planner).
 
 ---
 
+### D-105 · HYP-PM-0022 (closing-window order-flow imbalance, LATE) accepted, registered in P-M {I5,I6,I7,I12}, G0 frozen at N=613; G1 approved
+**Status:** RECORDED · **Date:** 2026-10-20 · **Type:** Mechanism acceptance (D-070 §1) + registration + G0 freeze +
+G1 approval · **Approval authority:** Owner, 2026-10-20: "TEST RUN". This followed the planner's feasibility note
+that the closing tape is testable on the minute bars and that HYP-PM-0009 never tested it validly. The planner ran
+the study. The owner approved the run before the census existed, so G1 stayed conditional on the frozen stop rule.
+
+- **Mechanism (order flow).**
+  - LATE = (dB − dS) / (dB + dS) over the last 30 minutes of continuous trading (15:19 → 15:49).
+  - dB and dS are differences of the cumulative aggressor counters (D-089 semantic register).
+  - Informed or size-constrained traders back-load execution. Their late net demand is information the close
+    does not yet reflect.
+  - **Pre-declared sign:** high LATE → higher return close t → close t+1.
+  - LATE is complete before the pre-closing session (15:50–16:00), so an entry at close(t) is attainable. Daily
+    OIB (HYP-PM-0021) was not.
+- **Family and census.**
+  - P-M {I5,I6,I7,I12}, I7 cell. This is the family's 6th registered member (0001, 0003, 0007, 0009, 0021 before
+    it).
+  - It is a new instrument, not a re-run of HYP-PM-0009 (whose back-loading test is INVALID (data), D-089).
+  - The census was 612 (D-102 withdrew before registration). This arm makes **613**, bar **3.2996**. It is counted
+    from registration (X8).
+- **Frozen study.**
+  - Branch `research/closing-tape-2026-10` @ `b895300`.
+  - PREDECLARATION sha256 `eb603250…`; the sidecar covers `late.py`, `extract_late.py`, `outcomes_late.py`,
+    `g0_census.py`, `g1_run.py`, `test_pit_late.py`, verbatim `ownership.py` `856afe18…` and `cost_realised.py`
+    `65051253…`.
+  - Snapshots: walkforward `a2d7e675…`, history_long `7d298068…` (prices end 2026-09-24). Window cache
+    `ae2cc1be…`.
+- **Pass conditions (all must hold):**
+  - S_cc (Q5 − Q1 close → close) NW t ≥ bar.
+  - Both halves > 0.
+  - Fama-MacBeth LATE coefficient over the pre-window OIB, same-day return, window return, log ADV and Parkinson-60:
+    NW t ≥ 2.0.
+  - Long-only Q5 − universe, net of the cost_realised round trip × turnover: > 0.
+  - Report only: close → open and open → close legs, long-short net.
+- **Census (counts only).**
+  - 384 testable days 2025-01-02 → 2026-09-23 (halves 230 / 154); median universe 370, quintile 74.
+  - **Stop rule not fired:** MDE 0.127%/day, power 48.8% at 0.10%/day.
+- **Disclosures.**
+  - HYP-PM-0021 found the daily-OIB spread reversing close → open; the planner knew this. The close → open leg is
+    reported, not used to choose the sign.
+  - The owner's TOWR 2026-10-07 last-20-minute note is one ticker-day and was not used.
+- **G1:** one run, `LATE_G1_APPROVED=1`. The verdict comes from the computed booleans only.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
