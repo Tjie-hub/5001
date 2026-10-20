@@ -256,7 +256,7 @@ def calc_ara_arb_levels(price: float) -> dict:
     """
     IDX Auto Rejection thresholds for today's session: ARA tiers per BEI
     Peng-00009/BEI.POP/03-2023 (<=200 -> 35%; 200-5000 -> 25%; >5000 -> 20%),
-    ARB a flat 15% since 2025-04-08 (engine.exits.price_limits).
+    ARB a flat 15% since 2025-04-08, 7% from 2026-10-19 to 2026-12-31 (engine.exits.price_limits).
     Returns {ara_pct, arb_pct, ara_price, arb_price}. Sub-Rp50 treated as tier 1.
 
     P4-2: the tier table and band math live in engine.exits.price_limits (the

@@ -19,6 +19,13 @@ def test_arb_price_matches_the_live_floors_of_2026_10_16():
     assert rec.arb_price(448) == 382      # TOWR
 
 
+def test_arb_price_follows_the_7pct_rule_on_its_sessions():
+    """DEV-001 (D-107): TOWR's 2026-10-19 low was exactly its 7% floor."""
+    assert rec.arb_price(388, "2026-10-19") == 362
+    assert rec.arb_price(6075, "2026-12-31") == 5650
+    assert rec.arb_price(6075, "2027-01-04") == 5175
+
+
 def test_event_days_use_the_low_vs_prior_close():
     ihsg = [("d0", 6000, 6000), ("d1", 5500, 5600), ("d2", 5200, 5300)]   # d1 -8.3% low, d2 -7.1%
     assert [e[0] for e in rec.event_days(ihsg)] == ["d1"]
@@ -57,8 +64,8 @@ def test_writes_only_after_t5_and_never_backfills(tmp_path):
     later = tmp_path / "later"
     later.mkdir()
     c = _db(later, days, {ev: 5400})                                   # the same day, t+5 now closed
-    assert rec.record(c, led) == 1                                     # AAA touched 850 = ARB(1000)
-    assert led["rows"][0]["ticker"] == "AAA" and led["rows"][0]["entry_arb"] == 850
+    assert rec.record(c, led) == 1                                     # AAA touched 850, under ARB(1000) = 930 (7%)
+    assert led["rows"][0]["ticker"] == "AAA" and led["rows"][0]["entry_arb"] == 930
     assert led["event_days"][0]["n_liquid"] == 2 and led["event_days"][0]["n_arb_touch"] == 1
     assert rec.record(c, led) == 0                                     # idempotent
 

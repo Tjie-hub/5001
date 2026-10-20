@@ -30,8 +30,14 @@ def tick(price):
     return 1 if price < 200 else 2 if price < 500 else 5 if price < 2000 else 10 if price < 5000 else 25
 
 
-def arb_price(prev_close):
-    raw = prev_close * (1 - ARB_PCT)
+# DEV-001 (D-107): the floor in force on the session. BEI cut the ARB to 7% for 2026-10-19 .. 2026-12-31
+# (Kep-00157/00158/BEI/10-2026); PROTOCOL §2 names "the ARB in force", and 15% was its value when frozen.
+ARB_SEVEN_PCT, ARB_SEVEN_FROM, ARB_SEVEN_TO = 0.07, "2026-10-19", "2026-12-31"
+
+
+def arb_price(prev_close, session=""):
+    pct = ARB_SEVEN_PCT if ARB_SEVEN_FROM <= str(session)[:10] <= ARB_SEVEN_TO else ARB_PCT
+    raw = prev_close * (1 - pct)
     t = tick(raw)
     return math.ceil(raw / t - 1e-9) * t
 
@@ -91,7 +97,7 @@ def record(conn, ledger):
             if lg is None:
                 continue  # t+5 not closed yet: deferred, not written
             bench.append(lg)
-            arb = arb_price(prev)
+            arb = arb_price(prev, d)
             if bars[i][3] <= arb:
                 rows.append((t, prev, arb, bars[i][3], lg, void_reason(bars, i)))
         if not bench:

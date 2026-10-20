@@ -14,7 +14,8 @@ the same reference live open_trade uses, so backtest and live produce identical
 capped levels for identical entries. The bands are REGIME-dependent (research
 LC-PM-0009, docs/research_programs/P-M/dataset_b/foundation.py): from
 2025-04-08 the lower band (ARB) is a flat 15% at every tier (SK Direksi BEI
-Kep-00003/BEI/04-2025) while the upper band (ARA) keeps the tiers. Sessions
+Kep-00003/BEI/04-2025) while the upper band (ARA) keeps the tiers; from 2026-10-19
+to 2026-12-31 it is 7% (Kep-00157/BEI/10-2026, D-107). Sessions
 before that keep the symmetric table (R3; older regimes are not modelled, as
 before). Until 2026-10-19 the symmetric table served every session, so a stop
 between -15% and the tier floor counted as fillable on the entry day.
@@ -44,12 +45,21 @@ ARA_ARB_SAFETY = 0.005
 # R4 (see the module docstring): flat lower band from this session on.
 ARB_FLAT_FROM = "2025-04-08"
 ARB_FLAT_PCT = 0.15
+# Temporary 7% floor after the 2026-10-16 MSCI shock (SK Direksi BEI Kep-00157/BEI/10-2026, amended by Kep-00158
+# for Rp 11-14 names, which may fall Rp 1; not modelled here, the levels are untick'd). BEI said it will review
+# the rule before year end: if a new SK extends or ends it, move ARB_SEVEN_TO (D-107).
+ARB_SEVEN_FROM, ARB_SEVEN_TO = "2026-10-19", "2026-12-31"
+ARB_SEVEN_PCT = 0.07
+
+
+def _today() -> str:
+    return datetime.now(ZoneInfo("Asia/Jakarta")).date().isoformat()
 
 
 def _session(session) -> str:
     """ISO date of the session a band applies to; None = today in WIB (the live path)."""
     if session is None:
-        return datetime.now(ZoneInfo("Asia/Jakarta")).date().isoformat()
+        return _today()
     s = str(session)[:10]
     # Fail closed: a non-date (e.g. a shadowed `date` class, "<class 'd") would compare
     # above "2025-04-08" and silently pick a regime.
@@ -62,7 +72,7 @@ def ara_arb_levels(price: float, session=None) -> dict:
     """Auto-rejection bands around `price` on `session` (ISO date; None = today).
 
     ARA tier: <=200 -> 35%; 200-5000 -> 25%; >5000 -> 20%. ARB: the same tier
-    before 2025-04-08, a flat 15% from then on. Sub-Rp50 treated as tier 1 (IDX
+    before 2025-04-08, a flat 15% from then on, 7% from 2026-10-19 to 2026-12-31. Sub-Rp50 treated as tier 1 (IDX
     board convention). Returns {ara_pct, arb_pct, ara_price, arb_price}.
     """
     if price <= 200:
@@ -71,7 +81,9 @@ def ara_arb_levels(price: float, session=None) -> dict:
         pct = 0.25
     else:
         pct = 0.20
-    arb = ARB_FLAT_PCT if _session(session) >= ARB_FLAT_FROM else pct
+    s = _session(session)
+    arb = (pct if s < ARB_FLAT_FROM else
+           ARB_SEVEN_PCT if ARB_SEVEN_FROM <= s <= ARB_SEVEN_TO else ARB_FLAT_PCT)
     return {
         "ara_pct":   pct,
         "arb_pct":   arb,

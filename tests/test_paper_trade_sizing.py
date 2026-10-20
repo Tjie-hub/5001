@@ -12,6 +12,15 @@ import sqlite3
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _band_session(monkeypatch):
+    """Sizing arithmetic here assumes the standing 15% ARB; the live path reads today's band, which is 7% from
+    2026-10-19 to 2026-12-31 (D-107, covered in test_price_limit_fillability.py). Pin the session so these
+    tests do not change with the calendar."""
+    import engine.exits.price_limits as pl
+    monkeypatch.setattr(pl, "_today", lambda: "2026-10-16")
+
+
 @pytest.fixture()
 def pt_db(tmp_path, monkeypatch):
     """Isolated paper_trade DB with OHLCV for ticker TEST (ATR14 ≈ 20)."""

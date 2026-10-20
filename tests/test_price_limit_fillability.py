@@ -39,7 +39,7 @@ def test_tier_table_is_symmetric_before_2025_04_08(price, pct):
 def test_arb_is_a_flat_15pct_from_2025_04_08(price, pct):
     """SK Direksi BEI Kep-00003/BEI/04-2025 (research LC-PM-0009). The symmetric table was applied to every session
     until 2026-10-19 (strategy logic check)."""
-    for session in ("2025-04-08", "2026-10-16", None):   # None = today, the live path
+    for session in ("2025-04-08", "2026-10-16", "2027-01-04"):
         lv = ara_arb_levels(price, session)
         assert lv["ara_pct"] == pct and lv["arb_pct"] == 0.15
         assert lv["ara_price"] == pytest.approx(price * (1 + pct))
@@ -74,7 +74,7 @@ def test_cap_levels_uses_the_15pct_floor_from_2025_04_08():
 
 
 def test_cap_levels_noop_when_fillable():
-    out = cap_levels(1000.0, tp_price=1150.0, sl_price=900.0)
+    out = cap_levels(1000.0, tp_price=1150.0, sl_price=900.0, session="2026-10-16")
     assert not out["tp_capped"] and not out["sl_capped"]
     assert out["tp_price"] == 1150.0 and out["sl_price"] == 900.0
 
@@ -201,3 +201,24 @@ def test_crash_recovery_caps_retracement_target_beyond_ara():
         ara = ara_arb_levels(tr.entry_price)["ara_price"]
         if tr.exit_reason == "TP":
             assert tr.exit_price <= ara * (1 - ARA_ARB_SAFETY) + 1e-6
+
+
+@pytest.mark.parametrize("price,pct", TIERS)
+def test_arb_is_7pct_from_2026_10_19_to_2026_12_31(price, pct):
+    """Kep-00157/BEI/10-2026 (after the 2026-10-16 MSCI shock), amended by Kep-00158 for Rp 11-14; BEI reviews it
+    before year end. TOWR fell to exactly its 7% floor on 2026-10-19 (388 -> 362)."""
+    for session in ("2026-10-19", "2026-12-31"):
+        lv = ara_arb_levels(price, session)
+        assert lv["ara_pct"] == pct and lv["arb_pct"] == 0.07
+        assert lv["arb_price"] == pytest.approx(price * 0.93)
+
+
+def test_cap_levels_under_the_7pct_floor():
+    out = cap_levels(1000.0, sl_price=900.0, session="2026-10-20")
+    assert out["sl_capped"] and out["sl_price"] == pytest.approx(930.0 * (1 + ARA_ARB_SAFETY))
+
+
+def test_live_path_uses_todays_rule(monkeypatch):
+    import engine.exits.price_limits as pl
+    monkeypatch.setattr(pl, "_today", lambda: "2026-10-20")
+    assert pl.ara_arb_levels(1000.0)["arb_pct"] == 0.07
