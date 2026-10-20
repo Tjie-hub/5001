@@ -66,6 +66,10 @@ def load_panel(upto: str | None = None):
     # within 25%, the store is UNADJUSTED for that event -> divide pre-ex prices by the factor.
     sp = ca[ca.action == "split"]
     df = df.sort_values(["ticker", "date"]).reset_index(drop=True)
+    # Rupiah turnover is the same before and after a split, so it is taken from the stored close BEFORE
+    # the fix below scales pre-ex prices (DEV-003, 2026-10-20: adjusted close x raw share volume had
+    # understated a recently split name's liquidity by the split factor in the top-200 ranking).
+    df["traded_value"] = df["close"] * df["volume"]
     fix = np.ones(len(df))
     if len(sp):
         by = {t: g[["date", "close"]].reset_index(drop=True) for t, g in df.groupby("ticker")}
@@ -83,7 +87,6 @@ def load_panel(upto: str | None = None):
                 fix[idx[dts[idx] < ex]] *= 1.0 / fac
     for col in ("high", "low", "close"):
         df[col] = df[col] * fix
-    df["traded_value"] = df["close"] * df["volume"]
 
     P = lambda col: df.pivot_table(index="date", columns="ticker", values=col, aggfunc="last").sort_index()
     cl, hi, lo, vol, tv = P("close"), P("high"), P("low"), P("volume"), P("traded_value")

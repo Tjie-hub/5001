@@ -115,3 +115,33 @@ and this note exists so the question is on record before the outcome is visible 
 Five further names (BNBR, ENRG 08-14, SINI, COCO, PADI) have July–August ex-dates inside the
 Parkinson-60 **lookback**. The estimator is range-based (ln(high/low) per day), so a close-to-close
 gap barely moves it. This is reported as information and is not a contamination claim.
+
+---
+
+## DEV-003 · 2026-10-20 · Rupiah traded value computed before the split fix (the spec's own quantity)
+
+**Authority.** DECISION_LOG D-104. Owner instruction 2026-10-19 ("fix") on the strategy logic check
+(`docs/audit/IDX_FULL_AUDIT_2026-10-19.md` §5, T4).
+
+**What changed.** `load_panel()` computes `traded_value = close × volume` from the stored close, before the
+split fix scales pre-ex prices. It used to be computed after it: adjusted close × raw share volume, which
+understates a name's Rupiah turnover by the split factor on every pre-ex session of a split the store holds
+unadjusted. Test: `tests/test_forward_volex_runner.py` (a 5:1 split with steady Rp 1 bn turnover: the
+trailing-60 median was Rp 0.2 bn before, Rp 1 bn now).
+
+**Why.** The universe is "the top 200 by trailing-60 median traded value"; Rupiah turnover does not change at a
+split. The defect bites only formations within about 30 sessions after such a split (before then the median
+is mostly post-split sessions), where a split name could drop out of the top 200.
+
+**Was any outcome visible?** No outcome was read for this change. Both recorded formations were regenerated
+blind with and without the fix on 2026-10-19 and compared on membership only: **2026-09-15 and 2026-10-01
+are identical** (universe and excluded list). The ledger is unchanged.
+
+**What did NOT change.** Universe rule, estimator, exclusion fraction, entry, horizon, benchmark, endpoint,
+decision rule, cadence, the session and suspension guards, the split back-adjustment of prices, and every
+recorded formation. Not a new spec id: the spec already names Rupiah traded value; the code now computes it.
+
+**Note carried.** Regenerating a past formation today does not reproduce it exactly (09-15: +BNGA +MBSS
+−BELL −SMDR; 10-01: +KOKA −GZCO) because suspensions and bar repairs recorded since then feed the ±20
+suspension pad. The recorded lists are authoritative; never regenerate a formation with `--as-of` after
+the fact.
