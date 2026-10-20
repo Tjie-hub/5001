@@ -3615,6 +3615,41 @@ NeoBDM review of the same day; the G0 is run by the planner).
 
 ---
 
+### D-104 · Strategy logic check: four forward-test recorders brought in line with their own protocols' rules; ARB modelled as a flat 15% from 2025-04-08 (no hypothesis, threshold, endpoint or decision rule changed)
+**Status:** RECORDED · **Date:** 2026-10-20 · **Type:** Recorder corrections under frozen protocols (deviation entries) + production execution-model correction ·
+**Approval authority:** Owner, 2026-10-19: "fix" on the strategy logic check (`docs/audit/IDX_FULL_AUDIT_2026-10-19.md` §5), after asking whether the tested strategies' logic had been checked.
+
+- **FWD-PM-REGIME-002, DEV-003 (`07a11a6`).** The recorder omitted PROTOCOL §2's contamination guard (a split or a
+  ±35% session in the window) that the reference backtest applies (`scripts/ref002.py` line 26); a split trips the
+  3×ATR stop and would be recorded as a fake −80% trade. Now applied. **0 of 105** recorded trades affected; the
+  first run excludes one MGNA trade (>35% session on 2026-10-01) that was due to be appended on 2026-10-20.
+- **FWD-PM-FADE-001, DEV-002 (`5490e06`).** The guard summed `s.shift(-1).rolling(h)` = sessions t−h+2 .. t+1, before
+  the signal; §2 names the holding window, now `s.shift(-h).rolling(h)`. Registered in-sample result h=20 vs EW book
+  t −8.16 → −8.35 (immaterial); ledger empty when changed; frozen script and SHA256SUMS untouched.
+- **FWD-PM-BANK-001, DEV-001 (`9e93358`).** The equal-weight book now leaves out a member whose window holds a price
+  step or a >35% session, the bank leg's own void rule. History: mean +0.003 pp, up to +1.85 pp (July 2026 splits
+  and rights). Ledger empty when changed; `SHA256SUMS.txt` updated for `run_recorder.py`.
+- **FWD-PM-VOLEX-001, DEV-003 (`86313fd`).** Rupiah traded value is taken before the split back-adjustment (it had
+  been adjusted close × raw share volume). Both recorded formations unchanged.
+- **Research code at large.** The backward guard line also sits in the frozen FADE evidence script and in
+  `forward_regime/scripts/panel.py` (`add_fwd`, about 15 research scripts). For broad price studies its effect is
+  negligible (about 0.4% of signals sit near a split), so no closed conclusion is reopened; any new or re-run study
+  must use the `shift(-h)` form.
+- **Production execution model (`2598388`).** `engine/exits/price_limits.py`: ARB is a flat 15% from 2025-04-08
+  (SK Direksi BEI Kep-00003/BEI/04-2025; research LC-PM-0009), the symmetric tier before; ARA tiers unchanged;
+  every backtest `cap_levels` call passes its entry date, live uses today. NR7 backtest source pin amended
+  (NR7_BULL retired, D-066).
+- **jurnal26 (personal tool, outside the research corpus): `37f443e`, `c49ae45`.** The held-position ARB alert and the
+  screener's ARA/ARB rule used the 2023 symmetric table and could not see the 15% floor (BMTR's ARB close on
+  2026-10-16 went unannounced); sniper zones and the screener now read only bars after the last corporate-action
+  price step.
+- **No outcome was read** for any of these: counts, membership lists, metadata and pre-forward history only.
+  **Census unchanged at 612.**
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
