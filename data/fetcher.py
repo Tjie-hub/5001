@@ -16,29 +16,27 @@ def _wib_today() -> str:
     """Current calendar date in WIB."""
     return datetime.now(_WIB).strftime("%Y-%m-%d")
 
-# ── Index Constituents (preserved for backward compat) ───────────────────────
+# ── Index Constituents ────────────────────────────────────────────────────────
+# Period 3 Aug - 30 Oct 2026 (BEI July 2026 major evaluation, Peng-00148/BEI.POP/07-2026). Lists per Kontan and
+# StockWatch; IDX80 matches idx80_membership_history P7 exactly. Updated 2026-10-20: the previous lists dated from
+# before 2025 (11 of the 30 IDX30 names had left). idx_tickers.in_idx30/in_lq45/in_idx80 carry the same sets.
+# Next reconstitution takes effect 2026-11-02 -- update both here and the idx_tickers flags.
 IDX30 = [
-    "AMMN", "AMRT", "ASII", "BBCA", "BBNI", "BBRI", "BBTN",
-    "BMRI", "BREN", "BRIS", "BRPT", "CPIN", "EXCL", "GOTO",
-    "ICBP", "INCO", "INDF", "ISAT", "ITMG", "KLBF", "MDKA",
-    "MEDC", "PGAS", "PGEO", "PTBA", "TBIG", "TLKM", "TOWR",
-    "TPIA", "UNTR",
+    "AADI", "ADMR", "ADRO", "AMRT", "ANTM", "ASII", "BBCA", "BBNI", "BBRI", "BMRI",
+    "BRPT", "BUMI", "CPIN", "DEWA", "EMTK", "GOTO", "ICBP", "INCO", "INDF", "INKP",
+    "JPFA", "KLBF", "MBMA", "MDKA", "MEDC", "PGAS", "PGEO", "TLKM", "UNTR", "UNVR",
 ]
 _LQ45_EXTRA = [
-    "ACES", "ADRO", "AKRA", "ANTM", "BTPS",
-    "CTRA", "EMTK", "HRUM", "INKP", "INTP",
-    "JSMR", "LPPF", "MAPI", "MIKA", "MTEL",
+    "AKRA", "AMMN", "BBTN", "CUAN", "ESSA", "EXCL", "HRTA", "INDY",
+    "ISAT", "ITMG", "MAPI", "NCKL", "PTBA", "SCMA", "WIFI",
 ]
 LQ45 = IDX30 + _LQ45_EXTRA
 
 _IDX80_EXTRA = [
-    "AALI", "ARTO", "BBYB", "BNGA", "BSDE",
-    "BUKA", "CMRY", "DNET", "ERAA", "ESSA",
-    "GGRM", "HMSP", "JPFA", "KAEF", "KIJA",
-    "LINK", "LSIP", "MBMA", "MNCN",
-    "MYOR", "NCKL", "NISP", "PANI", "PNBN",
-    "PTPP", "PWON", "RAJA", "SCMA", "SIDO",
-    "SMGR", "SMRA", "TINS", "TKIM", "UNVR",
+    "ACES", "ARTO", "BFIN", "BKSL", "BRMS", "BSDE", "BUKA", "CBDK", "CMRY", "CTRA",
+    "DSNG", "ELSA", "ENRG", "ERAA", "GGRM", "HEAL", "HRUM", "JSMR", "KIJA", "KPIG",
+    "LSIP", "MAPA", "MIKA", "MYOR", "PNLF", "PTRO", "PWON", "RAJA", "RATU", "SMGR",
+    "SMRA", "SSIA", "TAPG", "TOWR", "TPIA",
 ]
 IDX80 = LQ45 + _IDX80_EXTRA
 
