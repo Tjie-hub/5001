@@ -3763,6 +3763,37 @@ a flat 15% with no end.
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-108 · D-098 instrument change: the big-player alert carries an order-book depth read (alert text only; definitions unchanged)
+**Status:** RECORDED · **Date:** 2026-10-21 · **Type:** Instrument change (supersedes D-103's `bigplayer_watch.py` hash only) ·
+**Approval authority:** Owner, 2026-10-21: "so we need to add when the tape is trigger, check the order book too".
+
+- **Why.** On TOWR at 09:30 on 2026-10-21, the alert's only book line was the top-5 bid share. It did not show two things:
+  - 46k lots offered at 406–410, which is the plan SL.
+  - 116k lots bid at 362–364, which is the 7% ARB floor, far below the 400 price.
+- **What changed (jurnal26 `9ecf76f`).**
+  - A new module, `book_depth.py` (`8d88e61962b5767d…`), reads the whole visible book (about 20 levels a side):
+    - the 10-level bid share;
+    - the nearest wall on each side: a level of at least 3× the side's median level and at least Rp 250M;
+    - bids stacked at the ARB floor or one tick above it (floor taken from `bands`, so it follows D-107);
+    - the lots between the last price and the plan's SL and target.
+  - `bigplayer_watch.py` (`8618183215762237…` → `482d46a312eb9cb8…`) calls the module after the existing book fetch
+    and adds its lines after "Book top 5". Both calls are fail-soft: a depth error drops the lines, never the alert
+    (the D-103 lesson).
+- **What did not change.**
+  - No event added; no event definition, threshold or trigger changed.
+  - The book is fetched exactly as before: same call, same names at a key level.
+  - The depth read is **not** written to `bigplayer_events.jsonl`. The logged `version` stays `32703b1`, and the
+    E1–E5 record is unaffected.
+  - `tape.py` (`4cd0dfcee3d77ad3…`) and `limit_watch.py` (`3f3723e1751a6cbd…`) are unchanged.
+- **Status of the read.** Descriptive context only. The wall multiple and Rp floor were set on one morning
+  (TOWR / INDR). No order-book rule has been tested. Any later test of book depth needs its own D-entry and its own
+  record, and cannot draw on alert text.
+- **Tests.** 9 in `test_book_depth.py` (TOWR fixture; INDR, where the best bid of 2,660 was already under the 2,665 SL)
+  and 2 in `test_bigplayer_watch.py` (placement, and a malformed read still renders). The suite passes 203/203.
+- **Census unchanged at 613.** No outcome was read.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
