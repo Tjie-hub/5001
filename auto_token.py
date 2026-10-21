@@ -8,7 +8,7 @@ Usage:
 """
 
 import sys, os, time, requests, base64, json, fcntl, tempfile, contextlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -131,6 +131,38 @@ def _jwt_iat(token):
         return data.get("iat", 0)
     except Exception:
         return 0
+
+
+def _login_fix_command():
+    """The exact re-login command for failure alerts (T1, 2026-10-21): built
+    from BASE_DIR (never hard-coded — the repo path contains a space, hence
+    the quotes), the venv python (the system python3 lacks playwright), and a
+    cd so .env / relative paths resolve. The old alert text suggested a bare
+    `python3 auto_token.py --login`, which fails on both counts."""
+    return f'cd "{BASE_DIR}" && venv/bin/python3 auto_token.py --login'
+
+
+def _token_status_line():
+    """One operator-facing line about the on-disk token for failure alerts:
+    expiry wall-clock time + minutes left, from the existing JWT decode."""
+    if not TOKEN_FILE.exists():
+        return "Token file: tidak ada"
+    token = TOKEN_FILE.read_text().strip()
+    if not token:
+        return "Token file: kosong"
+    if not _is_jwt_shaped(token):
+        return "Token: tidak bisa di-decode (bukan JWT)"
+    remaining = jwt_expiry(token)  # hours
+    exp_dt = datetime.now() + timedelta(minutes=remaining * 60)
+    if remaining <= 0:
+        return (
+            f"Token sudah EXPIRED (expire {exp_dt.strftime('%Y-%m-%d %H:%M')} WIB, "
+            f"{abs(remaining) * 60:.0f} menit yang lalu)"
+        )
+    return (
+        f"Token expire {exp_dt.strftime('%Y-%m-%d %H:%M')} WIB "
+        f"(sisa {remaining * 60:.0f} menit)"
+    )
 
 
 def should_skip_refresh(margin_hours=None):
@@ -344,16 +376,26 @@ def initial_login():
 
 # ── Mode 2: Auto Refresh (headless, untuk cron) ──
 def auto_refresh():
-    from playwright.sync_api import sync_playwright
-
+    # STATE_DIR check before the playwright import: this failure path (and its
+    # tests) must not depend on playwright being installed, and must not pay
+    # the import cost just to report the missing session.
     if not STATE_DIR.exists():
         log("ERROR: No saved session")
         send_telegram(
-            "⚠️ <b>Auto Token GAGAL</b>\n"
-            "Session belum ada. Login dulu via CRD:\n"
-            "<code>python3 auto_token.py --login</code>"
+            "⚠️ <b>Auto Token GAGAL — saved login hilang</b>\n\n"
+            "Folder login tersimpan (Playwright profile) tidak ada:\n"
+            f"<code>{STATE_DIR}</code>\n"
+            "Tanpa folder itu refresh headless tidak bisa jalan. Jangan hapus "
+            "folder itu — itu ADALAH login Stockbit-nya.\n\n"
+            "Fix sekarang:\n"
+            f"1. <code>{_login_fix_command()}</code>\n"
+            "2. Login di browser yang terbuka (CRD, DISPLAY :20)\n"
+            "3. Setelah browser menunjukkan sudah login, tekan ENTER DI TERMINAL\n"
+            "Capture token makan sampai ~1 menit setelah ENTER."
         , event="data.token_refresh_failed")
         return None
+
+    from playwright.sync_api import sync_playwright
 
     log("Auto refresh started (headless)")
 
@@ -660,15 +702,17 @@ def main():
         log("❌ Token capture GAGAL dan credential login juga gagal")
         send_telegram(
             "⚠️ <b>Stockbit Auto Token GAGAL</b>\n\n"
-            "Session expired + credential login gagal.\n"
-            "Kemungkinan: password berubah atau ada CAPTCHA.\n\n"
-            "Refresh manual sebelum 08:50:\n"
-            "1. CRD → Chrome → stockbit.com/symbol/BBCA\n"
-            "2. F12 → Network → Fetch/XHR → refresh\n"
-            "3. Copy Bearer token\n"
-            "4. <code>echo 'TOKEN' > ~/.stockbit_token</code>\n\n"
-            "Atau re-login:\n"
-            "<code>python3 auto_token.py --login</code>"
+            "Refresh headless + credential login gagal.\n"
+            "Kemungkinan: password berubah, CAPTCHA, atau verifikasi perangkat.\n"
+            f"{_token_status_line()}\n\n"
+            "Fix paling cepat — re-login:\n"
+            f"1. <code>{_login_fix_command()}</code>\n"
+            "2. Login di browser CRD (DISPLAY :20), tekan ENTER di terminal\n"
+            "3. Capture token makan sampai ~1 menit setelah ENTER\n\n"
+            "Atau paste token manual (hasil harus mode 600):\n"
+            "1. CRD → Chrome → stockbit.com/symbol/BBCA → F12 → Network → copy Bearer token\n"
+            f"2. <code>install -m 600 /dev/stdin \"{TOKEN_FILE}\"</code>\n"
+            "   lalu paste token, ENTER, Ctrl-D."
         , event="data.token_refresh_failed")
         cleanup_zombies()
         sys.exit(1)

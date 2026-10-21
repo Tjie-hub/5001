@@ -347,6 +347,58 @@ def test_concurrent_invocation_finds_lock_held_and_exits_cleanly(token_file, loc
     assert calls == []
 
 
+# ── failure-alert instructions (T1, incident 2026-10-21) ──
+#
+# Root cause: both failure alerts gave repair steps that could not work --
+# `python3 auto_token.py --login` without the venv (system python has no
+# playwright) or the cd, and `echo 'TOKEN' > ~/.stockbit_token` (wrong path,
+# and echo creates mode 664 which startup validation rejects). The owner
+# followed the 10-21 08:40 alert into a dead end while the token was expired.
+
+def test_no_saved_session_alert_gives_working_instructions(tmp_path, monkeypatch):
+    monkeypatch.setattr(at, "STATE_DIR", tmp_path / "no_such_state_dir")
+    sent = []
+    monkeypatch.setattr(at, "send_telegram", lambda msg, **kw: sent.append(msg))
+
+    at.auto_refresh()  # STATE_DIR check happens before the playwright import
+
+    assert len(sent) == 1
+    msg = sent[0]
+    assert "venv/bin/python3 auto_token.py --login" in msg
+    assert f'cd "{at.BASE_DIR}"' in msg               # repo path from BASE_DIR, quoted
+    assert str(tmp_path / "no_such_state_dir") in msg  # says WHICH folder is missing
+    assert "~1 menit" in msg                          # warns capture is slow
+    assert "~/.stockbit_token" not in msg
+
+
+def test_final_failure_alert_gives_working_instructions(
+    token_file, lock_file, no_state_dir, monkeypatch
+):
+    stale = _make_jwt(exp_offset_h=-5)  # expired -> readable status line
+    token_file.write_text(stale)
+
+    monkeypatch.setattr(at, "auto_refresh", lambda: None)
+    monkeypatch.setattr(at, "credential_login", lambda: None)
+    monkeypatch.setattr(at, "verify_token", lambda t: False)
+    monkeypatch.setattr(at, "RETRY_BACKOFF_BASE_S", 0)
+
+    alerts = []
+    monkeypatch.setattr(at, "send_telegram", lambda msg, **kw: alerts.append(msg))
+
+    with pytest.raises(SystemExit) as exc:
+        at.main()
+    assert exc.value.code == 1
+
+    final = alerts[-1]
+    assert "venv/bin/python3 auto_token.py --login" in final
+    assert f'cd "{at.BASE_DIR}"' in final
+    # manual paste path: repo file (never ~/.stockbit_token), mode 600
+    assert f'install -m 600 /dev/stdin "{token_file}"' in final
+    assert "menit" in final                        # minutes-left from the JWT decode
+    assert "~/.stockbit_token" not in final
+    assert "echo" not in final
+
+
 # ── JWT-shape validation at capture time (incident 2026-09-22) ──
 #
 # Root cause: `_capture_from_page`'s `on_request` listener accepted the FIRST
