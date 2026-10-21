@@ -1417,8 +1417,16 @@ def scheduled_multi_strategy_scan():
         except Exception:
             _rs_foreign = None
         from engine.risk_score import ihsg_move as _ihsg_move
+        _ihsg_today = _ihsg_move(_rs_conn, date_str)   # today's own bar only (2026-10-21: no stale 09:05 floor)
+        _ihsg_prev = None
+        if _ihsg_today is None:
+            try:   # display only: the last session's move, labelled as such in the alert
+                from engine.risk_score import ihsg_last_move as _ihsg_last
+                _ihsg_prev = _ihsg_last(_rs_conn, date_str)
+            except Exception:
+                _ihsg_prev = None
         _market_risk = _compute_risk(_rs_vpin, _rs_accdist, _rs_breadth, _rs_tech, _rs_foreign,
-                                     ihsg_day_move=_ihsg_move(_rs_conn, date_str))
+                                     ihsg_day_move=_ihsg_today, ihsg_prev=_ihsg_prev)
         _rs_conn.close()
         logger.info(f"[{time_str}] Market risk score: {_market_risk['score']:.1f}/100 — {_market_risk['tier']}")
         # Route alert based on tier

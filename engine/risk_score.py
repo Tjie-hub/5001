@@ -113,14 +113,25 @@ SHOCK_FLOORS = ((-0.08, 'CRITICAL', 86.0), (-0.05, 'RED', 71.0), (-0.03, 'ORANGE
 _WEIGHTS = {'vpin': 0.30, 'accdist': 0.20, 'breadth': 0.20, 'technicals': 0.15, 'foreign_flow': 0.15}
 
 
-def ihsg_move(conn, date_str: str):
-    """IHSG close-to-close change for the latest bar on or before date_str (a provisional intraday bar counts),
-    as a fraction; None without two bars."""
-    rows = conn.execute("SELECT close FROM ohlcv WHERE ticker='IHSG' AND date<=? ORDER BY date DESC LIMIT 2",
+def ihsg_last_move(conn, date_str: str):
+    """(bar_date, move) for the latest IHSG bar on or before date_str (a provisional intraday bar counts); move is
+    the close-to-close change as a fraction. (None, None) without two bars."""
+    rows = conn.execute("SELECT date, close FROM ohlcv WHERE ticker='IHSG' AND date<=? ORDER BY date DESC LIMIT 2",
                         (date_str,)).fetchall()
-    if len(rows) < 2 or not rows[0][0] or not rows[1][0]:
-        return None
-    return rows[0][0] / rows[1][0] - 1
+    if len(rows) < 2 or not rows[0][1] or not rows[1][1]:
+        return None, None
+    return str(rows[0][0])[:10], rows[0][1] / rows[1][1] - 1
+
+
+def ihsg_move(conn, date_str: str):
+    """IHSG close-to-close change of date_str's OWN bar (a provisional intraday bar counts), as a fraction; None
+    when date_str has no IHSG bar yet.
+
+    Until 2026-10-21 this took the latest bar on or before date_str. The 09:05 scan runs before the first intraday
+    IHSG bar, so it reported the PREVIOUS session's move as "IHSG today" and applied its shock floor: 10-19 09:05
+    showed Friday's -8.01%, and 10-20 09:05 showed Monday's -4.46% while IHSG was opening about +2%."""
+    bar_date, move = ihsg_last_move(conn, date_str)
+    return move if bar_date == str(date_str)[:10] else None
 
 
 def compute_market_risk_score(
@@ -130,6 +141,7 @@ def compute_market_risk_score(
     technicals: dict,
     foreign_net_5d,
     ihsg_day_move=None,
+    ihsg_prev=None,
 ) -> dict:
     """Compute composite market risk score from sensor summaries.
 
@@ -142,8 +154,12 @@ def compute_market_risk_score(
                           (investor_type='Asing'; negative = net sell). This is brokerage
                           ownership, not end-investor identity — see D1 in
                           docs/research_programs/P-M/D1_D2_PRODUCTION_SEMANTIC_AUDIT_2026-09-10.md
+        ihsg_day_move   : TODAY's IHSG move (ihsg_move); sets the shock floor
+        ihsg_prev       : (bar_date, move) of the last session, for display only when today has no IHSG bar yet
+                          (pre-open); never sets a floor
 
-    Returns dict with: score (0-100), tier, label (=tier), components dict.
+    Returns dict with: score (0-100), tier, label (=tier), components dict, and ihsg_prev_date when the
+    previous-session move is reported instead of today's.
     """
     missing = lambda d: (d or {}).get('label') == 'INSUFFICIENT_DATA'
     comps = {
@@ -170,12 +186,19 @@ def compute_market_risk_score(
     tier = _score_to_tier(score)
 
     out_comps = {k: (round(v, 1) if v is not None else None) for k, v in comps.items()}
+    prev_date = None
     if ihsg_day_move is not None:
         out_comps['ihsg_move_pct'] = round(ihsg_day_move * 100, 2)
-    return {
+    elif ihsg_prev and ihsg_prev[0] and ihsg_prev[1] is not None:
+        prev_date = ihsg_prev[0]
+        out_comps['ihsg_prev_move_pct'] = round(ihsg_prev[1] * 100, 2)
+    out = {
         'score': score,
         'tier': tier,
         'label': tier,
         'shock_floor': shock,
         'components': out_comps,
     }
+    if prev_date:
+        out['ihsg_prev_date'] = prev_date
+    return out

@@ -77,9 +77,16 @@ def route_risk_alert(
         emoji = _TIER_EMOJI.get(tier, '⚠️')
         c = lambda k: _fmt(components.get(k))
         move = components.get('ihsg_move_pct')
-        shock = "" if move is None else (
-            f"IHSG today: {move:+.2f}%"
-            + (f" — floor {risk_result['shock_floor']}" if risk_result.get('shock_floor') else "") + "\n")
+        prev = components.get('ihsg_prev_move_pct')
+        if move is not None:
+            shock = (f"IHSG today: {move:+.2f}%"
+                     + (f" — floor {risk_result['shock_floor']}" if risk_result.get('shock_floor') else "") + "\n")
+        elif prev is not None and risk_result.get('ihsg_prev_date'):
+            # pre-open: no IHSG bar today yet -- say so instead of passing the last session off as today (2026-10-21)
+            shock = (f"IHSG: no bar today yet — last session {risk_result['ihsg_prev_date']} {prev:+.2f}% "
+                     f"(sensors reflect that session)\n")
+        else:
+            shock = ""
         msg = (
             f"{emoji} <b>Market Risk: {tier}</b> — Score {score:.1f}/100\n\n"
             + shock

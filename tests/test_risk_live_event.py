@@ -6,7 +6,7 @@ import sqlite3
 import pytest
 
 import scheduler.scanner as scanner
-from engine.risk_score import compute_market_risk_score, ihsg_move
+from engine.risk_score import compute_market_risk_score, ihsg_last_move, ihsg_move
 
 # The live inputs of 2026-10-16 ~10:00 WIB.
 LIVE = dict(
@@ -53,10 +53,51 @@ def _db(tmp_path, closes):
     return path, c
 
 
-def test_ihsg_move_uses_the_latest_bar(tmp_path):
+def test_ihsg_move_counts_only_the_dates_own_bar(tmp_path):
+    # bars on 2026-01-01 and 2026-01-02 (-8.01%)
     _, c = _db(tmp_path, [5863.78, 5393.92])
-    assert round(ihsg_move(c, "2099-01-01"), 4) == -0.0801
+    assert round(ihsg_move(c, "2026-01-02"), 4) == -0.0801
     assert ihsg_move(c, "2026-01-01") is None
+    # 2026-10-21: a later date with no bar of its own (the 09:05 pre-open scan) is NOT given the last session's move
+    assert ihsg_move(c, "2099-01-01") is None
+    d, mv = ihsg_last_move(c, "2099-01-01")
+    assert d == "2026-01-02" and round(mv, 4) == -0.0801
+
+
+def test_ihsg_move_counts_a_provisional_bar_of_today(tmp_path):
+    _, c = _db(tmp_path, [5000.0, 5000.0])
+    c.execute("INSERT INTO ohlcv VALUES ('IHSG', '2099-12-31', 5100.0, 0)")      # provisional intraday bar
+    c.commit()
+    assert round(ihsg_move(c, "2099-12-31"), 4) == 0.02
+
+
+def test_previous_session_move_never_sets_a_floor():
+    # 2026-10-20 09:05: Monday's -4.46% was applied as "today" while IHSG opened about +2%
+    calm = dict(vpin_summary={'label': 'GREEN'}, accdist_summary={'label': 'ACCUMULATION', 'dist_pct': 0},
+                breadth_summary={'label': 'BULL_MARKET', 'pct_advancing': 60},
+                technicals={'label': 'UPTREND', 'support_breaks': []}, foreign_net_5d=6e9)
+    r = compute_market_risk_score(**calm, ihsg_day_move=None, ihsg_prev=("2026-10-19", -0.0801))
+    assert r['tier'] == 'GREEN' and r['shock_floor'] is None
+    assert r['components']['ihsg_prev_move_pct'] == -8.01 and 'ihsg_move_pct' not in r['components']
+    assert r['ihsg_prev_date'] == "2026-10-19"
+    # today's own move still sets the floor, and then the previous session is not reported
+    r2 = compute_market_risk_score(**calm, ihsg_day_move=-0.0801, ihsg_prev=("2026-10-19", -0.05))
+    assert r2['tier'] == 'CRITICAL' and 'ihsg_prev_move_pct' not in r2['components'] and 'ihsg_prev_date' not in r2
+
+
+def test_preopen_critical_alert_labels_the_previous_session(tmp_path, monkeypatch):
+    import engine.risk_alert as ra
+
+    sent = []
+    monkeypatch.setattr(ra, "send_telegram", lambda msg, event=None, **k: sent.append((event, msg)))
+    risk = compute_market_risk_score(**LIVE, ihsg_day_move=None, ihsg_prev=("2026-10-19", -0.0446))
+    assert risk['tier'] in ('RED', 'CRITICAL')
+    risk = dict(risk, tier='CRITICAL', label='CRITICAL')     # route the CRITICAL path explicitly
+    conn = sqlite3.connect(tmp_path / "r.db")
+    ra.route_risk_alert(conn, risk, "2026-10-20", "09:05")
+    msg = sent[0][1]
+    assert "IHSG today" not in msg
+    assert "IHSG: no bar today yet — last session 2026-10-19 -4.46%" in msg
 
 
 def test_panic_gate_refreshes_when_a_new_bar_arrives(tmp_path, monkeypatch):
