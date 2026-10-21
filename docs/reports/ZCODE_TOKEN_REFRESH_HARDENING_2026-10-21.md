@@ -22,7 +22,7 @@ check reuses the already-registered, already-`BLACKOUT_EXEMPT` `data.token_expir
 | T1 fix both failure alerts | **DONE** |
 | T2 make failures diagnosable | **DONE** |
 | T3 move saved login out of repo (code/docs/tests) | **DONE** |
-| T3.6 live migration of `.playwright_state/` | **SCHEDULED — tonight 21:55 WIB** (automation `automation-c3dd2c60`, this session; details below) |
+| T3.6 live migration of `.playwright_state/` | **DONE — executed 2026-10-21 21:55 WIB** (automation `automation-c3dd2c60`; log below) |
 | T4 pre-open slack + 08:30 gate + crontab | **DONE** (crontab installed) |
 
 ## T1 — both failure alerts now give steps that work — DONE
@@ -99,7 +99,28 @@ migration log line + `--check` output to this report and commit it (docs only, n
 outside the 08:30–19:00 hard ban though not one of the two blessed windows. Until then the
 repo-root dir stays exactly where it is (untouched; verified present during this work).
 
-*(Section reserved for the 21:55 results — will be appended by the automation.)*
+## T3.6 live migration (executed 2026-10-21 21:55 WIB)
+
+Window guard passed (`date` → 2026-10-21 21:55:38 WIB, ≥ 21:50). Pre-state: `.playwright_state`
+drwxrwxr-x (775) with 16 top-level entries; `.stockbit_token` sha256
+`23c1b35c…368f`, mode 600. Migration returned **`migrated`**. Log lines
+(logs/auto_token.log tail):
+
+```
+[2026-10-21 21:55:59] Browser-state login migrated: /home/tjiesar/10 Projects/idx-walkforward-5001/.playwright_state -> /home/tjiesar/.local/state/idx-walkforward/playwright_state
+[2026-10-21 21:55:59] Left moved-note at /home/tjiesar/10 Projects/idx-walkforward-5001/.playwright_state.MOVED
+```
+
+Verification:
+- old repo dir `.playwright_state` no longer exists; `.playwright_state.MOVED` note present and
+  names the new path (full text: where the login went + do-not-delete warning);
+- `~/.local/state/idx-walkforward` and `~/.local/state/idx-walkforward/playwright_state` both
+  **mode 700**; all 16 top-level entries identical to the pre-state listing;
+- token untouched: `auto_token.py --check` → issued 2026-10-21 09:09, expires 2026-10-22 09:09,
+  **11.2 hours remaining, API test ✅ Valid**; sha256 and mode 600 re-verified identical.
+- Nothing deleted anywhere (os.rename move only); no playwright, no refresh, no login run.
+
+Tomorrow's 07:40 cron is the first run against the new location (migration is a no-op there).
 
 ## T4 — catch a failed refresh before the open — DONE
 
