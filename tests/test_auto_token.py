@@ -15,8 +15,11 @@ manual-token fallback bypass (the second, compounding root cause).
 import base64
 import json
 import os
+import re
 import stat
+import sys
 import time
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -397,6 +400,162 @@ def test_final_failure_alert_gives_working_instructions(
     assert "menit" in final                        # minutes-left from the JWT decode
     assert "~/.stockbit_token" not in final
     assert "echo" not in final
+
+
+# ── failure diagnosability (T2, incident 2026-10-21) ──
+#
+# The 08:40 "probably sent" alert and the 08:40:08 credential-fallback death
+# ("Login redirect detected" then nothing) both left zero evidence. send
+# outcomes are now logged; the redirect-but-no-token path records url/title,
+# a timestamped screenshot, and the page's error/OTP text; --login says what
+# it is doing during the ~20 s silent capture.
+
+class TestSendTelegramOutcomeLogging:
+    """Every real send logs 'sent ok' or 'HTTP <code>' — never the token or
+    chat id."""
+
+    @pytest.fixture(autouse=True)
+    def _hermetic_gate(self, tmp_path, monkeypatch):
+        import utils.notify_policy as np
+        monkeypatch.setattr(np, "OFF_FILE", str(tmp_path / "TELEGRAM_OFF"))
+        monkeypatch.setattr(np, "STATE_FILE", str(tmp_path / "notify_state.json"))
+        monkeypatch.setattr(np, "DIGEST_DIR", str(tmp_path / "digest_buffer"))
+
+    def _send(self, monkeypatch, resp):
+        from types import SimpleNamespace  # noqa: F401  (used by callers)
+        monkeypatch.setattr(at, "TELEGRAM_TOKEN", "tok123")
+        monkeypatch.setattr(at, "TELEGRAM_CHAT_ID", "chat456")
+        with patch("auto_token.requests.post", return_value=resp) as mock_post:
+            ok = _real_send_telegram("outcome test", event="system.test_probe")
+        assert mock_post.call_args  # the send really happened
+        return ok
+
+    def _log_text(self, tmp_path):
+        # the autouse isolated_log_file fixture points at.LOG_FILE here
+        return (tmp_path / "auto_token.log").read_text()
+
+    def test_successful_send_logs_sent_ok(self, tmp_path, monkeypatch):
+        from types import SimpleNamespace
+        ok = self._send(monkeypatch, SimpleNamespace(ok=True, status_code=200))
+        assert ok is True
+        log = self._log_text(tmp_path)
+        assert "[telegram] sent ok" in log
+        assert "tok123" not in log and "chat456" not in log  # no creds in log
+
+    def test_http_failure_logs_status_code(self, tmp_path, monkeypatch):
+        from types import SimpleNamespace
+        ok = self._send(monkeypatch, SimpleNamespace(ok=False, status_code=502))
+        assert ok is False
+        assert "HTTP 502" in self._log_text(tmp_path)
+
+
+class _ScreenshotPage:
+    def __init__(self):
+        self.paths = []
+
+    def screenshot(self, path):
+        Path(path).write_bytes(b"png")
+        self.paths.append(path)
+
+
+def test_login_debug_screenshot_timestamped_mode_600_and_retention(tmp_path):
+    for i in range(5):
+        (tmp_path / f"login_debug_2020010{i + 1}_000000.png").write_bytes(b"old")
+
+    at._save_login_debug_screenshot(_ScreenshotPage(), log_dir=tmp_path)
+
+    shots = sorted(tmp_path.glob("login_debug_*.png"))
+    assert len(shots) == at.LOGIN_DEBUG_KEEP           # keep the last 5
+    new = [p for p in shots if p.read_bytes() == b"png"]
+    assert len(new) == 1
+    assert re.fullmatch(r"login_debug_\d{8}_\d{6}\.png", new[0].name)
+    assert stat.S_IMODE(os.stat(new[0]).st_mode) == 0o600
+    # the oldest was pruned, the 4 newest of the pre-existing were kept
+    assert (tmp_path / "login_debug_20200101_000000.png") not in shots
+
+
+def test_login_debug_screenshot_never_raises_on_page_error(tmp_path):
+    class _Boom:
+        def screenshot(self, path):
+            raise RuntimeError("page closed")
+
+    at._save_login_debug_screenshot(_Boom(), log_dir=tmp_path)  # must not raise
+
+
+class _TextPage:
+    """Fake page whose locator(text=...).count() is 1 for hit substrings."""
+
+    def __init__(self, hits):
+        self._hits = hits
+
+    def locator(self, sel):
+        hit = any(h in sel for h in self._hits)
+
+        class _L:
+            def count(self):
+                return 1 if hit else 0
+
+        return _L()
+
+
+def test_error_texts_cover_base_and_device_verification_words():
+    assert at._log_login_error_texts(_TextPage(["Invalid"])) == "Invalid"
+    assert at._log_login_error_texts(
+        _TextPage(["OTP"]), extra_texts=at.DEVICE_VERIFICATION_TEXTS) == "OTP"
+    assert at._log_login_error_texts(_TextPage([])) is None
+
+
+class _FakeLoginContext:
+    def __init__(self, page):
+        self.pages = [page]
+
+    def close(self):
+        pass
+
+
+def _install_fake_playwright(monkeypatch, page):
+    """Fake playwright.sync_api in sys.modules — no browser is ever launched."""
+    import types
+
+    class _Chromium:
+        def launch_persistent_context(self, **kwargs):
+            return _FakeLoginContext(page)
+
+    class _PW:
+        chromium = _Chromium()
+
+    class _CM:
+        def __enter__(self):
+            return _PW()
+
+        def __exit__(self, *a):
+            return False
+
+    sync_mod = types.ModuleType("playwright.sync_api")
+    sync_mod.sync_playwright = lambda: _CM()
+    pw_mod = types.ModuleType("playwright")
+    pw_mod.sync_api = sync_mod
+    monkeypatch.setitem(sys.modules, "playwright", pw_mod)
+    monkeypatch.setitem(sys.modules, "playwright.sync_api", sync_mod)
+
+
+def test_initial_login_ux_and_atomic_mode_600_write(tmp_path, monkeypatch, capsys, token_file):
+    monkeypatch.setenv("DISPLAY", ":20")
+    monkeypatch.setattr(at, "STATE_DIR", tmp_path / "state")
+    _install_fake_playwright(monkeypatch, _FakePage())
+    monkeypatch.setattr("builtins.input", lambda prompt="": "")
+    jwt = _make_jwt(exp_offset_h=24)
+    monkeypatch.setattr(at, "_capture_from_page", lambda page, navigate=True: jwt)
+    monkeypatch.setattr(at, "verify_token", lambda t: True)
+
+    at.initial_login()
+
+    out = capsys.readouterr().out
+    assert "ENTER DI TERMINAL INI" in out             # pre-ENTER instruction
+    assert "Capturing token (up to 55 s)..." in out   # right after ENTER
+    assert "Expire" in out and "24.0h" in out         # result with expiry
+    assert token_file.read_text() == jwt
+    assert stat.S_IMODE(os.stat(token_file).st_mode) == 0o600  # was 644 via write_text
 
 
 # ── JWT-shape validation at capture time (incident 2026-09-22) ──

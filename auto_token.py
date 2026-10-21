@@ -78,7 +78,11 @@ def send_telegram(msg, event=None, subject=None, state=None):
             json={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "HTML"},
             timeout=10,
         )
-        return bool(resp.ok)
+        if resp.ok:
+            log("[telegram] sent ok")
+            return True
+        log(f"[telegram] send failed: HTTP {resp.status_code}")
+        return False
     except Exception as e:
         log(f"Telegram send failed: {e}")
         return False
@@ -356,22 +360,33 @@ def initial_login():
             print()
             print("=" * 55)
             print("  LOGIN STOCKBIT DI BROWSER YANG TERBUKA")
-            print("  Setelah login berhasil, tekan ENTER di sini")
+            print("  Setelah browser menunjukkan Anda sudah login,")
+            print("  tekan ENTER DI TERMINAL INI (bukan di browser).")
             print("=" * 55)
             input()
-
-            # Verify: buka halaman saham, capture token
+            # 2026-10-21: the capture is silent for ~20 s+ and looked hung —
+            # say what is happening before the silence.
+            print("Capturing token (up to 55 s)...")
             captured = _capture_from_page(page)
         finally:
             context.close()
 
     if captured and verify_token(captured):
-        TOKEN_FILE.write_text(captured)
+        # atomic + mode 600 — a plain write_text created the file 644, which
+        # startup validation rejects (same failure mode the old alert recipe
+        # had with echo)
+        _write_token_atomic(captured)
         log(f"Initial login OK — token saved (len={len(captured)})")
-        print(f"\n✅ Token saved! Auto-refresh siap dipakai.")
+        remaining = jwt_expiry(captured)
+        if remaining >= 0:
+            exp_dt = datetime.now() + timedelta(minutes=remaining * 60)
+            print(f"\n✅ Token saved! Expire {exp_dt.strftime('%Y-%m-%d %H:%M')} WIB "
+                  f"({remaining:.1f}h). Auto-refresh siap dipakai.")
+        else:
+            print("\n✅ Token saved! Auto-refresh siap dipakai.")
     else:
         log("Initial login done — session saved, tapi token belum ter-capture")
-        print(f"\n⚠ Session tersimpan. Coba run: python3 auto_token.py")
+        print("\n⚠ Session tersimpan. Coba run: venv/bin/python3 auto_token.py")
 
 
 # ── Mode 2: Auto Refresh (headless, untuk cron) ──
@@ -472,6 +487,53 @@ def _capture_from_page(page, navigate=True):
 
 
 # ── Mode 2b: Credential Login (headless, auto fallback) ──
+
+# Login-page error texts, checked one selector at a time (a combined
+# text=a,text=b locator throws when any alternative fails to parse).
+LOGIN_ERROR_TEXTS = ("Invalid", "salah", "incorrect", "captcha", "Captcha",
+                     "CAPTCHA", "verifikasi", "robot")
+# The 2026-10-21 incident path: login redirected fine but no Bearer token was
+# captured, with no evidence what the page showed — the guess is device
+# verification on a fresh profile. These words say so next time.
+DEVICE_VERIFICATION_TEXTS = ("OTP", "kode", "verifikasi perangkat", "device")
+LOGIN_DEBUG_KEEP = 5  # timestamped screenshots to retain
+
+
+def _save_login_debug_screenshot(page, log_dir=None):
+    """login_debug_<YYYYmmdd_HHMMSS>.png (mode 600 — a login page can show
+    the account email), keeping only the newest LOGIN_DEBUG_KEEP. Never
+    raises into the capture path."""
+    log_dir = Path(log_dir) if log_dir is not None else LOG_FILE.parent
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        path = log_dir / f"login_debug_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        page.screenshot(path=str(path))
+        os.chmod(path, 0o600)
+        log(f"Screenshot saved: {path}")
+        shots = sorted(log_dir.glob("login_debug_*.png"))
+        for old in shots[:-LOGIN_DEBUG_KEEP] if len(shots) > LOGIN_DEBUG_KEEP else ():
+            try:
+                old.unlink()
+                log(f"Pruned old login screenshot: {old.name}")
+            except OSError:
+                pass
+    except Exception as e:
+        log(f"Screenshot failed: {e}")
+
+
+def _log_login_error_texts(page, extra_texts=()):
+    """Log the first error text present on the login page; returns it or
+    None. Never raises (a closed page beats a diagnostic crash)."""
+    for err in tuple(LOGIN_ERROR_TEXTS) + tuple(extra_texts):
+        try:
+            if page.locator(f"text={err}").count() > 0:
+                log(f"ERROR page text found: '{err}'")
+                return err
+        except Exception:
+            pass
+    return None
+
+
 def credential_login():
     """Auto-fill login form headlessly using credentials from .env."""
     if not STOCKBIT_USER or not STOCKBIT_PASS:
@@ -559,18 +621,9 @@ def credential_login():
                 cur_title = page.title()
                 log(f"No redirect detected — url={cur_url} title={cur_title}")
                 # Save screenshot for diagnosis
-                try:
-                    ss_path = str(LOG_FILE.parent / "login_debug.png")
-                    page.screenshot(path=ss_path)
-                    log(f"Screenshot saved: {ss_path}")
-                except Exception as ss_err:
-                    log(f"Screenshot failed: {ss_err}")
+                _save_login_debug_screenshot(page)
                 # Check for error messages (check each selector separately)
-                err_texts = ["Invalid", "salah", "incorrect", "captcha", "Captcha", "CAPTCHA", "verifikasi", "robot"]
-                for err in err_texts:
-                    if page.locator(f"text={err}").count() > 0:
-                        log(f"ERROR page text found: '{err}'")
-                        break
+                _log_login_error_texts(page)
 
             if not redirect_ok:
                 log("Credential login: no redirect — aborting, session not established")
@@ -585,6 +638,16 @@ def credential_login():
             if not captured_token:
                 page.evaluate("window.scrollBy(0, 300)")
                 time.sleep(2)
+
+            if not captured_token:
+                # 2026-10-21 incident: "Login redirect detected" then no Bearer
+                # token captured, and nothing recorded what the page showed.
+                try:
+                    log(f"Redirect ok tapi token tidak ter-capture — url={page.url} title={page.title()}")
+                except Exception as e:
+                    log(f"Redirect ok tapi token tidak ter-capture (url/title unavailable: {e})")
+                _save_login_debug_screenshot(page)
+                _log_login_error_texts(page, extra_texts=DEVICE_VERIFICATION_TEXTS)
 
             page.remove_listener("request", on_request)
             token = captured_token
