@@ -72,6 +72,15 @@ def isolated_log_file(tmp_path, monkeypatch):
     monkeypatch.setattr(at, "LOG_FILE", tmp_path / "auto_token.log")
 
 
+@pytest.fixture(autouse=True)
+def isolated_state_dirs(tmp_path, monkeypatch):
+    """at.main() runs the T3 legacy-state migration first; without this
+    redirect the suite would MOVE THE LIVE repo .playwright_state/ (the real
+    Stockbit login) as a side effect of running the tests."""
+    monkeypatch.setattr(at, "LEGACY_STATE_DIR", tmp_path / "legacy_state")
+    monkeypatch.setattr(at, "STATE_DIR", tmp_path / "state_dir")
+
+
 # ── should_skip_refresh: margin threshold (Requirement 2 + 3) ──
 
 def test_skips_when_remaining_exceeds_margin(token_file, monkeypatch):
@@ -556,6 +565,99 @@ def test_initial_login_ux_and_atomic_mode_600_write(tmp_path, monkeypatch, capsy
     assert "Expire" in out and "24.0h" in out         # result with expiry
     assert token_file.read_text() == jwt
     assert stat.S_IMODE(os.stat(token_file).st_mode) == 0o600  # was 644 via write_text
+
+
+# ── saved-login state dir moved out of the repo (T3, incident 2026-10-21) ──
+#
+# Root cause of the outage: .playwright_state/ lived in the repo root, so a
+# cleanup deleted it as "a browser profile, recreated on next run". It is not
+# recreated — it IS the saved login. New home: XDG state dir, outside any
+# repo; the legacy dir is moved (never deleted) on the first run after the
+# change, and a .MOVED pointer is left behind.
+
+def test_state_dir_respects_xdg_state_home(monkeypatch):
+    monkeypatch.setenv("XDG_STATE_HOME", "/xdg/custom")
+    assert at._resolve_state_dir() == Path(
+        "/xdg/custom") / "idx-walkforward" / "playwright_state"
+
+
+def test_state_dir_defaults_to_local_state(monkeypatch):
+    monkeypatch.delenv("XDG_STATE_HOME", raising=False)
+    assert at._resolve_state_dir() == Path.home() / ".local" / "state" / \
+        "idx-walkforward" / "playwright_state"
+
+
+def test_migrate_moves_legacy_and_leaves_note(tmp_path):
+    legacy = tmp_path / ".playwright_state"
+    legacy.mkdir()
+    (legacy / "Cookies").write_text("session")
+    new = tmp_path / "xdg" / "idx-walkforward" / "playwright_state"
+
+    status = at._migrate_legacy_state_dir(legacy_dir=legacy, new_dir=new)
+
+    assert status == "migrated"
+    assert not legacy.exists()                      # moved, not copied
+    assert (new / "Cookies").read_text() == "session"
+    assert stat.S_IMODE(os.stat(new).st_mode) == 0o700
+    note = tmp_path / ".playwright_state.MOVED"
+    assert note.is_file()
+    assert str(new) in note.read_text()             # says where the login went
+
+
+def test_migrate_both_exist_uses_new_and_never_deletes_legacy(tmp_path):
+    legacy = tmp_path / ".playwright_state"
+    legacy.mkdir()
+    (legacy / "Cookies").write_text("old-login")
+    new = tmp_path / "xdg" / "idx-walkforward" / "playwright_state"
+    new.mkdir(parents=True)
+    (new / "Cookies").write_text("new-login")
+
+    status = at._migrate_legacy_state_dir(legacy_dir=legacy, new_dir=new)
+
+    assert status == "both-exist"
+    assert (legacy / "Cookies").read_text() == "old-login"   # untouched
+    assert (new / "Cookies").read_text() == "new-login"
+    assert not (tmp_path / ".playwright_state.MOVED").exists()
+
+
+def test_migrate_no_legacy_is_a_noop(tmp_path):
+    status = at._migrate_legacy_state_dir(
+        legacy_dir=tmp_path / ".playwright_state",
+        new_dir=tmp_path / "xdg" / "idx-walkforward" / "playwright_state")
+
+    assert status == "no-legacy"
+    assert not (tmp_path / "xdg").exists()          # nothing created
+
+
+def test_migrate_rename_failure_falls_back_to_legacy(tmp_path, monkeypatch):
+    legacy = tmp_path / ".playwright_state"
+    legacy.mkdir()
+    new = tmp_path / "xdg" / "idx-walkforward" / "playwright_state"
+    monkeypatch.setattr(at, "STATE_DIR", new)
+
+    def boom(*a):
+        raise OSError(18, "cross-device link")
+
+    monkeypatch.setattr(at.os, "rename", boom)
+
+    status = at._migrate_legacy_state_dir(legacy_dir=legacy, new_dir=new)
+
+    assert status == "rename-failed"
+    assert at.STATE_DIR == legacy     # this run keeps using the legacy dir
+    assert legacy.is_dir()            # never deleted on failure either
+    assert not new.exists()
+
+
+def test_main_runs_migration_before_any_mode(tmp_path, monkeypatch, token_file, lock_file):
+    legacy = tmp_path / "legacy_state"     # matches the autouse fixture's path
+    legacy.mkdir()
+    (legacy / "Cookies").write_text("session")
+
+    monkeypatch.setattr(at, "should_skip_refresh", lambda *a: True)
+
+    at.main()
+
+    assert (tmp_path / "state_dir" / "Cookies").read_text() == "session"
 
 
 # ── JWT-shape validation at capture time (incident 2026-09-22) ──

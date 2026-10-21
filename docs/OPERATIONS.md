@@ -331,10 +331,20 @@ revocation came from elsewhere — the working hypothesis is one active session 
 login on another device (the Windows box keeps its own token; `.stockbit_token*` is not synced)
 invalidates this host's token. Avoid ad-hoc Stockbit logins on other devices during market hours.
 
+**The saved login lives OUTSIDE the repo (2026-10-21).** The Playwright profile that holds the
+Stockbit session is at `~/.local/state/idx-walkforward/playwright_state` (XDG_STATE_HOME
+respected, mode 700). It sat in the repo root (`.playwright_state/`) until a cleanup deleted it
+on 2026-10-20 as "a browser profile, recreated on next run" — it is NOT recreated, it IS the
+login, and the next morning's refresh ran tokenless through the open. `auto_token.py` moves a
+legacy repo-root copy to the new location on its first run and leaves a `.playwright_state.MOVED`
+pointer. Never delete either location.
+
 **Manual recovery** when a session is still provisional after 17:30:
-`python3 auto_token.py --login`, then the same evening re-run the retry
-(`python3 -c "from screener.screener_jobs import run_eod_retry; print(run_eod_retry())"`), or for a
-past session `python3 scripts/repair_provisional_bars.py` (dry run) → `--apply` (settled
+`cd "<repo>" && venv/bin/python3 auto_token.py --login` (log in on the CRD browser,
+DISPLAY :20; after the browser shows you logged in, press ENTER **in the terminal** — the token
+capture then takes up to ~1 min), then the same evening re-run the retry
+(`venv/bin/python3 -c "from screener.screener_jobs import run_eod_retry; print(run_eod_retry())"`), or for a
+past session `venv/bin/python3 scripts/repair_provisional_bars.py` (dry run) → `--apply` (settled
 yfinance data, split-guarded; IHSG is fetched as `^JKSE`).
 
 ## Logging

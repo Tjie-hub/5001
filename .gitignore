@@ -2,7 +2,12 @@
 .env.local
 .stockbit_token
 .stockbit_token.lock
+# Saved Stockbit login (Playwright profile) moved OUT of the repo 2026-10-21 to
+# ~/.local/state/idx-walkforward/playwright_state (XDG_STATE_HOME respected);
+# auto_token.py migrates a legacy copy on first run and leaves the .MOVED note.
+# NEVER delete either location — it IS the login (incident 2026-10-21).
 .playwright_state/
+.playwright_state.MOVED
 logs/
 *.log
 __pycache__/

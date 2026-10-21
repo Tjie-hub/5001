@@ -20,7 +20,24 @@ load_dotenv(BASE_DIR / ".env")
 
 TOKEN_FILE = BASE_DIR / ".stockbit_token"
 LOCK_FILE = BASE_DIR / ".stockbit_token.lock"
-STATE_DIR = BASE_DIR / ".playwright_state"
+# Saved Stockbit login (the Playwright browser profile). Moved OUT of the
+# repo 2026-10-21 (T3): a cleanup deleted the repo-root .playwright_state/
+# listing it as "a browser profile, recreated on next run" — it is NOT
+# recreated, it IS the login, and the next morning ran tokenless through the
+# open. The repo-root path survives only as the one-time migration source.
+LEGACY_STATE_DIR = BASE_DIR / ".playwright_state"
+
+
+def _resolve_state_dir():
+    """Saved-login location: ~/.local/state/idx-walkforward/playwright_state
+    (XDG_STATE_HOME respected), outside the repo so cleanups stop offering
+    it. Reads the env at call time so tests can pin it."""
+    base = os.environ.get("XDG_STATE_HOME")
+    root = Path(base) if base else (Path.home() / ".local" / "state")
+    return root / "idx-walkforward" / "playwright_state"
+
+
+STATE_DIR = _resolve_state_dir()
 LOG_FILE = BASE_DIR / "logs" / "auto_token.log"
 
 # Refresh reliability tuning (incident 2026-07-27 hardening — see
@@ -231,6 +248,81 @@ def check_state_size():
         pass
 
 
+def _ensure_state_dir(state_dir=None):
+    """Create the saved-login dir (and parents) with mode 700 on the levels
+    this repo owns. ~/.local/state itself keeps whatever mode it already has
+    (it is the shared XDG state root, not ours to chmod)."""
+    path = Path(state_dir) if state_dir is not None else STATE_DIR
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(path.parent, 0o700)  # .../idx-walkforward — ours
+    except OSError:
+        pass
+    path.mkdir(exist_ok=True)
+    try:
+        os.chmod(path, 0o700)
+    except OSError:
+        pass
+
+
+def _leave_moved_note(legacy_dir, new_dir):
+    """Pointer file beside where the legacy dir lived, so future cleanups and
+    humans can find the login. Never raises."""
+    legacy = Path(legacy_dir)
+    note = legacy.with_name(legacy.name + ".MOVED")
+    try:
+        note.write_text(
+            "The Stockbit saved login (Playwright browser profile) that lived here moved to:\n"
+            f"  {new_dir}\n\n"
+            "Do NOT delete that folder — it IS the saved Stockbit login. Deleting it\n"
+            "breaks every headless token refresh (incident 2026-10-21: a cleanup deleted\n"
+            "it and the market ran tokenless through the open).\n"
+            "This note file is safe to delete.\n"
+        )
+        log(f"Left moved-note at {note}")
+    except OSError as e:
+        log(f"⚠ Could not write moved-note at {note}: {e}")
+
+
+def _migrate_legacy_state_dir(legacy_dir=None, new_dir=None):
+    """One-time T3 migration, run at the start of every auto_token.py run:
+    move the legacy repo-root .playwright_state/ to the XDG state dir.
+    Never deletes either location. Returns one of:
+      'migrated'      — moved; a .MOVED note now points at the new dir
+      'both-exist'    — the new dir wins, the old one is left alone (warned)
+      'no-legacy'     — nothing to do
+      'rename-failed' — os.rename failed; this run falls back to the legacy
+                        dir (a missing STATE_DIR would break the refresh
+                        worse than staying put for one more run)
+    """
+    global STATE_DIR
+    legacy = Path(legacy_dir) if legacy_dir is not None else LEGACY_STATE_DIR
+    new = Path(new_dir) if new_dir is not None else STATE_DIR
+    if not legacy.is_dir():
+        return "no-legacy"
+    if new.is_dir():
+        log(f"⚠ Both {legacy} and {new} exist — using the new one, leaving the old alone (never deleted)")
+        return "both-exist"
+    try:
+        new.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            os.chmod(new.parent, 0o700)  # .../idx-walkforward — ours
+        except OSError:
+            pass
+        os.rename(legacy, new)  # same-filesystem move; data is never copied
+        try:
+            os.chmod(new, 0o700)
+        except OSError:
+            pass
+        log(f"Browser-state login migrated: {legacy} -> {new}")
+    except OSError as e:
+        log(f"⚠ State-dir migration failed ({e}) — keeping {legacy} for this run")
+        STATE_DIR = legacy
+        return "rename-failed"
+    _leave_moved_note(legacy, new)
+    return "migrated"
+
+
 def _write_token_atomic(token, token_file=None):
     """Write the token via tmpfile+rename so a crash mid-write can never
     leave a truncated/partial token on disk — readers always see a complete
@@ -338,7 +430,7 @@ def initial_login():
 
     log(f"Starting login browser on DISPLAY={display}")
 
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    _ensure_state_dir()
 
     with sync_playwright() as p:
         context = p.chromium.launch_persistent_context(
@@ -548,7 +640,7 @@ def credential_login():
 
     log(f"Credential login started (headless) for {STOCKBIT_USER}")
 
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    _ensure_state_dir()
 
     with sync_playwright() as p:
         context = p.chromium.launch_persistent_context(
@@ -700,6 +792,10 @@ def check_token():
 
 # ── Main ──
 def main():
+    # T3 (2026-10-21): one-time move of the saved login out of the repo,
+    # before any mode touches it. No-op once the legacy dir is gone.
+    _migrate_legacy_state_dir()
+
     if "--login" in sys.argv:
         initial_login()
         return
