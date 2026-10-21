@@ -1,0 +1,11 @@
+ticker,listing_date,board,effective_date,effective_source,pojk25_lockup,locked_holders,control_commitment_12m,lockup_end,lockup_end_source,locked_share_pct,primary_source,status
+BUKA,2021-08-06,Utama,2021-07-26,tentative timetable (Bisnis 2021-07-13),yes,"founder, Microsoft and others (news: >=32 holders incl. 204 employees)",,2022-03-28,reported (Bisnis 2022-10-20); rule eff+8m = 2022-03-26 (Sat) -> next session,,news,rule-consistent
+GOTO,2022-04-11,Utama,,"not retrieved (offering 1-7 Apr 2022 followed the effective statement)",yes,"Alibaba, SoftBank among holders (news: >90% of shares)",,2022-11-30,reported (Bisnis 2022-10-20),,news,rule-consistent
+PGEO,2023-02-24,Utama,,not in announcement,no,,PPI: will not give up control >=1 yr (control pledge; not a share lock-up),none,IDX announcement,,IDX listing announcement,found
+CUAN,2023-03-08,Utama,,not in announcement,no,,,none,IDX announcement,,IDX listing announcement,found
+NCKL,2023-04-12,Utama,,not in announcement,yes,"all shareholders: PT Harita Jayaraya, PT Citra Duta Jaya Makmur",,eff+8m (effective date needed),rule,87.3,IDX listing announcement,found
+MBMA,2023-04-18,Utama,,not in announcement,yes,"PT Merdeka Energi Nusantara (capital increase), Huayong International (HK) Ltd (converted loan)",MDKA: will not transfer control 12m,eff+8m (effective date needed),rule,,IDX listing announcement,found
+AMMN,2023-07-07,Utama,2023-06-26,tentative timetable (Bisnis 2023-06-01; timetable later slipped: planned listing 07-05 vs actual 07-07),unknown,,,unknown,,,,not found
+BREN,2023-10-09,Utama,,not in announcement,yes,"PT Barito Pacific Tbk, Green Era Energy Pte Ltd",Prajogo Pangestu: will not transfer control 12m,eff+8m (effective date needed),rule,,IDX listing announcement,found
+LOPI,2023-10-11,Akselerasi,,not in announcement,yes,"Wahyu Dwi Jatmiko, LMI, Hening Tjiptadi S.",Wahyu Dwi Jatmiko: keep holding >=12m,eff+8m (effective date needed),rule,,IDX listing announcement,found
+BRIS,2018-05-09,Utama,,not found,unknown,,,unknown,,,"PDF exists (idnfinancials + idx.co.id link) but blocked to automated fetch",blocked
