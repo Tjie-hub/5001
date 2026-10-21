@@ -12,7 +12,15 @@ ROOT = Path(__file__).resolve().parents[1]
 CRONTAB = (ROOT / "deploy" / "crontab").read_text()
 WRAP = ROOT / "scripts" / "cron_wrap.sh"
 
-JOB_LINES = [l for l in CRONTAB.splitlines()
+# The installed crontab also carries owner-installed host entries (watch.sh
+# @reboot, the mtr sampler, idx_external snap_status) recorded in
+# deploy/crontab BELOW this marker so a verbatim install cannot delete them.
+# They are not repo jobs — no cron_wrap, absolute paths — so every repo-job
+# contract below applies only to the part above the marker.
+_LIVE_HOST_MARKER = "# ── LIVE HOST ENTRIES BELOW"
+REPO_CRONTAB = CRONTAB.split(_LIVE_HOST_MARKER)[0]
+
+JOB_LINES = [l for l in REPO_CRONTAB.splitlines()
              if l.strip() and not l.strip().startswith("#")
              and not re.match(r"^[A-Z]+=", l.strip())]
 
@@ -20,6 +28,19 @@ JOB_LINES = [l for l in CRONTAB.splitlines()
 def test_every_cron_job_uses_the_wrapper():
     for line in JOB_LINES:
         assert "$W " in line, f"unwrapped cron job: {line}"
+
+
+def test_live_host_entries_are_recorded_not_dropped():
+    """2026-10-21: the installed crontab carried three owner-installed
+    entries (watch.sh @reboot, the mtr sampler, idx_external snap_status)
+    that deploy/crontab did not — a verbatim install of the file would have
+    deleted them. They are now recorded below the LIVE HOST marker; this
+    pins that they stay recorded and stay out of the wrapped-job contracts."""
+    assert _LIVE_HOST_MARKER in CRONTAB
+    assert "@reboot nohup ~/watch.sh" in CRONTAB
+    assert "mtr -rwc 20 -n 8.8.8.8" in CRONTAB
+    assert "idx_external/status/snap_status.py" in CRONTAB
+    assert not any("watch.sh" in l or "snap_status" in l for l in JOB_LINES)
 
 
 def test_dead_jobs_are_gone():
@@ -118,6 +139,20 @@ def test_wrapper_blackout_exempts_backup_and_heartbeat_jobs(tmp_path):
         log = (tmp_path / f"cron_{job}.log").read_text()
         assert "globally OFF" not in log, job
         assert "ALERT SKIPPED (no telegram creds)" in log, job
+
+
+def test_wrapper_blackout_exempts_the_token_preopen_check(tmp_path):
+    """T4 (2026-10-21): the 08:30 pre-open token check is the alert path for
+    a dead token before the open (its own data.token_expired send is already
+    BLACKOUT_EXEMPT in notify_policy). If the check job ITSELF fails — e.g. a
+    crash — that failure must also alert through the blackout, same class as
+    auto_token; the 10-21 incident ran the market tokenless because every
+    signal was either suppressed or unreadable."""
+    (tmp_path / "TELEGRAM_OFF").touch()
+    _run_wrap(tmp_path, "token_preopen_check", "false")
+    log = (tmp_path / "cron_token_preopen_check.log").read_text()
+    assert "globally OFF" not in log
+    assert "ALERT SKIPPED (no telegram creds)" in log
 
 
 class _CapturingHandler(http.server.BaseHTTPRequestHandler):

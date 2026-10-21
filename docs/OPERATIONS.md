@@ -317,7 +317,9 @@ research reads only final bars. Its token defences, in time order (WIB, Mon–Fr
 
 | time | job id | what |
 |---|---|---|
+| 07:40, 08:10 | cron `auto_token` | headless refresh + retry (T4 2026-10-21; skip-if-fresh makes the retry a no-op — was a single 08:40 attempt whose token expired exactly at the open). Token normally expires ~07:40 the NEXT day |
 | 08:20, 12:00 | `token_health_*` | JWT `exp` claim only — blind to a server-side revocation |
+| 08:30 | cron `token_preopen_check` | `auto_token.py --preopen-check`: exp + one live API verify; alerts `data.token_expired` (blackout-exempt, with the manual-fix instructions) when the token is missing, expires within 3 h, or fails the verify — 20 min before the 08:50 OHLCV fetch |
 | 16:05 | `token_live_probe_1605` | live API call; on 401/403 runs `auto_token.py` once (a credential login takes 3–4 min, hence 16:05, not 16:10) |
 | 16:15 | `screener_eod` | verifies the token live before scraping (401/403 → one refresh; 5xx/timeout → retried with backoff, never a login). Refresh fails → Telegram, nothing saved. A scrape under 50% coverage whose failures are mostly 401/403 → one refresh + re-fetch of just those tickers. Under 50% after that → "EOD finalisation DEGRADED" Telegram |
 | 17:30 | `eod_retry_1730` | same-day retry: on a degraded day re-scrapes every ticker without a final bar, otherwise only leftover provisional bars. Deduped per day via `_job_sentinel` (`eod_retry`). The tradebook serves only the current session, so this cannot run for a past date |

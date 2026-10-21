@@ -42,9 +42,10 @@ LOG_FILE = BASE_DIR / "logs" / "auto_token.log"
 
 # Refresh reliability tuning (incident 2026-07-27 hardening — see
 # docs/audit/STOCKBIT_TOKEN_REFRESH_HARDENING.md). The margin must comfortably
-# exceed the gap from the 08:40 refresh check to the day's last token
-# consumer (20:15 WIB, run_broker_flow_fetch) — 11h35m — not just be a
-# round-sounding number (the old flat 6h bar was exactly that mistake).
+# exceed the gap from the 07:40 refresh check (T4, 2026-10-21 — was 08:40) to
+# the day's last token consumer (20:15 WIB, run_broker_flow_fetch) — 12h35m —
+# not just be a round-sounding number (the old flat 6h bar was exactly that
+# mistake).
 REFRESH_MARGIN_HOURS = float(os.environ.get("STOCKBIT_TOKEN_REFRESH_MARGIN_HOURS", "14"))
 MAX_RETRIES = int(os.environ.get("STOCKBIT_TOKEN_REFRESH_MAX_RETRIES", "2"))
 RETRY_BACKOFF_BASE_S = float(os.environ.get("STOCKBIT_TOKEN_REFRESH_BACKOFF_BASE_S", "5"))
@@ -790,6 +791,60 @@ def check_token():
     return valid
 
 
+# ── Mode 3b: Pre-open light check (T4, 2026-10-21) ──
+PREOPEN_MIN_REMAINING_HOURS = 3.0
+
+
+def preopen_check(min_remaining_hours=None):
+    """Light weekday-08:30 gate between the 07:40/08:10 refresh crons and the
+    08:50 OHLCV fetch. Read-only (at most one keystats GET): no refresh, no
+    login, never touches the token file.
+
+    Sends data.token_expired (BLACKOUT_EXEMPT, subject preopen_check) with
+    the T1 manual-fix instructions when the token is missing, unreadable,
+    expires within min_remaining_hours, or fails the live API verify (a
+    server-side revocation keeps a valid exp claim — 2026-09-21/22 incident).
+
+    Returns True when the token is fine OR the alert was delivered; False
+    only when a problem exists AND the alert could not be sent — then the
+    caller exits 1 so cron_wrap's generic failure alert is the fallback
+    signal. (Deliberately not the other way round: exiting nonzero on a
+    delivered alert would double-alert the owner every time.)
+    """
+    if min_remaining_hours is None:
+        min_remaining_hours = PREOPEN_MIN_REMAINING_HOURS
+    token = TOKEN_FILE.read_text().strip() if TOKEN_FILE.exists() else ""
+    remaining = jwt_expiry(token) if token else -1
+    problem = None
+    if not token:
+        problem = "token file tidak ada / kosong"
+    elif not _is_jwt_shaped(token) or remaining == -1:
+        problem = "token tidak bisa di-decode"
+    elif remaining <= 0:
+        problem = "token sudah expired"
+    elif remaining < min_remaining_hours:
+        problem = (f"token expires dalam {remaining * 60:.0f} menit "
+                   f"(< batas {min_remaining_hours:.0f}h)")
+    elif not verify_token(token):
+        problem = "token gagal verifikasi API live (kemungkinan revoked server-side)"
+    if problem is None:
+        msg = f"Pre-open check OK — token expires in {remaining:.1f}h"
+        log(msg)
+        print(msg)
+        return True
+    log(f"PREOPEN_CHECK problem={problem} action=alerting")
+    sent = send_telegram(
+        "🔴 <b>Stockbit token bermasalah SEBELUM OPEN</b>\n"
+        f"{problem}\n\n"
+        f"{_token_status_line()}\n\n"
+        "Fix sekarang (sebelum 08:50 OHLCV fetch):\n"
+        f"1. <code>{_login_fix_command()}</code>\n"
+        "2. Login di browser CRD (DISPLAY :20), tekan ENTER di terminal\n"
+        "3. Capture token makan sampai ~1 menit setelah ENTER",
+        event="data.token_expired", subject="preopen_check")
+    return bool(sent)
+
+
 # ── Main ──
 def main():
     # T3 (2026-10-21): one-time move of the saved login out of the repo,
@@ -803,6 +858,9 @@ def main():
     if "--check" in sys.argv:
         check_token()
         return
+
+    if "--preopen-check" in sys.argv:
+        sys.exit(0 if preopen_check() else 1)
 
     # Auto mode (untuk cron)
     log("=" * 40)

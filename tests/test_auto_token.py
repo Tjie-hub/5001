@@ -660,6 +660,70 @@ def test_main_runs_migration_before_any_mode(tmp_path, monkeypatch, token_file, 
     assert (tmp_path / "state_dir" / "Cookies").read_text() == "session"
 
 
+# ── pre-open light check (T4, 2026-10-21) ──
+#
+# The single 08:40 refresh attempt expired the token exactly AT the open —
+# zero slack. The new 08:30 pre-open gate must alert (BLACKOUT_EXEMPT,
+# data.token_expired) with the working manual fix while there is still time.
+
+def test_preopen_check_ok_when_fresh_and_api_verified(token_file, monkeypatch):
+    token_file.write_text(_make_jwt(exp_offset_h=10.0))
+    monkeypatch.setattr(at, "verify_token", lambda t: True)
+
+    assert at.preopen_check() is True
+
+
+def test_preopen_check_alerts_when_expiring_within_3h(token_file, monkeypatch):
+    token_file.write_text(_make_jwt(exp_offset_h=2.0))
+    monkeypatch.setattr(at, "verify_token", lambda t: True)
+    sends = []
+    monkeypatch.setattr(at, "send_telegram",
+                        lambda msg, **kw: sends.append((msg, kw)) or True)
+
+    assert at.preopen_check() is True  # problem + alert delivered
+
+    msg, kw = sends[0]
+    assert kw["event"] == "data.token_expired"
+    assert kw["subject"] == "preopen_check"
+    assert "venv/bin/python3 auto_token.py --login" in msg
+    assert "menit" in msg
+
+
+def test_preopen_check_alerts_when_api_verify_fails(token_file, monkeypatch):
+    """A server-side revocation keeps a valid exp claim (2026-09-21/22) — the
+    live verify is what catches it."""
+    token_file.write_text(_make_jwt(exp_offset_h=10.0))
+    monkeypatch.setattr(at, "verify_token", lambda t: False)
+    sends = []
+    monkeypatch.setattr(at, "send_telegram",
+                        lambda msg, **kw: sends.append((msg, kw)) or True)
+
+    assert at.preopen_check() is True
+    assert len(sends) == 1
+    assert "revoked" in sends[0][0]
+
+
+def test_preopen_check_alerts_when_token_file_missing(token_file, monkeypatch):
+    monkeypatch.setattr(at, "verify_token", lambda t: True)
+    sends = []
+    monkeypatch.setattr(at, "send_telegram",
+                        lambda msg, **kw: sends.append((msg, kw)) or True)
+
+    assert at.preopen_check() is True
+    assert len(sends) == 1
+    assert "tidak ada" in sends[0][0]
+
+
+def test_preopen_check_false_only_when_alert_undeliverable(token_file, monkeypatch):
+    """Exit-1 semantics: a detected problem whose alert could not be sent is
+    the ONLY failure — cron_wrap's generic alert is then the fallback."""
+    token_file.write_text(_make_jwt(exp_offset_h=2.0))
+    monkeypatch.setattr(at, "verify_token", lambda t: True)
+    monkeypatch.setattr(at, "send_telegram", lambda msg, **kw: False)
+
+    assert at.preopen_check() is False
+
+
 # ── JWT-shape validation at capture time (incident 2026-09-22) ──
 #
 # Root cause: `_capture_from_page`'s `on_request` listener accepted the FIRST

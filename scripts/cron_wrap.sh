@@ -30,7 +30,7 @@ if [ "$rc" -ne 0 ]; then
     # (audit 2026-10-19: it failed daily for days, a wrong VKTR close stayed invisible).
     # Matches utils/notify_policy.BLACKOUT_EXEMPT.
     case "$JOB" in
-        db_backup|db_backup_research|db_restore_drill|backup_heartbeat_check|heartbeat_check|disk_guard|offsite_backup|auto_token|stockbit_ohlcv|stockbit_flow|data_heal|provisional_bars_check)
+        db_backup|db_backup_research|db_restore_drill|backup_heartbeat_check|heartbeat_check|disk_guard|offsite_backup|auto_token|token_preopen_check|stockbit_ohlcv|stockbit_flow|data_heal|provisional_bars_check)
             BLACKOUT_EXEMPT=1 ;;
         *) BLACKOUT_EXEMPT=0 ;;
     esac
