@@ -24,10 +24,30 @@ no `auto_token.py` except its read-only `--check` where the brief names it, no `
 
 ## Y1. Tonight's pilot — NOT RUN YET (automation fires 19:05 WIB; window 19:00–21:50)
 
+**Update 2026-10-22 09:0x WIB (brief `ZCODE_BRIEF_UPDATE_2026-10-22.md`):** the 10-21 19:05
+ZCode automation died one second in on a Z.ai 429 quota error (zero GETs; `~/idx_external/stockbit_fin`
+never created). The pilot is re-scheduled as an OS job: transient systemd user timer
+`fq-pilot-20261022` fires **19:05 WIB Thu 2026-10-22** (verified pending 08:55) and runs
+`fin_pilot.sh`: `--preopen-check`, `fetch --tickers BBCA TLKM ASII KIJA TOTO PNBS BTEL TRAM PGEO CUAN
+--max-minutes 30` (no `--force`), `parse`; log `logs/fin_pilot_20261022.log`. **A data pull must
+never again run inside a model turn** — the model turn only checks the result afterwards.
+
+**Scheduling limitation (harness, hit again 2026-10-22):** the validation turn (U2) cannot be
+scheduled from the ZCode session that did the U3 prep — one automation per session, and that
+session is bound to an already-fired automation. **Tonight after ~19:45 (or Friday morning), open
+a fresh ZCode chat** and point it at: `ZCODE_BRIEF_UPDATE_2026-10-22.md` U2 (validate the five
+criteria below against `logs/fin_pilot_20261022.log` + `manifest.jsonl` + `fin.db`, fill the
+pilot table + extrapolation here and in the companion report, run the push-gate suites, commit,
+push A2) and U3 (only if all five pass: arm `scripts/fin_full_pull_20261025.sh` — committed
+`4a56236`, tests green, NOT armed — as two one-off systemd timers Sun 09:05 + 13:00, verify the
+Sat 21:40 token refresh line in `crontab -l`, record the timers here). If the log shows no
+START by 19:15, that fresh chat runs the pilot itself per U1, before 21:50.
+
 - The session's automation (`automation-1639d2f4`, updated today) runs the whole of Y1 tonight:
   10-name fetch + parse (no `--force`), the pilot table + extrapolation in the companion report, the
   A1 paragraph update, validation of the five pass criteria, commit and push (A2). If the pilot had
-  already run by the time it fires, it skips the fetch and validates only.
+  already run by the time it fires, it skips the fetch and validates only. *(Superseded 10-22: the
+  automation died on the Z.ai 429 — see the update above.)*
 - **Pass criteria (to be recorded here):** (1) all 10 names × 3 statements; (2) BTEL/TRAM
   pre-delisting history; (3) bank layout parses (BBCA, PNBS); (4) no 401/403/429; (5) parse
   failures 0 or each explained. — pending.
