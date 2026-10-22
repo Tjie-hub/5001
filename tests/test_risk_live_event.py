@@ -172,3 +172,58 @@ def test_critical_alert_is_sent_when_a_sensor_has_no_data(tmp_path, monkeypatch)
     assert sent and sent[0][0] == "risk.market_critical"
     assert "VPIN: n/a" in sent[0][1] and "IHSG today: -8.01% — floor CRITICAL" in sent[0][1]
     assert conn.execute("SELECT sent FROM market_risk_log").fetchone()[0] == 1
+
+
+# ── Coverage gate (brief 2026-10-22 B): the 10-21 pre-open CRITICAL was a coverage artefact ──
+#
+# market_risk_log 2026-10-21: 09:05 97.5 CRITICAL {vpin null, accdist null, breadth null,
+# technicals 100.0, foreign_flow 95.0, ihsg_prev_move_pct 0.23} then 10:05 74.5 RED (breadth
+# 40.0 joins), 11:05 96.0 CRITICAL (breadth 93.6 display-rounded) — while IHSG sat +0.36% all
+# day. One live flow sensor + a slow BEARISH_TREND read was presented as today's CRITICAL.
+
+# The 10-21 09:05 inputs. foreign_net_5d=-20e9 saturates the foreign sensor at its 95.0 clamp.
+PARTIAL = dict(
+    vpin_summary={'label': 'INSUFFICIENT_DATA', 'pct_above_06': 0.0},
+    accdist_summary={'label': 'NEUTRAL', 'dist_pct': 0.0, 'total': 0},
+    breadth_summary={'label': 'INSUFFICIENT_DATA'},
+    technicals={'label': 'BEARISH_TREND', 'death_cross': True, 'lower_high': True, 'support_breaks': []},
+    foreign_net_5d=-20_000_000_000,
+)
+
+
+def test_reproduces_2026_10_21_0905_score_and_caps_the_tier():
+    r = compute_market_risk_score(**PARTIAL, ihsg_day_move=None, ihsg_prev=("2026-10-20", 0.0023))
+    assert r['score'] == 97.5                       # reproduced exactly
+    assert r['components']['technicals'] == 100.0 and r['components']['foreign_flow'] == 95.0
+    # the fix: 1/4 flow-breadth sensors live -> not a top tier, and labelled
+    assert r['tier'] == 'ORANGE'                    # was CRITICAL (alert fired 10-21 09:05)
+    assert 'partial sensors: 1/4' in r['coverage'] and 'capped' in r['coverage']
+
+
+def test_reproduces_2026_10_21_1105_two_live_sensors_stay_critical():
+    # breadth 93.6 in the log is the display-rounded 93.75 (BEAR_MARKET 85 + 0.8*(35-24.0625));
+    # with it, two flow/breadth sensors are live and the gate does not cap.
+    r = compute_market_risk_score(**dict(PARTIAL, breadth_summary={'label': 'BEAR_MARKET',
+                                                                   'pct_advancing': 24.0625}),
+                                  ihsg_day_move=0.0036)
+    assert r['score'] == 96.0                       # reproduced exactly
+    assert r['tier'] == 'CRITICAL'                  # 2/4 live: within the gate's contract
+    assert 'coverage' not in r
+
+
+def test_2026_10_21_1005_two_live_sensors_may_read_red():
+    r = compute_market_risk_score(**dict(PARTIAL, breadth_summary={'label': 'NEUTRAL',
+                                                                   'pct_advancing': 35.0}),
+                                  ihsg_day_move=0.0036)
+    assert r['score'] == 74.5 and r['tier'] == 'RED'   # breadth(40)+foreign live: gate satisfied
+
+
+def test_shock_floor_overrides_the_coverage_cap():
+    r = compute_market_risk_score(**PARTIAL, ihsg_day_move=-0.0801)   # the 10-16 event shape
+    assert r['tier'] == 'CRITICAL' and r['shock_floor'] == 'CRITICAL'
+    assert 'capped' not in r['coverage']            # labelled partial, but the floor wins
+
+
+def test_full_coverage_day_is_untouched_by_the_gate():
+    assert compute_market_risk_score(**LIVE)['tier'] == 'RED'
+    assert 'coverage' not in compute_market_risk_score(**LIVE)

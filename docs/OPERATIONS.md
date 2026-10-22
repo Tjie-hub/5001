@@ -349,6 +349,23 @@ capture then takes up to ~1 min), then the same evening re-run the retry
 past session `venv/bin/python3 scripts/repair_provisional_bars.py` (dry run) → `--apply` (settled
 yfinance data, split-guarded; IHSG is fetched as `^JKSE`).
 
+## Market-risk score (`engine/risk_score.compute_market_risk_score`)
+
+Production rules, in order of adoption:
+
+- **2026-10-16 (`f56cdeb`, live MSCI-shock lesson; never previously recorded here):** a sensor with
+  no data is dropped and the remaining weights rescaled (missing ≠ safe); the IHSG day move
+  (provisional bar allowed, own date's bar only — 10-21 fix) sets a tier floor at
+  −8% CRITICAL / −5% RED / −3% ORANGE. Floors are fixed by the IDX rulebook, not fitted.
+- **2026-10-22 (coverage gate):** CRITICAL and RED additionally require **≥2 live flow/breadth
+  sensors** (`vpin`, `accdist`, `breadth`, `foreign_flow`). With fewer, the tier caps at ORANGE and
+  the result carries `coverage: "partial sensors: n/4 flow-breadth live"`. Reasoning-set, not
+  fitted: the top two tiers claim today's market is in trouble, which needs corroboration from at
+  least two independent live readings — on 10-21 the 09:05 pre-open scan had only the 5-day
+  foreign-owned flow alive beside a slow BEARISH_TREND read and opened the day at 97.5 CRITICAL
+  (alert sent) while IHSG sat +0.36%. The shock floor overrides the gate: a real −8% day stays
+  CRITICAL whatever the sensors say (10-16 event unchanged). Not a research result — no D-entry.
+
 ## Logging
 
 - `logs/app.log` — structured JSON (rotating 10 MB × 5), correlation IDs.

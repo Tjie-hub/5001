@@ -112,6 +112,16 @@ def _score_to_tier(score: float) -> str:
 SHOCK_FLOORS = ((-0.08, 'CRITICAL', 86.0), (-0.05, 'RED', 71.0), (-0.03, 'ORANGE', 51.0))
 _WEIGHTS = {'vpin': 0.30, 'accdist': 0.20, 'breadth': 0.20, 'technicals': 0.15, 'foreign_flow': 0.15}
 
+# Coverage gate (2026-10-22, brief B): CRITICAL/RED claim "the market is in trouble NOW", so they
+# need live corroboration — at least MIN_LIVE_FLOW_BREADTH of the four flow/breadth sensors. The
+# 10-21 09:05 pre-open scan had only the 5-day foreign-owned flow alive next to a slow BEARISH_TREND
+# read; the rescale handed technicals half the weight and the day opened at 97.5 CRITICAL while IHSG
+# sat +0.36% (score 97.5 -> 74.5 -> 96.0 -> 96.0 -> 94.0 all day). With fewer live sensors the tier
+# caps at ORANGE and the result is labelled. The IHSG shock floor overrides this gate: a real -8% day
+# is CRITICAL whatever the sensors say (the 10-16 -8.01% event reads CRITICAL, unchanged).
+FLOW_BREADTH_SENSORS = ('vpin', 'accdist', 'breadth', 'foreign_flow')
+MIN_LIVE_FLOW_BREADTH_FOR_TOP_TIERS = 2  # reasoning-set, not fitted: two independent live readings
+
 
 def ihsg_last_move(conn, date_str: str):
     """(bar_date, move) for the latest IHSG bar on or before date_str (a provisional intraday bar counts); move is
@@ -185,6 +195,15 @@ def compute_market_risk_score(
                 break
     tier = _score_to_tier(score)
 
+    # Coverage gate (see FLOW_BREADTH_SENSORS above): without enough LIVE flow/breadth sensors a
+    # top tier is a slow/no-data artefact, not today's market. The shock floor (shock is not None)
+    # overrides the cap — the index already told us.
+    live_fb = sum(1 for k in FLOW_BREADTH_SENSORS if comps.get(k) is not None)
+    partial = live_fb < MIN_LIVE_FLOW_BREADTH_FOR_TOP_TIERS
+    capped = partial and shock is None and tier in ('CRITICAL', 'RED')
+    if capped:
+        tier = 'ORANGE'
+
     out_comps = {k: (round(v, 1) if v is not None else None) for k, v in comps.items()}
     prev_date = None
     if ihsg_day_move is not None:
@@ -199,6 +218,11 @@ def compute_market_risk_score(
         'shock_floor': shock,
         'components': out_comps,
     }
+    if partial:
+        out['coverage'] = (
+            f"partial sensors: {live_fb}/4 flow-breadth live"
+            + ("; tier capped at ORANGE" if capped else "")
+        )
     if prev_date:
         out['ihsg_prev_date'] = prev_date
     return out

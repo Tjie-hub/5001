@@ -724,6 +724,45 @@ def test_preopen_check_false_only_when_alert_undeliverable(token_file, monkeypat
     assert at.preopen_check() is False
 
 
+def test_preopen_check_treats_a_deduped_alert_as_delivered(token_file, monkeypatch):
+    """B.5 (2026-10-22): on a second same-day run the once_per_day dedup suppresses the
+    send — the owner was already pinged. Exiting 1 made cron_wrap fire a duplicate
+    generic alert, so a deduped send must read as delivered."""
+    token_file.write_text(_make_jwt(exp_offset_h=2.0))
+    monkeypatch.setattr(at, "verify_token", lambda t: True)
+    monkeypatch.setattr(at, "send_telegram",
+                        lambda msg, **kw: "once_per_day (already sent today)")
+
+    assert at.preopen_check() is True
+
+
+def test_send_telegram_dedup_returns_a_truthy_reason_not_false(tmp_path, monkeypatch):
+    import utils.notify_policy as np
+
+    monkeypatch.setattr(np, "OFF_FILE", str(tmp_path / "TELEGRAM_OFF"))
+    monkeypatch.setattr(np, "STATE_FILE", str(tmp_path / "notify_state.json"))
+    monkeypatch.setattr(np, "DIGEST_DIR", str(tmp_path / "digest_buffer"))
+    (tmp_path / "notify_state.json").write_text(
+        json.dumps({f"data.token_expired|preopen_check": {"d": np.wib_today()}}))
+    monkeypatch.setattr(at, "TELEGRAM_TOKEN", "tok123")
+    monkeypatch.setattr(at, "TELEGRAM_CHAT_ID", "chat456")
+
+    with patch("auto_token.requests.post") as mock_post:
+        result = _real_send_telegram("dedup test", event="data.token_expired",
+                                     subject="preopen_check")
+
+    mock_post.assert_not_called()
+    assert result and result is not False and result is not True  # the reason string
+
+
+def test_preopen_fix_deadline_line_is_day_aware():
+    for d in range(5):
+        assert "08:50" in at._fix_deadline_line(d)
+    for d in (5, 6):
+        line = at._fix_deadline_line(d)
+        assert "21:40" in line and "08:50" not in line
+
+
 # ── JWT-shape validation at capture time (incident 2026-09-22) ──
 #
 # Root cause: `_capture_from_page`'s `on_request` listener accepted the FIRST

@@ -78,11 +78,15 @@ def send_telegram(msg, event=None, subject=None, state=None):
     # Curation policy gate (2026-10-06): tier + dedup + global TELEGRAM_OFF,
     # one brain in utils.notify_policy. Kept as a separate muscle so this
     # cron script's own log sees suppressions.
+    # Returns True when sent; a truthy suppression-reason STRING when the policy
+    # already handled this send (e.g. "once_per_day (already sent today)" — the
+    # owner was pinged earlier, so callers treating it as delivered is correct);
+    # False only on a real failure (HTTP error, no creds) — B.5, 2026-10-22.
     from utils.notify_policy import decide
     action, reason = decide(event, subject=subject, state=state, msg=msg)
     if action != "send":
         log(f"[telegram] {action} ({reason})")
-        return False
+        return reason or action
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         log(
             "Telegram not configured (set TELEGRAM_TOKEN and TELEGRAM_CHAT_ID env vars)"
@@ -795,6 +799,16 @@ def check_token():
 PREOPEN_MIN_REMAINING_HOURS = 3.0
 
 
+def _fix_deadline_line(weekday=None):
+    """Day-aware fix deadline for the pre-open alert (B.5): the 08:50 OHLCV fetch is a
+    weekday consumer; on weekends the Sat/Sun 21:40 refresh itself may repair the token."""
+    d = datetime.now().weekday() if weekday is None else weekday
+    if d < 5:
+        return "Fix sekarang (sebelum 08:50 OHLCV fetch):"
+    return ("Akhir pekan — refresh otomatis 21:40 WIB bisa memperbaiki token; "
+            "kalau tetap gagal, fix sekarang:")
+
+
 def preopen_check(min_remaining_hours=None):
     """Light weekday-08:30 gate between the 07:40/08:10 refresh crons and the
     08:50 OHLCV fetch. Read-only (at most one keystats GET): no refresh, no
@@ -837,11 +851,13 @@ def preopen_check(min_remaining_hours=None):
         "🔴 <b>Stockbit token bermasalah SEBELUM OPEN</b>\n"
         f"{problem}\n\n"
         f"{_token_status_line()}\n\n"
-        "Fix sekarang (sebelum 08:50 OHLCV fetch):\n"
+        f"{_fix_deadline_line()}\n"
         f"1. <code>{_login_fix_command()}</code>\n"
         "2. Login di browser CRD (DISPLAY :20), tekan ENTER di terminal\n"
         "3. Capture token makan sampai ~1 menit setelah ENTER",
         event="data.token_expired", subject="preopen_check")
+    # A deduped send (truthy reason string) counts as delivered: the owner was already
+    # pinged today, and exiting 1 made cron_wrap fire a duplicate generic alert (B.5).
     return bool(sent)
 
 
