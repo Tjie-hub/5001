@@ -6,7 +6,42 @@
   "opened_utc": "2026-10-05T16:09:16+00:00",
   "family": "P-M \u00b7 Price-Reversal {R1,R2}",
   "_comment": "Append-only. One object per event, written when its 10-session window closes with every leg present. Never back-filled: no event with signal_date earlier than opened_utc. Voided windows (|ret|>35%, split, rights/bonus/reverse split) are not written.",
-  "trades": [],
-  "fingerprint_sha256": null,
-  "last_append_utc": null
+  "trades": [
+    {
+      "ticker": "BBRI",
+      "signal_date": "2026-10-08",
+      "entry_date": "2026-10-09",
+      "entry_open": 3040.0,
+      "exit_date": "2026-10-22",
+      "exit_close": 2900.0,
+      "gross_return": -0.046053,
+      "net_return": -0.052053,
+      "ewbook_return": -0.151426,
+      "excess_ewbook": 0.099373,
+      "ihsg_return": -0.107816,
+      "excess_ihsg": 0.055764,
+      "primary": false,
+      "censored": false,
+      "generated_utc": "2026-10-23T02:40:17.447648+00:00"
+    },
+    {
+      "ticker": "BMRI",
+      "signal_date": "2026-10-08",
+      "entry_date": "2026-10-09",
+      "entry_open": 4010.0,
+      "exit_date": "2026-10-22",
+      "exit_close": 3850.0,
+      "gross_return": -0.0399,
+      "net_return": -0.0459,
+      "ewbook_return": -0.151426,
+      "excess_ewbook": 0.105526,
+      "ihsg_return": -0.107816,
+      "excess_ihsg": 0.061916,
+      "primary": false,
+      "censored": false,
+      "generated_utc": "2026-10-23T02:40:17.700585+00:00"
+    }
+  ],
+  "fingerprint_sha256": "2aa34c1ecac1ea47d410462386424d07769aee5ddf9eaaabf087bec8a8c9cffe",
+  "last_append_utc": "2026-10-23T02:40:17.965432+00:00"
 }

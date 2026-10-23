@@ -317,7 +317,18 @@
    "median_ann_vol_excluded_pct": 95.6,
    "median_ann_vol_held_pct": 42.4,
    "session_priced_tickers": 914,
-   "outcome": null,
+   "outcome": {
+    "entry_date": "2026-09-16",
+    "exit_date": "2026-10-15",
+    "n_held": 180,
+    "n_universe": 200,
+    "n_excluded": 20,
+    "held_ret_pct": -9.545,
+    "universe_ret_pct": -11.068,
+    "excluded_ret_pct": -24.774,
+    "incremental_pct": 1.5229,
+    "spread_held_minus_excluded_pct": 15.229
+   },
    "fingerprint": "f264c69d053a80bc"
   },
   {
