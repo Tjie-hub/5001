@@ -20,7 +20,7 @@ Brief: `ZCODE_BRIEF_FQ_BACKFILL_AND_LC_FILING_2026-10-21.md`. All commits local;
   Not filed as FAILED (HYPOTHESIS_LIFECYCLE §3.1).
 - No outcome was read at any point; the G0 was not re-run.
 
-## Z2. Stockbit financials backfill — review DONE, tests DONE, dry-run DONE, pilot PENDING (see end)
+## Z2. Stockbit financials backfill — review DONE, tests DONE, dry-run DONE, pilot DONE 5/5 (2026-10-22)
 
 ### Review findings (docstring claims vs code)
 
@@ -79,23 +79,22 @@ suites: `tests/test_architecture_boundary.py`, `tests/test_research_data_fence.p
 
 | Ticker | Role | Quarters covered | Accounts (rows) | Failures | Wall time/GET |
 |---|---|---|---|---|---|
-| BBCA | bank, mega | pending | pending | pending | pending |
-| TLKM | non-bank large | pending | pending | pending | pending |
-| ASII | non-bank large | pending | pending | pending | pending |
-| KIJA | mid cap | pending | pending | pending | pending |
-| TOTO | small cap | pending | pending | pending | pending |
-| PNBS | small regional bank | pending | pending | pending | pending |
-| PGEO | 2023 IPO, no-lock-up | pending | pending | pending | pending |
-| CUAN | 2023 IPO, no-lock-up | pending | pending | pending | pending |
-| BTEL | delisted telco | pending | pending | pending | pending |
-| TRAM | delisted small | pending | pending | pending | pending |
+| BBCA | bank, mega | Q1 2008 → Q2 2026 | 225 | 0 | 1.63 s |
+| TLKM | non-bank large | Q4 2007 → Q2 2026 | 229 | 0 | 1.63 s |
+| ASII | non-bank large | Q1 2008 → Q2 2026 | 255 | 0 | 1.63 s |
+| KIJA | mid cap | Q1 2008 → Q2 2026 | 215 | 0 | 1.63 s |
+| TOTO | small cap | Q1 2008 → Q2 2026 | 188 | 0 | 1.63 s |
+| PNBS | small regional bank | Q4 2011 → Q2 2026 | 188* | 0 | 1.63 s |
+| PGEO | 2023 IPO, no-lock-up | Q4 2019 → Q2 2026 | 179 | 0 | 1.63 s |
+| CUAN | 2023 IPO, no-lock-up | Q4 2021 → Q2 2026 | 215 | 0 | 1.63 s |
+| BTEL | delisted telco | Q4 2007 → Q3 2025 (delisted) | 195 | 0 | 1.63 s |
+| TRAM | delisted small | Q1 2008 → Q3 2019 (delisted) | 237 | 0 | 1.63 s |
 
 Selection used `--tickers` (the 10 deliberate picks below) rather than bare `--limit 10`, because
 `--limit` takes the alphabetically first N of the remaining set and would not have covered the
-bank/large/small/delisted mix the brief requires. Full-pull extrapolation: pending (after the run).
+bank/large/small/delisted mix the brief requires. Full-pull extrapolation (after the run, 2026-10-22): 30 GETs / 49 s wall = 1.63 s per GET; 2,847 GETs remaining × 1.63 s ≈ 77 min — one Sunday 09:05 session covers the pull inside the 170-min cap; ≈ 12.0M rows expected.
 
-**The full pull is NOT authorised and was not started.** It waits on the owner's ToS call (probe doc,
-Next steps 1); if authorised in writing, weekend daytime only.
+**Full pull AUTHORISED (A1, owner 2026-10-21): Sunday 2026-10-25 daytime only, after the pilot passed 5/5** (executed by the `fq-pilot-20261022` systemd timer 2026-10-22 19:05, 30/30 HTTP 200, 125,192 rows, 0 parse failures; the 10-21 19:05 ZCode automation attempt died on a Z.ai 429 quota error before any GET). Armed as two one-off systemd timers (see `docs/reports/ZCODE_FQ_FULL_PULL_2026-10-21.md` §Y2). *PNBS caveat: parses fully but its stored rows are the generic (non-bank) template — the coverage table's bank split keys on Interest Income presence.*
 
 ## Z3. {FQ} PIT rule draft — DONE (draft only)
 

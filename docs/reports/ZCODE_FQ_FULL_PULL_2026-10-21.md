@@ -22,46 +22,67 @@ no `auto_token.py` except its read-only `--check` where the brief names it, no `
 - Pre-flight for Y2 done 10:59: `/mnt/storage2tb` mounted (453G free), local `/` 111G free,
   `~/idx_external/stockbit_fin` not yet created (the pilot creates it tonight).
 
-## Y1. Tonight's pilot — NOT RUN YET (automation fires 19:05 WIB; window 19:00–21:50)
+## Y1. Pilot — **DONE, 5/5 PASS** (executed by systemd timer 2026-10-22 19:05 WIB; validated 10-23)
 
-**Update 2026-10-22 09:0x WIB (brief `ZCODE_BRIEF_UPDATE_2026-10-22.md`):** the 10-21 19:05
-ZCode automation died one second in on a Z.ai 429 quota error (zero GETs; `~/idx_external/stockbit_fin`
-never created). The pilot is re-scheduled as an OS job: transient systemd user timer
-`fq-pilot-20261022` fires **19:05 WIB Thu 2026-10-22** (verified pending 08:55) and runs
-`fin_pilot.sh`: `--preopen-check`, `fetch --tickers BBCA TLKM ASII KIJA TOTO PNBS BTEL TRAM PGEO CUAN
---max-minutes 30` (no `--force`), `parse`; log `logs/fin_pilot_20261022.log`. **A data pull must
-never again run inside a model turn** — the model turn only checks the result afterwards.
+**History:** the 10-21 19:05 ZCode automation died one second in on a Z.ai 429 (quota) — zero
+GETs. Re-armed as the one-off systemd user timer `fq-pilot-20261022` (the standing lesson: data
+pulls are OS jobs; model turns only check results). Log `logs/fin_pilot_20261022.log`:
+START 19:05:01 → pre-open check OK (token 12.6h) → fetch rc=0 (30 saved, 0 missing, **30/30
+HTTP 200, no 401/403/429**) → parse rc=0 (**125,192 rows, 10 tickers**) → END 19:05:52 (51 s).
 
-**Scheduling limitation (harness, hit again 2026-10-22):** the validation turn (U2) cannot be
-scheduled from the ZCode session that did the U3 prep — one automation per session, and that
-session is bound to an already-fired automation. **Tonight after ~19:45 (or Friday morning), open
-a fresh ZCode chat** and point it at: `ZCODE_BRIEF_UPDATE_2026-10-22.md` U2 (validate the five
-criteria below against `logs/fin_pilot_20261022.log` + `manifest.jsonl` + `fin.db`, fill the
-pilot table + extrapolation here and in the companion report, run the push-gate suites, commit,
-push A2) and U3 (only if all five pass: arm `scripts/fin_full_pull_20261025.sh` — committed
-`4a56236`, tests green, NOT armed — as two one-off systemd timers Sun 09:05 + 13:00, verify the
-Sat 21:40 token refresh line in `crontab -l`, record the timers here). If the log shows no
-START by 19:15, that fresh chat runs the pilot itself per U1, before 21:50.
+Pass criteria (numbers re-verified read-only from `manifest.jsonl` + `fin.db` on 10-23):
 
-- The session's automation (`automation-1639d2f4`, updated today) runs the whole of Y1 tonight:
-  10-name fetch + parse (no `--force`), the pilot table + extrapolation in the companion report, the
-  A1 paragraph update, validation of the five pass criteria, commit and push (A2). If the pilot had
-  already run by the time it fires, it skips the fetch and validates only. *(Superseded 10-22: the
-  automation died on the Z.ai 429 — see the update above.)*
-- **Pass criteria (to be recorded here):** (1) all 10 names × 3 statements; (2) BTEL/TRAM
-  pre-delisting history; (3) bank layout parses (BBCA, PNBS); (4) no 401/403/429; (5) parse
-  failures 0 or each explained. — pending.
-- Fallback ladder per the brief: if tonight's window is missed entirely, Thursday 2026-10-22 after
-  19:00, token checked read-only first.
+1. **10 names × 3 statements — PASS.** 30/30 files, every file with values; `fin_files` rows
+   with `n_values = 0`: none.
+2. **BTEL and TRAM pre-delisting history — PASS.** BTEL Q4-2007 → **Q3-2025** (144 income
+   periods); TRAM Q1-2008 → **Q3-2019** (94). Both include their delisting-era quarters.
+3. **Bank layouts — PASS on parsing, one caveat.** BBCA shows the bank layout (Interest
+   Income / Interest Expense rows present). PNBS parses completely (110 periods, 0 failures)
+   but its **stored row labels are generic** (Total Revenue / COGS / Gross Profit — no
+   Pendapatan Bunga rows): Stockbit maps PNBS through the non-bank template. The Y2 coverage
+   table's bank-vs-non-bank split should therefore key on Interest Income presence, not on
+   SIC/issuer type, or PNBS will count as non-bank.
+4. **No 401/403/429 — PASS.** All 30 manifest statuses are 200.
+5. **Parse failures — PASS.** Zero `n_values = 0` files; no anomalies to explain.
 
-## Y2. Full pull — NOT RUN YET (approval A1; **cannot be scheduled from this session** — runbook below)
+Coverage per name (min → max quarter, all three statements): ASII/BBCA/KIJA/TOTO Q1-2008→Q2-2026
+(148–296 periods); TLKM Q4-2007→Q2-2026; BTEL →Q3-2025; TRAM →Q3-2019; CUAN Q4-2021→Q2-2026;
+PGEO Q4-2019→Q2-2026; PNBS Q4-2011→Q2-2026.
 
-**Scheduling limitation (harness, 2026-10-21 11:0x WIB):** this session is already bound to the
-tonight-19:05 automation, and the scheduler refuses a second automation in the same session
-("Cannot create a scheduled task inside a session that already belongs to a scheduled task"), and a
-scheduled run may not create or reconfigure further automations. So Sunday's runs cannot be armed
-from here. **To execute Sunday, open a fresh ZCode chat around 08:50 WIB, 2026-10-25, and point it at
-the runbook below** (it may run Y2 live in that session — ~2 h — then Y3, or schedule within it).
+**Full-pull extrapolation (coverage/parse stats only):** 30 GETs took 49 s wall
+(**1.63 s/GET** incl. the script's 1.5 s pacing). Remaining after the pilot: **2,847 GETs ×
+1.63 s ≈ 77 min** — comfortably inside the 170-min `--max-minutes` cap for Sunday's s1
+(09:05), so the 13:00 s2 resume is expected to be a no-op safety net. Rows: 125,192 rows / 30
+files ≈ 4.2k rows per file → **≈ 12.0M rows** expected across the full 2,877-file universe.
+
+*(Superseded plan notes: the original `automation-1639d2f4` Y1 turn and its fallback ladder are
+history — the 429 killed the first attempt; nothing else ran.)*
+
+## Y2. Full pull — ARMED (Sunday 2026-10-25; approval A1; data steps as OS timers)
+
+**Armed 2026-10-23 (A2):** two one-off systemd user timers run
+`scripts/fin_full_pull_20261025.sh` (commit `4a56236` + the A2 review fixes):
+- `fq-fullpull-20261025-s1.timer` — **Sun 2026-10-25 09:05 WIB**, tag `s1`
+  (log `logs/fin_full_pull_20261025_s1.log`);
+- `fq-fullpull-20261025-s2.timer` — **Sun 13:00 WIB**, tag `s2` — a resume that refuses while
+  s1 still holds the flock (`~/idx_external/stockbit_fin/.pull.lock`) and no-ops when the
+  pull is complete.
+- Guards in the script: runs only on 2026-10-25 (never catches up on a missed window); refuses
+  while the jurnal26 tape-backfill **service** is active (the A2 fix: the service state, not a
+  `pgrep` substring that also matched editors/greps); token must pass `--preopen-check` (rc 0);
+  ≥5G free where the raw store lands; then `fetch` — no `--force`, default 170-min cap.
+- Token: `crontab -l` confirmed `40 21 * * 6,0` — Saturday 21:40 refresh ⇒ token valid to
+  Sunday ~21:40, covering both sessions (s1 ends ≤ 11:55 at the 77-min extrapolation; s2 ≤ 15:50
+  worst case), all clear of jurnal26's 21:05 backfill.
+- Expected: ≈ 77 min for the 2,847 remaining GETs (1.63 s/GET from the pilot) → s2 is a no-op
+  safety net. **Stop-and-report** rules live inside the fetcher (401/403 stop; a second 429
+  backoff stops; >5% parse failures after parse).
+
+**Scheduling limitation (history, 2026-10-21/22):** a ZCode automation could not be re-armed
+(one per session; the 10-21 one died on the Z.ai 429) — which produced the standing rule this
+now follows: data pulls are OS jobs. **The Sunday-afternoon/Monday model turn (parse, sha256
+manifest, coverage table, archive copy, Y3 PIT v2) runs in a FRESH ZCode chat, per the runbook
+below.**
 
 ### Y2 runbook (Sunday 2026-10-25, daytime; approval A1)
 
