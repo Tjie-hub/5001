@@ -1,0 +1,401 @@
+{
+ "record_type": "pead_data_checks",
+ "earnings_sha256": "d07f855ca529facdfe905f4873a4067e3ee7896d2bc1e69678ba4210140a6d78",
+ "ksei_sha256": "e2c297dc18e7d43fe071b93a080e4d201af5de895439494b7653f8a0c673a6f0",
+ "run_wib": "2026-10-23T09:39:19.126051+07:00",
+ "fetch_status": {
+  "tickers": 628,
+  "with_rows": 87,
+  "empty": 513,
+  "error": 28
+ },
+ "C1_basis": {
+  "median_rep_over_est": {
+   "9M": 0.997775120084464,
+   "FY": 1.0,
+   "H1": 0.9983914834642507,
+   "Q1": 0.978640776699029
+  },
+  "median_abs_rep_vs_same_year_Q1": {
+   "Q1": 1.0,
+   "H1": 1.0186119151105646,
+   "9M": 1.0138418868225716,
+   "FY": 1.0936655092552523
+  },
+  "n_positive_pairs": 2592
+ },
+ "C2_split": {
+  "n": 33,
+  "n_factor_ge2": 29,
+  "share_factor_ge2_closer_to_1_than_factor": 0.8620689655172413,
+  "share_factor_ge2_like_unrestated": 0.0,
+  "cases": [
+   {
+    "ticker": "ACES",
+    "date": "2012-11-01",
+    "factor": 10.0,
+    "pre_over_post": 0.7722473604826546
+   },
+   {
+    "ticker": "AKRA",
+    "date": "2022-01-12",
+    "factor": 5.0,
+    "pre_over_post": 0.4041682173427614
+   },
+   {
+    "ticker": "AMRT",
+    "date": "2013-07-29",
+    "factor": 10.0,
+    "pre_over_post": 1.2679938744257275
+   },
+   {
+    "ticker": "ASII",
+    "date": "2012-06-05",
+    "factor": 10.0,
+    "pre_over_post": 0.9215767634854771
+   },
+   {
+    "ticker": "BBCA",
+    "date": "2008-01-28",
+    "factor": 2.0,
+    "pre_over_post": 0.8036890645586297
+   },
+   {
+    "ticker": "BBCA",
+    "date": "2021-10-13",
+    "factor": 5.0,
+    "pre_over_post": 0.8507246376811595
+   },
+   {
+    "ticker": "BBNI",
+    "date": "2023-10-06",
+    "factor": 2.0,
+    "pre_over_post": 0.9098639455782312
+   },
+   {
+    "ticker": "BBRI",
+    "date": "2011-01-11",
+    "factor": 2.0,
+    "pre_over_post": 0.3283927744326077
+   },
+   {
+    "ticker": "BBRI",
+    "date": "2017-11-10",
+    "factor": 5.0,
+    "pre_over_post": 0.8833242464366384
+   },
+   {
+    "ticker": "BMRI",
+    "date": "2017-09-13",
+    "factor": 2.0,
+    "pre_over_post": 0.7859352108090509
+   },
+   {
+    "ticker": "BMRI",
+    "date": "2023-04-04",
+    "factor": 2.0,
+    "pre_over_post": 0.84114960030453
+   },
+   {
+    "ticker": "BNBR",
+    "date": "2008-03-06",
+    "factor": 0.5,
+    "pre_over_post": 1.1373983739837399
+   },
+   {
+    "ticker": "CTRA",
+    "date": "2010-06-15",
+    "factor": 2.0,
+    "pre_over_post": 0.7487309644670052
+   },
+   {
+    "ticker": "CTRA",
+    "date": "2015-09-30",
+    "factor": 1.0108695652173914,
+    "pre_over_post": 1.0758942457231728
+   },
+   {
+    "ticker": "CTRA",
+    "date": "2016-07-13",
+    "factor": 1.0061728395061729,
+    "pre_over_post": 1.4633333333333336
+   },
+   {
+    "ticker": "ICBP",
+    "date": "2016-07-27",
+    "factor": 2.0,
+    "pre_over_post": 0.916923076923077
+   },
+   {
+    "ticker": "INCO",
+    "date": "2008-01-15",
+    "factor": 10.0,
+    "pre_over_post": 2.0
+   },
+   {
+    "ticker": "ISAT",
+    "date": "2024-10-14",
+    "factor": 4.0,
+    "pre_over_post": 0.8538826318909306
+   },
+   {
+    "ticker": "JPFA",
+    "date": "2013-04-19",
+    "factor": 5.0,
+    "pre_over_post": 1.3818181818181818
+   },
+   {
+    "ticker": "KLBF",
+    "date": "2012-10-08",
+    "factor": 5.0,
+    "pre_over_post": 0.7909090909090909
+   },
+   {
+    "ticker": "LSIP",
+    "date": "2011-02-25",
+    "factor": 5.0,
+    "pre_over_post": 0.525
+   },
+   {
+    "ticker": "MAPA",
+    "date": "2023-07-17",
+    "factor": 10.0,
+    "pre_over_post": 0.8715953307392996
+   },
+   {
+    "ticker": "MAPI",
+    "date": "2018-06-04",
+    "factor": 10.0,
+    "pre_over_post": 0.5714285714285715
+   },
+   {
+    "ticker": "PTBA",
+    "date": "2017-12-14",
+    "factor": 5.0,
+    "pre_over_post": 0.3056179775280899
+   },
+   {
+    "ticker": "SCMA",
+    "date": "2021-10-29",
+    "factor": 5.0,
+    "pre_over_post": 0.9700115340253749
+   },
+   {
+    "ticker": "SIDO",
+    "date": "2021-09-28",
+    "factor": 1.0076335877862594,
+    "pre_over_post": 0.7590744101633394
+   },
+   {
+    "ticker": "SMGR",
+    "date": "2007-08-07",
+    "factor": 10.0,
+    "pre_over_post": 0.6464528991526832
+   },
+   {
+    "ticker": "SMRA",
+    "date": "2008-05-22",
+    "factor": 2.0,
+    "pre_over_post": 0.5601503759398496
+   },
+   {
+    "ticker": "SMRA",
+    "date": "2013-06-27",
+    "factor": 2.0,
+    "pre_over_post": 0.9150505326413548
+   },
+   {
+    "ticker": "TLKM",
+    "date": "2013-08-28",
+    "factor": 5.0,
+    "pre_over_post": 0.9131689401888774
+   },
+   {
+    "ticker": "TOWR",
+    "date": "2013-07-22",
+    "factor": 10.0,
+    "pre_over_post": 0.563157894736842
+   },
+   {
+    "ticker": "TOWR",
+    "date": "2018-06-28",
+    "factor": 5.0,
+    "pre_over_post": 1.0485714285714285
+   },
+   {
+    "ticker": "UNVR",
+    "date": "2020-01-02",
+    "factor": 5.0,
+    "pre_over_post": 0.977319587628866
+   }
+  ]
+ },
+ "C3_duplicates": {
+  "rows_within_days_of_previous": 41,
+  "days": 20,
+  "examples": [
+   {
+    "ticker": "AKRA",
+    "ann_wib": "2015-10-29 18:00:00",
+    "fy": 2015,
+    "period": "9M",
+    "est": 23.74,
+    "rep": 12.1
+   },
+   {
+    "ticker": "ARTO",
+    "ann_wib": "2024-04-26 07:00:00",
+    "fy": 2024,
+    "period": "Q1",
+    "est": 2.96,
+    "rep": 1.58
+   },
+   {
+    "ticker": "ASII",
+    "ann_wib": "2009-07-30 17:00:00",
+    "fy": 2009,
+    "period": "H1",
+    "est": 41.7,
+    "rep": 46.3
+   },
+   {
+    "ticker": "ASRI",
+    "ann_wib": "2022-05-20 07:00:00",
+    "fy": 2022,
+    "period": "Q1",
+    "est": 11.98,
+    "rep": -15.85
+   },
+   {
+    "ticker": "ASRI",
+    "ann_wib": "2023-04-28 07:00:00",
+    "fy": 2023,
+    "period": "Q1",
+    "est": 9.24,
+    "rep": 1.53
+   },
+   {
+    "ticker": "AVIA",
+    "ann_wib": "2022-10-31 20:00:00",
+    "fy": 2022,
+    "period": "9M",
+    "est": 7.32,
+    "rep": 4.9
+   },
+   {
+    "ticker": "AVIA",
+    "ann_wib": "2023-03-20 07:00:00",
+    "fy": 2022,
+    "period": "FY",
+    "est": 7.04,
+    "rep": 5.17
+   },
+   {
+    "ticker": "BBCA",
+    "ann_wib": "2010-04-30 22:00:00",
+    "fy": 2010,
+    "period": "Q1",
+    "est": 17.35,
+    "rep": 15.8
+   },
+   {
+    "ticker": "BBTN",
+    "ann_wib": "2020-10-23 15:00:00",
+    "fy": 2020,
+    "period": "9M",
+    "est": 33.29,
+    "rep": 34.0
+   },
+   {
+    "ticker": "BMRI",
+    "ann_wib": "2009-07-29 16:00:00",
+    "fy": 2009,
+    "period": "H1",
+    "est": 15.0,
+    "rep": 18.22
+   }
+  ]
+ },
+ "C4_consensus": {
+  "rows": 3037,
+  "est_missing": 182,
+  "rep_missing": 233,
+  "usable": 2788,
+  "est_equals_rep": 72,
+  "est_equals_rep_share": 0.02582496413199426
+ },
+ "C5_coverage": {
+  "2009": {
+   "names": 0.165,
+   "mcap": 0.6849338973494628
+  },
+  "2010": {
+   "names": 0.15,
+   "mcap": 0.6181599168497386
+  },
+  "2011": {
+   "names": 0.22,
+   "mcap": 0.6516213371418744
+  },
+  "2012": {
+   "names": 0.26,
+   "mcap": 0.6823354304481307
+  },
+  "2013": {
+   "names": 0.25,
+   "mcap": 0.6515957972851232
+  },
+  "2014": {
+   "names": 0.245,
+   "mcap": 0.6721435677852302
+  },
+  "2015": {
+   "names": 0.225,
+   "mcap": 0.6360117873748665
+  },
+  "2016": {
+   "names": 0.195,
+   "mcap": 0.5958194499469974
+  },
+  "2017": {
+   "names": 0.18,
+   "mcap": 0.6815362753774785
+  },
+  "2018": {
+   "names": 0.175,
+   "mcap": 0.6405985971982155
+  },
+  "2019": {
+   "names": 0.185,
+   "mcap": 0.615779452825753
+  },
+  "2020": {
+   "names": 0.19,
+   "mcap": 0.5731556392034616
+  },
+  "2021": {
+   "names": 0.215,
+   "mcap": 0.5678040762257581
+  },
+  "2022": {
+   "names": 0.215,
+   "mcap": 0.5491126207746059
+  },
+  "2023": {
+   "names": 0.205,
+   "mcap": 0.4708741971967461
+  },
+  "2024": {
+   "names": 0.21,
+   "mcap": 0.3945712760453873
+  },
+  "2025": {
+   "names": 0.22,
+   "mcap": 0.35363710126920517
+  },
+  "2026": {
+   "names": 0.21,
+   "mcap": 0.41106144181107446
+  }
+ }
+}

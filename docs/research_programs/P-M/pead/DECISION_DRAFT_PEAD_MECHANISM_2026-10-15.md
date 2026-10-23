@@ -1,5 +1,11 @@
 # DRAFT — D-0xx (number assigned on approval; D-098 went to the tape protocol) · Mechanism proposed: post-earnings announcement drift (consensus anchor → under-reaction)
 
+> **SUPERSEDED 2026-10-23 by `G0_FREEZE_PEAD_2026-10-23.md`** (same directory). Kept unchanged below as the
+> 10-15 record. What changed and why: the census moved (HYP-PM-0022 went to D-105, so this arm is HYP-PM-0023 at
+> N = 614, bar 3.3001); the 2005–2020 holdout drew only on names liquid in 2025–26 (survivorship), now replaced
+> by a KSEI point-in-time universe from 2009-04; the earnings file is re-fetched for that universe and pinned
+> by sha256; the effect floor and minimum power are frozen; and data checks plus distinctness measures were added.
+
 **Status of this file:** DRAFT for the owner. Nothing is appended to `DECISION_LOG.md`, nothing is registered,
 no G0 has run, and **no post-event return has been read**. Census stays at 612.
 **Origin:** owner 2026-10-15 "Go PEAD", after a screen of the SetupAlpha "60+ market edges" list against the
