@@ -74,10 +74,11 @@ are recorded in `docs/OPERATIONS.md`'s new "Market-risk score" section.
 
 **Deploy:** `scripts/safe_restart.sh` ran via the one-shot `risk-gate-restart-20261022` at
 **16:20:37 on 10-22** (journalctl: gunicorn restarted, listening on 5001) — outside market
-hours. **Scan verification:** the first scans under the new code are this morning's; a one-shot
-(`risk-gate-verify-20261023`, 09:07) captures them via `scripts/risk_gate_check.py` to
-`logs/risk_gate_check_20261023.txt` — expect the 09:05 partial-coverage read ORANGE-labelled
-where it used to say CRITICAL (10-21 09:05 sent a BLACKOUT_EXEMPT alert; today's must not).
+hours. **Scan verification (DONE, 2026-10-23):** today's scans under the new code —
+`09:05 97.5 ORANGE | live flow-breadth 1/4` (the identical component picture that read CRITICAL
+and alerted on 10-21 — capped and labelled now), 10:05/11:05 RED with breadth live (2/4 — the
+gate rightly does not touch them), 13:35/14:35 ORANGE, `sent=0` all day
+(`logs/risk_gate_check_20261023.txt`, `scripts/risk_gate_check.py`).
 
 **B.5 `--preopen-check` fixes** (same commit): a deduped alert now counts as delivered
 (`send_telegram` returns the suppression reason — truthy — so a second same-day run exits 0
@@ -113,6 +114,6 @@ no safety claim.
 | A1 validate pilot | **DONE — 5/5 PASS** (recorded in both reports) |
 | A2 arm Sunday | **DONE** — s1 Sun 09:05, s2 Sun 13:00, flock + service-state guards, token schedule confirmed |
 | A3 after-data turn | **NOT RUN** — Sunday/Monday fresh chat, by design |
-| B coverage gate | **DONE — deployed 10-22 16:20**; scan-line capture pending (`logs/risk_gate_check_20261023.txt` after 09:07) |
+| B coverage gate | **DONE — deployed 10-22 16:20; live-verified 10-23** (09:05 97.5 ORANGE 1/4, no alert; midday REDs with 2/4 untouched) |
 | B.5 preopen fixes | **DONE** |
 | C auction monitor | **DONE/ARMED** — see `~/jurnal26/docs/ZCODE_AUCTION_WATCH_2026-10-22.md` (first fire Mon 08:50; C5 backfill tonight 19:00) |
