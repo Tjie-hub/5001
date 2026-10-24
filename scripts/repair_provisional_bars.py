@@ -43,6 +43,21 @@ already `is_final=1`, compute `factor = stored_close / yfinance_close` on each,
 and require the two to agree. That factor converts yfinance's adjusted price
 back to the table's own raw basis, whatever that basis happens to be.
 
+THE IHSG FALLBACK (2026-10-23)
+------------------------------
+yfinance can lack an index session outright: ^JKSE jumped 2026-10-20 ->
+2026-10-22 while every stock carried a final 10-21 bar, so the stranded 10-21
+IHSG provisional bar (an ~11:05 intraday snapshot, volume 0) had no settled
+value to repair from and the dry run could only say "no settled bar for the
+session". When that happens for IHSG, ONE Stockbit historical-summary GET
+(the same feed the owner used for the manual 10-21 fix) provides the day's
+OHLCV — but only after Stockbit's close is validated against yfinance's on the
+nearest session BOTH sources serve (they agreed to 0.001% on 2026-10-22:
+5,387.905 vs 5,387.90). Disagreement, no common session, or a rejected read
+(401/403/429/5xx) leaves the bar provisional. Stocks NEVER take this path:
+their split basis is yfinance-derived (see the trap above), and no Stockbit
+price is written for them here.
+
 SAFETY
 ------
 * Only touches rows where `COALESCE(is_final,1) <> 1`. An authoritative
@@ -91,6 +106,22 @@ YF_SYMBOL = {"IHSG": "^JKSE"}
 # Indices never split, so the empirical basis factor is pure source noise for them (IHSG measured
 # 1.0008-1.0016 on 2026-09-16..22: the stored rows are yfinance's own pre-close 16:00 snapshots).
 NO_REBASE = {"IHSG"}
+# --- IHSG fallback via Stockbit (2026-10-23) ----------------------------------
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TOKEN_FILE = os.path.join(REPO, ".stockbit_token")
+STOCKBIT_BASE = "https://exodus.stockbit.com"
+# Same +/- 12 calendar days the yfinance window spans, so the agreement check
+# below always has both feeds over one common window.
+FB_WINDOW_DAYS = REF_SPAN * 2
+# Stockbit's close must match yfinance's this closely on the nearest session
+# both serve before Stockbit is trusted for the session yfinance lacks
+# (10-22 measured: 5,387.905 vs 5,387.90 = 0.001%).
+FB_AGREEMENT = 0.0005
+FB_DISAGREE_REASON = "stockbit fallback disagrees with yfinance"
+
+
+class StockbitUnavailable(Exception):
+    """The Stockbit read was rejected (401/403/429/5xx/network). Never retried."""
 
 
 def yf_symbol(ticker: str) -> str:
@@ -248,6 +279,68 @@ def plausible_move(conn, ticker: str, date: str, new_close: float) -> bool:
     return 1 / bound <= ratio <= bound
 
 
+def stockbit_ihsg_window(date: str) -> dict[str, dict]:
+    """{date: {open,high,low,close,volume}} from ONE Stockbit historical-summary
+    GET spanning FB_WINDOW_DAYS around `date` — the feed the owner used for the
+    manual 2026-10-21 fix. Reads .stockbit_token only; never logs in; raises
+    StockbitUnavailable on any rejection so the caller stops rather than retries.
+    """
+    import requests
+    d0 = datetime.strptime(date, "%Y-%m-%d")
+    start = (d0 - timedelta(days=FB_WINDOW_DAYS)).strftime("%Y-%m-%d")
+    end = (d0 + timedelta(days=FB_WINDOW_DAYS)).strftime("%Y-%m-%d")
+    try:
+        with open(TOKEN_FILE, encoding="utf-8") as fh:
+            token = fh.read().strip()
+    except OSError as e:
+        raise StockbitUnavailable(f".stockbit_token unreadable ({e})") from e
+    url = (f"{STOCKBIT_BASE}/company-price-feed/historical/summary/IHSG"
+           f"?period=HS_PERIOD_DAILY&start_date={start}&end_date={end}&limit=30&page=1")
+    try:
+        r = requests.get(url, headers={
+            "Authorization": f"Bearer {token}",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+            "Origin": "https://stockbit.com", "Referer": "https://stockbit.com/",
+            "Accept": "application/json"}, timeout=30)
+    except Exception as e:  # requests.RequestException — anything network-side
+        raise StockbitUnavailable(f"network error ({type(e).__name__})") from e
+    if r.status_code in (401, 403):
+        raise StockbitUnavailable(
+            f"HTTP {r.status_code} — token rejected; do not re-login from here")
+    if r.status_code != 200:
+        raise StockbitUnavailable(f"HTTP {r.status_code}")
+    try:
+        rows = ((r.json() or {}).get("data") or {}).get("result") or []
+    except ValueError as e:
+        raise StockbitUnavailable("response was not JSON") from e
+    out: dict[str, dict] = {}
+    for row in rows:
+        try:
+            d = str(row["date"])[:10]
+            close = float(row["close"])
+            if close > 0:
+                out[d] = {"open": float(row["open"]), "high": float(row["high"]),
+                          "low": float(row["low"]), "close": close,
+                          "volume": float(row.get("volume") or 0.0)}
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out
+
+
+def _fb_agrees(yf_bars: dict | None, sb_bars: dict, date: str) -> tuple[bool, str]:
+    """True when Stockbit's close matches yfinance's within FB_AGREEMENT on the
+    nearest session (other than the stranded one) that both feeds serve."""
+    common = sorted(d for d in (yf_bars or {}) if d != date and d in sb_bars)
+    if not common:
+        return False, "no common session with yfinance to validate the feed against"
+    tgt = datetime.strptime(date, "%Y-%m-%d")
+    near = min(common, key=lambda d: abs((datetime.strptime(d, "%Y-%m-%d") - tgt).days))
+    yf_c, sb_c = yf_bars[near]["close"], sb_bars[near]["close"]
+    diff = abs(sb_c / yf_c - 1)
+    return diff <= FB_AGREEMENT, (f"nearest common session {near}: stockbit {sb_c:,.2f} "
+                                  f"vs yfinance {yf_c:,.2f} ({100 * diff:.3f}% apart)")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true", help="write (default is dry-run)")
@@ -266,20 +359,48 @@ def main() -> int:
 
     repaired = skipped = material = rebased = 0
     reasons: dict[str, int] = defaultdict(int)
+    stockbit_ok = True                      # flipped off by the first rejected read
+    ohlcv_cols = {r[1] for r in conn.execute("PRAGMA table_info(ohlcv)")}
     for date in sorted(stranded):
         tickers = stranded[date]
         print(f"{date}: {len(tickers)} provisional")
         window = fetch_window(tickers, date)
-        if not window:
+        # An all-empty yfinance window still routes IHSG through the per-ticker
+        # loop below: the Stockbit fallback must run (and fail its agreement
+        # check loudly) rather than vanish inside this whole-date skip.
+        if not window and "IHSG" not in tickers:
             print("    [skip] no settled data returned — leaving provisional\n")
             skipped += len(tickers)
             continue
 
-        writes, big, splits = [], [], []
+        writes, big, splits, fb_writes = [], [], [], []
         for t in tickers:
             bars = window.get(t)
             tgt = bars.get(date) if bars else None
-            if not tgt:
+            fb = False
+            if not tgt and t == "IHSG" and stockbit_ok:
+                # yfinance lacks this stranded index session (2026-10-21: ^JKSE
+                # jumps 10-20 -> 10-22). One Stockbit GET, written only if the
+                # two feeds agree on the nearest session they both serve.
+                try:
+                    sb = stockbit_ihsg_window(date)
+                except StockbitUnavailable as e:
+                    stockbit_ok = False   # one token: later GETs would fail the same way
+                    print(f"    [stop] Stockbit fallback: {e} — leaving IHSG provisional")
+                    reasons["stockbit fallback unavailable"] += 1
+                    continue
+                tgt = sb.get(date)
+                if not tgt:
+                    print(f"    [fallback] IHSG {date}: Stockbit has no bar for the session either")
+                    reasons["no settled bar for the session"] += 1
+                    continue
+                ok, detail = _fb_agrees(bars, sb, date)
+                if not ok:
+                    print(f"    [fallback] IHSG {date}: {detail}")
+                    reasons[FB_DISAGREE_REASON] += 1
+                    continue
+                fb = True
+            elif not tgt:
                 reasons["no settled bar for the session"] += 1
                 continue
             f, info = (1.0, "index") if t in NO_REBASE else basis_factor(conn, t, date, bars)
@@ -300,9 +421,16 @@ def main() -> int:
                     big.append((t, float(old[0]), new_close, d))
             writes.append((tgt["open"] * f, tgt["high"] * f, tgt["low"] * f,
                            new_close, tgt["volume"] / f, t, date))
+            if fb:
+                fb_writes.append((t, date))
 
         miss = len(tickers) - len(writes)
         print(f"    repairable {len(writes)}, skipped {miss}")
+        if fb_writes:
+            note = ("" if "source" in ohlcv_cols else
+                    "  (ohlcv has no source column — provenance kept in this output only)")
+            print(f"    {len(fb_writes)} via the Stockbit fallback (source: stockbit): "
+                  f"{', '.join(f'{t} {d}' for t, d in fb_writes)}{note}")
         if splits:
             rebased += len(splits)
             print(f"    {len(splits)} rebased to the table's raw basis "
@@ -322,6 +450,10 @@ def main() -> int:
                     "UPDATE ohlcv SET open=?, high=?, low=?, close=?, volume=?, "
                     "is_final=1 WHERE ticker=? AND date=? AND COALESCE(is_final,1) <> 1",
                     writes)
+                if fb_writes and "source" in ohlcv_cols:
+                    conn.executemany(
+                        "UPDATE ohlcv SET source='stockbit' WHERE ticker=? AND date=?",
+                        fb_writes)
             left = conn.execute(
                 "SELECT COUNT(*) FROM ohlcv WHERE date=? AND COALESCE(is_final,1)<>1",
                 (date,)).fetchone()[0]

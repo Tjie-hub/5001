@@ -127,25 +127,38 @@ def finalise_index_bars(ticker: str = "IHSG", symbol: str = "^JKSE") -> int:
     df = yf.download(symbol, start=min(pending), end=wib_today,
                      auto_adjust=False, progress=False)
     if df is None or df.empty:
-        return 0
-    df = df.reset_index()
-    df.columns = [c[0] if isinstance(c, tuple) else c for c in df.columns]
-    conn = get_db()
+        df = None
+    updated: set = set()
     n = 0
-    try:
-        for _, row in df.iterrows():
-            d = str(row["Date"])[:10]
-            c = row["Close"]
-            if d not in pending or c is None or (isinstance(c, float) and math.isnan(c)):
-                continue
-            n += conn.execute(
-                "UPDATE ohlcv SET open=?, high=?, low=?, close=?, volume=?, is_final=1 "
-                "WHERE ticker=? AND date=? AND is_final=0",
-                (float(row["Open"]), float(row["High"]), float(row["Low"]), float(c),
-                 float(row["Volume"]), ticker, d)).rowcount
-        conn.commit()
-    finally:
-        conn.close()
+    if df is not None:
+        df = df.reset_index()
+        df.columns = [c[0] if isinstance(c, tuple) else c for c in df.columns]
+        conn = get_db()
+        try:
+            for _, row in df.iterrows():
+                d = str(row["Date"])[:10]
+                c = row["Close"]
+                if d not in pending or c is None or (isinstance(c, float) and math.isnan(c)):
+                    continue
+                updated.add(d)
+                n += conn.execute(
+                    "UPDATE ohlcv SET open=?, high=?, low=?, close=?, volume=?, is_final=1 "
+                    "WHERE ticker=? AND date=? AND is_final=0",
+                    (float(row["Open"]), float(row["High"]), float(row["Low"]), float(c),
+                     float(row["Volume"]), ticker, d)).rowcount
+            conn.commit()
+        finally:
+            conn.close()
+    # 2026-10-21 stayed stranded for two days because this step returned 0 with no
+    # line at all when yfinance simply lacked the session (^JKSE jumps 10-20 -> 10-22
+    # while every stock had a final 10-21 bar). Name what is still unsettled so the
+    # log shows it; the repair script's Stockbit fallback then knows the target.
+    still = pending - updated
+    if still:
+        msg = (f"IHSG: {len(still)} provisional past session(s) still unsettled "
+               f"(yfinance returned no bar): {', '.join(sorted(still))}")
+        print(f"  {msg}")
+        logging.warning(msg)
     return n
 
 

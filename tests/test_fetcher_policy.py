@@ -274,6 +274,25 @@ def test_finalise_index_bars_leaves_a_session_the_source_lacks(db, monkeypatch):
     conn.close()
 
 
+def test_finalise_index_bars_names_sessions_yfinance_lacks(db, monkeypatch, capsys):
+    # 2026-10-21: ^JKSE jumped 10-20 -> 10-22, finalise returned 0 with no line
+    # at all, and the stranded bar sat unreported for two days. The unsettleable
+    # remainder must now be named in the log.
+    import data.fetcher as f
+    monkeypatch.setattr(f, "_wib_today", lambda: "2026-09-29")
+    _seed_ihsg(db, [("2026-09-24", 6360, 6370, 6290, 6300.0, 0),
+                    ("2026-09-25", 6300, 6320, 6240, 6247.0, 0)])
+    monkeypatch.setattr(f.yf, "download",
+                        lambda *a, **k: _yf_frame(["2026-09-25"], [6250.0]))
+    assert f.finalise_index_bars() == 1
+    out = capsys.readouterr().out
+    assert "still unsettled" in out and "2026-09-24" in out
+    conn = sqlite3.connect(db)
+    got = dict(conn.execute("SELECT date, is_final FROM ohlcv WHERE ticker='IHSG'").fetchall())
+    conn.close()
+    assert got == {"2026-09-24": 0, "2026-09-25": 1}
+
+
 def test_finalise_index_bars_is_a_noop_with_nothing_stranded(db, monkeypatch):
     import data.fetcher as f
     monkeypatch.setattr(f, "_wib_today", lambda: "2026-09-29")
