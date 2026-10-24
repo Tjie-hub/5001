@@ -108,8 +108,17 @@ below.**
 6. **Coverage table** (coverage/parse stats ONLY — no return, spread, IC, or join to prices):
    tickers × statements present; quarters per ticker (min/median/max; how many tickers ≥ 40
    quarters); **how many of the 41 stale/delisted names have history** (recompute the 41 the same
-   way: last `ohlcv` bar < max-date − 90 d); bank vs non-bank layout counts (statement-section rows
-   containing e.g. `Interest Income` / `Pendapatan Bunga`).
+   way: last `ohlcv` bar < max-date − 90 d); bank vs non-bank layout counts.
+   **The split rule (verified on the pilot raw files, 2026-10-23): key on Interest-Income
+   presence, NOT on issuer type** — a name counts as *bank layout* iff its income-statement
+   `statement`-section rows contain `Interest Income` in `account_en` **or** `Pendapatan Bunga`
+   in `account_id` (check BOTH languages). Evidence: BBCA carries both rows; PNBS — a bank —
+   carries NEITHER in either language (the feed itself maps PNBS through the generic template;
+   the parser is a faithful row extractor and was checked NOT to be dropping them: TLKM shows
+   the same generic row set). Counting by SIC/issuer type would misfile PNBS as bank-layout;
+   counting by this rule files it as generic-layout **with a footnote naming it a bank on the
+   generic template** — that footnote list (banks filed under generic) goes in the coverage
+   table itself.
 7. **Off-SSD copy:** `mkdir -p /mnt/storage2tb/idx-archive/stockbit_fin/2026-10-25/`; copy `raw/`,
    `manifest.jsonl`, `SHA256SUMS_2026-10-25.txt`, `fin.db`; recompute sha256 on the mount and
    compare both sides (report any mismatch; delete nothing; local copy stays).
