@@ -58,16 +58,7 @@ files ≈ 4.2k rows per file → **≈ 12.0M rows** expected across the full 2,8
 *(Superseded plan notes: the original `automation-1639d2f4` Y1 turn and its fallback ladder are
 history — the 429 killed the first attempt; nothing else ran.)*
 
-## Y2. Full pull — FETCH DONE 2026-10-25 · post-steps NOT RUN (approval A1; data steps as OS timers)
-
-**Result (2026-10-25):** the `s1` timer ran 09:05 → 10:24 WIB (`logs/fin_full_pull_20261025_s1.log`): pre-open
-check OK (token 12.6 h), universe 959 tickers, 2,877 requests (30 from the pilot, 2,847 to go), **`fetch rc=0`,
-"run end: 2841 saved, 6 missing/empty, 0 requests still to go"**. No 401/403/429 lines in the log. `manifest.jsonl`
-has 2,877 lines; the raw store has 2,871 files (957 ticker directories) — the 6 missing/empty are 2 tickers × 3
-statements, not yet named. Raw store 171 MB; local disk 99 G free. The 13:00 `s2` timer is the no-op safety net.
-**NOT RUN (by design, fresh chat per the runbook below):** `parse` (`fin.db` still holds only the pilot's 10
-tickers), the sha256 pin manifest, the coverage table, the off-SSD copy, and the Y2 commit/push. Do not
-re-fetch or `--force`.
+## Y2. Full pull — DONE 2026-10-25 (approval A1; data steps as OS timers) — result in "Y2 result" at the end
 
 **Armed 2026-10-23 (A2):** two one-off systemd user timers run
 `scripts/fin_full_pull_20261025.sh` (commit `4a56236` + the A2 review fixes):
@@ -156,7 +147,7 @@ exposure (keep, disclose; settle with IDX notices) · D3 buffer +1 month · D4 l
 COVID override table · D6 relabel restatement as "as first reported, narrow evidence" and approve the stratified
 extension · D7 Regime A backward application, flagged · D8 fetch the blocked IDX/OJK texts · D9 freeze path after D1–D8.
 
-**Y4 push:** HOLD — committed locally only. The standing instruction (weekend brief 2026-10-24) is to push when the owner says "push" (fast-forward only); the branch is already 3 commits ahead of origin with other work.
+**Y4 push:** HOLD for the Y3 commit (`6d61380`, local). The standing instruction (weekend brief 2026-10-24) is to push when the owner says "push" (fast-forward only); an earlier "push" approval covered that push only.
 
 ### Y3 runbook (after Y2's data exists; approval A3 — propose only)
 

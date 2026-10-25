@@ -285,9 +285,11 @@ start the panel at the first Regime-B period (period end 30 Jun 2011 or later), 
 
 ## 9. What this revision did not do
 
-- The Y2 post-steps — `parse`, the sha256 pin manifest, the coverage table and the off-SSD copy — are **not** run.
-  The fetch finished at 10:24 on 2026-10-25 (`fetch rc=0`; 2,841 saved in the run + 30 from the pilot; 6 missing/empty
-  = 2 tickers × 3 statements). This draft read the raw store only, and `fin.db` still holds the pilot's 10 tickers.
+- It did not run the Y2 post-steps. A separate session did (parse 11:11, sha256 pin, off-SSD copy, commit `9372efb`;
+  results in `docs/reports/ZCODE_FQ_FULL_PULL_2026-10-21.md` §"Y2 result"). While this draft was being written
+  (before 11:11) `fin.db` held only the pilot's 10 tickers, so every vendor value in §5 was read from the raw store
+  through `parse_report`. The six raw files used (TLKM, BMRI, ASII × income, balance) match the pinned
+  `SHA256SUMS_2026-10-25.txt` entries, so the CSV's vendor side is reproducible from the pinned bytes.
 - Not built: the stratified restatement sample, the late-filer list, and a count of unfiled statements at day 30.
 - Not verified: the Kep-00089 end date, the IDX I-E tiers for Q1/Q3, and the OJK-level instrument for the FY2020 deadline.
 
