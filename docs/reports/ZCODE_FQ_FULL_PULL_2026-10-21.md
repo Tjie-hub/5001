@@ -152,3 +152,22 @@ Write `P-M/data_acquisition/11_FQ_PIT_RULE_DRAFT_V2_2026-10-25.md` (sibling; ori
    the OJK X.K.2 page pattern for the 2003 decision) and what each settles.
 6. **End with a "decisions for the owner" list.** Commit and push. **No freeze, no D-entry, no {FQ}
    mechanism entry.**
+
+## Y2 result (Sunday 2026-10-25)
+
+- **Fetch (OS job s1, 10:24 WIB):** rc=0, 2,841 saved, 6 missing/empty, 0 requests still to go; no 401/403,
+  no second 429. The s2 resume timer (13:00) stays armed and is a no-op.
+- **Parse (11:11 WIB):** 2,841 new/changed files, fin.db 8,752,992 rows, 957 tickers x 3 statements = 2,871
+  fin_files rows, **0 with n_values = 0** (stop threshold was >5%).
+- **Coverage (parse stats only, no returns/joins to prices):** quarters per ticker (min over the three
+  statements) min 6 / median 39 / max 78; **475 of 957 tickers have >= 40 quarters**. Stale/delisted
+  (last ohlcv bar < 2026-10-23 - 90 d): **40 of the 41 have history** (CNTB has none); 20 of the 41 have
+  >= 40 quarters (median 39).
+- **Layout split (Interest-Income presence, both languages):** 70 bank layout, 887 generic. Banks filed
+  under the generic template (footnote list, from a hand-kept bank ticker set, so it may be incomplete):
+  BMAS, BRIS, BTPS, PNBS.
+- **sha256 pin:** `~/idx_external/stockbit_fin/SHA256SUMS_2026-10-25.txt` (2,873 lines: raw/* + fin.db +
+  manifest.jsonl); its own sha256 = `07a82032a02550a238b599b10058dc5fb4fc52579c3fc0a3e5fd74936d393684`.
+- **Archive:** `/mnt/storage2tb/idx-archive/stockbit_fin/2026-10-25/`; `sha256sum -c` on the mount:
+  2,873 of 2,873 OK, 0 mismatches; local copy kept.
+- **Y3:** drafted by a separate session (11_FQ_PIT_RULE_DRAFT_V2_2026-10-25.md, 11b CSV); not part of this commit.
