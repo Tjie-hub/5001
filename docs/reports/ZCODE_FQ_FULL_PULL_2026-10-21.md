@@ -58,7 +58,16 @@ files ≈ 4.2k rows per file → **≈ 12.0M rows** expected across the full 2,8
 *(Superseded plan notes: the original `automation-1639d2f4` Y1 turn and its fallback ladder are
 history — the 429 killed the first attempt; nothing else ran.)*
 
-## Y2. Full pull — ARMED (Sunday 2026-10-25; approval A1; data steps as OS timers)
+## Y2. Full pull — FETCH DONE 2026-10-25 · post-steps NOT RUN (approval A1; data steps as OS timers)
+
+**Result (2026-10-25):** the `s1` timer ran 09:05 → 10:24 WIB (`logs/fin_full_pull_20261025_s1.log`): pre-open
+check OK (token 12.6 h), universe 959 tickers, 2,877 requests (30 from the pilot, 2,847 to go), **`fetch rc=0`,
+"run end: 2841 saved, 6 missing/empty, 0 requests still to go"**. No 401/403/429 lines in the log. `manifest.jsonl`
+has 2,877 lines; the raw store has 2,871 files (957 ticker directories) — the 6 missing/empty are 2 tickers × 3
+statements, not yet named. Raw store 171 MB; local disk 99 G free. The 13:00 `s2` timer is the no-op safety net.
+**NOT RUN (by design, fresh chat per the runbook below):** `parse` (`fin.db` still holds only the pilot's 10
+tickers), the sha256 pin manifest, the coverage table, the off-SSD copy, and the Y2 commit/push. Do not
+re-fetch or `--force`.
 
 **Armed 2026-10-23 (A2):** two one-off systemd user timers run
 `scripts/fin_full_pull_20261025.sh` (commit `4a56236` + the A2 review fixes):
@@ -126,6 +135,28 @@ below.**
    the archive verification in this report's Y2 section. Commit code/doc changes + coverage (NOT
    data — it lives outside the repo). **Push** (A2; never force; remote moved → fetch+rebase; on
    conflict stop and report).
+
+## Y3. PIT v2 — DONE (propose-only; 2026-10-25)
+
+Revision: `docs/research_programs/P-M/data_acquisition/11_FQ_PIT_RULE_DRAFT_V2_2026-10-25.md` (v1 untouched) plus
+`11b_FQ_RESTATEMENT_CHECK_2026-10-25.csv` (70 rows, source URL + sha256 each). **Not frozen; no D-entry; no {FQ}
+mechanism entry.** It read the raw store only (no `parse`, no write to `fin.db`), and no outcome data.
+
+| Runbook item | Status |
+|---|---|
+| 1 H1 basis | DONE — recommend uniform 31 Oct (123 d). No attestation field in any of the 2,871 raw files. Population count of audited H1s not knowable (0 of 3 in hand). **New:** Q1/Q3 carry the same exposure |
+| 2 Buffer | DONE — keep +1 month; ≥ 8.8 % of required filers still unfiled at the boundary (FY2025), mostly repeat names → availability flag, not a longer buffer |
+| 3 COVID | DONE — primary texts for SEOJK 20/2021, SEOJK 4/2022, POJK 7/2021, POJK 4/2022 and the Mar-2020 joint release read; IDX decisions and OJK S-92 / S-205 are [S] / [P\*] only. Relaxations ran FY2019–FY2022; v1's "ignore" option withdrawn as anti-conservative |
+| 4 Restatement | **PARTIAL** — 16 issuer-periods, 3 large issuers (TLKM, BMRI, ASII), 70 fields, **0 differences**; vendor keeps the original where the issuer later restated (TLKM FY2014, BMRI FY2013). Not the stratified ~20: no small cap, nothing before 2012 |
+| 5 Blocked texts | DONE — Kep-36/PM/2003 and the current IDX I-E (+ the COVID-era IDX decisions) listed with what each settles |
+| 6 Owner decisions | DONE — D1–D9 at the end of the draft |
+
+**Owner decision list (full table with reasons in draft §8):** D1 H1 = uniform 31 Oct · D2 Q1/Q3 attested-path
+exposure (keep, disclose; settle with IDX notices) · D3 buffer +1 month · D4 late-filer availability flag · D5 encode the
+COVID override table · D6 relabel restatement as "as first reported, narrow evidence" and approve the stratified
+extension · D7 Regime A backward application, flagged · D8 fetch the blocked IDX/OJK texts · D9 freeze path after D1–D8.
+
+**Y4 push:** HOLD — committed locally only. The standing instruction (weekend brief 2026-10-24) is to push when the owner says "push" (fast-forward only); the branch is already 3 commits ahead of origin with other work.
 
 ### Y3 runbook (after Y2's data exists; approval A3 — propose only)
 
