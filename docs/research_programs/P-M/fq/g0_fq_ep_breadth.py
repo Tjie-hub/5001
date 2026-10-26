@@ -28,7 +28,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 DA = HERE.parent / "data_acquisition"
 FREEZE = HERE / "G0_FREEZE_FQ_EP_2026-10-26.md"
-FREEZE_SHA256 = None                       # set at freeze; None = refuse to run
+FREEZE_SHA256 = "e14ab4d96d58947f7d1a475c46f754d39ad258e0215db9f1e6b0aba747358549"   # owner, 2026-10-26
 
 KSEI_CSV = Path.home() / "idx_external" / "ksei" / "ksei_equity_holdings.csv"
 FIN_DB = Path.home() / "idx_external" / "stockbit_fin" / "fin.db"
@@ -37,6 +37,14 @@ FYX_CSV = DA / "13b_FQ_FISCAL_YEAR_EXCEPTIONS.csv"
 YAHOO_CSV = Path.home() / "idx_external" / "fx" / "usdidr_month_end_yahoo_2026-10-26.csv"
 NEW_CODES = Path.home() / "idx_external" / "stockbit_fin" / "_ksei_missing92.txt"
 FX_TOL = 0.03                              # report-only: vendor rate vs Yahoo month-end
+FIN_SUMS = Path.home() / "idx_external" / "stockbit_fin" / "SHA256SUMS_2026-10-26.txt"   # written after the 92-code parse
+PINS = {                                   # G0 freeze §1: inputs fixed before tonight's pull
+    KSEI_CSV: "38c8a90b10546f0602d4568b277d79d154f994e5cafb921bd0d73c3ce55df781",
+    YAHOO_CSV: "a0937cde0221f6a7d0e9f5b9e81060c67a30026672a0a686240f6e8e085ee1b9",
+    DA / "13_FQ_PIT_RULE_FROZEN_V3_2026-10-26.md": "8c78b96f12cd83c652eedf652b1cf7af8a52a8eea8e6bbfda3a20c52bdacb457",
+    LATE_CSV: "b549358b68e560aba806ca7b99514853056b8ac8cc07ec8d343cf22b1c691e8c",
+    FYX_CSV: "013af724fed5291c46e0872eb6d3a5eceb64e1420a26a2a71d4995b4d77f1089",
+}
 
 # ---- frozen parameters (G0 freeze §2-§5) ----
 FIRST_D, LAST_D = (2009, 5), (2026, 8)
@@ -74,6 +82,8 @@ def add_months_eom(d: date, k: int) -> date:
 def deadline_for(pe: date, fy_end: str | None) -> date | None:
     """Calendar deadline (a month end) for period_end pe; None = excluded (off-quarter fiscal year, R7)."""
     if fy_end is not None and fy_end not in ("31-Mar", "30-Sep"):
+        return None
+    if pe.month not in BASE_OFFSET:        # off-quarter period end: the store's calendar mapping fails (R7)
         return None
     d = COVID.get(pe, add_months_eom(pe, BASE_OFFSET[pe.month]))
     if fy_end is not None:                 # R7: FY-end and H1 periods take month 3; keep the later deadline
@@ -355,6 +365,33 @@ def build(by_date: dict, fin: dict, new_codes=frozenset()):
     return months
 
 
+def sha256_file(path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def verify_inputs(pins=None, fin_db=None, sums=None) -> list[str]:
+    """Problems with the pinned inputs (empty list = all match). fin.db is checked against its sums file."""
+    pins = PINS if pins is None else pins
+    fin_db, sums = fin_db or FIN_DB, sums or FIN_SUMS
+    bad = [f"{Path(p).name}: sha256 mismatch" for p, want in pins.items()
+           if not Path(p).exists() or sha256_file(p) != want]
+    want = None
+    if Path(sums).exists():
+        for line in open(sums):
+            parts = line.split()
+            if len(parts) == 2 and Path(parts[1]).name == "fin.db":
+                want = parts[0]
+    if want is None:
+        bad.append(f"{Path(sums).name}: no fin.db line (run after the 92-code parse)")
+    elif sha256_file(fin_db) != want:
+        bad.append("fin.db: does not match its sums file")
+    return bad
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="{FQ} E/P G0 breadth")
     ap.parse_args(argv)
@@ -362,6 +399,10 @@ def main(argv=None) -> int:
             hashlib.sha256(FREEZE.read_bytes()).hexdigest() != FREEZE_SHA256:
         print("G0 freeze not pinned or changed; refusing to run (breadth stays unseen until the freeze).")
         return 2
+    problems = verify_inputs()
+    if problems:
+        print("Pinned inputs do not match; refusing to run:\n  " + "\n  ".join(problems))
+        return 3
     by_date = load_ksei()
     yahoo = load_yahoo()
     fin = load_fin(withheld=load_withheld(), fyx=load_fyx(), yahoo=yahoo)
@@ -375,6 +416,7 @@ def main(argv=None) -> int:
     res = {"formation_months": len(months), "qualifying_months": q, "t_eff_years": round(t_eff, 3),
            "power": round(pw, 4), "bar": BAR, "ir_floor": IR_FLOOR, "months_needed": months_needed(),
            "stop_rule_fired": pw < MIN_POWER, "freeze_sha256": FREEZE_SHA256,
+           "fin_db_sha256": sha256_file(FIN_DB),
            "fx_check": fx_check(fin, yahoo), "new_code_coverage": coverage, "months": months}
     stamp = datetime.now(timezone(timedelta(hours=7))).strftime("%Y%m%dT%H%M%S")
     out = HERE / f"G0_RESULT_{stamp}.json"

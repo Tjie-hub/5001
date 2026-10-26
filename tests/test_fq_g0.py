@@ -34,6 +34,7 @@ def G():
     (date(2025, 9, 30), "31-Mar", date(2025, 12, 31)), # R7: its H1 takes month 3
     (date(2025, 6, 30), "31-Mar", date(2025, 9, 30)),  # R7: other periods keep R3
     (date(2025, 3, 31), "31-Jan", None),               # R7: off-quarter fiscal year excluded
+    (date(2025, 1, 31), None, None),                   # off-quarter period end in the store: excluded
 ])
 def test_deadline_for(G, pe, fy, expected):
     assert G.deadline_for(pe, fy) == expected
@@ -154,9 +155,14 @@ def test_power_and_threshold(G):
     assert G.power(128 / 12) < G.MIN_POWER <= G.power(129 / 12)
 
 
-def test_main_refuses_until_frozen(G):
-    assert G.FREEZE_SHA256 is None
+def test_main_refuses_on_freeze_mismatch_or_bad_inputs(G, monkeypatch):
+    """Never calls main() unpatched: with real pins in place that would run G0 outside its single controlled run."""
+    monkeypatch.setattr(G, "FREEZE_SHA256", "0" * 64)
     assert G.main([]) == 2
+    monkeypatch.setattr(G, "FREEZE_SHA256", G.sha256_file(G.FREEZE))
+    monkeypatch.setattr(G, "verify_inputs", lambda: ["fin.db: does not match its sums file"])
+    monkeypatch.setattr(G, "load_ksei", lambda: (_ for _ in ()).throw(AssertionError("must not load data")))
+    assert G.main([]) == 3
 
 
 def test_period_labels(G):
@@ -228,3 +234,16 @@ def test_build_counts_valid_names_from_new_codes(G, monkeypatch):
     new = frozenset(list(next(iter(by.values())))[:3])
     months = G.build(by, _fin(by), new)
     assert all(m["valid_new_codes"] == (3 if m["valid"] else 0) for m in months)
+
+
+def test_verify_inputs(G, tmp_path):
+    a = tmp_path / "a.txt"; a.write_text("x")
+    db = tmp_path / "fin.db"; db.write_bytes(b"db")
+    sums = tmp_path / "SUMS.txt"
+    good = {a: G.sha256_file(a)}
+    assert any("no fin.db line" in p for p in G.verify_inputs(good, db, sums))
+    sums.write_text(f"{G.sha256_file(db)}  {db}\n")
+    assert G.verify_inputs(good, db, sums) == []
+    assert G.verify_inputs({a: "0" * 64}, db, sums) == ["a.txt: sha256 mismatch"]
+    db.write_bytes(b"changed")
+    assert G.verify_inputs(good, db, sums) == ["fin.db: does not match its sums file"]
