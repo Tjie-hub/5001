@@ -14,7 +14,7 @@ Built 09:21 by the earlier session from the news articles cited in v2 (verified 
 | Tag | **all 417 are [S]** (secondary news); no [P] row exists |
 | Periods | FY2024 128 · FY2025 84 · H1-2025 52 · Q1-2025 59 · Q3-2024 46 · Q3-2025 48 |
 | Repeat names | appear in 1 period: 59 · 2: 27 · 3: 6 · 4: 3 · 5: 8 · **6 (all six periods): 39** |
-| Duplicate (ticker, period) rows | 7 — to be de-duplicated or explained before any use |
+| Repeated (ticker, period) pairs | 7 — not errors: the same issuer at two sanction stages (FY2025 day-60 warning III list and day-91 suspension). The CSV is one row per sanction event |
 
 **Reading:** 83 of 142 names (58%) appear in two or more of the six periods, and 39 appear in all six. The late-filer
 tail is concentrated in a persistent set, not spread evenly. That supports an availability flag keyed to the issuer
