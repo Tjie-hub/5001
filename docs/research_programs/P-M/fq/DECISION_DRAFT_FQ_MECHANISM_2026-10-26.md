@@ -100,3 +100,9 @@ obtained.
 
 PEAD's G0 runs tonight (17:45). If its stop rule fires on power, that is about event-study dispersion on earnings
 dates. It does not bear on a monthly cross-sectional design, which pools ~200 names a month.
+
+## 7. Owner response (2026-10-26)
+
+Recommended option on all four: **D-FQ-1** E/P value, one arm · **D-FQ-2** IDX E/P 0.75 as published · **D-FQ-3** pull
+approved · **D-FQ-4** top-200 by market cap. Filed as **D-112**. The six preferred/class codes (EDJSA, EDJSB, MAMIP,
+MYRXP, TALFA, TALFB) are outside the common-equity universe, so the pull is 92 codes, scheduled 19:05 WIB.

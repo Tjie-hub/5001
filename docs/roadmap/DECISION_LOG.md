@@ -3896,6 +3896,38 @@ year ends off a calendar quarter end, and asked Claude to file this entry as D-1
 **Amendment.** Only by a superseding D-entry. No later version or list change applies retroactively to a frozen {FQ}
 G0 (R8).
 
+### D-112 · {FQ} opened; mechanism accepted: value (E/P) as a risk premium; G0 floor and universe fixed before any data build
+**Status:** RECORDED · **Date:** 2026-10-26 · **Type:** Family opening + mechanism acceptance (D-070 §1) ·
+**Approval authority:** Owner, 2026-10-26. The owner chose the recommended option on D-FQ-1..4 of
+`P-M/fq/DECISION_DRAFT_FQ_MECHANISM_2026-10-26.md`.
+
+- **Family:** PIT-Fundamentals **{FQ}** opens. Data rule: D-111.
+- **Mechanism:** cheap stocks carry distress and cash-flow risk that holders are paid for, a risk premium under
+  D-070 §1. The signal is reported earnings over price; price is the denominator only.
+  - **One arm: E/P.** B/M and ROE are pre-declared sensitivities, reported and never substituted.
+  - Negative earnings are excluded from that month's E/P rank (RC-FQ-001).
+  - Pre-declared sign: positive (high E/P outperforms low E/P).
+- **G0 power floor:** E/P IDX IR **0.75** as published (Rouwenhorst, IDX 1990–97), the D-109 precedent. This gives
+  prior-only power **43.0%** at bar 3.300 over 208 monthly cross-sections (T = 17.33 y). The 50% post-publication
+  haircut row (power **4.1%**) is reported beside it, so a null result at G1 is weak evidence.
+- **Universe:** top-200 by month-end market cap (KSEI `sec_num × price`), 4-letter common equities only. No
+  survivorship-complete volume exists before 2021.
+- **Panel:** KSEI monthly holdings 2009-03 … 2026-09 (1,055 equity codes incl. delisted), with month-end price and
+  shares; fundamentals from `fin.db` under D-111.
+- **Data pull approved:** Stockbit fundamentals for the 92 four-letter KSEI codes `fin.db` lacks (98 minus six
+  preferred/class codes). Scheduled as one-shot timer `zcode-fq-ksei-pull-20261026` at 19:05 WIB (inside the script's
+  allowed window), token only, stop on 401/403/429. Parsed into `fin.db` under a new sha256 pin.
+- **G0 is not frozen by this entry.** Still to be fixed in the G0 entry, before any panel return is read:
+  - the split rule;
+  - the stale-price entry filter;
+  - delisting at the last print with a −100% row;
+  - Newey–West lags;
+  - the panel-breadth check.
+- **Census:** stays at **613**. The arm counts only at registration (N = 614).
+- **No outcome was read.**
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
