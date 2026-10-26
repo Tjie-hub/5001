@@ -265,6 +265,7 @@ def load_fin(db=FIN_DB, withheld=frozenset(), fyx=None, yahoo=None):
             a, b = es.get((t, pe_s)), ed.get((t, pe_s))
             vendor_r = b / a if ccy == "USD" and t in eq_q and a and b else None
             rows.setdefault(t, {})[pe] = {"ni": ni.get((t, pe_s)), "ccy": ccy, "rate": rate, "vendor_r": vendor_r,
+                                          "equity": a,     # statement total equity (G1 B/M, ROE sensitivities)
                                           "deadline": deadline_for(pe, fyx.get(t)),
                                           "withheld": (t, pe) in withheld}
     return rows

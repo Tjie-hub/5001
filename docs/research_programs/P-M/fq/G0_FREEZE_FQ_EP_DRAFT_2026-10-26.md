@@ -16,6 +16,7 @@ from any month t to t+1 has been computed.
 | Late filers / FY exceptions | `12_FQ_LATE_FILERS_…csv` / `13b_FQ_FISCAL_YEAR_EXCEPTIONS.csv` | `b549358b…` / `013af724…` |
 | Universe, price, shares | `~/idx_external/ksei/ksei_equity_holdings.csv` (2009-03 … 2026-09) | at freeze |
 | Fundamentals | `~/idx_external/stockbit_fin/fin.db` after the 92-code pull | new `SHA256SUMS_2026-10-26.txt` |
+| G1 script | `P-M/fq/g1_fq_ep.py` (tests: `tests/test_fq_g1.py`); refuses until registration is pinned | at registration |
 | G0 script | `P-M/fq/g0_fq_ep_breadth.py` (tests: `tests/test_fq_g0.py`, 36 synthetic) | at freeze |
 | USD/IDR conversion + check | `~/idx_external/fx/usdidr_month_end_yahoo_2026-10-26.csv` | `a0937cde…` |
 
@@ -58,9 +59,11 @@ from any month t to t+1 has been computed.
 - **Terciles** of valid E/P within the universe at D; **value-weighted** by market cap at D; long top − short bottom;
   hold one month.
 - **Return D → D+1:** KSEI price ratio, adjusted for splits.
-  - **Split rule:** k = sec_num(D+1) ÷ sec_num(D). If k ≥ 1.5 or k ≤ 0.67, and price(D+1) ÷ price(D) is within
-    ±25% of 1/k, treat it as a split/consolidation and multiply the price ratio by k. Otherwise use the raw price
-    ratio (issuance is not adjusted).
+  - **Split rule:** k = sec_num(D+1) ÷ sec_num(D). Treat it as a split/consolidation, and multiply the price ratio
+    by k, only if all three hold: k ≥ 1.5 or k ≤ 0.67; k or 1/k is within 2% of a whole number ≥ 2 (IDX splits use
+    whole ratios, rights issues rarely do); and price(D+1) ÷ price(D) is within ±25% of 1/k. Otherwise use the raw
+    price ratio (issuance and rights are not adjusted). A rights issue at an exact whole ratio with a deep discount
+    can still pass; such rows are listed in the result for inspection, without a rule change.
   - **Price-only:** no dividends (conservative against value).
   - **Delisting:** a name absent at D+1 exits at its last KSEI price (return to that print). A **−100% row** is
     reported beside the result (D-065 v2 §2).
