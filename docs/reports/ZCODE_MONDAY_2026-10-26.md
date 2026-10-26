@@ -39,8 +39,8 @@ numbers and no proposed D-entry text yet. No post-event return may be read.
 See `docs/research_programs/P-M/data_acquisition/12_FQ_PIT_FOLLOWUPS_2026-10-26.md`. Summary: D4 list = 417 rows,
 142 tickers, all [S]; 39 names appear in all six periods; 7 repeated (ticker, period) pairs are two sanction stages
 of the same issuer, not errors. Day-30 count cannot be
-built — `fin.db` has no filing date. D8: idx.co.id still 403, Wayback 404; owner-browser list written. No v3, no
-freeze, no D-entry.
+built — `fin.db` has no filing date. D8: idx.co.id still 403, Wayback 404; owner-browser list written. H3 itself filed nothing; the v3 and its
+freeze (D-111) followed later on the owner's request (below).
 
 ## H4. Index rebalance
 Latest announcement found: Peng-00148/BEI.POP/07-2026 (27 Jul), effective 3 Aug – 30 Oct 2026. The announcement for
