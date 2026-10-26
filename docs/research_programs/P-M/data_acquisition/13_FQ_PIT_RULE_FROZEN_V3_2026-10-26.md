@@ -49,8 +49,11 @@ Source of record: `12_FQ_LATE_FILERS_2026-10-26.csv`, extended only by appending
 **R7 — Non-calendar fiscal years.** Issuers on `13b_FQ_FISCAL_YEAR_EXCEPTIONS.csv` with a fiscal year ending 31 Mar
 or 30 Sep take deadline(i, P) = end of month 3 after period_end for their fiscal-year-end period and for their H1
 period (the period ending six months after fiscal-year start); their other periods follow R3's table. The list is
-extended only by appending rows with source URL and tag. Until an issuer is on it, it is treated as calendar-year,
-and that residual is disclosed with every {FQ} result.
+extended only by appending rows with source URL and tag. Issuers on the list whose fiscal year ends on a date that is
+not a calendar quarter end (e.g., 31 Jan) are **excluded** from every {FQ} cross-section, because the vendor's
+`period_end` cannot be their actual period end. Fiscal-year end is known ex ante, so the exclusion conditions on no
+later event. An issuer whose fiscal year ends 30 Jun needs no entry (R3 already gives the correct lags). Until an
+issuer is on the list, it is treated as calendar-year, and that residual is disclosed with every {FQ} result.
 
 **R8 — Change control.** The rule changes only by a superseding, dated version approved by the owner, which may
 tighten a lag on primary evidence. Appending to the R5 or R7 lists is not a rule change, because it can only withhold

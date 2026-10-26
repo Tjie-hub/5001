@@ -210,9 +210,11 @@ The owner chose the recommended option on all four: **D4a** withhold the issuer-
 exception list from issuer sources, disclosed until built · **D11** (a) shift to the next IDX trading day, then
 +1 month · **D9** freeze now, without waiting on D8.
 
-The frozen text is `13_FQ_PIT_RULE_FROZEN_V3_2026-10-26.md` (R1–R8 with these choices filled in), sha256
-`a02ad16fb2670bbf7bcc1ebf1935ecdf532886ff9497f4de002a3b1b50db6ff1`. The R7 list `13b_FQ_FISCAL_YEAR_EXCEPTIONS.csv`
-was created empty (header only). The `DECISION_LOG` entry is the owner's to file and number.
+The frozen text is `13_FQ_PIT_RULE_FROZEN_V3_2026-10-26.md` (R1–R8 with these choices filled in). Before filing, the
+owner added one choice: issuers whose fiscal year ends off a calendar quarter end (IDX's Q1-2024 notice counts one with
+a January year-end) are **excluded**, which went into R7. Final sha256
+`8c78b96f12cd83c652eedf652b1cf7af8a52a8eea8e6bbfda3a20c52bdacb457`. Filed as **D-111** at the owner's request. The
+R7 list `13b_FQ_FISCAL_YEAR_EXCEPTIONS.csv` holds one [S] candidate (SQMI).
 
 ---
 

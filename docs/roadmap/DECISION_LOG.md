@@ -3857,6 +3857,45 @@ a flat 15% with no end.
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-111 · {FQ} point-in-time rule frozen (v3)
+**Status:** RECORDED · **Date:** 2026-10-26 · **Type:** Data-rule freeze (precedes any {FQ} mechanism entry) ·
+**Approval authority:** Owner, 2026-10-26. D1–D8 were approved as recommended (v2 §10). On the v3 questions the owner
+chose the recommended options: D4a, D10, D11 and D9 "Freeze now". The owner then chose to exclude issuers whose fiscal
+year ends off a calendar quarter end, and asked Claude to file this entry as D-111.
+
+- **Frozen text:** `P-M/data_acquisition/13_FQ_PIT_RULE_FROZEN_V3_2026-10-26.md` (R1–R8), sha256
+  `8c78b96f12cd83c652eedf652b1cf7af8a52a8eea8e6bbfda3a20c52bdacb457`. The rationale, coverage tables and test vectors
+  are in the v3 draft `11_FQ_PIT_RULE_DRAFT_V3_2026-10-26.md`.
+- **The rule in brief:**
+  - Lag: usable from the filing deadline, shifted to the next IDX trading day, plus one month. That gives Q1 31 May,
+    H1 31 Oct, Q3 30 Nov and FY 30 Apr before any shift.
+  - COVID overrides for FY2019–FY2022, with two [U] rows held at the longer deadline.
+  - Late filers are withheld (the issuer-period's numbers are never used); the issuer is never dropped from the universe.
+  - Issuers with a March or September fiscal year take the annual/H1 lag. Issuers whose fiscal year ends off a calendar
+    quarter end are excluded.
+  - Labels: `regime_a_unverified`, `values_as_first_reported_narrow`, `override_unverified`, `flag_coverage`,
+    `fy_exception`.
+- **Lists as of this entry** (appended to only; any {FQ} G0 pins its own copy):
+  - `12_FQ_LATE_FILERS_2026-10-26.csv`: 417 sanction events across 6 periods, all [S]. sha256
+    `b549358b68e560aba806ca7b99514853056b8ac8cc07ec8d343cf22b1c691e8c`.
+  - `13b_FQ_FISCAL_YEAR_EXCEPTIONS.csv`: 1 [S] candidate (SQMI). sha256
+    `013af724fed5291c46e0872eb6d3a5eceb64e1420a26a2a71d4995b4d77f1089`.
+- **Residuals disclosed with every {FQ} result:**
+  - the Q1/Q3 attested-path exposure (D2);
+  - the late-filer flag: uncovered before Q3-2024, incomplete within its window, and asymmetric across time;
+  - narrow restatement evidence (D6);
+  - Regime A unverified (D7);
+  - the two [U] COVID rows;
+  - fiscal-year issuers not yet on the R7 list. IDX's Q1-2024 notice counts 7 issuers with a different fiscal year,
+    and names none of them.
+- **Not changed:** v2 §6 had made the freeze wait on primary texts (I-E, Kep-36/PM/2003). The owner's D2/D7 approvals
+  replace that dependency with stated conservative assumptions. Reading those texts can only tighten the rule, by a
+  superseding version.
+- **No {FQ} mechanism is accepted by this entry**, the census is unchanged, and no outcome was read.
+
+**Amendment.** Only by a superseding D-entry. No later version or list change applies retroactively to a frozen {FQ}
+G0 (R8).
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
