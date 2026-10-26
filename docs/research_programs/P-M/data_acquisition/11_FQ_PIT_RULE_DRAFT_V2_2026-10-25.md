@@ -322,3 +322,17 @@ search-engine extracts, and the Bisnis page itself returned 403):
 - 10 issuers still on H1-2020 relaxation: https://market.bisnis.com/read/20200807/7/1276318/dikasih-ampun-10-saham-ini-bebas-dari-cap-notasi-khusus
 
 **Originals for §5:** URLs and sha256 per row in `11b_FQ_RESTATEMENT_CHECK_2026-10-25.csv`.
+
+---
+
+## 10. Owner response (2026-10-26)
+
+The owner approved **D1–D8 as recommended in §8**: D1 uniform 31 Oct H1 lag (123 d); D2 keep Q1/Q3 at 31 May / 30 Nov
+with disclosure; D3 keep the +1 month buffer; D4 availability flag for the late-filer tail (residual disclosed until
+the IDX sanction lists are obtained); D5 encode the §4 COVID override table; D6 relabel the vendor values "as first
+reported, narrow evidence"; D7 apply the §1 table backward for Regime A, flagged; D8 fetch the primary texts in §6
+(owner browser).
+
+**Recorded only.** Not frozen. No `DECISION_LOG` entry. No {FQ} mechanism entry. **D9 (freeze path) was not
+approved** and stays open: it needs a v3 incorporating D1–D8, which the owner has not yet asked for. D4, D6 and D8
+still depend on the items marked "Needs" in §8 (IDX announcements, owner-browser originals, primary texts).
