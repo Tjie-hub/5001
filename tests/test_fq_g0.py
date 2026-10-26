@@ -67,16 +67,25 @@ def test_first_qualifying_weekend_deadline(G):
 # ---------------------------------------------------------------- currency
 
 @pytest.mark.parametrize("s,d,expected", [
-    (100.0, 100.0, ("IDR", 1.0)),
-    (100.0, 1_672_000.0, ("USD", 16720.0)),
-    (100.0, 140.0, (None, None)),                      # JATI-like ratio: ambiguous
-    (None, 100.0, (None, None)),
-    (0.0, 100.0, (None, None)),
+    (100.0, 100.0, "IDR"),
+    (100.0, 55.0, "IDR"),                              # late-filer layout: parent equity / total equity
+    (100.0, 140.0, "IDR"),                             # JATI-like ratio: same magnitude, so IDR
+    (100.0, 1_672_000.0, "USD"),
+    (100.0, 1_000.0, None),                            # neither magnitude
+    (None, 100.0, None),
+    (0.0, 100.0, None),
 ])
 def test_classify_currency(G, s, d, expected):
-    ccy, rate = G.classify_currency(s, d)
-    assert ccy == expected[0]
-    assert rate == pytest.approx(expected[1]) if expected[1] else rate is None
+    assert G.classify_currency(s, d) == expected
+
+
+def test_carry_currency_fills_gaps_without_conflict(G):
+    k = {date(2020, 3, 31): "USD", date(2020, 6, 30): None, date(2020, 9, 30): "USD",
+         date(2020, 12, 31): None, date(2021, 3, 31): "IDR", date(2021, 6, 30): "AMB"}
+    out = G.carry_currency(k)
+    assert out[date(2020, 6, 30)] == "USD"            # both neighbours agree
+    assert out[date(2020, 12, 31)] is None            # neighbours conflict (USD before, IDR after)
+    assert out[date(2021, 6, 30)] == "AMB"            # ambiguous is never filled
 
 
 # ---------------------------------------------------------------- TTM
@@ -197,3 +206,25 @@ def test_build_never_reads_later_prices(G, monkeypatch):
     keep = [m for m in base if m["D"] <= target.isoformat()]
     assert keep and keep == [m for m in again if m["D"] <= target.isoformat()]
     assert all(m["valid"] > 0 for m in keep if m["D"] >= "2009-06-30")
+
+
+# ---------------------------------------------------------------- report-only additions
+
+def test_fx_check_flags_deviation_beyond_tolerance(G):
+    fin = {"AAAA": {date(2024, 12, 31): dict(_q(1.0, None, ccy="USD", rate=15500.0), vendor_r=15500.0),
+                    date(2025, 3, 31): dict(_q(1.0, None, ccy="USD", rate=16300.0), vendor_r=17000.0)},
+           "BBBB": {date(2024, 12, 31): _q(1.0, None)}}
+    yahoo = {(2024, 12): 15500.0, (2025, 3): 16300.0}
+    r = G.fx_check(fin, yahoo)
+    assert r["usd_periods_checked"] == 2 and r["beyond_tol"] == 1
+    assert r["worst"][0][1:] == ("AAAA", "2025-03-31")
+
+
+def test_build_counts_valid_names_from_new_codes(G, monkeypatch):
+    monkeypatch.setattr(G, "FIRST_D", (2009, 5))
+    monkeypatch.setattr(G, "LAST_D", (2009, 12))
+    monkeypatch.setattr(G, "MIN_VALID", 5)
+    by = _panel()
+    new = frozenset(list(next(iter(by.values())))[:3])
+    months = G.build(by, _fin(by), new)
+    assert all(m["valid_new_codes"] == (3 if m["valid"] else 0) for m in months)

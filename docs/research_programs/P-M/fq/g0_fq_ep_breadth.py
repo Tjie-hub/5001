@@ -34,6 +34,9 @@ KSEI_CSV = Path.home() / "idx_external" / "ksei" / "ksei_equity_holdings.csv"
 FIN_DB = Path.home() / "idx_external" / "stockbit_fin" / "fin.db"
 LATE_CSV = DA / "12_FQ_LATE_FILERS_2026-10-26.csv"
 FYX_CSV = DA / "13b_FQ_FISCAL_YEAR_EXCEPTIONS.csv"
+YAHOO_CSV = Path.home() / "idx_external" / "fx" / "usdidr_month_end_yahoo_2026-10-26.csv"
+NEW_CODES = Path.home() / "idx_external" / "stockbit_fin" / "_ksei_missing92.txt"
+FX_TOL = 0.03                              # report-only: vendor rate vs Yahoo month-end
 
 # ---- frozen parameters (G0 freeze §2-§5) ----
 FIRST_D, LAST_D = (2009, 5), (2026, 8)
@@ -98,15 +101,34 @@ def first_qualifying(deadline: date, kdate: dict) -> date | None:
 
 
 def classify_currency(stmt_equity, derived_equity):
-    """('IDR', 1.0) | ('USD', rate) | (None, None) from vendor 'Total Equity (Quarter)' / statement 'Total Ekuitas'."""
+    """'IDR' | 'USD' | None from the order of magnitude of vendor derived equity (IDR-converted) / statement equity.
+
+    The derived row is 'Total Equity (Quarter)' (total equity) or, in the late-filer layout, 'Total Equity'
+    (parent equity), so only the magnitude is used: ~1 means IDR, ~the USD/IDR rate means USD."""
     if not stmt_equity or not derived_equity:
-        return None, None
-    r = derived_equity / stmt_equity
-    if 0.99 < r < 1.01:
-        return "IDR", 1.0
+        return None
+    r = abs(derived_equity / stmt_equity)
+    if 0.2 < r < 5:
+        return "IDR"
     if 5000 < r < 25000:
-        return "USD", r
-    return None, None
+        return "USD"
+    return None
+
+
+def carry_currency(known: dict) -> dict:
+    """Fill periods with no balance-sheet currency from the issuer's nearest classified periods (within 4 quarters
+    either side) when they do not conflict. known: period_end -> 'IDR' | 'USD' | None | 'AMB' (AMB is never filled)."""
+    pes = sorted(known)
+    out = dict(known)
+    for i, pe in enumerate(pes):
+        if known[pe] is not None:
+            continue
+        before = next((known[p] for p in reversed(pes[max(0, i - 4):i]) if known[p] in ("IDR", "USD")), None)
+        after = next((known[p] for p in pes[i + 1:i + 5] if known[p] in ("IDR", "USD")), None)
+        if before and after and before != after:
+            continue
+        out[pe] = before or after
+    return out
 
 
 def ttm_at(D: date, quarters: dict):
@@ -193,9 +215,11 @@ def load_ksei(path=KSEI_CSV):
     return by_date
 
 
-def load_fin(db=FIN_DB, withheld=frozenset(), fyx=None):
-    """ticker -> period_end -> dict(ni, ccy, rate, deadline). qual is filled by the caller."""
+def load_fin(db=FIN_DB, withheld=frozenset(), fyx=None, yahoo=None):
+    """ticker -> period_end -> dict(ni, ccy, rate, vendor_r, deadline, withheld). qual is filled by the caller.
+    USD quarters convert at Yahoo's USD/IDR month-end close for the period-end month (G0 §3)."""
     fyx = fyx or {}
+    yahoo = yahoo if yahoo is not None else load_yahoo()
     con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
     rows = {}
     def rowmap(stmt, cond):
@@ -209,7 +233,11 @@ def load_fin(db=FIN_DB, withheld=frozenset(), fyx=None):
         if r and r[0] is not None:
             owners[t] = r[0]
     eq_s = rowmap("balance", "account_en like 'Total Ekuitas%'")
-    eq_d = rowmap("balance", "account_en='Total Equity (Quarter)'")
+    eq_q = rowmap("balance", "account_en='Total Equity (Quarter)'")
+    eq_d = dict(eq_q)
+    for t, ro in rowmap("balance", "account_en='Total Equity'").items():
+        if t not in eq_d and t in eq_s and ro > eq_s[t]:      # late-filer layout: derived section after statement
+            eq_d[t] = ro
     def values(stmt, rmap):
         out = {}
         for t, ro in rmap.items():
@@ -218,13 +246,27 @@ def load_fin(db=FIN_DB, withheld=frozenset(), fyx=None):
                 out[(t, pe)] = v
         return out
     ni, es, ed = values("income", owners), values("balance", eq_s), values("balance", eq_d)
-    for (t, pe_s) in set(ni) | set(es):
-        pe = date.fromisoformat(pe_s)
-        ccy, rate = classify_currency(es.get((t, pe_s)), ed.get((t, pe_s)))
-        rows.setdefault(t, {})[pe] = {"ni": ni.get((t, pe_s)), "ccy": ccy, "rate": rate,
-                                      "deadline": deadline_for(pe, fyx.get(t)),
-                                      "withheld": (t, pe) in withheld}
     con.close()
+    by_t: dict[str, dict] = {}
+    for (t, pe_s) in set(ni) | set(es):
+        by_t.setdefault(t, {})[date.fromisoformat(pe_s)] = pe_s
+    for t, pes in by_t.items():
+        known = {}
+        for pe, pe_s in pes.items():
+            a, b = es.get((t, pe_s)), ed.get((t, pe_s))
+            c = classify_currency(a, b)
+            known[pe] = c if c else ("AMB" if a and b else None)
+        filled = carry_currency(known)
+        for pe, pe_s in pes.items():
+            ccy = filled[pe] if filled[pe] in ("IDR", "USD") else None
+            rate = 1.0 if ccy == "IDR" else yahoo.get((pe.year, pe.month)) if ccy == "USD" else None
+            if ccy == "USD" and rate is None:
+                ccy = None
+            a, b = es.get((t, pe_s)), ed.get((t, pe_s))
+            vendor_r = b / a if ccy == "USD" and t in eq_q and a and b else None
+            rows.setdefault(t, {})[pe] = {"ni": ni.get((t, pe_s)), "ccy": ccy, "rate": rate, "vendor_r": vendor_r,
+                                          "deadline": deadline_for(pe, fyx.get(t)),
+                                          "withheld": (t, pe) in withheld}
     return rows
 
 
@@ -243,7 +285,41 @@ def load_fyx(path=FYX_CSV):
 
 # ---------------------------------------------------------------- run
 
-def build(by_date: dict, fin: dict):
+def load_yahoo(path=YAHOO_CSV):
+    out = {}
+    for x in csv.DictReader(open(path)):
+        d = date.fromisoformat(x["month_end"][:10])
+        out[(d.year, d.month)] = float(x["usdidr"])
+    return out
+
+
+def fx_check(fin: dict, yahoo: dict, tol=FX_TOL):
+    """Report-only: the vendor's implied USD/IDR rate (total-equity layout) vs the Yahoo month-end close used for
+    conversion (G0 §3)."""
+    n = off = 0
+    worst = []
+    for t, qs in fin.items():
+        for pe, q in qs.items():
+            if q["ccy"] != "USD" or not q.get("vendor_r"):
+                continue
+            y = yahoo.get((pe.year, pe.month))
+            if not y:
+                continue
+            n += 1
+            dev = q["vendor_r"] / y - 1
+            if abs(dev) > tol:
+                off += 1
+                worst.append((round(dev, 4), t, pe.isoformat()))
+    worst.sort(key=lambda x: -abs(x[0]))
+    return {"usd_periods_checked": n, "beyond_tol": off, "share_beyond_tol": round(off / n, 4) if n else None,
+            "tol": tol, "worst": worst[:10]}
+
+
+def load_new_codes(path=NEW_CODES):
+    return frozenset(x.strip() for x in open(path) if x.strip()) if Path(path).exists() else frozenset()
+
+
+def build(by_date: dict, fin: dict, new_codes=frozenset()):
     dates = sorted(by_date)
     kdate = {(d.year, d.month): d for d in dates}
     for t, qs in fin.items():
@@ -257,7 +333,7 @@ def build(by_date: dict, fin: dict):
         m1 = by_date[dates[i - 1]] if i >= 1 else {}
         m2 = by_date[dates[i - 2]] if i >= 2 else {}
         uni = universe_at(by_date[D], m1, m2)
-        reasons, n_valid, n_usd = {}, 0, 0
+        reasons, n_valid, n_usd, n_new = {}, 0, 0, 0
         for t, mcap in uni:
             qs = fin.get(t)
             if not qs:
@@ -270,10 +346,11 @@ def build(by_date: dict, fin: dict):
                 reasons["negative"] = reasons.get("negative", 0) + 1
             else:
                 n_valid += 1
+                n_new += t in new_codes
                 n_usd += any(q["ccy"] == "USD" for pe, q in qs.items() if q["qual"] and q["qual"] <= D
                              and pe >= add_months_eom(D, -12))
         months.append({"D": D.isoformat(), "universe": len(uni), "valid": n_valid, "valid_usd": n_usd,
-                       "qualifies": n_valid >= MIN_VALID, "missing": reasons})
+                       "valid_new_codes": n_new, "qualifies": n_valid >= MIN_VALID, "missing": reasons})
     return months
 
 
@@ -285,14 +362,19 @@ def main(argv=None) -> int:
         print("G0 freeze not pinned or changed; refusing to run (breadth stays unseen until the freeze).")
         return 2
     by_date = load_ksei()
-    fin = load_fin(withheld=load_withheld(), fyx=load_fyx())
-    months = build(by_date, fin)
+    yahoo = load_yahoo()
+    fin = load_fin(withheld=load_withheld(), fyx=load_fyx(), yahoo=yahoo)
+    new_codes = load_new_codes()
+    months = build(by_date, fin, new_codes)
     q = sum(m["qualifies"] for m in months)
     t_eff = q / 12
     pw = power(t_eff)
+    coverage = {"new_codes": len(new_codes), "new_codes_with_fin": len(new_codes & set(fin)),
+                "valid_name_months_from_new_codes": sum(m["valid_new_codes"] for m in months)}
     res = {"formation_months": len(months), "qualifying_months": q, "t_eff_years": round(t_eff, 3),
            "power": round(pw, 4), "bar": BAR, "ir_floor": IR_FLOOR, "months_needed": months_needed(),
-           "stop_rule_fired": pw < MIN_POWER, "freeze_sha256": FREEZE_SHA256, "months": months}
+           "stop_rule_fired": pw < MIN_POWER, "freeze_sha256": FREEZE_SHA256,
+           "fx_check": fx_check(fin, yahoo), "new_code_coverage": coverage, "months": months}
     stamp = datetime.now(timezone(timedelta(hours=7))).strftime("%Y%m%dT%H%M%S")
     out = HERE / f"G0_RESULT_{stamp}.json"
     out.write_text(json.dumps(res, indent=1))

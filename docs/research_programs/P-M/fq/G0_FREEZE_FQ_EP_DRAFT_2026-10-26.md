@@ -16,8 +16,8 @@ from any month t to t+1 has been computed.
 | Late filers / FY exceptions | `12_FQ_LATE_FILERS_…csv` / `13b_FQ_FISCAL_YEAR_EXCEPTIONS.csv` | `b549358b…` / `013af724…` |
 | Universe, price, shares | `~/idx_external/ksei/ksei_equity_holdings.csv` (2009-03 … 2026-09) | at freeze |
 | Fundamentals | `~/idx_external/stockbit_fin/fin.db` after the 92-code pull | new `SHA256SUMS_2026-10-26.txt` |
-| G0 script | `P-M/fq/g0_fq_ep_breadth.py` (tests: `tests/test_fq_g0.py`, 31 synthetic) | at freeze |
-| FX cross-check only | `~/idx_external/fx/usdidr_month_end_yahoo_2026-10-26.csv` | `a0937cde…` |
+| G0 script | `P-M/fq/g0_fq_ep_breadth.py` (tests: `tests/test_fq_g0.py`, 36 synthetic) | at freeze |
+| USD/IDR conversion + check | `~/idx_external/fx/usdidr_month_end_yahoo_2026-10-26.csv` | `a0937cde…` |
 
 ## 2. Formation dates and universe
 
@@ -40,15 +40,17 @@ from any month t to t+1 has been computed.
   usable quarter's window is blocked (missing, withheld, currency-ambiguous), the next-older window of 4 is tried
   (D-111 R5), down to a **staleness cap: the window's latest quarter must end within 15 months of D**; otherwise E/P
   is missing at D.
-- **Currency (new rule).** `fin.db` stores each issuer's reporting currency without a field. Per issuer-period,
-  r = vendor "Total Equity (Quarter)" ÷ statement "Total Ekuitas":
-  - 0.99 < r < 1.01 → IDR;
-  - 5,000 < r < 25,000 → USD, and **r is the vendor's period-end USD/IDR rate**: each USD quarter is converted at its
-    own r;
-  - anything else → E/P missing for any TTM that needs that quarter.
-  - Measured 2026-10-26 on the current store: 35,135 IDR, 4,943 USD (108 tickers), 13 ambiguous (all JATI),
-    109 with no equity row. The Yahoo series checks r: report the share of USD periods with |r ÷ Yahoo − 1| > 3%
-    (report only, no rule change).
+- **Currency.** `fin.db` stores each issuer's reporting currency without a field. Per issuer-period,
+  r = vendor derived equity (IDR-converted) ÷ statement "Total Ekuitas". The derived row is "Total Equity (Quarter)"
+  (total equity), or "Total Equity" after the statement rows in the late-filer layout (55 tickers, where it is
+  parent equity, so r runs ~0.5–1.0). Only the magnitude is used:
+  - 0.2 < r < 5 → IDR; 5,000 < r < 25,000 → USD; otherwise unclassified.
+  - A period with no balance-sheet values takes the issuer's currency from its nearest classified periods within
+    4 quarters either side, if they do not conflict.
+  - **USD quarters convert at Yahoo's USD/IDR month-end close for the period-end month.** Checked against the
+    vendor's own implied rate (total-equity layout) on 4,908 USD periods: 0 outside 3%.
+  - Unclassified → E/P missing for any TTM that needs that quarter.
+  - Measured 2026-10-26 on the current store: 38,701 IDR, 5,223 USD, **51 unclassified** of 43,975 issuer-periods.
 - **E/P** = TTM owners' NI (IDR) ÷ market cap at D. **Negative TTM → excluded from the rank** (not from the universe).
 
 ## 4. Portfolios and returns (computed at G1 only)
@@ -84,8 +86,8 @@ G0 builds the panel and reports **breadth only**:
 B/M · ROE · equal-weight · the −100% delisting row · era split at 2021-07 (D-070) · with/without D-111's covered
 late-filer window · USD reporters excluded · top-100 universe.
 
-**Not yet in the script:** the Yahoo FX cross-check share (§3) and the 92-code coverage line (§5.4). Both are
-report-only and will be added before the freeze. Per-month missing reasons and USD counts are already written.
+**Report-only lines in the script:** the FX cross-check (§3) and the 92-code coverage (§5.4), plus per-month
+missing reasons and USD counts.
 
 ## 7. What the owner approves at freeze
 
