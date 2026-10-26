@@ -61,7 +61,11 @@ def _claude_glm_router(claude_error=None, claude_result=None):
 # and ::test_provider_mode_defaults_to_auto. This proves the full factory ->
 # router pipeline honors that default end-to-end.
 
-def test_build_router_with_no_overrides_uses_claude_first(monkeypatch):
+def test_build_router_with_no_overrides_uses_claude_first(monkeypatch, tmp_path):
+    # Reloading config re-runs load_dotenv(.env); point it at an empty file (as test_config.py's
+    # _isolate_env does) so the real repo .env cannot supply the "default" -- since 2026-10-26 the
+    # production .env sets AGENT_FIRM_PROVIDER_ORDER=zai, which used to leak in here.
+    monkeypatch.setenv("AGENT_FIRM_ENV_PATH", str(tmp_path / "absent.env"))
     monkeypatch.delenv("AGENT_FIRM_PROVIDER", raising=False)
     monkeypatch.delenv("AGENT_FIRM_PROVIDER_ORDER", raising=False)
     import importlib

@@ -462,12 +462,11 @@ def start_scheduler():
         day_of_week="mon-fri", hour=18, minute=30, timezone=WIB),
         id="forward_test_cycle", name="Forward-Test Cycle 18:30")
 
-    # Phase 5 (spec 2026-07-08) — daily BULL-watch on the NR7 governed universe;
-    # alerts only on band transitions, so the moment NR7 becomes eligible is loud.
-    _add_job(scheduler, run_phase5_bull_watch, CronTrigger(
-        day_of_week="mon-fri", hour=17, minute=10, timezone=WIB),
-        id="phase5_bull_watch", name="Phase 5 BULL-watch 17:10",
-        replace_existing=True)
+    # Phase 5 BULL-watch (17:10) unscheduled 2026-10-26 (owner, production signal audit
+    # docs/reports/PRODUCTION_SIGNAL_AUDIT_2026-10-26.md): it watched the NR7 governed
+    # universe for a band transition, but NR7_BULL is RETIRED (D-066) and registry_loader
+    # treats RETIRED as a hard exclusion, so the watch could only log about a strategy
+    # production may not trade. run_phase5_bull_watch stays importable for manual use.
 
     # Dead-man's-switch — stamp a heartbeat every 5 min (audit item 3.7). An
     # external crontab watchdog (scripts/check_scheduler_heartbeat.py) alarms if

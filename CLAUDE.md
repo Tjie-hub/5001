@@ -28,6 +28,12 @@ premarket, and the intraday exit-veto in `monitor.py`), which all share one rout
 same config.
 **Amended:** 2026-10-01 — NR7_BULL retired (D-066): invariant #10 now has
 no grandfathered exception; registry_loader treats RETIRED as a hard admission exclusion.
+**Amended:** 2026-10-26 — Owner-approved production signal audit
+(`docs/reports/PRODUCTION_SIGNAL_AUDIT_2026-10-26.md`): the production `.env` sets
+`AGENT_FIRM_PROVIDER_ORDER=zai` (GLM only, failover disabled) so the daily firm runs stop drawing
+on the Claude subscription window; **code defaults are unchanged** (`claude,zai`). The Phase-5
+BULL-watch job is unscheduled (NR7_BULL retired), and the dashboard's signal/watchlist views carry
+an "Unvalidated — no tested edge" notice (`templates/_evidence_notice.html`).
 
 > This document is the canonical workspace operating manual for Claude sessions in this
 > repository. It defines how work should be performed but does not supersede repository source

@@ -603,6 +603,7 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
       <button class="btn btn-sm" onclick="loadSignals()">↺ Refresh</button>
     </div>
   </div>
+  {% include "_evidence_notice.html" %}
   <div id="signals-list" style="display:flex; flex-direction:column; gap:8px;"></div>
   <div id="signals-empty" style="display:none; text-align:center; padding:40px 20px; color:var(--text-mute); font-size:13px;">No signals recorded today.</div>
 
@@ -626,6 +627,7 @@ tr.best-row td:first-child::before { content:""; position:absolute; left:0; top:
   <div class="panel-head">
     <div><h2>Strategy Scanner</h2><div class="sub">Multi-strategy scan with walk-forward filter and signal aggregation.</div></div>
   </div>
+  {% include "_evidence_notice.html" %}
 
   <div class="scanner-section">
     <div class="section-title">Strategies</div>
