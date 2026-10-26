@@ -204,6 +204,18 @@ The implementation should ship these rows as unit tests.
 
 ---
 
+## 7. Owner response (2026-10-26)
+
+The owner chose the recommended option on all four: **D4a** withhold the issuer-period, keep the issuer · **D10** (a)
+exception list from issuer sources, disclosed until built · **D11** (a) shift to the next IDX trading day, then
++1 month · **D9** freeze now, without waiting on D8.
+
+The frozen text is `13_FQ_PIT_RULE_FROZEN_V3_2026-10-26.md` (R1–R8 with these choices filled in), sha256
+`a02ad16fb2670bbf7bcc1ebf1935ecdf532886ff9497f4de002a3b1b50db6ff1`. The R7 list `13b_FQ_FISCAL_YEAR_EXCEPTIONS.csv`
+was created empty (header only). The `DECISION_LOG` entry is the owner's to file and number.
+
+---
+
 ## Sources
 
 As v2 (OJK [P] texts; news [S] list), plus: `12_FQ_LATE_FILERS_2026-10-26.csv` (source URL per row);
