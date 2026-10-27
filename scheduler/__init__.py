@@ -484,7 +484,6 @@ def start_scheduler():
     scheduler.start()
     logger.info("Scheduler started:")
     logger.info("  💓 SCHEDULER HEARTBEAT: every 5 min (dead-man's-switch)")
-    logger.info("  📡 PHASE 5 BULL-WATCH: 17:10 (NR7 universe band transitions)")
     # Edge Registry (M1 inversion): load once, announce what production runs on.
     from engine.registry_loader import announce_registry
     announce_registry()
