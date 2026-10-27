@@ -36,16 +36,31 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
 - [x] PEAD G0 power run executed 17:53 WIB: **stop rule FIRED** (506 top-quintile events / 159 months, SE 0.90%,
       MDE80 3.74%, power at 2% floor 13.9% — holdout 8.2%, recent 1.5%) → withdraw before registration, uncounted.
 
+**Done 2026-10-27 (ZCode Tuesday brief, `docs/reports/ZCODE_TUESDAY_2026-10-27.md`)**
+- [x] PEAD G0 result committed (`fc418ba`, log force-added past `*.log` ignore); withdrawal D-entry text PROPOSED
+      in the Tuesday report (owner files it); both registries confirmed to carry no PEAD row.
+- [x] 5001 restarted 08:48 via `safe_restart.sh` — process had been stale since 10-22, so `d0fd245` (GLM-only
+      order, BULL-watch unscheduled) was not live until now. Stale "PHASE 5 BULL-WATCH" boot banner left by
+      `d0fd245` removed (`77ff4ae`, next restart). pytest boundary/route: 6 passed before and after.
+- [x] Auction first-live-day closed: 18:30 backfill wrote a sensible 10-26 report; today's 08:50/08:59/09:02/09:05
+      fires all exit 0; `GET /api/auction` 200 with read token (`X-Token`), 401 without.
+- [x] Index rebalance **found and prepared**: Peng-00204/BEI.POP/10-2026 (26 Oct, effective 2 Nov 2026 –
+      29 Jan 2027). IDX30 +ISAT +PTBA −PGEO −UNVR; LQ45 +SMGR −SCMA; IDX80 +AALI +TINS +TKIM −HEAL −MIKA −SMRA
+      (SCMA stays in IDX80). On branches only: 5001 `ops/idx-rebalance-20261102` (`ba3fd29`), jurnal26
+      `idx-rebalance-20261102` (`01b0bbb`); `idx_tickers` flags untouched.
+- [x] {FQ} night: KSEI pull finished (41/92 codes; fin.db 998 tickers); G0 never ran — missing
+      `SHA256SUMS_2026-10-26.txt` written (pins all match), one-shot `zcode-fq-g0-20261027` armed 17:41 today.
+
 **Open**
-- [ ] **Commit the PEAD G0 result** (`G0_RESULT_20261026T175314.json`, `events_pead_20261026T175314.csv`,
-      `g0_run_2026-10-26.log` — untracked) and record the withdrawal as a dated decision entry (append-only;
-      uncounted per the freeze). Also uncommitted: `forward_fade` / `forward_regime` `ledger.json` (weekly appends).
+- [ ] **17:41 today: {FQ} E/P G0 runs** (timer `zcode-fq-g0-20261027`) → commit `P-M/fq/G0_RESULT_*.json` +
+      `g0_run_2026-10-27.log`, fill the proposed D-entry template in the Tuesday report.
+- [ ] **2026-11-02 (before 08:50 WIB): apply the rebalance** per the switch note in
+      `docs/reports/ZCODE_TUESDAY_2026-10-27.md` §J4.2 (merge both branches, update `idx_tickers` flags with the
+      old flags saved, `safe_restart.sh`, restart jurnal26, run the list tests).
 - [ ] **{FQ} registration (HYP-PM-0023) + G1** — wait for a separate owner go (D-112).
-- [ ] **Verify 5001 restarted** after `d0fd245` (`scripts/safe_restart.sh`, outside market hours) so the GLM-only
-      order and unscheduled job are live — not confirmed in this review.
-- [ ] Auction monitor first-live-day: 18:30 backfill result pending (ZCode Monday H1).
-- [ ] Index rebalance 2026-11-02 (IDX30/LQ45/IDX80 lists in `fetcher.py` + `idx_tickers` flags + jurnal26 backfill).
-- [ ] Owner decision on pushing both repos (HOLD).
+- [ ] **PEAD D-entry** — owner files or amends the proposed text (Tuesday report §J2).
+- [ ] Owner decision on pushing both repos (HOLD; 5001 20 ahead, jurnal26 8 ahead).
+- [ ] `forward_fade` / `forward_regime` `ledger.json` cron appends remain uncommitted by design.
 
 ---
 
