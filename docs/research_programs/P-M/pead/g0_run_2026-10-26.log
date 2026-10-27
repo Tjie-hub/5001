@@ -1,0 +1,7 @@
+events: {"rows": 3037, "usable_est_rep": 2788, "duplicates_dropped": 37, "outside_eras": 255, "not_top200_at_E-2": 24, "not_liquid_at_E-2": 80, "no_price_at_E-2": 0, "quarters": 70, "events_in_small_quarters": 0, "eligible_events": 2391, "top_quintile_events": 506, "by_era": {"holdout": {"eligible": 1641, "top_q": 347}, "recent": {"eligible": 750, "top_q": 159}}, "matured_by_cut": 2361, "placebo_low_coverage": 0}
+distinctness: {"hi52": {"spearman_with_sue": 0.13230166416305844, "flag": false}, "park60": {"spearman_with_sue": -0.0349649849777339, "flag": false}, "log_mcap": {"spearman_with_sue": 0.08261281875601367, "flag": false}, "t1": {"spearman_with_sue": 0.06175906557569305, "flag": false}, "share_top_q_in_hi52_top20": 0.24308300395256918, "share_all_in_hi52_top20": 0.2480133835215391, "share_top_q_in_park60_top10": 0.009881422924901186, "share_all_in_park60_top10": 0.003345880384776244, "share_top_q_in_t1": 0.1541501976284585, "share_all_in_t1": 0.1271434546214973, "share_top_q_next_event_inside_window": 0.4308300395256917}
+placebo events 506 over 159 months; per-event sd 0.1743; SE 0.9033%; MDE80 3.74%; power at 2.0% floor = 13.9%
+  holdout: n 347 months 112 SE 1.0473% power 8.2% (reported, not the stop metric)
+  recent: n 159 months 47 SE 1.7714% power 1.5% (reported, not the stop metric)
+STOP RULE FIRED -> withdraw before registration (uncounted).
+files: events_pead_20261026T175314.csv, G0_RESULT_20261026T175314.json
