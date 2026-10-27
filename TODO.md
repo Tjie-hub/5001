@@ -52,6 +52,11 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
       `SHA256SUMS_2026-10-26.txt` written (pins all match), one-shot `zcode-fq-g0-20261027` armed 17:41 today.
 
 **Open**
+- [ ] **Hypothesis search 2026-10-28 (propose-only, `P-M/search/`)**: 64-row exclusion index, 41-cell space map
+      (exhausted at pass 3), 8 candidates + 5 skeletons. **Top pick: C-003 dividend-yield level** (the only
+      power-real candidate, ~80–95% at a 0.80%/mo floor; sequence after the {FQ} G0; owner rules on debt +
+      family). Then C-001/C-006 KSEI foreign + MF/PF share (one build/G0, owner floor ≥0.8%/mo), C-002
+      cap-proximity overlay. Report: `docs/reports/ZCODE_HYPOTHESIS_SEARCH_2026-10-28.md`.
 - [ ] **17:41 today: {FQ} E/P G0 runs** (timer `zcode-fq-g0-20261027`) → commit `P-M/fq/G0_RESULT_*.json` +
       `g0_run_2026-10-27.log`, fill the proposed D-entry template in the Tuesday report.
 - [ ] **2026-11-02 (before 08:50 WIB): apply the rebalance** per the switch note in
