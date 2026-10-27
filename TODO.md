@@ -52,10 +52,14 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
       `SHA256SUMS_2026-10-26.txt` written (pins all match), one-shot `zcode-fq-g0-20261027` armed 17:41 today.
 
 **Open**
+- [ ] **C-003 dividend-yield G0 built (propose-only, `P-M/dy/`)**: L1 overlap cleared (not a re-skin of the
+      D-077 ex-date arms); L2 extraction done (D-111 v3 PIT via frozen {FQ} import, 20/20 tests, 498 payers,
+      coverage 33.9%/median 68 valid names); L3 G0 script **refuses until the owner pins the freeze**
+      (`G0_FREEZE_DY_DRAFT_2026-10-28.md`: floor 0.80%/mo proposed, both family options costed, liquidity-gate
+      question open). Owner: pin freeze + floor + family. Report: `docs/reports/ZCODE_C003_DY_2026-10-28.md`.
 - [ ] **Hypothesis search 2026-10-28 (propose-only, `P-M/search/`)**: 64-row exclusion index, 41-cell space map
-      (exhausted at pass 3), 8 candidates + 5 skeletons. **Top pick: C-003 dividend-yield level** (the only
-      power-real candidate, ~80–95% at a 0.80%/mo floor; sequence after the {FQ} G0; owner rules on debt +
-      family). Then C-001/C-006 KSEI foreign + MF/PF share (one build/G0, owner floor ≥0.8%/mo), C-002
+      (exhausted at pass 3), 8 candidates + 5 skeletons. **Top pick: C-003 dividend-yield level** (now built,
+      above). Then C-001/C-006 KSEI foreign + MF/PF share (one build/G0, owner floor ≥0.8%/mo), C-002
       cap-proximity overlay. Report: `docs/reports/ZCODE_HYPOTHESIS_SEARCH_2026-10-28.md`.
 - [ ] **17:41 today: {FQ} E/P G0 runs** (timer `zcode-fq-g0-20261027`) → commit `P-M/fq/G0_RESULT_*.json` +
       `g0_run_2026-10-27.log`, fill the proposed D-entry template in the Tuesday report.
