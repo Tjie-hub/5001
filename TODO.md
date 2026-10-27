@@ -1,6 +1,7 @@
 # IDX Walkforward — TODO
 
-_Last updated: 2026-09-22 — closed P0-1 (security work was committed `817f732` on 2026-08-20),
+_Last updated: 2026-10-27 (see "Current status" below; the P0–P6 plan that follows is the 2026-09-22 snapshot) —
+previous update 2026-09-22 — closed P0-1 (security work was committed `817f732` on 2026-08-20),
 verified 2/3 of P0-3's collection errors are now clean, and closed P0-6 (Stockbit auto-token
 corruption incident + fix). Base plan is still the 2026-08-19 full-stack machine audit below; all
 Sprint 8–19 work is shipped and archived further down._
@@ -19,6 +20,32 @@ machines.** Code syncs; data does not. So:
 
 Reference: `Audit/` corpus + `docs/RESEARCH_MASTER_PLAN.md` v3. Full audit findings and evidence
 trail: the 2026-08-19 machine audit (workflow map, joint failures, test-cache analysis).
+
+---
+
+# 📌 Current status — 2026-10-27 (carried from 2026-10-26)
+
+_Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
+`docs/reports/PRODUCTION_SIGNAL_AUDIT_2026-10-26.md`, PEAD G0 result JSON. Push is **HOLD**; nothing pushed._
+
+**Done 2026-10-26**
+- [x] {FQ} PIT rule v3 frozen (D-111, `c441fca`); {FQ} opened as E/P value risk premium (D-112, `fcf14e1`);
+      E/P G0 freeze pinned (sha `e14ab4d9`, `d1e9497`); G0 + G1 scripts built, refuse to run unpinned.
+- [x] Production signal audit applied (`d0fd245`): Phase-5 BULL watch unscheduled, dashboard signal/watchlist
+      views carry "Unvalidated — no tested edge", Agent Firm GLM-only via `.env` (`AGENT_FIRM_PROVIDER_ORDER=zai`).
+- [x] PEAD G0 power run executed 17:53 WIB: **stop rule FIRED** (506 top-quintile events / 159 months, SE 0.90%,
+      MDE80 3.74%, power at 2% floor 13.9% — holdout 8.2%, recent 1.5%) → withdraw before registration, uncounted.
+
+**Open**
+- [ ] **Commit the PEAD G0 result** (`G0_RESULT_20261026T175314.json`, `events_pead_20261026T175314.csv`,
+      `g0_run_2026-10-26.log` — untracked) and record the withdrawal as a dated decision entry (append-only;
+      uncounted per the freeze). Also uncommitted: `forward_fade` / `forward_regime` `ledger.json` (weekly appends).
+- [ ] **{FQ} registration (HYP-PM-0023) + G1** — wait for a separate owner go (D-112).
+- [ ] **Verify 5001 restarted** after `d0fd245` (`scripts/safe_restart.sh`, outside market hours) so the GLM-only
+      order and unscheduled job are live — not confirmed in this review.
+- [ ] Auction monitor first-live-day: 18:30 backfill result pending (ZCode Monday H1).
+- [ ] Index rebalance 2026-11-02 (IDX30/LQ45/IDX80 lists in `fetcher.py` + `idx_tickers` flags + jurnal26 backfill).
+- [ ] Owner decision on pushing both repos (HOLD).
 
 ---
 
