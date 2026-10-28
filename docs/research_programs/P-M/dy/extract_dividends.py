@@ -176,10 +176,13 @@ def _ticker_currency(db=FIN_DB) -> dict[str, str | None]:
     if _CURRENCY_CACHE:
         return _CURRENCY_CACHE
     con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-    def rm(cond):
-        return {t: ro for t, ro in con.execute(
-            f"select ticker, min(row_order) from fin_rows where statement='balance' and {cond} group by ticker")}
-    eq_s, eq_q = rm("account_en like 'Total Ekuitas%'"), rm("account_en='Total Equity (Quarter)'")
+    # constant SQL + bound label (was an f-string-interpolated predicate; same rows, scanner-clean)
+    eq_s = {t: ro for t, ro in con.execute(
+        "select ticker, min(row_order) from fin_rows where statement='balance' and account_en like ? "
+        "group by ticker", ("Total Ekuitas%",))}
+    eq_q = {t: ro for t, ro in con.execute(
+        "select ticker, min(row_order) from fin_rows where statement='balance' and account_en = ? "
+        "group by ticker", ("Total Equity (Quarter)",))}
     def val(t, ro):
         r = con.execute("select value from fin_values where ticker=? and statement='balance' and row_order=? "
                         "and value is not null limit 1", (t, ro)).fetchone()

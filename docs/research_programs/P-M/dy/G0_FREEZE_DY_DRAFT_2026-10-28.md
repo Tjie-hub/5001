@@ -10,7 +10,9 @@ to choose the floor, universe, sign or any parameter below** — the constructio
 KSEI monthly holdings csv (sha `38c8a90b…`), Yahoo USDIDR month-end (sha `a0937cde…`), {FQ} late-filer list
 (`b549358b…`), fiscal-year exceptions (`013af724…`), fin.db as pinned by `SHA256SUMS_2026-10-26.txt`
 (`caefb1a2…` — the same post-92-code-parse state the {FQ} G0 pins; any fin.db change needs a re-pin decision).
-Extraction: `extract_dividends.py` v1 (committed `72d2f6d`; 20 synthetic tests) — vendor label whitelist for
+Extraction: `extract_dividends.py` v1.1 (v1 `72d2f6d`; v1.1 2026-10-28 replaced the f-string SQL predicate in
+`_ticker_currency` with constant SQL + bound labels — currency output identical on all 998 tickers; 20 synthetic
+tests) — vendor label whitelist for
 parent dividends-paid, NCI/subsidiary/received/tax/advance exclusions, DISCRETE/CUMULATIVE layout classifier,
 USD-reporter conversion at period-end month rate, D-111 v3 deadlines, late-filer withholding.
 
