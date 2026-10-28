@@ -77,6 +77,16 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
       wrong; the pre-registered measured rule decided.
 - [x] M4: C-009 marked "UNDERPOWERED — not folded in (owner 2026-10-28)".
 
+**Done 2026-10-28 PM (ZCode, owner: "test this new hypothesis")**
+- [x] **Pre-open news-timing screen: G0 breadth STOP — withdrawn before registration, uncounted (D-117,
+      `c912a19`)**: the 08:00 WIB pre-market news crawl has written on only **8 of 119** trading days since
+      2026-04-26 (197 events, 179 joinable over 7 dates vs the frozen ≥60-date floor), and the 17:00
+      `INSERT OR REPLACE` destroys pre-open evidence on every normal day — the hypothesis is untestable on
+      current data. Census unchanged at 615; no return read; no registry row. Path to testability (owner
+      decision, propose-only): append-only premarket capture (`news_mentions_premarket` or a REPLACE-preserved
+      `first_seen_at`) + scheduler coverage fix, then re-run the breadth G0.
+      Report: `docs/reports/ZCODE_NEWS_TIMING_SCREEN_2026-10-28.md`.
+
 **Open**
 - [ ] **Owner, C-003 {PY}: registration go/no-go** (G0 passed; registration text = freeze §8; census 614 → 615
       at registration; note t 3.27 at the floor sits just under the bar's face value — a real risk of a null
