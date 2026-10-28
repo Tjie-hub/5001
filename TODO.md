@@ -68,23 +68,25 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
 **Open**
 - [ ] **Owner, {FQ}:** file the G0 D-entry; then go / no-go for HYP-PM-0023 registration (census 613 → 614) and
       the single G1 run (`g1_fq_ep.py`).
-- [ ] **C-003 dividend-yield G0 built (propose-only, `P-M/dy/`)**: L1 overlap cleared (not a re-skin of the
-      D-077 ex-date arms); L2 extraction done (D-111 v3 PIT via frozen {FQ} import, 20/20 tests, 498 payers,
-      coverage 33.9%/median 68 valid names); L3 G0 script **refuses until the owner pins the freeze**
-      (`G0_FREEZE_DY_DRAFT_2026-10-28.md`: floor 0.80%/mo proposed, both family options costed, liquidity-gate
-      question open). Owner: pin freeze + floor + family. Report: `docs/reports/ZCODE_C003_DY_2026-10-28.md`.
+- [ ] **C-003 dividend-yield G0 built (propose-only, `P-M/dy/`)**: L1 cleared; L2 done (20/20 tests, 498
+      payers, coverage 33.9%); L3 refuses until the owner pins the freeze (`G0_FREEZE_DY_DRAFT_2026-10-28.md`:
+      floor 0.80%/mo proposed, both family options costed, liquidity gate open). **{FQ} G0 PASSED → the
+      FM-over-E/P separator is live and the family question is real** (C-003 report §L4). Owner: pin freeze +
+      floor + family + the buyback-composite question. Report: `docs/reports/ZCODE_C003_DY_2026-10-28.md`.
 - [ ] **Hypothesis search 2026-10-28 (propose-only, `P-M/search/`)**: 64-row exclusion index, 41-cell space map
       (exhausted at pass 3), 8 candidates + 5 skeletons. **Top pick: C-003 dividend-yield level** (now built,
       above). Then C-001/C-006 KSEI foreign + MF/PF share (one build/G0, owner floor ≥0.8%/mo), C-002
       cap-proximity overlay. Report: `docs/reports/ZCODE_HYPOTHESIS_SEARCH_2026-10-28.md`.
-- [ ] **ZCode, not started:** Wednesday brief K5 (family-widening memo, now with the G0 numbers) and the buyback
-      brief (`ZCODE_BRIEF_BUYBACK_2026-10-28.md`, C-009). The Wednesday report `ZCODE_WEDNESDAY_2026-10-28.md`
-      is not written yet.
+- [ ] **Buyback C-009 (propose-only, `P-M/buyback/`)**: announcement design INFEASIBLE locally (IDX 403 →
+      owner-browser); executed series 139 tickers/787 periods in fin.db; UNDERPOWERED standalone — composite
+      net-payout path inside the C-003 freeze is the powered alternative (decide with the C-003 pin).
+      Report: `docs/reports/ZCODE_BUYBACK_2026-10-28.md` (`03071ed`).
 - [ ] **2026-11-02 (before 08:50 WIB): apply the rebalance** per the switch note in
       `docs/reports/ZCODE_TUESDAY_2026-10-27.md` §J4.2 (merge both branches, update `idx_tickers` flags with the
       old flags saved, `safe_restart.sh`, restart jurnal26, run the list tests).
 - [ ] **PEAD D-entry** — owner files or amends the proposed text (Tuesday report §J2).
-- [ ] Owner decision on pushing both repos (HOLD; 5001 36 ahead, jurnal26 9 ahead).
+- [ ] Wednesday report DONE (`docs/reports/ZCODE_WEDNESDAY_2026-10-28.md`): K1–K5 all DONE; K5 recommends register E/P alone, widen (gross profitability first) after G1 — propose-only.
+- [ ] Owner decision on pushing both repos (HOLD; 5001 37 ahead, jurnal26 9 ahead).
 - [ ] Mimosa full-repo pre-commit scan still fails with `scanner_enobufs`; only focused reruns have completed.
 - [ ] `forward_bank` / `forward_fade` / `forward_regime` `ledger.json` cron appends remain uncommitted by design.
 
