@@ -3984,6 +3984,27 @@ G0 (R8).
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-115 · HYP-PM-0023 ({FQ} E/P value premium) registered — one arm, census 613 → 614; owner no-widening clause
+**Status:** RECORDED · **Date:** 2026-10-28 · **Type:** Hypothesis registration ·
+**Approval authority:** Owner, 2026-10-28 ("Approved recomend — delegate to zcode").
+
+- **Registration record:** `P-M/fq/HYP-PM-0023_REGISTERED.md`, sha256
+  `7155e1c739c890379b23382180271734173fc2de8ff4de22bf782b4bece9847b`, pinned in `g1_fq_ep.py::REG_SHA256`
+  (script sha256 `f5d35449…` at pin time). Spec = `G0_FREEZE_FQ_EP_2026-10-26.md` §§2–6 verbatim (freeze sha
+  `e14ab4d9…`, D-112; G0 passed per D-114).
+- **Arm:** value-weighted top−bottom tercile of E/P (TTM owners' NI IDR ÷ KSEI mcap, D-111 v3 PIT), top-200
+  universe, stale filter, 208 monthly formations 2009-05→2026-08; one-sided NW t (6 lags) vs bar **3.300069**
+  (`e_max_abs_z(614)`); single G1 run, no rescue; sensitivities (B/M, ROE, EW, −100% row, era split 2021-07,
+  without D-111 late-filer months, USD-excluded, top-100) reported, never substituted.
+- **Owner clause (verbatim):** "**No later widening of {FQ} with a valuation or profitability arm** (B/M, ROE,
+  gross profitability, RNOA, CF/P): their G1 sensitivities will have been read, so a post-G1 arm would be
+  outcome-conditioned." Supersedes `FQ_FAMILY_WIDENING_MEMO_2026-10-28.md` §4.
+- **Census:** **613 → 614.** `HYPOTHESIS_REGISTRY.md` row + {FQ} family line appended (no existing row edited).
+- **G1 not run by this entry** — it runs once, separately, after the C-003 freeze question is resolved
+  (brief M5 ordering).
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)

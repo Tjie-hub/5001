@@ -26,7 +26,7 @@ G0 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(G0)
 
 REG = HERE / "HYP-PM-0023_REGISTERED.md"
-REG_SHA256 = None                          # set at registration; None = refuse to run
+REG_SHA256 = "7155e1c739c890379b23382180271734173fc2de8ff4de22bf782b4bece9847b"              # HYP-PM-0023 registration, 2026-10-28 (D-115)
 
 # ---- frozen parameters (G0 freeze §4) ----
 NW_LAGS = 6
