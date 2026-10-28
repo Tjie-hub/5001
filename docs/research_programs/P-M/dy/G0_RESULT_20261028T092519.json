@@ -1,0 +1,34 @@
+{
+ "record_type": "g0_coverage_power",
+ "arm": "dividend-yield level (C-003, family {PY})",
+ "freeze_sha256": "2789ab21dedc269d0eeaf20b264c27a0e29c82362c6790a8065318524350c208",
+ "coverage": {
+  "panel_months": 209,
+  "months_formable_ge30": 209,
+  "formable_share": 1.0,
+  "name_month_total": 41800,
+  "name_month_with_ttm": 14185,
+  "name_month_coverage": 0.3394,
+  "median_valid_names": 68
+ },
+ "power": {
+  "placebo_sigma_monthly": 0.035389,
+  "draws": 10,
+  "seed": 20261028,
+  "n_formable": 209,
+  "se_mean": 0.002448,
+  "floor_pct": 0.8,
+  "t_at_floor": 3.268,
+  "power_at_floor": 0.4873,
+  "mde80_pct": 0.609,
+  "bar": 3.300069
+ },
+ "stop_rule_fired": false,
+ "proposed": {
+  "floor_pct": 0.8,
+  "bar": 3.300069,
+  "ir_floor": 0.75,
+  "min_power": 0.2,
+  "min_formable_share": 0.8
+ }
+}
