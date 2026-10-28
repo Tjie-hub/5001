@@ -1,0 +1,2693 @@
+{
+ "formation_months": 208,
+ "qualifying_months": 203,
+ "t_eff_years": 16.917,
+ "power": 0.4148,
+ "bar": 3.300069,
+ "ir_floor": 0.75,
+ "months_needed": 129,
+ "stop_rule_fired": false,
+ "freeze_sha256": "e14ab4d96d58947f7d1a475c46f754d39ad258e0215db9f1e6b0aba747358549",
+ "fin_db_sha256": "caefb1a214418e3feb07a1a925c6b4c2a6d806bed84b7fb4a9f7f3f991dda39a",
+ "fx_check": {
+  "usd_periods_checked": 4908,
+  "beyond_tol": 0,
+  "share_beyond_tol": 0.0,
+  "tol": 0.03,
+  "worst": []
+ },
+ "new_code_coverage": {
+  "new_codes": 92,
+  "new_codes_with_fin": 41,
+  "valid_name_months_from_new_codes": 755
+ },
+ "months": [
+  {
+   "D": "2009-05-29",
+   "universe": 200,
+   "valid": 122,
+   "valid_usd": 0,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "ccy": 10,
+    "gap": 14,
+    "negative": 22,
+    "no_data": 19,
+    "no_ticker": 13
+   }
+  },
+  {
+   "D": "2009-06-30",
+   "universe": 200,
+   "valid": 114,
+   "valid_usd": 0,
+   "valid_new_codes": 4,
+   "qualifies": false,
+   "missing": {
+    "ccy": 8,
+    "gap": 9,
+    "no_data": 22,
+    "negative": 36,
+    "no_ticker": 11
+   }
+  },
+  {
+   "D": "2009-07-31",
+   "universe": 200,
+   "valid": 113,
+   "valid_usd": 0,
+   "valid_new_codes": 5,
+   "qualifies": false,
+   "missing": {
+    "ccy": 9,
+    "gap": 9,
+    "negative": 36,
+    "no_data": 24,
+    "no_ticker": 9
+   }
+  },
+  {
+   "D": "2009-08-31",
+   "universe": 200,
+   "valid": 114,
+   "valid_usd": 0,
+   "valid_new_codes": 4,
+   "qualifies": false,
+   "missing": {
+    "ccy": 10,
+    "gap": 9,
+    "negative": 36,
+    "no_data": 24,
+    "no_ticker": 7
+   }
+  },
+  {
+   "D": "2009-09-30",
+   "universe": 200,
+   "valid": 113,
+   "valid_usd": 0,
+   "valid_new_codes": 5,
+   "qualifies": false,
+   "missing": {
+    "ccy": 10,
+    "gap": 10,
+    "negative": 34,
+    "no_data": 23,
+    "no_ticker": 10
+   }
+  },
+  {
+   "D": "2009-10-30",
+   "universe": 200,
+   "valid": 113,
+   "valid_usd": 0,
+   "valid_new_codes": 4,
+   "qualifies": false,
+   "missing": {
+    "ccy": 9,
+    "gap": 11,
+    "negative": 35,
+    "no_data": 24,
+    "no_ticker": 8
+   }
+  },
+  {
+   "D": "2009-11-30",
+   "universe": 200,
+   "valid": 122,
+   "valid_usd": 0,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "ccy": 10,
+    "gap": 6,
+    "negative": 31,
+    "no_data": 22,
+    "no_ticker": 9
+   }
+  },
+  {
+   "D": "2009-12-30",
+   "universe": 200,
+   "valid": 134,
+   "valid_usd": 9,
+   "valid_new_codes": 6,
+   "qualifies": true,
+   "missing": {
+    "gap": 4,
+    "negative": 31,
+    "no_data": 22,
+    "no_ticker": 9
+   }
+  },
+  {
+   "D": "2010-01-29",
+   "universe": 200,
+   "valid": 137,
+   "valid_usd": 10,
+   "valid_new_codes": 6,
+   "qualifies": true,
+   "missing": {
+    "gap": 4,
+    "negative": 32,
+    "no_data": 19,
+    "no_ticker": 8
+   }
+  },
+  {
+   "D": "2010-02-25",
+   "universe": 200,
+   "valid": 141,
+   "valid_usd": 10,
+   "valid_new_codes": 6,
+   "qualifies": true,
+   "missing": {
+    "gap": 4,
+    "negative": 30,
+    "no_data": 17,
+    "no_ticker": 8
+   }
+  },
+  {
+   "D": "2010-03-31",
+   "universe": 200,
+   "valid": 140,
+   "valid_usd": 8,
+   "valid_new_codes": 6,
+   "qualifies": true,
+   "missing": {
+    "gap": 4,
+    "negative": 30,
+    "no_data": 20,
+    "no_ticker": 6
+   }
+  },
+  {
+   "D": "2010-04-30",
+   "universe": 200,
+   "valid": 156,
+   "valid_usd": 9,
+   "valid_new_codes": 6,
+   "qualifies": true,
+   "missing": {
+    "gap": 5,
+    "negative": 15,
+    "no_data": 16,
+    "no_ticker": 8
+   }
+  },
+  {
+   "D": "2010-05-31",
+   "universe": 200,
+   "valid": 159,
+   "valid_usd": 9,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "negative": 15,
+    "no_data": 14,
+    "gap": 4,
+    "no_ticker": 8
+   }
+  },
+  {
+   "D": "2010-06-30",
+   "universe": 200,
+   "valid": 160,
+   "valid_usd": 8,
+   "valid_new_codes": 6,
+   "qualifies": true,
+   "missing": {
+    "negative": 16,
+    "no_data": 12,
+    "gap": 4,
+    "no_ticker": 8
+   }
+  },
+  {
+   "D": "2010-07-30",
+   "universe": 200,
+   "valid": 157,
+   "valid_usd": 8,
+   "valid_new_codes": 8,
+   "qualifies": true,
+   "missing": {
+    "negative": 18,
+    "no_data": 11,
+    "gap": 4,
+    "no_ticker": 10
+   }
+  },
+  {
+   "D": "2010-08-31",
+   "universe": 200,
+   "valid": 158,
+   "valid_usd": 8,
+   "valid_new_codes": 8,
+   "qualifies": true,
+   "missing": {
+    "gap": 6,
+    "negative": 16,
+    "no_data": 10,
+    "no_ticker": 10
+   }
+  },
+  {
+   "D": "2010-09-30",
+   "universe": 200,
+   "valid": 160,
+   "valid_usd": 7,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "gap": 6,
+    "negative": 14,
+    "no_data": 11,
+    "no_ticker": 9
+   }
+  },
+  {
+   "D": "2010-10-29",
+   "universe": 200,
+   "valid": 156,
+   "valid_usd": 8,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "gap": 9,
+    "negative": 15,
+    "no_data": 10,
+    "no_ticker": 10
+   }
+  },
+  {
+   "D": "2010-11-30",
+   "universe": 200,
+   "valid": 153,
+   "valid_usd": 10,
+   "valid_new_codes": 8,
+   "qualifies": true,
+   "missing": {
+    "gap": 10,
+    "no_data": 9,
+    "negative": 18,
+    "no_ticker": 10
+   }
+  },
+  {
+   "D": "2010-12-30",
+   "universe": 200,
+   "valid": 161,
+   "valid_usd": 10,
+   "valid_new_codes": 8,
+   "qualifies": true,
+   "missing": {
+    "gap": 5,
+    "no_data": 8,
+    "negative": 16,
+    "no_ticker": 10
+   }
+  },
+  {
+   "D": "2011-01-31",
+   "universe": 200,
+   "valid": 160,
+   "valid_usd": 10,
+   "valid_new_codes": 8,
+   "qualifies": true,
+   "missing": {
+    "gap": 5,
+    "no_data": 10,
+    "negative": 17,
+    "no_ticker": 8
+   }
+  },
+  {
+   "D": "2011-02-28",
+   "universe": 200,
+   "valid": 159,
+   "valid_usd": 9,
+   "valid_new_codes": 8,
+   "qualifies": true,
+   "missing": {
+    "gap": 5,
+    "no_data": 10,
+    "negative": 18,
+    "no_ticker": 8
+   }
+  },
+  {
+   "D": "2011-03-31",
+   "universe": 200,
+   "valid": 160,
+   "valid_usd": 10,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "gap": 5,
+    "no_data": 9,
+    "negative": 19,
+    "no_ticker": 7
+   }
+  },
+  {
+   "D": "2011-04-29",
+   "universe": 200,
+   "valid": 165,
+   "valid_usd": 10,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "gap": 3,
+    "no_data": 9,
+    "negative": 14,
+    "stale": 2,
+    "no_ticker": 7
+   }
+  },
+  {
+   "D": "2011-05-31",
+   "universe": 200,
+   "valid": 169,
+   "valid_usd": 12,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "no_data": 7,
+    "negative": 11,
+    "gap": 5,
+    "no_ticker": 8
+   }
+  },
+  {
+   "D": "2011-06-30",
+   "universe": 200,
+   "valid": 167,
+   "valid_usd": 14,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "negative": 13,
+    "no_data": 7,
+    "gap": 5,
+    "no_ticker": 8
+   }
+  },
+  {
+   "D": "2011-07-29",
+   "universe": 200,
+   "valid": 168,
+   "valid_usd": 14,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "negative": 12,
+    "no_data": 8,
+    "gap": 5,
+    "no_ticker": 7
+   }
+  },
+  {
+   "D": "2011-08-26",
+   "universe": 200,
+   "valid": 169,
+   "valid_usd": 14,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "negative": 11,
+    "no_data": 8,
+    "gap": 6,
+    "no_ticker": 6
+   }
+  },
+  {
+   "D": "2011-09-30",
+   "universe": 200,
+   "valid": 168,
+   "valid_usd": 14,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "negative": 12,
+    "no_data": 8,
+    "gap": 6,
+    "no_ticker": 6
+   }
+  },
+  {
+   "D": "2011-10-31",
+   "universe": 200,
+   "valid": 170,
+   "valid_usd": 14,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "no_data": 8,
+    "negative": 10,
+    "gap": 6,
+    "no_ticker": 6
+   }
+  },
+  {
+   "D": "2011-11-30",
+   "universe": 200,
+   "valid": 172,
+   "valid_usd": 14,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "no_data": 7,
+    "negative": 10,
+    "gap": 5,
+    "no_ticker": 6
+   }
+  },
+  {
+   "D": "2011-12-30",
+   "universe": 200,
+   "valid": 173,
+   "valid_usd": 14,
+   "valid_new_codes": 8,
+   "qualifies": true,
+   "missing": {
+    "no_data": 6,
+    "negative": 11,
+    "no_ticker": 6,
+    "gap": 4
+   }
+  },
+  {
+   "D": "2012-01-31",
+   "universe": 200,
+   "valid": 175,
+   "valid_usd": 14,
+   "valid_new_codes": 8,
+   "qualifies": true,
+   "missing": {
+    "no_data": 6,
+    "negative": 10,
+    "no_ticker": 5,
+    "gap": 4
+   }
+  },
+  {
+   "D": "2012-02-29",
+   "universe": 200,
+   "valid": 176,
+   "valid_usd": 14,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "no_data": 6,
+    "no_ticker": 5,
+    "negative": 10,
+    "gap": 3
+   }
+  },
+  {
+   "D": "2012-03-30",
+   "universe": 200,
+   "valid": 179,
+   "valid_usd": 14,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "no_data": 4,
+    "negative": 8,
+    "no_ticker": 6,
+    "gap": 3
+   }
+  },
+  {
+   "D": "2012-04-30",
+   "universe": 200,
+   "valid": 180,
+   "valid_usd": 13,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "no_data": 4,
+    "no_ticker": 5,
+    "negative": 8,
+    "gap": 3
+   }
+  },
+  {
+   "D": "2012-05-31",
+   "universe": 200,
+   "valid": 173,
+   "valid_usd": 22,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "negative": 16,
+    "no_data": 5,
+    "no_ticker": 5,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2012-06-29",
+   "universe": 200,
+   "valid": 174,
+   "valid_usd": 22,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "no_data": 6,
+    "negative": 14,
+    "no_ticker": 5,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2012-07-31",
+   "universe": 200,
+   "valid": 175,
+   "valid_usd": 23,
+   "valid_new_codes": 9,
+   "qualifies": true,
+   "missing": {
+    "no_data": 5,
+    "negative": 14,
+    "no_ticker": 4,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2012-08-31",
+   "universe": 200,
+   "valid": 174,
+   "valid_usd": 23,
+   "valid_new_codes": 8,
+   "qualifies": true,
+   "missing": {
+    "no_data": 6,
+    "negative": 13,
+    "no_ticker": 4,
+    "gap": 3
+   }
+  },
+  {
+   "D": "2012-09-28",
+   "universe": 200,
+   "valid": 174,
+   "valid_usd": 23,
+   "valid_new_codes": 8,
+   "qualifies": true,
+   "missing": {
+    "no_data": 6,
+    "negative": 12,
+    "no_ticker": 3,
+    "gap": 4,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2012-10-31",
+   "universe": 200,
+   "valid": 172,
+   "valid_usd": 21,
+   "valid_new_codes": 8,
+   "qualifies": true,
+   "missing": {
+    "no_data": 6,
+    "negative": 13,
+    "no_ticker": 3,
+    "gap": 5,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2012-11-30",
+   "universe": 200,
+   "valid": 170,
+   "valid_usd": 18,
+   "valid_new_codes": 7,
+   "qualifies": true,
+   "missing": {
+    "no_data": 6,
+    "negative": 19,
+    "no_ticker": 4,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2012-12-28",
+   "universe": 200,
+   "valid": 170,
+   "valid_usd": 17,
+   "valid_new_codes": 7,
+   "qualifies": true,
+   "missing": {
+    "no_data": 6,
+    "negative": 19,
+    "no_ticker": 3,
+    "gap": 1,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2013-01-31",
+   "universe": 200,
+   "valid": 169,
+   "valid_usd": 18,
+   "valid_new_codes": 7,
+   "qualifies": true,
+   "missing": {
+    "no_data": 7,
+    "negative": 18,
+    "no_ticker": 4,
+    "gap": 1,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2013-02-28",
+   "universe": 200,
+   "valid": 169,
+   "valid_usd": 17,
+   "valid_new_codes": 7,
+   "qualifies": true,
+   "missing": {
+    "no_data": 6,
+    "negative": 19,
+    "no_ticker": 3,
+    "gap": 2,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2013-03-28",
+   "universe": 200,
+   "valid": 171,
+   "valid_usd": 19,
+   "valid_new_codes": 8,
+   "qualifies": true,
+   "missing": {
+    "no_data": 5,
+    "negative": 18,
+    "no_ticker": 3,
+    "gap": 2,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2013-04-30",
+   "universe": 200,
+   "valid": 171,
+   "valid_usd": 20,
+   "valid_new_codes": 8,
+   "qualifies": true,
+   "missing": {
+    "no_data": 4,
+    "negative": 19,
+    "no_ticker": 3,
+    "gap": 2,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2013-05-31",
+   "universe": 200,
+   "valid": 175,
+   "valid_usd": 21,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "gap": 2,
+    "no_data": 1,
+    "negative": 19,
+    "no_ticker": 2,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2013-06-28",
+   "universe": 200,
+   "valid": 175,
+   "valid_usd": 20,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "no_data": 2,
+    "gap": 3,
+    "negative": 18,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2013-07-31",
+   "universe": 200,
+   "valid": 175,
+   "valid_usd": 20,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "gap": 3,
+    "no_data": 3,
+    "negative": 17,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2013-08-30",
+   "universe": 200,
+   "valid": 175,
+   "valid_usd": 19,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "gap": 3,
+    "no_data": 3,
+    "negative": 17,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2013-09-30",
+   "universe": 200,
+   "valid": 173,
+   "valid_usd": 19,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "gap": 4,
+    "no_data": 3,
+    "negative": 18,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2013-10-31",
+   "universe": 200,
+   "valid": 177,
+   "valid_usd": 20,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "gap": 3,
+    "no_data": 3,
+    "negative": 15,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2013-11-29",
+   "universe": 200,
+   "valid": 173,
+   "valid_usd": 20,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "gap": 4,
+    "no_data": 3,
+    "negative": 18,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2013-12-30",
+   "universe": 200,
+   "valid": 171,
+   "valid_usd": 18,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "negative": 21,
+    "no_data": 3,
+    "gap": 3,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2014-01-30",
+   "universe": 200,
+   "valid": 170,
+   "valid_usd": 16,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "negative": 20,
+    "gap": 5,
+    "no_data": 3,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2014-02-28",
+   "universe": 200,
+   "valid": 168,
+   "valid_usd": 16,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "negative": 22,
+    "gap": 5,
+    "no_data": 3,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2014-03-28",
+   "universe": 200,
+   "valid": 172,
+   "valid_usd": 17,
+   "valid_new_codes": 4,
+   "qualifies": true,
+   "missing": {
+    "negative": 19,
+    "gap": 4,
+    "no_data": 3,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2014-04-30",
+   "universe": 200,
+   "valid": 172,
+   "valid_usd": 16,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "negative": 19,
+    "gap": 5,
+    "no_data": 2,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2014-05-30",
+   "universe": 200,
+   "valid": 174,
+   "valid_usd": 19,
+   "valid_new_codes": 6,
+   "qualifies": true,
+   "missing": {
+    "negative": 21,
+    "no_data": 3,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2014-06-30",
+   "universe": 200,
+   "valid": 168,
+   "valid_usd": 17,
+   "valid_new_codes": 6,
+   "qualifies": true,
+   "missing": {
+    "negative": 27,
+    "no_data": 3,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2014-07-25",
+   "universe": 200,
+   "valid": 168,
+   "valid_usd": 17,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "negative": 27,
+    "no_data": 3,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2014-08-29",
+   "universe": 200,
+   "valid": 169,
+   "valid_usd": 18,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "negative": 26,
+    "no_data": 3,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2014-09-30",
+   "universe": 200,
+   "valid": 169,
+   "valid_usd": 18,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "negative": 27,
+    "no_data": 2,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2014-10-31",
+   "universe": 200,
+   "valid": 167,
+   "valid_usd": 19,
+   "valid_new_codes": 6,
+   "qualifies": true,
+   "missing": {
+    "negative": 28,
+    "no_data": 3,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2014-11-28",
+   "universe": 200,
+   "valid": 166,
+   "valid_usd": 18,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "negative": 28,
+    "gap": 1,
+    "no_data": 3,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2014-12-31",
+   "universe": 200,
+   "valid": 171,
+   "valid_usd": 21,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "negative": 24,
+    "no_data": 3,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2015-01-30",
+   "universe": 200,
+   "valid": 171,
+   "valid_usd": 20,
+   "valid_new_codes": 6,
+   "qualifies": true,
+   "missing": {
+    "negative": 24,
+    "no_data": 3,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2015-02-27",
+   "universe": 200,
+   "valid": 170,
+   "valid_usd": 19,
+   "valid_new_codes": 6,
+   "qualifies": true,
+   "missing": {
+    "negative": 24,
+    "no_data": 3,
+    "no_ticker": 2,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2015-03-31",
+   "universe": 200,
+   "valid": 172,
+   "valid_usd": 18,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "negative": 23,
+    "no_data": 2,
+    "no_ticker": 2,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2015-04-30",
+   "universe": 200,
+   "valid": 171,
+   "valid_usd": 17,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "negative": 23,
+    "no_data": 2,
+    "no_ticker": 3,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2015-05-29",
+   "universe": 200,
+   "valid": 170,
+   "valid_usd": 19,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "negative": 23,
+    "gap": 2,
+    "no_data": 2,
+    "no_ticker": 2,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2015-06-30",
+   "universe": 200,
+   "valid": 166,
+   "valid_usd": 18,
+   "valid_new_codes": 4,
+   "qualifies": true,
+   "missing": {
+    "negative": 25,
+    "no_data": 3,
+    "gap": 4,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2015-07-31",
+   "universe": 200,
+   "valid": 167,
+   "valid_usd": 19,
+   "valid_new_codes": 4,
+   "qualifies": true,
+   "missing": {
+    "no_data": 2,
+    "negative": 24,
+    "gap": 4,
+    "no_ticker": 3
+   }
+  },
+  {
+   "D": "2015-08-31",
+   "universe": 200,
+   "valid": 167,
+   "valid_usd": 16,
+   "valid_new_codes": 6,
+   "qualifies": true,
+   "missing": {
+    "no_data": 3,
+    "negative": 22,
+    "gap": 5,
+    "no_ticker": 3
+   }
+  },
+  {
+   "D": "2015-09-30",
+   "universe": 200,
+   "valid": 169,
+   "valid_usd": 17,
+   "valid_new_codes": 5,
+   "qualifies": true,
+   "missing": {
+    "no_data": 3,
+    "negative": 21,
+    "gap": 6,
+    "no_ticker": 1
+   }
+  },
+  {
+   "D": "2015-10-30",
+   "universe": 200,
+   "valid": 169,
+   "valid_usd": 18,
+   "valid_new_codes": 4,
+   "qualifies": true,
+   "missing": {
+    "no_data": 3,
+    "negative": 21,
+    "gap": 5,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2015-11-30",
+   "universe": 200,
+   "valid": 163,
+   "valid_usd": 16,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "no_data": 3,
+    "negative": 26,
+    "gap": 6,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2015-12-30",
+   "universe": 200,
+   "valid": 156,
+   "valid_usd": 13,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "no_data": 1,
+    "negative": 35,
+    "gap": 6,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2016-01-29",
+   "universe": 200,
+   "valid": 155,
+   "valid_usd": 14,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "no_data": 2,
+    "negative": 35,
+    "gap": 6,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2016-02-29",
+   "universe": 200,
+   "valid": 156,
+   "valid_usd": 15,
+   "valid_new_codes": 4,
+   "qualifies": true,
+   "missing": {
+    "negative": 33,
+    "no_data": 3,
+    "gap": 6,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2016-03-31",
+   "universe": 200,
+   "valid": 151,
+   "valid_usd": 14,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 38,
+    "no_data": 3,
+    "gap": 6,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2016-04-29",
+   "universe": 200,
+   "valid": 151,
+   "valid_usd": 14,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 40,
+    "gap": 6,
+    "no_data": 1,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2016-05-31",
+   "universe": 200,
+   "valid": 157,
+   "valid_usd": 15,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "no_data": 2,
+    "negative": 36,
+    "gap": 3,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2016-06-30",
+   "universe": 200,
+   "valid": 162,
+   "valid_usd": 18,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "gap": 3,
+    "negative": 33,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2016-07-29",
+   "universe": 200,
+   "valid": 165,
+   "valid_usd": 17,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "gap": 3,
+    "negative": 30,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2016-08-31",
+   "universe": 200,
+   "valid": 164,
+   "valid_usd": 17,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "gap": 2,
+    "negative": 32,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2016-09-30",
+   "universe": 200,
+   "valid": 162,
+   "valid_usd": 18,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "gap": 5,
+    "negative": 31,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2016-10-31",
+   "universe": 200,
+   "valid": 165,
+   "valid_usd": 15,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "gap": 4,
+    "negative": 29,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2016-11-30",
+   "universe": 200,
+   "valid": 165,
+   "valid_usd": 16,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "gap": 4,
+    "negative": 29,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2016-12-30",
+   "universe": 200,
+   "valid": 166,
+   "valid_usd": 15,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "gap": 4,
+    "negative": 28,
+    "no_ticker": 2
+   }
+  },
+  {
+   "D": "2017-01-31",
+   "universe": 200,
+   "valid": 165,
+   "valid_usd": 15,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "gap": 4,
+    "negative": 31
+   }
+  },
+  {
+   "D": "2017-02-28",
+   "universe": 200,
+   "valid": 168,
+   "valid_usd": 15,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "gap": 4,
+    "negative": 28
+   }
+  },
+  {
+   "D": "2017-03-31",
+   "universe": 200,
+   "valid": 164,
+   "valid_usd": 19,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "gap": 4,
+    "negative": 32
+   }
+  },
+  {
+   "D": "2017-04-28",
+   "universe": 200,
+   "valid": 165,
+   "valid_usd": 20,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "gap": 3,
+    "negative": 32
+   }
+  },
+  {
+   "D": "2017-05-31",
+   "universe": 200,
+   "valid": 177,
+   "valid_usd": 29,
+   "valid_new_codes": 4,
+   "qualifies": true,
+   "missing": {
+    "negative": 21,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2017-06-22",
+   "universe": 200,
+   "valid": 174,
+   "valid_usd": 28,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 25,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2017-07-31",
+   "universe": 200,
+   "valid": 172,
+   "valid_usd": 28,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 26,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2017-08-31",
+   "universe": 200,
+   "valid": 173,
+   "valid_usd": 27,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 24,
+    "gap": 3
+   }
+  },
+  {
+   "D": "2017-09-29",
+   "universe": 200,
+   "valid": 173,
+   "valid_usd": 27,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 24,
+    "gap": 3
+   }
+  },
+  {
+   "D": "2017-10-31",
+   "universe": 200,
+   "valid": 172,
+   "valid_usd": 27,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 23,
+    "gap": 5
+   }
+  },
+  {
+   "D": "2017-11-30",
+   "universe": 200,
+   "valid": 174,
+   "valid_usd": 29,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 25,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2017-12-29",
+   "universe": 200,
+   "valid": 174,
+   "valid_usd": 29,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 24,
+    "gap": 1,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2018-01-31",
+   "universe": 200,
+   "valid": 171,
+   "valid_usd": 28,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 27,
+    "ccy": 1,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2018-02-28",
+   "universe": 200,
+   "valid": 171,
+   "valid_usd": 29,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 27,
+    "ccy": 1,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2018-03-29",
+   "universe": 200,
+   "valid": 171,
+   "valid_usd": 29,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 27,
+    "ccy": 1,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2018-04-30",
+   "universe": 200,
+   "valid": 165,
+   "valid_usd": 27,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 32,
+    "ccy": 1,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2018-05-31",
+   "universe": 200,
+   "valid": 176,
+   "valid_usd": 30,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 23,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2018-06-29",
+   "universe": 200,
+   "valid": 177,
+   "valid_usd": 30,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 22,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2018-07-31",
+   "universe": 200,
+   "valid": 173,
+   "valid_usd": 32,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 24,
+    "ccy": 1,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2018-08-31",
+   "universe": 200,
+   "valid": 170,
+   "valid_usd": 27,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 25,
+    "gap": 4,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2018-09-28",
+   "universe": 200,
+   "valid": 173,
+   "valid_usd": 28,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 23,
+    "gap": 3,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2018-10-31",
+   "universe": 200,
+   "valid": 167,
+   "valid_usd": 27,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 25,
+    "gap": 7,
+    "ccy": 1
+   }
+  },
+  {
+   "D": "2018-11-30",
+   "universe": 200,
+   "valid": 168,
+   "valid_usd": 27,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 29,
+    "gap": 3
+   }
+  },
+  {
+   "D": "2018-12-28",
+   "universe": 200,
+   "valid": 171,
+   "valid_usd": 27,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 27,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2019-01-31",
+   "universe": 200,
+   "valid": 171,
+   "valid_usd": 26,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 28,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2019-02-28",
+   "universe": 200,
+   "valid": 169,
+   "valid_usd": 25,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 30,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2019-03-29",
+   "universe": 200,
+   "valid": 172,
+   "valid_usd": 25,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 27,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2019-04-30",
+   "universe": 200,
+   "valid": 172,
+   "valid_usd": 24,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 25,
+    "no_ticker": 1,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2019-05-31",
+   "universe": 200,
+   "valid": 176,
+   "valid_usd": 26,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 23,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2019-06-28",
+   "universe": 200,
+   "valid": 178,
+   "valid_usd": 26,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 21,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2019-07-31",
+   "universe": 200,
+   "valid": 174,
+   "valid_usd": 26,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 23,
+    "gap": 3
+   }
+  },
+  {
+   "D": "2019-08-30",
+   "universe": 200,
+   "valid": 172,
+   "valid_usd": 25,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 25,
+    "gap": 3
+   }
+  },
+  {
+   "D": "2019-09-30",
+   "universe": 200,
+   "valid": 173,
+   "valid_usd": 25,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 23,
+    "gap": 4
+   }
+  },
+  {
+   "D": "2019-10-31",
+   "universe": 200,
+   "valid": 173,
+   "valid_usd": 26,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 25,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2019-11-29",
+   "universe": 200,
+   "valid": 174,
+   "valid_usd": 27,
+   "valid_new_codes": 4,
+   "qualifies": true,
+   "missing": {
+    "negative": 24,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2019-12-30",
+   "universe": 200,
+   "valid": 167,
+   "valid_usd": 23,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 33
+   }
+  },
+  {
+   "D": "2020-01-31",
+   "universe": 200,
+   "valid": 166,
+   "valid_usd": 23,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 32,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2020-02-28",
+   "universe": 200,
+   "valid": 169,
+   "valid_usd": 22,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 30,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2020-03-31",
+   "universe": 200,
+   "valid": 169,
+   "valid_usd": 23,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 29,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2020-04-30",
+   "universe": 200,
+   "valid": 167,
+   "valid_usd": 21,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 32,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2020-05-29",
+   "universe": 200,
+   "valid": 167,
+   "valid_usd": 22,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 32,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2020-06-30",
+   "universe": 200,
+   "valid": 168,
+   "valid_usd": 22,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 30,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2020-07-30",
+   "universe": 200,
+   "valid": 178,
+   "valid_usd": 23,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 21,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2020-08-31",
+   "universe": 200,
+   "valid": 165,
+   "valid_usd": 19,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 35
+   }
+  },
+  {
+   "D": "2020-09-30",
+   "universe": 200,
+   "valid": 165,
+   "valid_usd": 21,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 34,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2020-10-27",
+   "universe": 200,
+   "valid": 165,
+   "valid_usd": 19,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 34,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2020-11-30",
+   "universe": 200,
+   "valid": 164,
+   "valid_usd": 19,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 35,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2020-12-30",
+   "universe": 200,
+   "valid": 158,
+   "valid_usd": 19,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 42
+   }
+  },
+  {
+   "D": "2021-01-29",
+   "universe": 200,
+   "valid": 157,
+   "valid_usd": 20,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 42,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2021-02-26",
+   "universe": 200,
+   "valid": 157,
+   "valid_usd": 18,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 42,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2021-03-31",
+   "universe": 200,
+   "valid": 152,
+   "valid_usd": 18,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 47,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2021-04-30",
+   "universe": 200,
+   "valid": 157,
+   "valid_usd": 17,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 42,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2021-05-31",
+   "universe": 200,
+   "valid": 155,
+   "valid_usd": 17,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 44,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2021-06-30",
+   "universe": 200,
+   "valid": 162,
+   "valid_usd": 17,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 36,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2021-07-30",
+   "universe": 200,
+   "valid": 165,
+   "valid_usd": 16,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 31,
+    "gap": 4
+   }
+  },
+  {
+   "D": "2021-08-31",
+   "universe": 200,
+   "valid": 165,
+   "valid_usd": 17,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 34,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2021-09-30",
+   "universe": 200,
+   "valid": 168,
+   "valid_usd": 18,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 30,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2021-10-29",
+   "universe": 200,
+   "valid": 172,
+   "valid_usd": 18,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 26,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2021-11-30",
+   "universe": 200,
+   "valid": 171,
+   "valid_usd": 20,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 26,
+    "gap": 3
+   }
+  },
+  {
+   "D": "2021-12-30",
+   "universe": 200,
+   "valid": 172,
+   "valid_usd": 23,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 24,
+    "gap": 4
+   }
+  },
+  {
+   "D": "2022-01-31",
+   "universe": 200,
+   "valid": 174,
+   "valid_usd": 25,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 24,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2022-02-25",
+   "universe": 200,
+   "valid": 173,
+   "valid_usd": 28,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 25,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2022-03-31",
+   "universe": 200,
+   "valid": 172,
+   "valid_usd": 27,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 26,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2022-04-28",
+   "universe": 200,
+   "valid": 171,
+   "valid_usd": 28,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 27,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2022-05-31",
+   "universe": 200,
+   "valid": 174,
+   "valid_usd": 31,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 24,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2022-06-30",
+   "universe": 200,
+   "valid": 182,
+   "valid_usd": 36,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 15,
+    "gap": 3
+   }
+  },
+  {
+   "D": "2022-07-29",
+   "universe": 200,
+   "valid": 183,
+   "valid_usd": 34,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 14,
+    "gap": 3
+   }
+  },
+  {
+   "D": "2022-08-31",
+   "universe": 200,
+   "valid": 186,
+   "valid_usd": 34,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 14
+   }
+  },
+  {
+   "D": "2022-09-30",
+   "universe": 200,
+   "valid": 186,
+   "valid_usd": 33,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 14
+   }
+  },
+  {
+   "D": "2022-10-31",
+   "universe": 200,
+   "valid": 186,
+   "valid_usd": 34,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 14
+   }
+  },
+  {
+   "D": "2022-11-30",
+   "universe": 200,
+   "valid": 182,
+   "valid_usd": 31,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 14,
+    "gap": 4
+   }
+  },
+  {
+   "D": "2022-12-30",
+   "universe": 200,
+   "valid": 183,
+   "valid_usd": 32,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 13,
+    "gap": 4
+   }
+  },
+  {
+   "D": "2023-01-31",
+   "universe": 200,
+   "valid": 182,
+   "valid_usd": 33,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 18
+   }
+  },
+  {
+   "D": "2023-02-28",
+   "universe": 200,
+   "valid": 180,
+   "valid_usd": 33,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 20
+   }
+  },
+  {
+   "D": "2023-03-31",
+   "universe": 200,
+   "valid": 181,
+   "valid_usd": 33,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 19
+   }
+  },
+  {
+   "D": "2023-04-28",
+   "universe": 200,
+   "valid": 178,
+   "valid_usd": 33,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 20,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2023-05-31",
+   "universe": 200,
+   "valid": 180,
+   "valid_usd": 32,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 18,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2023-06-27",
+   "universe": 200,
+   "valid": 182,
+   "valid_usd": 32,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 18
+   }
+  },
+  {
+   "D": "2023-07-31",
+   "universe": 200,
+   "valid": 181,
+   "valid_usd": 33,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 19
+   }
+  },
+  {
+   "D": "2023-08-31",
+   "universe": 200,
+   "valid": 182,
+   "valid_usd": 33,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 17,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2023-09-29",
+   "universe": 200,
+   "valid": 181,
+   "valid_usd": 33,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 18,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2023-10-31",
+   "universe": 200,
+   "valid": 182,
+   "valid_usd": 32,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "gap": 2,
+    "negative": 16
+   }
+  },
+  {
+   "D": "2023-11-30",
+   "universe": 200,
+   "valid": 184,
+   "valid_usd": 33,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 16
+   }
+  },
+  {
+   "D": "2023-12-29",
+   "universe": 200,
+   "valid": 181,
+   "valid_usd": 35,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 19
+   }
+  },
+  {
+   "D": "2024-01-31",
+   "universe": 200,
+   "valid": 180,
+   "valid_usd": 35,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 19,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2024-02-29",
+   "universe": 200,
+   "valid": 180,
+   "valid_usd": 35,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 19,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2024-03-28",
+   "universe": 200,
+   "valid": 177,
+   "valid_usd": 33,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 22,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2024-04-30",
+   "universe": 200,
+   "valid": 177,
+   "valid_usd": 33,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 23
+   }
+  },
+  {
+   "D": "2024-05-31",
+   "universe": 200,
+   "valid": 183,
+   "valid_usd": 36,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 17
+   }
+  },
+  {
+   "D": "2024-06-28",
+   "universe": 200,
+   "valid": 183,
+   "valid_usd": 38,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 17
+   }
+  },
+  {
+   "D": "2024-07-31",
+   "universe": 200,
+   "valid": 183,
+   "valid_usd": 37,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 17
+   }
+  },
+  {
+   "D": "2024-08-30",
+   "universe": 200,
+   "valid": 180,
+   "valid_usd": 37,
+   "valid_new_codes": 3,
+   "qualifies": true,
+   "missing": {
+    "negative": 20
+   }
+  },
+  {
+   "D": "2024-09-30",
+   "universe": 200,
+   "valid": 179,
+   "valid_usd": 38,
+   "valid_new_codes": 2,
+   "qualifies": true,
+   "missing": {
+    "negative": 21
+   }
+  },
+  {
+   "D": "2024-10-31",
+   "universe": 200,
+   "valid": 183,
+   "valid_usd": 37,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 17
+   }
+  },
+  {
+   "D": "2024-11-29",
+   "universe": 200,
+   "valid": 181,
+   "valid_usd": 35,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 18,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2024-12-30",
+   "universe": 200,
+   "valid": 181,
+   "valid_usd": 33,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 19
+   }
+  },
+  {
+   "D": "2025-01-31",
+   "universe": 200,
+   "valid": 181,
+   "valid_usd": 34,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 19
+   }
+  },
+  {
+   "D": "2025-02-28",
+   "universe": 200,
+   "valid": 181,
+   "valid_usd": 33,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 19
+   }
+  },
+  {
+   "D": "2025-03-27",
+   "universe": 200,
+   "valid": 179,
+   "valid_usd": 33,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 21
+   }
+  },
+  {
+   "D": "2025-04-30",
+   "universe": 200,
+   "valid": 181,
+   "valid_usd": 33,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 19
+   }
+  },
+  {
+   "D": "2025-05-28",
+   "universe": 200,
+   "valid": 182,
+   "valid_usd": 35,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 18
+   }
+  },
+  {
+   "D": "2025-06-30",
+   "universe": 200,
+   "valid": 178,
+   "valid_usd": 36,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 21,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2025-07-31",
+   "universe": 200,
+   "valid": 177,
+   "valid_usd": 37,
+   "valid_new_codes": 0,
+   "qualifies": true,
+   "missing": {
+    "negative": 22,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2025-08-29",
+   "universe": 200,
+   "valid": 179,
+   "valid_usd": 35,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 21
+   }
+  },
+  {
+   "D": "2025-09-30",
+   "universe": 200,
+   "valid": 177,
+   "valid_usd": 36,
+   "valid_new_codes": 1,
+   "qualifies": true,
+   "missing": {
+    "negative": 22,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2025-10-31",
+   "universe": 200,
+   "valid": 173,
+   "valid_usd": 36,
+   "valid_new_codes": 0,
+   "qualifies": true,
+   "missing": {
+    "negative": 27
+   }
+  },
+  {
+   "D": "2025-11-28",
+   "universe": 200,
+   "valid": 170,
+   "valid_usd": 35,
+   "valid_new_codes": 0,
+   "qualifies": true,
+   "missing": {
+    "negative": 29,
+    "gap": 1
+   }
+  },
+  {
+   "D": "2025-12-30",
+   "universe": 200,
+   "valid": 173,
+   "valid_usd": 35,
+   "valid_new_codes": 0,
+   "qualifies": true,
+   "missing": {
+    "negative": 25,
+    "gap": 2
+   }
+  },
+  {
+   "D": "2026-01-30",
+   "universe": 200,
+   "valid": 169,
+   "valid_usd": 33,
+   "valid_new_codes": 0,
+   "qualifies": true,
+   "missing": {
+    "negative": 23,
+    "gap": 2,
+    "withheld": 6
+   }
+  },
+  {
+   "D": "2026-02-27",
+   "universe": 200,
+   "valid": 170,
+   "valid_usd": 33,
+   "valid_new_codes": 0,
+   "qualifies": true,
+   "missing": {
+    "negative": 21,
+    "gap": 3,
+    "withheld": 6
+   }
+  },
+  {
+   "D": "2026-03-31",
+   "universe": 200,
+   "valid": 169,
+   "valid_usd": 33,
+   "valid_new_codes": 0,
+   "qualifies": true,
+   "missing": {
+    "negative": 21,
+    "gap": 4,
+    "withheld": 6
+   }
+  },
+  {
+   "D": "2026-04-30",
+   "universe": 200,
+   "valid": 178,
+   "valid_usd": 40,
+   "valid_new_codes": 0,
+   "qualifies": true,
+   "missing": {
+    "negative": 16,
+    "gap": 6
+   }
+  },
+  {
+   "D": "2026-05-29",
+   "universe": 200,
+   "valid": 179,
+   "valid_usd": 39,
+   "valid_new_codes": 0,
+   "qualifies": true,
+   "missing": {
+    "negative": 16,
+    "gap": 5
+   }
+  },
+  {
+   "D": "2026-06-30",
+   "universe": 200,
+   "valid": 181,
+   "valid_usd": 38,
+   "valid_new_codes": 0,
+   "qualifies": true,
+   "missing": {
+    "negative": 15,
+    "gap": 4
+   }
+  },
+  {
+   "D": "2026-07-31",
+   "universe": 200,
+   "valid": 181,
+   "valid_usd": 39,
+   "valid_new_codes": 0,
+   "qualifies": true,
+   "missing": {
+    "negative": 15,
+    "gap": 4
+   }
+  },
+  {
+   "D": "2026-08-31",
+   "universe": 200,
+   "valid": 181,
+   "valid_usd": 40,
+   "valid_new_codes": 0,
+   "qualifies": true,
+   "missing": {
+    "negative": 15,
+    "gap": 4
+   }
+  }
+ ]
+}
