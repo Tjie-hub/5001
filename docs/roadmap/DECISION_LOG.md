@@ -4029,6 +4029,42 @@ G0 (R8).
 
 ---
 
+### D-117 · Pre-open news-timing screen: G0 breadth stop — 8/119 days pre-open capture; withdrawn before registration (uncounted)
+**Status:** RECORDED · **Date:** 2026-10-28 · **Type:** G0 breadth stop + withdrawal ·
+**Approval authority:** Owner, 2026-10-28 (in-session: "test this new hypothesis", motivated by BBCA's
+pre-open Q3 headline and +7.65% close on 10-28); verdict per the frozen stop rule.
+
+- **Freeze:** `P-M/news_timing/G0_FREEZE_NEWS_TIMING_2026-10-28.md`, sha256
+  `f23914b6631265a6285129d6a7b71e5576f944cbf98f5d204483ddf99956351d`. Construction (would-be, never
+  registered): event = same-day-published Google News headlines captured by the 08:00 WIB pre-market crawl
+  (`news_mentions.count >= 1`, `updated_at` time-of-day ∈ [08:00, 09:00) — PIT-safe: fetch time ≥
+  publication time, so existence before the open is proven); H1 same-day open→close > 0; daily
+  equal-weight portfolio net of one 0.60% RT (D-082 basis), gross beside; one-sided Newey–West t (5 lags)
+  vs the D-064 §C exact bar at the census in force at registration (3.300988 at 616); kill if either
+  calendar half ≤ 0; **no-widening clause:** sentiment-lexicon and liquid-only variants are G1
+  sensitivities only, never later arms.
+- **Breadth result (counts only; NO return read):** coverage 2026-04-26 → 2026-10-28, 119 trading dates;
+  pre-open crawl rows exist on only **8 dates** (06-16, 07-08, 07-13, 07-23, 08-20, 10-15, 10-16, 10-28);
+  197 event ticker-dates; **179 joinable to final ohlcv bars, over 7 dates**. Stop rule (≥ 60 event-days):
+  **FIRED.** Power rule never reached.
+- **Root cause (data infrastructure):** the 08:00 job exists in code since `02c2034` (2026-06-10) but
+  wrote on 8/119 trading days, and `save_news_count` uses `INSERT OR REPLACE`, so the 17:00 crawl destroys
+  the pre-open evidence on every normal day. Pre-open news is unrecoverable from `news_mentions` for all
+  non-captured days; the 8 surviving dates are an endogenous, non-random subset.
+- **Status: WITHDRAWN.** Never registered, so it is **not counted; census unchanged at 615**; no
+  HYPOTHESIS_REGISTRY row; no EXPERIMENT_LEDGER record; no event ticker-date return was read. Precedent:
+  D-113 (PEAD, G0 stop, uncounted). Close-relative check: the 2026-09-29 broad search only inventoried
+  news coverage (`phase0_counts.py`, family F) — no news-based return trial has ever been counted;
+  `catalyst_flags` is empty (no alternative instrument).
+- **Path to testability (owner decision, propose-only — no code changed):** append-only pre-market capture
+  (`news_mentions_premarket` written only by the 08:00 job, or a `first_seen_at` column the 17:00 REPLACE
+  must preserve) + scheduler coverage fix so the 08:00 job fires every trading day; then re-freeze this G0
+  and re-run the breadth check. A census trial is consumed only at the first return read.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
