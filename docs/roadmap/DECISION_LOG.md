@@ -3928,6 +3928,62 @@ G0 (R8).
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-113 · PEAD long top-SUE quintile G0: stop rule fired — WITHDRAWN before registration (uncounted)
+**Status:** RECORDED · **Date:** 2026-10-26 · **Type:** G0 stop + withdrawal ·
+**Approval authority:** Owner, 2026-10-28 (filing of the proposed text); verdict per the frozen stop rule
+(`G0_FREEZE_PEAD_2026-10-23.md`; precedents D-087, D-094, D-097, D-102, D-110).
+
+- **Run.** Once, 2026-10-26 17:53 WIB. Script `g0_pead_power.py` sha256 `ed589c6c…`; freeze sha `004fce27…`
+  verified; snapshot `/mnt/storage2tb/idx-archive/wf_snapshot_20260929/walkforward-20260928-213012.db`
+  rehashed (`db48e8d8…`). Result committed `fc418ba` (`G0_RESULT_20261026T175314.json`,
+  `events_pead_20261026T175314.csv`, `g0_run_2026-10-26.log`).
+- **Cohort.** 3,037 earnings rows → 2,788 usable est/rep; 2,391 eligible events after universe/liquidity
+  filters; **506 top-SUE-quintile events over 159 months** (holdout 347 events / 112 months; recent 159 / 47).
+- **Stop rule: FIRED.**
+
+  | Measure | Value |
+  |---|---|
+  | Per-event placebo sd | 17.4% |
+  | SE over months | 0.90% |
+  | MDE at 80% power | 3.74% |
+  | Power at the 2.0% floor | **13.9%**, against the 20% minimum |
+
+  Reported, not the stop metric: holdout power 8.2%, recent 1.5%. Distinctness checks all passed (no flag vs
+  hi52 / park60 / log_mcap / t1) — the arm is withdrawn on power alone.
+- **Status: WITHDRAWN.** Never registered, so it is not counted; no HYPOTHESIS_REGISTRY row (verified 0 PEAD
+  rows 2026-10-27). Census unchanged.
+- **No outcome was read.**
+
+**Amendment.** Only by a superseding D-entry.
+
+### D-114 · {FQ} E/P value G0: stop rule not fired — eligible for registration on the owner's go
+**Status:** RECORDED · **Date:** 2026-10-27 · **Type:** G0 breadth/power ·
+**Approval authority:** Owner, 2026-10-28 (filing of the proposed text); verdict per the frozen stop rule
+(`P-M/fq/G0_FREEZE_FQ_EP_2026-10-26.md`; precedents D-087, D-094, D-097, D-102, D-110).
+
+- **Run.** Once, 2026-10-27 17:41 WIB (one-shot timer `zcode-fq-g0-20261027`, exit 0, 12 s). Breadth and power
+  only; no panel return was computed or read.
+- **Pins (freeze §7.2).** Freeze file sha256 `e14ab4d96d58947f7d1a475c46f754d39ad258e0215db9f1e6b0aba747358549`
+  (= `FREEZE_SHA256` in the script). Script `g0_fq_ep_breadth.py` sha256
+  `d741e9b50a3d6547f683f0d94e6bd237734187c9ad370752f4e2c4392e7ef1b1` (unchanged since `d1e9497`). Sums file
+  `~/idx_external/stockbit_fin/SHA256SUMS_2026-10-26.txt` sha256
+  `debbda26697307a83ea9287bd0fa9811154a26dae86c7c13a7a2b024557114e1`, written 2026-10-27 08:40 after the
+  2026-10-26 19:12 parse; its `fin.db` line `caefb1a2…` matches the result JSON. fin.db mtime 2026-10-26 19:12.
+- **Result.** Qualifying formation months **203 of 208** (≥ 120 names with valid E/P, ≥ 40 per tercile);
+  T_eff **16.92 y**; prior-only power Φ(0.75·√T_eff − 3.300069) = **41.5%** against the **20%** stop
+  (129 qualifying months needed). **Stop rule not fired.** (D-112 projected 43.0% on 208 months; the 5
+  non-qualifying months account for the gap.) The 50% post-publication haircut row in D-112 still applies: a null
+  G1 would be weak evidence.
+- **Report-only lines (no rule attached).** FX cross-check: 0 of 4,908 USD-reporter periods beyond the 3%
+  tolerance. New-code coverage: 41 of the 92 newly pulled KSEI codes carry fundamentals (755 valid
+  name-months); the other 51 are never-tracked delisted names (ZCode 10-27, K4.1).
+- **Not decided by this entry.** Registration of the arm (HYP-PM-0023; census 613 → 614) and the single G1 run
+  wait for the owner's separate go (freeze §7.4, D-112). No hypothesis-registry row is created by this entry.
+- **Census:** stays at **613**.
+- **No outcome was read.**
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
