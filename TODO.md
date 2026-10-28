@@ -66,8 +66,23 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
       currency output identical on all 998 tickers; 20/20 tests; freeze DRAFT cites v1.1.
 
 **Open**
-- [ ] **Owner, {FQ}:** file the G0 D-entry; then go / no-go for HYP-PM-0023 registration (census 613 → 614) and
-      the single G1 run (`g1_fq_ep.py`).
+**Done 2026-10-28 AM (ZCode, registration brief)**
+- [x] **D-113/D-114 filed** (`f39ffa8`): PEAD G0 withdrawal (WITHDRAWN uncounted); {FQ} E/P G0 passed.
+- [x] **HYP-PM-0023 REGISTERED** (`ad05040`, **D-115**): {FQ} E/P one arm; **census 613 → 614**; owner
+      no-widening clause (B/M/ROE/GP/RNOA/CF/P = sensitivities only, never arms); REG_SHA256 pinned
+      (`7155e1c7…`); G1 not run.
+- [x] **C-003 freeze pinned + G0 run — PASSED** (`7c116ba`, `98370bb`, **D-116**): {PY} family, dividends
+      only, floor 0.80%/mo, gate (b); formable 209/209; placebo sigma 3.54%/mo; **power 48.7% ≥ 20% stop;
+      MDE80 0.61%/mo**. Both earlier power predictions (candidate 80–95%, freeze-note single digits) were
+      wrong; the pre-registered measured rule decided.
+- [x] M4: C-009 marked "UNDERPOWERED — not folded in (owner 2026-10-28)".
+
+**Open**
+- [ ] **Owner, C-003 {PY}: registration go/no-go** (G0 passed; registration text = freeze §8; census 614 → 615
+      at registration; note t 3.27 at the floor sits just under the bar's face value — a real risk of a null
+      G1). Report: `docs/reports/ZCODE_FQ_REGISTRATION_2026-10-28.md`.
+- [ ] **Owner, {FQ}: single G1 run** (`g1_fq_ep.py`, everything pinned) — run after the C-003 decision per the
+      ordering rule (M5 was deliberately not run).
 - [ ] **C-003 dividend-yield G0 built (propose-only, `P-M/dy/`)**: L1 cleared; L2 done (20/20 tests, 498
       payers, coverage 33.9%); L3 refuses until the owner pins the freeze (`G0_FREEZE_DY_DRAFT_2026-10-28.md`:
       floor 0.80%/mo proposed, both family options costed, liquidity gate open). **{FQ} G0 PASSED → the
@@ -86,7 +101,7 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
       old flags saved, `safe_restart.sh`, restart jurnal26, run the list tests).
 - [ ] **PEAD D-entry** — owner files or amends the proposed text (Tuesday report §J2).
 - [ ] Wednesday report DONE (`docs/reports/ZCODE_WEDNESDAY_2026-10-28.md`): K1–K5 all DONE; K5 recommends register E/P alone, widen (gross profitability first) after G1 — propose-only.
-- [ ] Owner decision on pushing both repos (HOLD; 5001 37 ahead, jurnal26 9 ahead).
+- [ ] Owner decision on pushing both repos (HOLD; 5001 43 ahead, jurnal26 9 ahead).
 - [ ] Mimosa full-repo pre-commit scan still fails with `scanner_enobufs`; only focused reruns have completed.
 - [ ] `forward_bank` / `forward_fade` / `forward_regime` `ledger.json` cron appends remain uncommitted by design.
 

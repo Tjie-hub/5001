@@ -14,7 +14,7 @@ minimum power 20%. Sources: `00_EXCLUSION_INDEX` rows in brackets.
 | 6 | C-004 sanction-deadline pressure [C-004] | 4 | 3 (CSV exists; <24 formations) | 1 | 5 | 2 | NOT registrable (own G0 would fire); keep as monitored list |
 | 7 | C-008 auction/ARB-7% records [C-008] | 5 | 4 (recording now) | 1 (by design, records) | 4 | 5 | Records only; G0 re-check 2027-Q2 |
 | 8 | C-007 HSC IHSG-exclusion one-shot [C10/F8] | 5 | 3 (date pending, idx.co.id blocked) | 1 (N=1) | 5 | n/a | Record; also an owner note: it changes the IHSG benchmark itself |
-| 9 | C-009 executed buybacks / mcap [buyback brief B1-B3, 2026-10-27] | 4 (OJK-mandated buyer, rule barrier) | 3 (139 tickers / 787 periods in fin.db; **no announcement dates** — IDX page 403) | 1 standalone (~12% at 1.0%/mo on ~100 formations) / rides C-003 as net-payout composite | 3 (net-payout collapse + stress confound — two FM separators) | 4 | **UNDERPOWERED standalone**; composite net-payout path or owner-browser announcement pull |
+| 9 | C-009 executed buybacks / mcap [buyback brief B1-B3, 2026-10-27] | 4 (OJK-mandated buyer, rule barrier) | 3 (139 tickers / 787 periods in fin.db; **no announcement dates** — IDX page 403) | 1 standalone (~12% at 1.0%/mo on ~100 formations) / rides C-003 as net-payout composite | 3 (net-payout collapse + stress confound — two FM separators) | 4 | **UNDERPOWERED — not folded into C-003 (owner 2026-10-28)**; announcement pull stays an owner-browser item |
 
 **{FQ} family-widening arms (B/M, gross profitability, low asset growth, low leverage on the 998-ticker panel)**
 are deliberately NOT ranked here — they are the Wednesday brief's K5 memo's scope and an input to this search,
