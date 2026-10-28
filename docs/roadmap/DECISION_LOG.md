@@ -4005,6 +4005,28 @@ G0 (R8).
 
 **Amendment.** Only by a superseding D-entry.
 
+### D-116 · {PY} opened (payout-commitment); C-003 G0 freeze pinned — dividends only, floor 0.80%/mo, gate (b); census unchanged at 614
+**Status:** RECORDED · **Date:** 2026-10-28 · **Type:** Mechanism + G0 freeze ·
+**Approval authority:** Owner, 2026-10-28 ("Approved recomend — delegate to zcode": dividends only, floor
+0.80%/mo, separate family {PY}, liquidity gate (b)).
+
+- **Freeze:** `P-M/dy/G0_FREEZE_DY_DRAFT_2026-10-28.md` (retitled FINAL at pin), sha256
+  `2789ab21dedc269d0eeaf20b264c27a0e29c82362c6790a8065318524350c208`. Script `g0_dy_breadth.py` sha256
+  `497f32b9…` at pin time. Inputs: KSEI `38c8a90b…`, Yahoo `a0937cde…`, late-filer `b549358b…`, FYX
+  `013af724…`, fin.db `caefb1a2…` via sums `debbda26…` (the D-114-verified state); extraction v1.1 (`106db63`).
+- **Scope:** standing payout rate as a risk premium (NOT the D-077 ex-date event arms — distinct per
+  `dy/00_OVERLAP_CHECK_2026-10-28.md`). Dividends only; **C-009 buyback not folded in (UNDERPOWERED
+  standalone)**. Universe = the E/P basis (top-200, stale filter, **price ≥ Rp 50**; no ADV gate, no era
+  break). Floor **0.80%/mo**; bar 3.300069 at census 614; placebo power pre-registered (seeded random
+  quintile spreads, {OC}/{RF} precedent).
+- **Recorded error:** the draft's §4 power scale ("33–45% at 0.80%/mo"; candidate file "80–95%") used a plain
+  5% test, not the census-deflated bar — corrected in the freeze before pinning. The owner's floor stands;
+  the stop rule decides.
+- **Census:** unchanged at **614** (the arm counts only at registration). G0 once; stop rule per freeze §5;
+  registration only on a separate owner go after the G0.
+
+**Amendment.** Only by a superseding D-entry.
+
 ---
 
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)

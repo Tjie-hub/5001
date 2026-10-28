@@ -25,7 +25,7 @@ import extract_dividends as ex
 import g0_fq_ep_breadth as fq
 
 FREEZE = HERE / "G0_FREEZE_DY_DRAFT_2026-10-28.md"
-FREEZE_SHA256: str | None = None        # owner pins this after editing the DRAFT into the freeze
+FREEZE_SHA256: str | None = "2789ab21dedc269d0eeaf20b264c27a0e29c82362c6790a8065318524350c208"   # owner-pinned final freeze, 2026-10-28 (D-116)
 
 # ---- proposed frozen parameters (freeze draft §2-§4) ----
 FIRST_MONTH, LAST_MONTH = "2009-04", "2026-09"
@@ -72,7 +72,7 @@ def verify_inputs() -> list[str]:
 
 
 def monthly_panel():
-    """(month_date, {ticker: (sec_num, price)}) top-200 KSEI mcap with the stale filter."""
+    """(month_date, {ticker: (sec_num, price)}) top-200 KSEI mcap, stale filter, price >= Rp 50 (freeze §2 gate b)."""
     ksei = fq.load_ksei()
     months = sorted(ksei)
     panel = {}
@@ -82,7 +82,7 @@ def monthly_panel():
         m1, m2 = months[i - 1], months[i - 2]
         rows = []
         for t, (sec, px) in ksei[d].items():
-            if not fq.TICKER_RE.match(t) or not sec or not px or px <= 0:
+            if not fq.TICKER_RE.match(t) or not sec or not px or px < 50:
                 continue
             p1 = ksei[m1].get(t, (None, None))[1]
             p2 = ksei[m2].get(t, (None, None))[1]
@@ -92,6 +92,36 @@ def monthly_panel():
         rows.sort(key=lambda x: -x[1])
         panel[d] = {t: (ksei[d][t][0], ksei[d][t][1]) for t, _ in rows[:TOP_N]}
     return panel
+
+
+def placebo_sigma(panel, draws: int = 10, seed: int = 20261028) -> float:
+    """Monthly Q5-Q1 spread SD of RANDOM quintile assignments (freeze §4). Random buckets carry no
+    yield information, so no signal outcome is read ({OC}/{RF} G0 precedent)."""
+    import random
+    from statistics import pstdev
+    ksei = fq.load_ksei()
+    months = sorted(panel)
+    rets = {}
+    for d, nxt in zip(months, months[1:]):
+        rr = {}
+        for t, (_, px) in panel[d].items():
+            nx = ksei.get(nxt, {}).get(t, (None, None))[1]
+            if nx and px > 0:
+                rr[t] = nx / px - 1.0
+        if len(rr) >= 50:
+            rets[d] = rr
+    sds = []
+    for k in range(draws):
+        rng = random.Random(seed + k)
+        spreads = []
+        for d, rr in rets.items():
+            names = sorted(rr)
+            rng.shuffle(names)
+            q = len(names) // 5
+            top, bot = names[-q:], names[:q]
+            spreads.append(sum(rr[t] for t in top) / q - sum(rr[t] for t in bot) / q)
+        sds.append(pstdev(spreads))
+    return sum(sds) / len(sds)
 
 
 def valid_yield_counts(panel, series) -> tuple[list[int], int, int]:
@@ -138,9 +168,17 @@ def main(argv=None) -> int:
     per_month, nm, hv = valid_yield_counts(panel, series)
     formable = sum(1 for n in per_month if n >= MIN_VALID_NAMES)
     months_all = len(per_month)
+    sigma_m = placebo_sigma(panel)
+    n_eff = formable if formable else 1
+    se_mean = sigma_m / (n_eff ** 0.5)
+    from math import erf, sqrt
+    t_floor = FLOOR / se_mean if se_mean else 0.0
+    power = 0.5 * (1 + erf((t_floor - BAR) / sqrt(2)))
+    mde80 = 2.487 * se_mean
+    stop = (formable / months_all if months_all else 0) < MIN_MONTHS_FORMABLE or power < MIN_POWER
     res = {
         "record_type": "g0_coverage_power",
-        "arm": "dividend-yield level (C-003)",
+        "arm": "dividend-yield level (C-003, family {PY})",
         "freeze_sha256": FREEZE_SHA256,
         "coverage": {
             "panel_months": months_all,
@@ -150,8 +188,14 @@ def main(argv=None) -> int:
             "name_month_coverage": round(hv / nm, 4) if nm else None,
             "median_valid_names": sorted(per_month)[months_all // 2] if per_month else None,
         },
-        "power_placeholders": "SD source: placebo monthly quintile-spread SD from a pre-registered random "
-                              "assignment on the panel (freeze §5); fill at the pinned run.",
+        "power": {
+            "placebo_sigma_monthly": round(sigma_m, 6), "draws": 10, "seed": 20261028,
+            "n_formable": n_eff, "se_mean": round(se_mean, 6),
+            "floor_pct": 100 * FLOOR, "t_at_floor": round(t_floor, 3),
+            "power_at_floor": round(power, 4), "mde80_pct": round(100 * mde80, 3),
+            "bar": BAR,
+        },
+        "stop_rule_fired": bool(stop),
         "proposed": {"floor_pct": 100 * FLOOR, "bar": BAR, "ir_floor": IR_FLOOR,
                      "min_power": MIN_POWER, "min_formable_share": MIN_MONTHS_FORMABLE},
     }
@@ -159,9 +203,12 @@ def main(argv=None) -> int:
     out = HERE / f"G0_RESULT_{stamp}.json"
     out.write_text(json.dumps(res, indent=1))
     print(f"months formable {formable}/{months_all}; name-month coverage {hv}/{nm} = "
-          f"{100 * hv / nm:.1f}%; median valid names {res['coverage']['median_valid_names']}; {out.name}")
-    print("STOP RULE (proposed): fires if formable_share < 0.80 or (at pin) floor power < 0.20 -> "
-          "withdraw before registration, uncounted.")
+          f"{100 * hv / nm:.1f}%; median valid names {res['coverage']['median_valid_names']}")
+    print(f"placebo sigma_m {100 * sigma_m:.2f}%/mo; SE {100 * se_mean:.3f}%/mo; "
+          f"t at floor {t_floor:.2f} vs bar {BAR}; power {power:.1%}; MDE80 {100 * mde80:.2f}%/mo")
+    print(f"STOP RULE {'FIRED' if stop else 'not fired'} -> "
+          + ("WITHDRAWN before registration (uncounted)." if stop else "eligible for registration on the owner's go."))
+    print(f"{out.name}")
     return 0
 
 
