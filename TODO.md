@@ -108,9 +108,13 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
 - [ ] **ZCode: run `ZCODE_BRIEF_C003_REGISTRATION_G1_2026-10-29.md` N0 → N4 in order** (owner-approved; one G1
       per arm; a pass is not VALIDATED). Deliverable `docs/reports/ZCODE_G1_2026-10-29.md`. Risk noted at G0:
       C-003's t 3.27 at the floor sits just under the bar — a null G1 is a real possibility.
-- [ ] **Permanent pre-open capture (production):** `news_filter.py` 08:00 run also writes an append-only
-      `news_mentions_premarket` table the 17:00 run never touches; test + `safe_restart.sh` after 17:30. Until it
-      is live, run `snapshot_premarket.py` each trading day before 17:00.
+- [ ] **Permanent pre-open capture — code done, NOT live** (`668ab02`): the 08:00 run (`premarket=True`, set on
+      that slot only) also writes append-only `news_mentions_premarket` (first write wins, nothing at/after 09:00);
+      5 new tests, 661 guard + scheduler tests pass, `preflight_boot` OK (53 jobs). **Owner: run
+      `scripts/safe_restart.sh` after today's 17:00 news run logs "selesai" (~17:25)** — the session's attempt to
+      arm a one-shot restart was blocked by the permission classifier (production deploy). Until it is live, run
+      `docs/research_programs/P-M/news_timing/snapshot_premarket.py` each trading day between 08:30 and 17:00
+      (a timer for it was also blocked). Verify the next morning: `news_mentions_premarket` has rows at ~08:22.
 - [ ] **News construct (any re-freeze):** require the ticker code as a whole word in the headline (word-tickers).
 - [ ] **Hypothesis search 2026-10-28 (propose-only, `P-M/search/`)**: 64-row exclusion index, 41-cell space map
       (exhausted at pass 3), 8 candidates + 5 skeletons. Top pick C-003 (now being registered). Next:
