@@ -105,9 +105,15 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
       Wednesday report (done, `7bdba38`).
 
 **Open**
-- [ ] **ZCode: run `ZCODE_BRIEF_C003_REGISTRATION_G1_2026-10-29.md` N0 → N4 in order** (owner-approved; one G1
-      per arm; a pass is not VALIDATED). Deliverable `docs/reports/ZCODE_G1_2026-10-29.md`. Risk noted at G0:
-      C-003's t 3.27 at the floor sits just under the bar — a null G1 is a real possibility.
+- [x] **Brief 2026-10-29 N0 → N4 executed (Claude)** — report `docs/reports/ZCODE_G1_2026-10-29.md`:
+      D-118 correction; HYP-PM-0024 registered (D-119, census 614 → 615); `g1_dy.py` pinned (D-120);
+      **HYP-PM-0023 E/P G1 FAILED F2** (t 1.30 vs 3.300069, D-121); **HYP-PM-0024 C-003 G1 FAILED F2** (t 0.26 vs
+      3.300529, half2 < 0, FM t −0.84, D-122). FAIL-PM-0023/0024; F2 tally 11.
+- [ ] **Owner, HYP-PM-0024 classification:** F2 filed per the frozen kill rule, but the price-only instrument omits
+      ≈ 0.82%/mo dividend carry (≈ the whole hypothesised effect). Keep F2, or supersede to INVALID · data. A
+      total-return dividend-yield test would be a new registration carrying this result as debt.
+- [ ] **`extract_dividends` scale errors** (ESSA 775×, TUGU 677× mcap; MLPL/ADMF/TINS ~1×; 83 negatives) — fix before
+      any payout work (D-122).
 - [ ] **Permanent pre-open capture — code done, NOT live** (`668ab02`): the 08:00 run (`premarket=True`, set on
       that slot only) also writes append-only `news_mentions_premarket` (first write wins, nothing at/after 09:00);
       5 new tests, 661 guard + scheduler tests pass, `preflight_boot` OK (53 jobs). **Owner: run
