@@ -4147,6 +4147,31 @@ verdict stands) · **Approval authority:** Owner, 2026-10-29 ("complete all step
 
 ---
 
+### D-121 · HYP-PM-0023 ({FQ} E/P value premium) G1 — FAILED (F2)
+**Status:** RECORDED · **Date:** 2026-10-29 · **Type:** G1 outcome · **Approval authority:** the frozen kill rule
+(D-115); computed booleans only.
+
+- **Run.** Once, 2026-10-29 08:53 WIB, after the HYP-PM-0024 G1 pin (D-120). `g1_fq_ep.py` sha `f5d35449…` (D-115
+  pin), registration sha `7155e1c7…` matched; freeze inputs verified the same morning (`g0_dy_breadth.verify_inputs`,
+  identical KSEI/Yahoo/late-filer/FYX/fin.db pins). Result `P-M/fq/G1_RESULT_20261029T085326.json` (sha256
+  `7dff44b41c51b7a0…`), log `g1_run_2026-10-29.log`. Wall 66 s, peak RSS 110 MB.
+- **Outcome: FAIL.** 208 months; VW top−bottom tercile **+0.555%/mo, NW SE 0.428%, t 1.30** vs bar **3.300069**.
+  Net of 0.60% RT × turnover 0.33/mo: +0.359%/mo, t 0.84. 1 mechanical drop excluded; 56 split-adjusted rows.
+- **Sensitivities (report-only, never substituted):** B/M t 1.06 · ROE 0.21 · EW 0.68 · −100% delisting 1.36 ·
+  pre-2021-07 0.54 (146 m) · post-2021-07 1.24 (62 m, +1.28%/mo) · without the D-111 covered months 1.12 · USD
+  excluded 1.16 · top-100 1.08. None reaches t 1.4.
+- **Classification: F2.** The premium has the predicted sign but is not detectable at the census-deflated bar. G0
+  power was 41.5% at the IR floor: a weak null (D-050 — non-rejection is not evidence of absence; the D-112 haircut
+  row applies). The B/M and ROE rows are null as well; per the D-115 owner clause they cannot become later arms.
+- **Census** stays **615** (the arm counts from registration, X8). {FQ} has 1 member: HYP-PM-0023 FAILED F2.
+  Registry status cell + {FQ} family line updated (precedent D-106); FAILURE_REGISTRY row FAIL-PM-0023 appended,
+  F2 tally 9 → 10.
+- **Next:** the HYP-PM-0024 G1 runs once, as frozen; its FM-over-E/P separator runs whatever this verdict.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
