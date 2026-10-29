@@ -4172,6 +4172,40 @@ verdict stands) · **Approval authority:** Owner, 2026-10-29 ("complete all step
 
 ---
 
+### D-122 · HYP-PM-0024 ({PY} dividend-yield level) G1 — FAILED (F2) on the registered price-only instrument
+**Status:** RECORDED · **Date:** 2026-10-29 · **Type:** G1 outcome · **Approval authority:** the frozen kill rule
+(D-119); computed booleans only.
+
+- **Run.** Once, 2026-10-29 08:55 WIB, after D-121 was committed. `g1_dy.py` sha `6a202b26…` (D-120); `verify()`
+  passed (registration, 4 imported files, freeze inputs, pickle, ohlcv fingerprint). Result
+  `P-M/dy/G1_RESULT_20261029T085501.json` (sha256 `3847db30aeb6ab06…`), log `g1_run_20261029T085501.log`. Wall 30 s,
+  peak RSS 0.80 GB.
+- **Outcome: FAIL — all three kill conditions.** 208 formations 2009-05 → 2026-08 (median 68 valid names, book 13).
+  Net spread **+0.074%/mo, NW SE 0.284%, t 0.26** vs bar **3.300529**; halves **+0.531% / −0.384%**; FM incremental
+  yield-rank coefficient −0.38%, **t −0.84** over 208 months (0 unidentified). Floor 0.80%/mo not met.
+- **Sensitivities (report-only, never substituted):** gross t 0.56 · −100% delisting 0.31 · pre-2021-07 +0.454%/mo
+  t 1.40 · post-2021-07 −0.823%/mo t −1.86 · FM 2021-07 → t −1.02 · FM without VOLEX t −0.85 · VW top quintile
+  −0.542%/mo t −2.00.
+- **Construct caveat (disclosed at D-119, sized post-G1 from signal levels only — no new return read).** The frozen
+  instrument is price-only; the book's omitted dividend carry, (book − universe yield)/12 with names > 100%/yr or < 0
+  treated as errors, is **+0.82%/mo** (median 0.77%) — about the whole hypothesised effect. A rough carry-added spread
+  (~0.89%/mo, t ≈ 3.1 on the same SE) is still under the bar, so the primary verdict does not depend on the caveat;
+  the second half and the FM could. This result refutes a **price-return** yield premium, not a total-return one. A
+  total-return test would be a new hypothesis and registration, carrying this outcome as declared multiplicity debt.
+- **Data defect (post-G1, signal levels).** `extract_dividends` v1.1 yields scale errors for a few names (ESSA up to
+  775×, TUGU 677× mcap; MLPL, ADMF, TINS near 1×) and 83 negative name-months; 37 of 2,762 book name-months (1.34%)
+  hold such a name. Bounded: even an adverse 15% move on every contaminated slot shifts t by < 1 — the verdict
+  stands. The G1 report's raw carry line (27%/mo) is outlier-driven and superseded by the robust figure above. Any
+  future payout work must fix the extraction first.
+- **Classification: F2** per the frozen kill rule. The owner may supersede it to INVALID · data if the price-only
+  construct is judged unable to measure the hypothesis.
+- **Census** stays **615.** {PY} has 1 member: HYP-PM-0024 FAILED F2. Registry status cell + {PY} family line
+  updated; FAILURE_REGISTRY row FAIL-PM-0024 appended, F2 tally 10 → 11.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
