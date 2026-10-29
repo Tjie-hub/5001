@@ -1,6 +1,6 @@
 # IDX Walkforward — TODO
 
-_Last updated: 2026-10-27 (see "Current status" below; the P0–P6 plan that follows is the 2026-09-22 snapshot) —
+_Last updated: 2026-10-29 (see "Current status" below; the P0–P6 plan that follows is the 2026-09-22 snapshot) —
 previous update 2026-09-22 — closed P0-1 (security work was committed `817f732` on 2026-08-20),
 verified 2/3 of P0-3's collection errors are now clean, and closed P0-6 (Stockbit auto-token
 corruption incident + fix). Base plan is still the 2026-08-19 full-stack machine audit below; all
@@ -23,7 +23,7 @@ trail: the 2026-08-19 machine audit (workflow map, joint failures, test-cache an
 
 ---
 
-# 📌 Current status — 2026-10-28 (carried from 2026-10-26/27)
+# 📌 Current status — 2026-10-29 (carried from 2026-10-26/27/28)
 
 _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
 `docs/reports/PRODUCTION_SIGNAL_AUDIT_2026-10-26.md`, PEAD G0 result JSON. Push is **HOLD**; nothing pushed._
@@ -65,7 +65,6 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
 - [x] **C-003 SQL f-string removed** (`106db63`): `_ticker_currency` now uses constant SQL + bound labels;
       currency output identical on all 998 tickers; 20/20 tests; freeze DRAFT cites v1.1.
 
-**Open**
 **Done 2026-10-28 AM (ZCode, registration brief)**
 - [x] **D-113/D-114 filed** (`f39ffa8`): PEAD G0 withdrawal (WITHDRAWN uncounted); {FQ} E/P G0 passed.
 - [x] **HYP-PM-0023 REGISTERED** (`ad05040`, **D-115**): {FQ} E/P one arm; **census 613 → 614**; owner
@@ -82,36 +81,47 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
       `c912a19`)**: the 08:00 WIB pre-market news crawl has written on only **8 of 119** trading days since
       2026-04-26 (197 events, 179 joinable over 7 dates vs the frozen ≥60-date floor), and the 17:00
       `INSERT OR REPLACE` destroys pre-open evidence on every normal day — the hypothesis is untestable on
-      current data. Census unchanged at 615; no return read; no registry row. Path to testability (owner
+      current data. Census unchanged — **in force: 614** ("615" was wrong: C-003 is not registered; D-118
+      per the 10-29 brief). No return read; no registry row. Path to testability (owner
       decision, propose-only): append-only premarket capture (`news_mentions_premarket` or a REPLACE-preserved
       `first_seen_at`) + scheduler coverage fix, then re-run the breadth G0.
       Report: `docs/reports/ZCODE_NEWS_TIMING_SCREEN_2026-10-28.md`.
 
+**Done 2026-10-29 (Claude, owner: "complete all step")**
+- [x] **Yesterday's C-003 brief found NOT started** (`ZCODE_BRIEF_C003_REGISTRATION_G1_2026-10-28.md`, issued
+      09:46): no HYP-PM-0024, no `g1_dy.py`, neither G1 run; D-117 then took the number it earmarked.
+- [x] **Pre-open news saved before the 17:00 overwrite** (`512b82b`, committed 08:33, before the open):
+      `P-M/news_timing/snapshot_premarket.py` (read-only, append-only, refuses an overwritten day) →
+      `premarket_capture/2026-10-29.jsonl`, 958 rows, 45 tickers / 107 headlines written 08:22, sha `005caf98…`.
+- [x] **D-117 facts checked:** census in force is **614** (bars 614 → 3.300069, 615 → 3.300529, recomputed);
+      the 08:00 job **completed on 33/37 trading days** 09-08 → 10-28 (misses 10-12..14 = OHLCV-repair outage),
+      so the 17:00 `INSERT OR REPLACE` alone explains 8/119 — no scheduler fix needed. Also found: the
+      `"<ticker> saham"` query matches word-tickers (10-29: PADA/LABA/BANK/DATA = 32/107 headlines, 30% noise).
+- [x] **Corrected brief issued** (`8f5e069`): `ZCODE_BRIEF_C003_REGISTRATION_G1_2026-10-29.md` — N0 D-118
+      correction, N1 HYP-PM-0024 at D-119 (census 614 → 615, bar 3.300529), N2 pin `g1_dy.py`, N3 E/P G1 once,
+      N4 C-003 G1 once. Supersedes the 10-28 brief.
+- [x] Superseded/finished items closed: C-003 go/no-go (owner "Daftarkan" 2026-10-28); {FQ} G1 approval (same);
+      C-003 G0 propose-only build (freeze pinned + G0 passed, D-116); PEAD D-entry (filed as D-113, `f39ffa8`);
+      Wednesday report (done, `7bdba38`).
+
 **Open**
-- [ ] **Owner, C-003 {PY}: registration go/no-go** (G0 passed; registration text = freeze §8; census 614 → 615
-      at registration; note t 3.27 at the floor sits just under the bar's face value — a real risk of a null
-      G1). Report: `docs/reports/ZCODE_FQ_REGISTRATION_2026-10-28.md`.
-- [ ] **Owner, {FQ}: single G1 run** (`g1_fq_ep.py`, everything pinned) — run after the C-003 decision per the
-      ordering rule (M5 was deliberately not run).
-- [ ] **C-003 dividend-yield G0 built (propose-only, `P-M/dy/`)**: L1 cleared; L2 done (20/20 tests, 498
-      payers, coverage 33.9%); L3 refuses until the owner pins the freeze (`G0_FREEZE_DY_DRAFT_2026-10-28.md`:
-      floor 0.80%/mo proposed, both family options costed, liquidity gate open). **{FQ} G0 PASSED → the
-      FM-over-E/P separator is live and the family question is real** (C-003 report §L4). Owner: pin freeze +
-      floor + family + the buyback-composite question. Report: `docs/reports/ZCODE_C003_DY_2026-10-28.md`.
+- [ ] **ZCode: run `ZCODE_BRIEF_C003_REGISTRATION_G1_2026-10-29.md` N0 → N4 in order** (owner-approved; one G1
+      per arm; a pass is not VALIDATED). Deliverable `docs/reports/ZCODE_G1_2026-10-29.md`. Risk noted at G0:
+      C-003's t 3.27 at the floor sits just under the bar — a null G1 is a real possibility.
+- [ ] **Permanent pre-open capture (production):** `news_filter.py` 08:00 run also writes an append-only
+      `news_mentions_premarket` table the 17:00 run never touches; test + `safe_restart.sh` after 17:30. Until it
+      is live, run `snapshot_premarket.py` each trading day before 17:00.
+- [ ] **News construct (any re-freeze):** require the ticker code as a whole word in the headline (word-tickers).
 - [ ] **Hypothesis search 2026-10-28 (propose-only, `P-M/search/`)**: 64-row exclusion index, 41-cell space map
-      (exhausted at pass 3), 8 candidates + 5 skeletons. **Top pick: C-003 dividend-yield level** (now built,
-      above). Then C-001/C-006 KSEI foreign + MF/PF share (one build/G0, owner floor ≥0.8%/mo), C-002
-      cap-proximity overlay. Report: `docs/reports/ZCODE_HYPOTHESIS_SEARCH_2026-10-28.md`.
-- [ ] **Buyback C-009 (propose-only, `P-M/buyback/`)**: announcement design INFEASIBLE locally (IDX 403 →
-      owner-browser); executed series 139 tickers/787 periods in fin.db; UNDERPOWERED standalone — composite
-      net-payout path inside the C-003 freeze is the powered alternative (decide with the C-003 pin).
-      Report: `docs/reports/ZCODE_BUYBACK_2026-10-28.md` (`03071ed`).
+      (exhausted at pass 3), 8 candidates + 5 skeletons. Top pick C-003 (now being registered). Next:
+      C-001/C-006 KSEI foreign + MF/PF share (one build/G0, owner floor ≥0.8%/mo), C-002 cap-proximity overlay.
+      Report: `docs/reports/ZCODE_HYPOTHESIS_SEARCH_2026-10-28.md`.
+- [ ] **Buyback C-009 (propose-only, `P-M/buyback/`)**: UNDERPOWERED standalone, not folded into C-003 (owner
+      2026-10-28, M4). Report: `docs/reports/ZCODE_BUYBACK_2026-10-28.md` (`03071ed`).
 - [ ] **2026-11-02 (before 08:50 WIB): apply the rebalance** per the switch note in
       `docs/reports/ZCODE_TUESDAY_2026-10-27.md` §J4.2 (merge both branches, update `idx_tickers` flags with the
-      old flags saved, `safe_restart.sh`, restart jurnal26, run the list tests).
-- [ ] **PEAD D-entry** — owner files or amends the proposed text (Tuesday report §J2).
-- [ ] Wednesday report DONE (`docs/reports/ZCODE_WEDNESDAY_2026-10-28.md`): K1–K5 all DONE; K5 recommends register E/P alone, widen (gross profitability first) after G1 — propose-only.
-- [ ] Owner decision on pushing both repos (HOLD; 5001 43 ahead, jurnal26 9 ahead).
+      old flags saved, `safe_restart.sh`, restart jurnal26, run the list tests). Dry-run Friday 10-30.
+- [ ] Owner decision on pushing both repos (HOLD; 5001 49 ahead, jurnal26 9 ahead, 2026-10-29).
 - [ ] Mimosa full-repo pre-commit scan still fails with `scanner_enobufs`; only focused reruns have completed.
 - [ ] `forward_bank` / `forward_fade` / `forward_regime` `ledger.json` cron appends remain uncommitted by design.
 
