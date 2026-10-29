@@ -38,7 +38,7 @@ ex, fq = g0dy.ex, g0dy.fq
 g1fq = _load("g1_fq_ep", P_M / "fq" / "g1_fq_ep.py")
 
 REG = HERE / "HYP-PM-0024_REGISTERED.md"
-REG_SHA256: str | None = None
+REG_SHA256: str | None = "37c548dd0db06dbb83b2f36905ad7d716ef740b5cdadfe66a0270f12bb28992d"   # HYP-PM-0024 registration, 2026-10-29 (D-119)
 
 # ---- registered parameters (HYP-PM-0024_REGISTERED.md §3) ----
 BAR = 3.300529                   # e_max_abs_z(615), deflation_audit/bar_v2.py

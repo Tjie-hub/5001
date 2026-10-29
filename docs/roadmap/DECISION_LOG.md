@@ -4122,6 +4122,31 @@ verdict stands) · **Approval authority:** Owner, 2026-10-29 ("complete all step
 
 ---
 
+### D-120 · HYP-PM-0024 G1 script pinned — before any G1 return of either arm
+**Status:** RECORDED · **Date:** 2026-10-29 · **Type:** G1 pin · **Approval authority:** Owner, 2026-10-29
+("complete all step").
+
+- **Script:** `P-M/dy/g1_dy.py` sha256 `6a202b2641cd7283cd13cab7ba8bd3864fdbd5cc4a95af3ab28d37f79a260532` (`REG_SHA256` = `37c548dd0db06dbb…`, the D-119 record, unchanged).
+  It refuses unless the registration, the four imported files (`g0_dy_breadth` `497f32b9…`, `extract_dividends`
+  `a73a2df2…`, `g1_fq_ep` `f5d35449…`, `g0_fq_ep_breadth` `d741e9b5…`), the freeze inputs, `hist_pre2021.pkl`
+  (`ea827fa6…`) and the production-ohlcv fingerprint (`3978ec8f…`) all match; `verify()` passed on 2026-10-29
+  with no return read. Tests: `test_g1_dy.py` 12 synthetic (32 with `test_extract_dividends.py`), all passing.
+- **Implementation details fixed here, before any run:** (1) in the FM, a constant regressor column (e.g. no
+  VOLEX name that month) is dropped, and a month whose design is still rank-deficient yields no coefficient —
+  least squares would otherwise split an exactly collinear yield/E-P effect between the two and fake an
+  increment; (2) the first formation's turnover is 1.0 as registered (a full round trip on the initial build —
+  conservative by 0.30% once).
+- **Disclosed limitation of the registered rank FM (found by a synthetic test, no real data):** percentile-ranked
+  controls absorb the rank-linear part of E/P only; if value pays in raw E/P levels, a yield signal correlated
+  with E/P can pick up the remainder. The FM t ≥ 2 condition is therefore a weaker separator than a levels FM;
+  read a pass with that in mind.
+- **Order:** this pin precedes the HYP-PM-0023 G1 (next), then the HYP-PM-0024 G1 — C-003's implementation is
+  fixed before E/P's outcome is seen.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
