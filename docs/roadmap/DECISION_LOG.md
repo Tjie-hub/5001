@@ -4065,6 +4065,36 @@ pre-open Q3 headline and +7.65% close on 10-28); verdict per the frozen stop rul
 
 ---
 
+### D-118 · Correction to D-117 — census in force 614 (not 615); pre-open root cause is the 17:00 overwrite; word-ticker matches
+**Status:** RECORDED · **Date:** 2026-10-29 · **Type:** correction (supersedes the statements named below; D-117's
+verdict stands) · **Approval authority:** Owner, 2026-10-29 ("complete all step", executing
+`ZCODE_BRIEF_C003_REGISTRATION_G1_2026-10-29.md` N0).
+
+- **Census.** D-117's "not counted; census unchanged at 615" and its would-be bar "3.300988 at 616" are
+  superseded. The census in force on 2026-10-28 was **614** (HYP-PM-0023, D-115; C-003 was not registered —
+  HYPOTHESIS_REGISTRY ended at HYP-PM-0023). Bars recomputed 2026-10-29 from the D-064 §C integral: 614 →
+  3.300069, **615 → 3.300529**, 616 → 3.300988. The would-be news-timing bar was therefore 3.300529. D-117's
+  verdict (withdrawn before registration, uncounted, no return read) is unaffected.
+- **Root cause.** D-117 cause 1 ("the 08:00 job … wrote on 8/119 trading days", scheduler not up) is
+  superseded. `logs/app.log*` shows `news_fetch_premarket` **completed on 33 of 37 trading days** 2026-09-08 →
+  10-28; the misses are 10-12..10-14 (OHLCV-repair outage, service up after 08:00) and 09-08 (log-window edge).
+  Older logs are rotated away, so before 2026-09-08 the cause is unknown, not "scheduler down". Cause 2 — the
+  17:00 `INSERT OR REPLACE` in `news_filter.save_news_count` — explains the gap by itself; no scheduler fix is
+  needed. Method note: logs `.3`/`.5` contain binary bytes, so a plain piped `grep` silently skips matches;
+  counts above use `grep -a`.
+- **Remedy in place.** Stopgap: `P-M/news_timing/snapshot_premarket.py` (read-only, append-only daily copy;
+  first capture 2026-10-29, `512b82b`, committed 08:33 before the open; 958 rows, sha `005caf98…`). Permanent:
+  `news_mentions_premarket`, written only by the 08:00 run, first write wins, nothing at/after 09:00
+  (`668ab02`; live after the next `safe_restart`).
+- **Construct defect for any re-freeze.** The crawl query `"<ticker> saham"` matches tickers that are common
+  words. 2026-10-29 pre-open: PADA 14, LABA 9, BANK 6, DATA 3 = 32 of 107 headlines (30%) not about the issuer
+  (e.g. LABA → "Laba Per Saham Algoma Steel …"). A re-frozen event definition must require the ticker code as a
+  whole word in the headline.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.

@@ -70,3 +70,12 @@ them. That is the mechanism the owner saw. It is currently the exception, not a 
    consumed.
 
 Artifacts: freeze + D-117 + this report. Commits local, **push HOLD** per standing rule.
+
+---
+
+**Correction note, 2026-10-29 (D-118).** Two statements above are superseded: (1) the census in force was
+**614**, not 615 — C-003 was not registered on 10-28 — so the would-be bar was 3.300529 (615), not 3.300988;
+(2) the 08:00 job did run: it completed on 33 of 37 trading days 2026-09-08 → 10-28, so the 17:00
+`INSERT OR REPLACE` alone explains the missing pre-open rows (no scheduler fix needed). Also: the
+`"<ticker> saham"` query matches word-tickers (PADA/LABA/BANK/DATA = 30% of the 10-29 pre-open headlines).
+The verdict (withdrawn, uncounted, no return read) is unchanged.
