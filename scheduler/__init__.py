@@ -316,6 +316,7 @@ def start_scheduler():
     # News mentions fetch — pre-market 08:00 WIB
     _add_job(scheduler, run_news_fetch, CronTrigger(
         day_of_week="mon-fri", hour=8, minute=0, timezone=WIB),
+        kwargs={"premarket": True},  # append-only pre-open copy; the 17:00 slot must not set it
         id="news_fetch_premarket", name="News Mentions Fetch 08:00 (pre-market)")
 
     # News mentions fetch — 17:00 WIB

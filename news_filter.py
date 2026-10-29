@@ -67,6 +67,31 @@ def _ensure_table(conn):
     """)
 
 
+# The 17:00 run's INSERT OR REPLACE erases the 08:00 row of the same (ticker, date), and with it the only
+# proof that a headline was out before the 09:00 open -- 111 of 119 days were unrecoverable by 2026-10-28
+# (D-117; root cause corrected by D-118). The pre-market run therefore also writes this table: written by
+# no other run, first write wins (INSERT OR IGNORE), and never once the sweep ends at or after the open.
+PREMARKET_CUTOFF = "09:00"
+
+
+def _ensure_premarket_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS news_mentions_premarket (
+            ticker TEXT NOT NULL,
+            date TEXT NOT NULL,
+            count INTEGER NOT NULL,
+            headlines_json TEXT,
+            captured_at TEXT NOT NULL,
+            PRIMARY KEY (ticker, date)
+        )
+    """)
+
+
+def _now():
+    """Clock seam for the pre-open cutoff (host clock is WIB, like updated_at)."""
+    return datetime.now()
+
+
 def _load_tickers():
     try:
         from data.fetcher import load_all_tickers
@@ -253,8 +278,11 @@ def get_spiking_tickers(conn=None):
             conn.close()
 
 
-def run_news_batch(tickers=None, delay=1.0):
+def run_news_batch(tickers=None, delay=1.0, premarket=False):
     """Fetch news for all tickers, persist counts. Returns rows-saved count.
+
+    premarket=True (the 08:00 job only) also keeps an append-only copy in
+    news_mentions_premarket, provided the sweep finished before the open.
 
     Compute-then-write: the whole RSS sweep runs with NO database connection
     open, and every row is written in one short transaction at the end. The
@@ -286,15 +314,29 @@ def run_news_batch(tickers=None, delay=1.0):
             logging.warning(f"[news] {ticker} error: {e}")
         time.sleep(delay)
 
+    captured = _now()
+    keep_premarket = premarket and captured.strftime("%H:%M") < PREMARKET_CUTOFF
+    if premarket and not keep_premarket:
+        logging.warning(f"[news] pre-market sweep ended {captured:%H:%M}, at/after the {PREMARKET_CUTOFF} "
+                        f"open -- not recorded in news_mentions_premarket")
+
     # ── Phase 2: write. One transaction, no network inside it. ──
     saved = 0
     conn = db_connect(_DB_PATH)
     try:
         _ensure_table(conn)
+        if keep_premarket:
+            _ensure_premarket_table(conn)
         for ticker, count, headlines in fetched:
             try:
                 save_news_count(ticker, count, headlines,
                                 trade_date=today_str, conn=conn)
+                if keep_premarket:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO news_mentions_premarket "
+                        "(ticker, date, count, headlines_json, captured_at) VALUES (?, ?, ?, ?, ?)",
+                        (ticker, today_str, count, json.dumps(headlines[:20], ensure_ascii=False),
+                         captured.strftime("%Y-%m-%d %H:%M:%S")))
                 saved += 1
             except Exception as e:
                 logging.warning(f"[news] {ticker} save error: {e}")

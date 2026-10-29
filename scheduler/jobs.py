@@ -820,10 +820,12 @@ def run_foreign_snapshot():
         logging.error(f"run_foreign_snapshot error: {e}")
 
 
-def run_news_fetch():
+def run_news_fetch(premarket=False):
     """Fetch Google News headlines per ticker, persist to news_mentions table.
 
     Spike detection (today_count >= 3× 30d avg) is consumed by flow_broker_report.
+    premarket=True is set only on the 08:00 slot: it also keeps the append-only
+    pre-open copy (news_filter.news_mentions_premarket, D-117/D-118).
     """
     if _holiday_skip("run_news_fetch"):
         return
@@ -832,7 +834,7 @@ def run_news_fetch():
     logger.info(f"[{now_str}] News fetch dimulai...")
     try:
         from news_filter import run_news_batch
-        saved = run_news_batch()
+        saved = run_news_batch(premarket=premarket)
         logger.info(f"[{dt.now(WIB).strftime('%H:%M')}] News fetch selesai. {saved} tickers tersimpan.")
     except Exception as e:
         logger.warning(f"[{dt.now(WIB).strftime('%H:%M')}] News fetch error: {e}")
