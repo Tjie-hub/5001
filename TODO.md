@@ -116,9 +116,9 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
       any payout work (D-122).
 - [ ] **Permanent pre-open capture — code done, NOT live** (`668ab02`): the 08:00 run (`premarket=True`, set on
       that slot only) also writes append-only `news_mentions_premarket` (first write wins, nothing at/after 09:00);
-      5 new tests, 661 guard + scheduler tests pass, `preflight_boot` OK (53 jobs). **Owner: run
-      `scripts/safe_restart.sh` after today's 17:00 news run logs "selesai" (~17:25)** — the session's attempt to
-      arm a one-shot restart was blocked by the permission classifier (production deploy). Until it is live, run
+      5 new tests, 661 guard + scheduler tests pass, `preflight_boot` OK (53 jobs). **Restart armed
+      (owner-approved 2026-10-29):** one-shot `claude-news-premarket-restart-20261029.timer` at 17:35 waits for the
+      17:00 news run to log "selesai", then runs `scripts/safe_restart.sh` (preflight-gated). Until it is live, run
       `docs/research_programs/P-M/news_timing/snapshot_premarket.py` each trading day between 08:30 and 17:00
       (a timer for it was also blocked). Verify the next morning: `news_mentions_premarket` has rows at ~08:22.
 - [ ] **News construct (any re-freeze):** require the ticker code as a whole word in the headline (word-tickers).
