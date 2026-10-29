@@ -4095,6 +4095,33 @@ verdict stands) · **Approval authority:** Owner, 2026-10-29 ("complete all step
 
 ---
 
+### D-119 · HYP-PM-0024 ({PY} dividend-yield level) registered — one arm, census 614 → 615; G1 spec fixed before any run
+**Status:** RECORDED · **Date:** 2026-10-29 · **Type:** Hypothesis registration · **Approval authority:** Owner,
+2026-10-28 ("Daftarkan") and 2026-10-29 ("complete all step"; FM daily data: "Pin pickle, full 2009→").
+
+- **Registration record:** `P-M/dy/HYP-PM-0024_REGISTERED.md`, sha256 `37c548dd0db06dbb83b2f36905ad7d716ef740b5cdadfe66a0270f12bb28992d`, to be pinned in
+  `g1_dy.py::REG_SHA256`. Spec = freeze §1–§2 + §8 (`G0_FREEZE_DY_DRAFT_2026-10-28.md`, sha `2789ab21…`, D-116;
+  G0 passed per D-116).
+- **Arm:** EW top quintile of valid-yield names (TTM dividends paid ÷ KSEI mcap) vs the EW top-200 universe, monthly
+  from 2009-04, price-only, net 0.60% RT per month on turnover; one-sided NW t vs bar **3.300529**
+  (`e_max_abs_z(615)`); kill if t < bar, either half ≤ 0, or FM incremental yield t < 2. The +0.80%/mo floor is
+  reported, not a kill condition (frozen kill rule).
+- **Details the freeze left open, fixed here before any return is read:** NW lags 6 (the {FQ} G1's rule); per-month
+  net with first-formation turnover 1.0; halves by month count; FM on percentile-ranked regressors with VOLEX as the
+  top-decile Parkinson-60 dummy, ≥ 30 names per month; FM daily data = `hist_pre2021.pkl` (sha `ea827fa6…`) before
+  2021-07-05 + production `ohlcv` (fingerprint `3978ec8f…`) after — the owner's choice; survivorship disclosed
+  (Parkinson-60 coverage 72–85% of the universe 2009–2020).
+- **Disclosed:** price-only returns understate a high-yield book's spread by about the yield gap / 12 per month (gap
+  reported at G1); MDE80 at the deflated bar ≈ 1.01%/mo net; t at the floor 3.27 at G0 (just under the bar);
+  multiplicity debt alpha_search_v2 #6.
+- **Census:** **614 → 615.** `HYPOTHESIS_REGISTRY.md` row + {PY} family line appended (no existing row edited).
+- **G1 not run by this entry.** Order per the 10-29 brief: G1 script pinned (next entry) → HYP-PM-0023 G1 once →
+  HYP-PM-0024 G1 once.
+
+**Amendment.** Only by a superseding D-entry.
+
+---
+
 ## 3. Pointers — decisions recorded in full elsewhere (not duplicated)
 
 Per 42010 §5.7 the rationale must be *recorded*, not *centralized*. These eight carry full ADRs in [[01_SCIENTIFIC_FOUNDATION]] §14 and are indexed here only.
