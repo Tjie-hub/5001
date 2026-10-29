@@ -114,13 +114,11 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
       total-return dividend-yield test would be a new registration carrying this result as debt.
 - [ ] **`extract_dividends` scale errors** (ESSA 775×, TUGU 677× mcap; MLPL/ADMF/TINS ~1×; 83 negatives) — fix before
       any payout work (D-122).
-- [ ] **Permanent pre-open capture — code done, NOT live** (`668ab02`): the 08:00 run (`premarket=True`, set on
-      that slot only) also writes append-only `news_mentions_premarket` (first write wins, nothing at/after 09:00);
-      5 new tests, 661 guard + scheduler tests pass, `preflight_boot` OK (53 jobs). **Restart armed
-      (owner-approved 2026-10-29):** one-shot `claude-news-premarket-restart-20261029.timer` at 17:35 waits for the
-      17:00 news run to log "selesai", then runs `scripts/safe_restart.sh` (preflight-gated). Until it is live, run
-      `docs/research_programs/P-M/news_timing/snapshot_premarket.py` each trading day between 08:30 and 17:00
-      (a timer for it was also blocked). Verify the next morning: `news_mentions_premarket` has rows at ~08:22.
+- [x] **Permanent pre-open capture LIVE** (`668ab02`): 5001 restarted 2026-10-29 17:35:07 by the owner-approved
+      one-shot (after the 17:00 news run finished 17:23; preflight OK, 53 jobs). From 10-30 the 08:00 run writes
+      append-only `news_mentions_premarket` (first write wins, nothing at/after 09:00).
+- [ ] **Verify 10-30 ~08:25:** `news_mentions_premarket` has ~958 rows for 2026-10-30 with `captured_at` 08:2x; then
+      the manual `snapshot_premarket.py` is no longer needed.
 - [ ] **News construct (any re-freeze):** require the ticker code as a whole word in the headline (word-tickers).
 - [ ] **Hypothesis search 2026-10-28 (propose-only, `P-M/search/`)**: 64-row exclusion index, 41-cell space map
       (exhausted at pass 3), 8 candidates + 5 skeletons. Top pick C-003 (now being registered). Next:
