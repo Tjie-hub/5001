@@ -40,8 +40,25 @@
       "primary": false,
       "censored": false,
       "generated_utc": "2026-10-23T02:40:17.700585+00:00"
+    },
+    {
+      "ticker": "BBNI",
+      "signal_date": "2026-10-12",
+      "entry_date": "2026-10-13",
+      "entry_open": 3380.0,
+      "exit_date": "2026-10-26",
+      "exit_close": 3470.0,
+      "gross_return": 0.026627,
+      "net_return": 0.020627,
+      "ewbook_return": -0.105356,
+      "excess_ewbook": 0.125983,
+      "ihsg_return": -0.091613,
+      "excess_ihsg": 0.11224,
+      "primary": false,
+      "censored": false,
+      "generated_utc": "2026-10-27T02:40:08.762533+00:00"
     }
   ],
-  "fingerprint_sha256": "2aa34c1ecac1ea47d410462386424d07769aee5ddf9eaaabf087bec8a8c9cffe",
-  "last_append_utc": "2026-10-23T02:40:17.965432+00:00"
+  "fingerprint_sha256": "30f4054b625e20094d4cbd4996bf4d91fbb4547fc7380a91ef227f996ab79d20",
+  "last_append_utc": "2026-10-27T02:40:08.762680+00:00"
 }
