@@ -117,8 +117,9 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
 - [x] **Permanent pre-open capture LIVE** (`668ab02`): 5001 restarted 2026-10-29 17:35:07 by the owner-approved
       one-shot (after the 17:00 news run finished 17:23; preflight OK, 53 jobs). From 10-30 the 08:00 run writes
       append-only `news_mentions_premarket` (first write wins, nothing at/after 09:00).
-- [ ] **Verify 10-30 ~08:25:** `news_mentions_premarket` has ~958 rows for 2026-10-30 with `captured_at` 08:2x; then
-      the manual `snapshot_premarket.py` is no longer needed.
+- [x] **Verified 2026-11-06 (debug sweep):** `news_mentions_premarket` has **958 rows for all five live days**
+      (10-30, 11-02, 11-03, 11-04, 11-05), `captured_at` 08:21:47–08:23:19 WIB each day. The 08:00 append-only
+      capture is healthy; the manual `snapshot_premarket.py` is retired.
 - [ ] **News construct (any re-freeze):** require the ticker code as a whole word in the headline (word-tickers).
 - [ ] **Hypothesis search 2026-10-28 (propose-only, `P-M/search/`)**: 64-row exclusion index, 41-cell space map
       (exhausted at pass 3), 8 candidates + 5 skeletons. Top pick C-003 (now being registered). Next:
@@ -129,6 +130,10 @@ _Source: `git log` 10-23..10-26, `docs/reports/ZCODE_MONDAY_2026-10-26.md`,
 - [ ] **2026-11-02 (before 08:50 WIB): apply the rebalance** per the switch note in
       `docs/reports/ZCODE_TUESDAY_2026-10-27.md` §J4.2 (merge both branches, update `idx_tickers` flags with the
       old flags saved, `safe_restart.sh`, restart jurnal26, run the list tests). Dry-run Friday 10-30.
+      **Measured 2026-11-06 (debug sweep): still NOT applied** — 12/12 sampled flags stale
+      (ISAT/PTBA in_idx30=0, PGEO/UNVR in_idx30=1, SMGR lq45=0, SCMA lq45=1, AALI/TINS/TKIM in_idx80=0,
+      HEAL/MIKA/SMRA in_idx80=1 — all pre-rebalance values). Owner window required; index-flag views
+      show pre-11-02 membership until then.
 - [ ] Owner decision on pushing both repos (HOLD; 5001 49 ahead, jurnal26 9 ahead, 2026-10-29).
 - [ ] Mimosa full-repo pre-commit scan still fails with `scanner_enobufs`; only focused reruns have completed.
 - [ ] `forward_bank` / `forward_fade` / `forward_regime` `ledger.json` cron appends remain uncommitted by design.

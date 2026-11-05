@@ -16,6 +16,7 @@ import json
 import logging
 import logging.handlers
 import os
+import re
 import traceback
 import uuid
 from datetime import datetime, timezone
@@ -141,6 +142,40 @@ class SecretRedactionFilter(logging.Filter):
         return True
 
 
+class YfinanceNoiseFilter(logging.Filter):
+    """Downgrade yfinance's per-symbol "possibly delisted" errors to DEBUG.
+
+    The daily incremental fetch (steady ~140-340 ERROR lines/day at the
+    10:10 staged-fill fetch, scraper backfills and the 21:00 reconcile) is
+    per-symbol vendor noise: tickers without a bar for the requested window
+    (suspended for the day, or the 2026-07-18 IDX delisting batch that still
+    carried status='active' in idx_tickers) each log one ERROR from the
+    yfinance library. Only the per-symbol "$TICK.JK: possibly delisted..."
+    lines are downgraded to DEBUG; the batch summaries ("N Failed downloads:"
+    header and the "['TICK.JK', ...]" ticker lists) stay at ERROR so every
+    run still surfaces exactly which symbols failed.
+
+    Attached to the `yfinance` logger (logger-level filters run before the
+    handlers' level checks, so mutating levelno here is what makes an
+    INFO-level handler drop the record). `symbols_suppressed` counts the
+    per-symbol suppressions for quick log/sweep inspection.
+    """
+
+    _PER_SYMBOL = re.compile(r"^\$[A-Z^]{1,6}(\.JK)?: possibly delisted")
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.symbols_suppressed = 0
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        if record.levelno >= logging.ERROR and self._PER_SYMBOL.match(msg):
+            record.levelno = logging.DEBUG
+            record.levelname = "DEBUG"
+            self.symbols_suppressed += 1
+        return True
+
+
 def set_correlation_id(cid: str | None = None) -> str:
     """Set a correlation ID for the current thread (used by scheduler jobs)."""
     cid = cid or str(uuid.uuid4())
@@ -186,4 +221,5 @@ def setup_logging(log_dir: str = 'logs', level: int = logging.INFO) -> None:
     root.addHandler(console_handler)
 
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
+    logging.getLogger('yfinance').addFilter(YfinanceNoiseFilter())
     logging.info('Structured JSON logging initialised (level=%s)', logging.getLevelName(level))
