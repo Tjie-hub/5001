@@ -57,8 +57,25 @@
       "primary": false,
       "censored": false,
       "generated_utc": "2026-10-27T02:40:08.762533+00:00"
+    },
+    {
+      "ticker": "BBCA",
+      "signal_date": "2026-10-16",
+      "entry_date": "2026-10-19",
+      "entry_open": 4820.0,
+      "exit_date": "2026-10-30",
+      "exit_close": 4980.0,
+      "gross_return": 0.033195,
+      "net_return": 0.027195,
+      "ewbook_return": -0.009352,
+      "excess_ewbook": 0.036548,
+      "ihsg_return": 0.019181,
+      "excess_ihsg": 0.008014,
+      "primary": true,
+      "censored": false,
+      "generated_utc": "2026-11-02T02:40:14.896433+00:00"
     }
   ],
-  "fingerprint_sha256": "30f4054b625e20094d4cbd4996bf4d91fbb4547fc7380a91ef227f996ab79d20",
-  "last_append_utc": "2026-10-27T02:40:08.762680+00:00"
+  "fingerprint_sha256": "a6f7d044b2ef29a978ece524575e3ccd5f502cd5b45f8a2031f21a7fbb3f3348",
+  "last_append_utc": "2026-11-02T02:40:15.633516+00:00"
 }
