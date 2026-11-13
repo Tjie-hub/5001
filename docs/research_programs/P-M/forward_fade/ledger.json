@@ -15893,6 +15893,4686 @@
       },
       "censored": false,
       "generated_utc": "2026-11-06T02:35:20.781484+00:00"
+    },
+    {
+      "ticker": "CARS",
+      "signal_date": "2026-10-08",
+      "entry_date": "2026-10-09",
+      "entry_open": 101.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-15",
+          "exit_close": 99.0,
+          "gross_return": -0.019802,
+          "net_return": -0.025802,
+          "ihsg_return": -0.029016,
+          "excess_ihsg": 0.003214,
+          "ewbook_return": -0.044884,
+          "excess_ewbook": 0.019082
+        },
+        "10": {
+          "exit_date": "2026-10-22",
+          "exit_close": 92.0,
+          "gross_return": -0.089109,
+          "net_return": -0.095109,
+          "ihsg_return": -0.107816,
+          "excess_ihsg": 0.012707,
+          "ewbook_return": -0.130837,
+          "excess_ewbook": 0.035728
+        },
+        "20": {
+          "exit_date": "2026-11-05",
+          "exit_close": 84.0,
+          "gross_return": -0.168317,
+          "net_return": -0.174317,
+          "ihsg_return": -0.167039,
+          "excess_ihsg": -0.007278,
+          "ewbook_return": -0.229851,
+          "excess_ewbook": 0.055534
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.616505+00:00"
+    },
+    {
+      "ticker": "DSNG",
+      "signal_date": "2026-10-08",
+      "entry_date": "2026-10-09",
+      "entry_open": 1500.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-15",
+          "exit_close": 1465.0,
+          "gross_return": -0.023333,
+          "net_return": -0.029333,
+          "ihsg_return": -0.029016,
+          "excess_ihsg": -0.000317,
+          "ewbook_return": -0.044884,
+          "excess_ewbook": 0.015551
+        },
+        "10": {
+          "exit_date": "2026-10-22",
+          "exit_close": 1345.0,
+          "gross_return": -0.103333,
+          "net_return": -0.109333,
+          "ihsg_return": -0.107816,
+          "excess_ihsg": -0.001517,
+          "ewbook_return": -0.130837,
+          "excess_ewbook": 0.021504
+        },
+        "20": {
+          "exit_date": "2026-11-05",
+          "exit_close": 1370.0,
+          "gross_return": -0.086667,
+          "net_return": -0.092667,
+          "ihsg_return": -0.167039,
+          "excess_ihsg": 0.074372,
+          "ewbook_return": -0.229851,
+          "excess_ewbook": 0.137184
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.617705+00:00"
+    },
+    {
+      "ticker": "MKPI",
+      "signal_date": "2026-10-08",
+      "entry_date": "2026-10-09",
+      "entry_open": 20900.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-15",
+          "exit_close": 20550.0,
+          "gross_return": -0.016746,
+          "net_return": -0.022746,
+          "ihsg_return": -0.029016,
+          "excess_ihsg": 0.00627,
+          "ewbook_return": -0.044884,
+          "excess_ewbook": 0.022137
+        },
+        "10": {
+          "exit_date": "2026-10-22",
+          "exit_close": 19875.0,
+          "gross_return": -0.049043,
+          "net_return": -0.055043,
+          "ihsg_return": -0.107816,
+          "excess_ihsg": 0.052773,
+          "ewbook_return": -0.130837,
+          "excess_ewbook": 0.075794
+        },
+        "20": {
+          "exit_date": "2026-11-05",
+          "exit_close": 18825.0,
+          "gross_return": -0.099282,
+          "net_return": -0.105282,
+          "ihsg_return": -0.167039,
+          "excess_ihsg": 0.061756,
+          "ewbook_return": -0.229851,
+          "excess_ewbook": 0.124569
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.621654+00:00"
+    },
+    {
+      "ticker": "MSIE",
+      "signal_date": "2026-10-08",
+      "entry_date": "2026-10-09",
+      "entry_open": 119.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-15",
+          "exit_close": 94.0,
+          "gross_return": -0.210084,
+          "net_return": -0.216084,
+          "ihsg_return": -0.029016,
+          "excess_ihsg": -0.187068,
+          "ewbook_return": -0.044884,
+          "excess_ewbook": -0.1712
+        },
+        "10": {
+          "exit_date": "2026-10-22",
+          "exit_close": 91.0,
+          "gross_return": -0.235294,
+          "net_return": -0.241294,
+          "ihsg_return": -0.107816,
+          "excess_ihsg": -0.133478,
+          "ewbook_return": -0.130837,
+          "excess_ewbook": -0.110457
+        },
+        "20": {
+          "exit_date": "2026-11-05",
+          "exit_close": 74.0,
+          "gross_return": -0.378151,
+          "net_return": -0.384151,
+          "ihsg_return": -0.167039,
+          "excess_ihsg": -0.217113,
+          "ewbook_return": -0.229851,
+          "excess_ewbook": -0.1543
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.622077+00:00"
+    },
+    {
+      "ticker": "NISP",
+      "signal_date": "2026-10-08",
+      "entry_date": "2026-10-09",
+      "entry_open": 1240.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-15",
+          "exit_close": 1225.0,
+          "gross_return": -0.012097,
+          "net_return": -0.018097,
+          "ihsg_return": -0.029016,
+          "excess_ihsg": 0.010919,
+          "ewbook_return": -0.044884,
+          "excess_ewbook": 0.026787
+        },
+        "10": {
+          "exit_date": "2026-10-22",
+          "exit_close": 1180.0,
+          "gross_return": -0.048387,
+          "net_return": -0.054387,
+          "ihsg_return": -0.107816,
+          "excess_ihsg": 0.053429,
+          "ewbook_return": -0.130837,
+          "excess_ewbook": 0.07645
+        },
+        "20": {
+          "exit_date": "2026-11-05",
+          "exit_close": 1150.0,
+          "gross_return": -0.072581,
+          "net_return": -0.078581,
+          "ihsg_return": -0.167039,
+          "excess_ihsg": 0.088458,
+          "ewbook_return": -0.229851,
+          "excess_ewbook": 0.15127
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.622494+00:00"
+    },
+    {
+      "ticker": "TCPI",
+      "signal_date": "2026-10-08",
+      "entry_date": "2026-10-09",
+      "entry_open": 1280.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-15",
+          "exit_close": 1750.0,
+          "gross_return": 0.367188,
+          "net_return": 0.361187,
+          "ihsg_return": -0.029016,
+          "excess_ihsg": 0.390204,
+          "ewbook_return": -0.044884,
+          "excess_ewbook": 0.406071
+        },
+        "10": {
+          "exit_date": "2026-10-22",
+          "exit_close": 1450.0,
+          "gross_return": 0.132812,
+          "net_return": 0.126812,
+          "ihsg_return": -0.107816,
+          "excess_ihsg": 0.234629,
+          "ewbook_return": -0.130837,
+          "excess_ewbook": 0.25765
+        },
+        "20": {
+          "exit_date": "2026-11-05",
+          "exit_close": 1505.0,
+          "gross_return": 0.175781,
+          "net_return": 0.169781,
+          "ihsg_return": -0.167039,
+          "excess_ihsg": 0.33682,
+          "ewbook_return": -0.229851,
+          "excess_ewbook": 0.399632
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.624569+00:00"
+    },
+    {
+      "ticker": "WIFI",
+      "signal_date": "2026-10-08",
+      "entry_date": "2026-10-09",
+      "entry_open": 1375.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-15",
+          "exit_close": 1290.0,
+          "gross_return": -0.061818,
+          "net_return": -0.067818,
+          "ihsg_return": -0.029016,
+          "excess_ihsg": -0.038802,
+          "ewbook_return": -0.044884,
+          "excess_ewbook": -0.022934
+        },
+        "10": {
+          "exit_date": "2026-10-22",
+          "exit_close": 1110.0,
+          "gross_return": -0.192727,
+          "net_return": -0.198727,
+          "ihsg_return": -0.107816,
+          "excess_ihsg": -0.090911,
+          "ewbook_return": -0.130837,
+          "excess_ewbook": -0.06789
+        },
+        "20": {
+          "exit_date": "2026-11-05",
+          "exit_close": 810.0,
+          "gross_return": -0.410909,
+          "net_return": -0.416909,
+          "ihsg_return": -0.167039,
+          "excess_ihsg": -0.24987,
+          "ewbook_return": -0.229851,
+          "excess_ewbook": -0.187058
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.625767+00:00"
+    },
+    {
+      "ticker": "BAIK",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 238.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 224.0,
+          "gross_return": -0.058824,
+          "net_return": -0.064824,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": 0.086456,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": 0.109037
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 214.0,
+          "gross_return": -0.10084,
+          "net_return": -0.10684,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": 0.002838,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": 0.016623
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 179.0,
+          "gross_return": -0.247899,
+          "net_return": -0.253899,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.080575,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.008141
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.614952+00:00"
+    },
+    {
+      "ticker": "BINA",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 3970.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 3900.0,
+          "gross_return": -0.017632,
+          "net_return": -0.023632,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": 0.127647,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": 0.150229
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 3890.0,
+          "gross_return": -0.020151,
+          "net_return": -0.026151,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": 0.083527,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": 0.097313
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 3640.0,
+          "gross_return": -0.083123,
+          "net_return": -0.089123,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": 0.0842,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": 0.156634
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.615435+00:00"
+    },
+    {
+      "ticker": "BREN",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 2700.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 1855.0,
+          "gross_return": -0.312963,
+          "net_return": -0.318963,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.167684,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.145102
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 2380.0,
+          "gross_return": -0.118519,
+          "net_return": -0.124519,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.01484,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.001055
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 2110.0,
+          "gross_return": -0.218519,
+          "net_return": -0.224519,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.051195,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": 0.021239
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.615812+00:00"
+    },
+    {
+      "ticker": "BRIS",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 1360.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 1095.0,
+          "gross_return": -0.194853,
+          "net_return": -0.200853,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.049574,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.026992
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 1020.0,
+          "gross_return": -0.25,
+          "net_return": -0.256,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.146321,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.132536
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 1150.0,
+          "gross_return": -0.154412,
+          "net_return": -0.160412,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": 0.012912,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": 0.085346
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.616006+00:00"
+    },
+    {
+      "ticker": "BUKA",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 100.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 98.0,
+          "gross_return": -0.02,
+          "net_return": -0.026,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": 0.125279,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": 0.147861
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 109.0,
+          "gross_return": 0.09,
+          "net_return": 0.084,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": 0.193679,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": 0.207464
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 97.0,
+          "gross_return": -0.03,
+          "net_return": -0.036,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": 0.137324,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": 0.209758
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.616201+00:00"
+    },
+    {
+      "ticker": "CDIA",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 560.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 404.0,
+          "gross_return": -0.278571,
+          "net_return": -0.284571,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.133292,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.110711
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 426.0,
+          "gross_return": -0.239286,
+          "net_return": -0.245286,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.135607,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.121822
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 330.0,
+          "gross_return": -0.410714,
+          "net_return": -0.416714,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.243391,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.170956
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.616661+00:00"
+    },
+    {
+      "ticker": "COIN",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 680.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 434.0,
+          "gross_return": -0.361765,
+          "net_return": -0.367765,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.216485,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.193904
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 396.0,
+          "gross_return": -0.417647,
+          "net_return": -0.423647,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.313969,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.300183
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 296.0,
+          "gross_return": -0.564706,
+          "net_return": -0.570706,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.397382,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.324948
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.616907+00:00"
+    },
+    {
+      "ticker": "CUAN",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 775.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 540.0,
+          "gross_return": -0.303226,
+          "net_return": -0.309226,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.157946,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.135365
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 510.0,
+          "gross_return": -0.341935,
+          "net_return": -0.347935,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.238257,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.224472
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 358.0,
+          "gross_return": -0.538065,
+          "net_return": -0.544065,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.370741,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.298307
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.617093+00:00"
+    },
+    {
+      "ticker": "DGWG",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 324.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 290.0,
+          "gross_return": -0.104938,
+          "net_return": -0.110938,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": 0.040341,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": 0.062923
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 270.0,
+          "gross_return": -0.166667,
+          "net_return": -0.172667,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.062988,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.049203
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 258.0,
+          "gross_return": -0.203704,
+          "net_return": -0.209704,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.03638,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": 0.036054
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.617396+00:00"
+    },
+    {
+      "ticker": "ENAK",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 185.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 140.0,
+          "gross_return": -0.243243,
+          "net_return": -0.249243,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.097964,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.075382
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 180.0,
+          "gross_return": -0.027027,
+          "net_return": -0.033027,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": 0.076651,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": 0.090437
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 159.0,
+          "gross_return": -0.140541,
+          "net_return": -0.146541,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": 0.026783,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": 0.099217
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.618035+00:00"
+    },
+    {
+      "ticker": "ENRG",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 990.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 880.0,
+          "gross_return": -0.111111,
+          "net_return": -0.117111,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": 0.034168,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": 0.05675
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 880.0,
+          "gross_return": -0.111111,
+          "net_return": -0.117111,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.007433,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": 0.006353
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 555.0,
+          "gross_return": -0.439394,
+          "net_return": -0.445394,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.27207,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.199636
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.618167+00:00"
+    },
+    {
+      "ticker": "FUTR",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 254.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 181.0,
+          "gross_return": -0.287402,
+          "net_return": -0.293402,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.142122,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.119541
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 167.0,
+          "gross_return": -0.34252,
+          "net_return": -0.34852,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.238841,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.225056
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 105.0,
+          "gross_return": -0.586614,
+          "net_return": -0.592614,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.41929,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.346856
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.618684+00:00"
+    },
+    {
+      "ticker": "GTSI",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 129.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 99.0,
+          "gross_return": -0.232558,
+          "net_return": -0.238558,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.087279,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.064697
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 98.0,
+          "gross_return": -0.24031,
+          "net_return": -0.24631,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.136632,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.122846
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 66.0,
+          "gross_return": -0.488372,
+          "net_return": -0.494372,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.321048,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.248614
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.619034+00:00"
+    },
+    {
+      "ticker": "IMPC",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 1330.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 920.0,
+          "gross_return": -0.308271,
+          "net_return": -0.314271,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.162991,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.14041
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 875.0,
+          "gross_return": -0.342105,
+          "net_return": -0.348105,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.238427,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.224642
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 775.0,
+          "gross_return": -0.417293,
+          "net_return": -0.423293,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.24997,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.177535
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.619566+00:00"
+    },
+    {
+      "ticker": "INET",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 250.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 187.0,
+          "gross_return": -0.252,
+          "net_return": -0.258,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.106721,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.084139
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 191.0,
+          "gross_return": -0.236,
+          "net_return": -0.242,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.132321,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.118536
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 158.0,
+          "gross_return": -0.368,
+          "net_return": -0.374,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.200676,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.128242
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.619801+00:00"
+    },
+    {
+      "ticker": "JARR",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 3120.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 2270.0,
+          "gross_return": -0.272436,
+          "net_return": -0.278436,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.127157,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.104575
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 2490.0,
+          "gross_return": -0.201923,
+          "net_return": -0.207923,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.098245,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.084459
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 2280.0,
+          "gross_return": -0.269231,
+          "net_return": -0.275231,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.101907,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.029473
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.620178+00:00"
+    },
+    {
+      "ticker": "JAWA",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 147.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 107.0,
+          "gross_return": -0.272109,
+          "net_return": -0.278109,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.126829,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.104248
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 116.0,
+          "gross_return": -0.210884,
+          "net_return": -0.216884,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.107206,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.093421
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 106.0,
+          "gross_return": -0.278912,
+          "net_return": -0.284912,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.111588,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.039154
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.620342+00:00"
+    },
+    {
+      "ticker": "KETR",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 880.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 655.0,
+          "gross_return": -0.255682,
+          "net_return": -0.261682,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.110402,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.087821
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 625.0,
+          "gross_return": -0.289773,
+          "net_return": -0.295773,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.186094,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.172309
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 456.0,
+          "gross_return": -0.481818,
+          "net_return": -0.487818,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.314494,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.24206
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.620585+00:00"
+    },
+    {
+      "ticker": "MDIA",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 138.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 96.0,
+          "gross_return": -0.304348,
+          "net_return": -0.310348,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.159068,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.136487
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 94.0,
+          "gross_return": -0.318841,
+          "net_return": -0.324841,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.215162,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.201377
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 69.0,
+          "gross_return": -0.5,
+          "net_return": -0.506,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.332676,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.260242
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.621241+00:00"
+    },
+    {
+      "ticker": "MGLV",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 13400.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 11450.0,
+          "gross_return": -0.145522,
+          "net_return": -0.151522,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.000243,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": 0.022338
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 12300.0,
+          "gross_return": -0.08209,
+          "net_return": -0.08809,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": 0.021589,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": 0.035374
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 8225.0,
+          "gross_return": -0.386194,
+          "net_return": -0.392194,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.21887,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.146436
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.621411+00:00"
+    },
+    {
+      "ticker": "MLPT",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 930.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 740.0,
+          "gross_return": -0.204301,
+          "net_return": -0.210301,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.059022,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.03644
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 630.0,
+          "gross_return": -0.322581,
+          "net_return": -0.328581,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.218902,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.205117
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 384.0,
+          "gross_return": -0.587097,
+          "net_return": -0.593097,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.419773,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.347339
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.621839+00:00"
+    },
+    {
+      "ticker": "PIPA",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 142.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 104.0,
+          "gross_return": -0.267606,
+          "net_return": -0.273606,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.122326,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.099745
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 111.0,
+          "gross_return": -0.21831,
+          "net_return": -0.22431,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.114631,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.100846
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 77.0,
+          "gross_return": -0.457746,
+          "net_return": -0.463746,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.290423,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.217989
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.623112+00:00"
+    },
+    {
+      "ticker": "RISE",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 605.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 550.0,
+          "gross_return": -0.090909,
+          "net_return": -0.096909,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": 0.05437,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": 0.076952
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 535.0,
+          "gross_return": -0.115702,
+          "net_return": -0.121702,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.012024,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": 0.001761
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 478.0,
+          "gross_return": -0.209917,
+          "net_return": -0.215917,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.042594,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": 0.029841
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.623642+00:00"
+    },
+    {
+      "ticker": "SILO",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 1910.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 1745.0,
+          "gross_return": -0.086387,
+          "net_return": -0.092387,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": 0.058892,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": 0.081473
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 1860.0,
+          "gross_return": -0.026178,
+          "net_return": -0.032178,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": 0.077501,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": 0.091286
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 1800.0,
+          "gross_return": -0.057592,
+          "net_return": -0.063592,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": 0.109732,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": 0.182166
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.623966+00:00"
+    },
+    {
+      "ticker": "TOTL",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 1510.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 1290.0,
+          "gross_return": -0.145695,
+          "net_return": -0.151695,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.000416,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": 0.022165
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 1395.0,
+          "gross_return": -0.076159,
+          "net_return": -0.082159,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": 0.02752,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": 0.041305
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 1400.0,
+          "gross_return": -0.072848,
+          "net_return": -0.078848,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": 0.094476,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": 0.16691
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.624837+00:00"
+    },
+    {
+      "ticker": "TPIA",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 1680.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 1205.0,
+          "gross_return": -0.282738,
+          "net_return": -0.288738,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.137459,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.114877
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 1330.0,
+          "gross_return": -0.208333,
+          "net_return": -0.214333,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.104655,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.09087
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 1245.0,
+          "gross_return": -0.258929,
+          "net_return": -0.264929,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.091605,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.019171
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.625008+00:00"
+    },
+    {
+      "ticker": "UANG",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 2980.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 2430.0,
+          "gross_return": -0.184564,
+          "net_return": -0.190564,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.039284,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.016703
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 2270.0,
+          "gross_return": -0.238255,
+          "net_return": -0.244255,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.134577,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.120791
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 1800.0,
+          "gross_return": -0.395973,
+          "net_return": -0.401973,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.228649,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.156215
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.625265+00:00"
+    },
+    {
+      "ticker": "VKTR",
+      "signal_date": "2026-10-09",
+      "entry_date": "2026-10-12",
+      "entry_open": 645.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-16",
+          "exit_close": 374.0,
+          "gross_return": -0.420155,
+          "net_return": -0.426155,
+          "ihsg_return": -0.151279,
+          "excess_ihsg": -0.274876,
+          "ewbook_return": -0.173861,
+          "excess_ewbook": -0.252294
+        },
+        "10": {
+          "exit_date": "2026-10-23",
+          "exit_close": 400.0,
+          "gross_return": -0.379845,
+          "net_return": -0.385845,
+          "ihsg_return": -0.109679,
+          "excess_ihsg": -0.276166,
+          "ewbook_return": -0.123464,
+          "excess_ewbook": -0.262381
+        },
+        "20": {
+          "exit_date": "2026-11-06",
+          "exit_close": 232.0,
+          "gross_return": -0.64031,
+          "net_return": -0.64631,
+          "ihsg_return": -0.173324,
+          "excess_ihsg": -0.472986,
+          "ewbook_return": -0.245758,
+          "excess_ewbook": -0.400552
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-09T02:35:11.625551+00:00"
+    },
+    {
+      "ticker": "AMRT",
+      "signal_date": "2026-10-12",
+      "entry_date": "2026-10-13",
+      "entry_open": 1225.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-19",
+          "exit_close": 985.0,
+          "gross_return": -0.195918,
+          "net_return": -0.201918,
+          "ihsg_return": -0.155262,
+          "excess_ihsg": -0.046656,
+          "ewbook_return": -0.169799,
+          "excess_ewbook": -0.032119
+        },
+        "10": {
+          "exit_date": "2026-10-26",
+          "exit_close": 1045.0,
+          "gross_return": -0.146939,
+          "net_return": -0.152939,
+          "ihsg_return": -0.091613,
+          "excess_ihsg": -0.061326,
+          "ewbook_return": -0.097187,
+          "excess_ewbook": -0.055752
+        },
+        "20": {
+          "exit_date": "2026-11-09",
+          "exit_close": 940.0,
+          "gross_return": -0.232653,
+          "net_return": -0.238653,
+          "ihsg_return": -0.142217,
+          "excess_ihsg": -0.096436,
+          "ewbook_return": -0.205588,
+          "excess_ewbook": -0.033065
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.887749+00:00"
+    },
+    {
+      "ticker": "BNGA",
+      "signal_date": "2026-10-12",
+      "entry_date": "2026-10-13",
+      "entry_open": 1675.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-19",
+          "exit_close": 1460.0,
+          "gross_return": -0.128358,
+          "net_return": -0.134358,
+          "ihsg_return": -0.155262,
+          "excess_ihsg": 0.020904,
+          "ewbook_return": -0.169799,
+          "excess_ewbook": 0.035441
+        },
+        "10": {
+          "exit_date": "2026-10-26",
+          "exit_close": 1610.0,
+          "gross_return": -0.038806,
+          "net_return": -0.044806,
+          "ihsg_return": -0.091613,
+          "excess_ihsg": 0.046807,
+          "ewbook_return": -0.097187,
+          "excess_ewbook": 0.052381
+        },
+        "20": {
+          "exit_date": "2026-11-09",
+          "exit_close": 1510.0,
+          "gross_return": -0.098507,
+          "net_return": -0.104507,
+          "ihsg_return": -0.142217,
+          "excess_ihsg": 0.03771,
+          "ewbook_return": -0.205588,
+          "excess_ewbook": 0.10108
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.889899+00:00"
+    },
+    {
+      "ticker": "BUKA",
+      "signal_date": "2026-10-12",
+      "entry_date": "2026-10-13",
+      "entry_open": 98.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-19",
+          "exit_close": 99.0,
+          "gross_return": 0.010204,
+          "net_return": 0.004204,
+          "ihsg_return": -0.155262,
+          "excess_ihsg": 0.159467,
+          "ewbook_return": -0.169799,
+          "excess_ewbook": 0.174003
+        },
+        "10": {
+          "exit_date": "2026-10-26",
+          "exit_close": 102.0,
+          "gross_return": 0.040816,
+          "net_return": 0.034816,
+          "ihsg_return": -0.091613,
+          "excess_ihsg": 0.126429,
+          "ewbook_return": -0.097187,
+          "excess_ewbook": 0.132003
+        },
+        "20": {
+          "exit_date": "2026-11-09",
+          "exit_close": 105.0,
+          "gross_return": 0.071429,
+          "net_return": 0.065429,
+          "ihsg_return": -0.142217,
+          "excess_ihsg": 0.207646,
+          "ewbook_return": -0.205588,
+          "excess_ewbook": 0.271016
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.890539+00:00"
+    },
+    {
+      "ticker": "DFAM",
+      "signal_date": "2026-10-12",
+      "entry_date": "2026-10-13",
+      "entry_open": 65.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-19",
+          "exit_close": 54.0,
+          "gross_return": -0.169231,
+          "net_return": -0.175231,
+          "ihsg_return": -0.155262,
+          "excess_ihsg": -0.019968,
+          "ewbook_return": -0.169799,
+          "excess_ewbook": -0.005431
+        },
+        "10": {
+          "exit_date": "2026-10-26",
+          "exit_close": 64.0,
+          "gross_return": -0.015385,
+          "net_return": -0.021385,
+          "ihsg_return": -0.091613,
+          "excess_ihsg": 0.070228,
+          "ewbook_return": -0.097187,
+          "excess_ewbook": 0.075802
+        },
+        "20": {
+          "exit_date": "2026-11-09",
+          "exit_close": 57.0,
+          "gross_return": -0.123077,
+          "net_return": -0.129077,
+          "ihsg_return": -0.142217,
+          "excess_ihsg": 0.013141,
+          "ewbook_return": -0.205588,
+          "excess_ewbook": 0.076511
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.891949+00:00"
+    },
+    {
+      "ticker": "HYGN",
+      "signal_date": "2026-10-12",
+      "entry_date": "2026-10-13",
+      "entry_open": 182.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-19",
+          "exit_close": 178.0,
+          "gross_return": -0.021978,
+          "net_return": -0.027978,
+          "ihsg_return": -0.155262,
+          "excess_ihsg": 0.127284,
+          "ewbook_return": -0.169799,
+          "excess_ewbook": 0.141821
+        },
+        "10": {
+          "exit_date": "2026-10-26",
+          "exit_close": 176.0,
+          "gross_return": -0.032967,
+          "net_return": -0.038967,
+          "ihsg_return": -0.091613,
+          "excess_ihsg": 0.052646,
+          "ewbook_return": -0.097187,
+          "excess_ewbook": 0.05822
+        },
+        "20": {
+          "exit_date": "2026-11-09",
+          "exit_close": 175.0,
+          "gross_return": -0.038462,
+          "net_return": -0.044462,
+          "ihsg_return": -0.142217,
+          "excess_ihsg": 0.097756,
+          "ewbook_return": -0.205588,
+          "excess_ewbook": 0.161126
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.894858+00:00"
+    },
+    {
+      "ticker": "MSIN",
+      "signal_date": "2026-10-12",
+      "entry_date": "2026-10-13",
+      "entry_open": 168.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-19",
+          "exit_close": 127.0,
+          "gross_return": -0.244048,
+          "net_return": -0.250048,
+          "ihsg_return": -0.155262,
+          "excess_ihsg": -0.094785,
+          "ewbook_return": -0.169799,
+          "excess_ewbook": -0.080248
+        },
+        "10": {
+          "exit_date": "2026-10-26",
+          "exit_close": 105.0,
+          "gross_return": -0.375,
+          "net_return": -0.381,
+          "ihsg_return": -0.091613,
+          "excess_ihsg": -0.289387,
+          "ewbook_return": -0.097187,
+          "excess_ewbook": -0.283813
+        },
+        "20": {
+          "exit_date": "2026-11-09",
+          "exit_close": 82.0,
+          "gross_return": -0.511905,
+          "net_return": -0.517905,
+          "ihsg_return": -0.142217,
+          "excess_ihsg": -0.375687,
+          "ewbook_return": -0.205588,
+          "excess_ewbook": -0.312317
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.899280+00:00"
+    },
+    {
+      "ticker": "RGAS",
+      "signal_date": "2026-10-12",
+      "entry_date": "2026-10-13",
+      "entry_open": 87.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-19",
+          "exit_close": 71.0,
+          "gross_return": -0.183908,
+          "net_return": -0.189908,
+          "ihsg_return": -0.155262,
+          "excess_ihsg": -0.034646,
+          "ewbook_return": -0.169799,
+          "excess_ewbook": -0.020109
+        },
+        "10": {
+          "exit_date": "2026-10-26",
+          "exit_close": 73.0,
+          "gross_return": -0.16092,
+          "net_return": -0.16692,
+          "ihsg_return": -0.091613,
+          "excess_ihsg": -0.075307,
+          "ewbook_return": -0.097187,
+          "excess_ewbook": -0.069733
+        },
+        "20": {
+          "exit_date": "2026-11-09",
+          "exit_close": 60.0,
+          "gross_return": -0.310345,
+          "net_return": -0.316345,
+          "ihsg_return": -0.142217,
+          "excess_ihsg": -0.174127,
+          "ewbook_return": -0.205588,
+          "excess_ewbook": -0.110757
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.902400+00:00"
+    },
+    {
+      "ticker": "TMPO",
+      "signal_date": "2026-10-12",
+      "entry_date": "2026-10-13",
+      "entry_open": 142.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-19",
+          "exit_close": 169.0,
+          "gross_return": 0.190141,
+          "net_return": 0.184141,
+          "ihsg_return": -0.155262,
+          "excess_ihsg": 0.339403,
+          "ewbook_return": -0.169799,
+          "excess_ewbook": 0.35394
+        },
+        "10": {
+          "exit_date": "2026-10-26",
+          "exit_close": 189.0,
+          "gross_return": 0.330986,
+          "net_return": 0.324986,
+          "ihsg_return": -0.091613,
+          "excess_ihsg": 0.416599,
+          "ewbook_return": -0.097187,
+          "excess_ewbook": 0.422173
+        },
+        "20": {
+          "exit_date": "2026-11-09",
+          "exit_close": 292.0,
+          "gross_return": 1.056338,
+          "net_return": 1.050338,
+          "ihsg_return": -0.142217,
+          "excess_ihsg": 1.192555,
+          "ewbook_return": -0.205588,
+          "excess_ewbook": 1.255926
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.904065+00:00"
+    },
+    {
+      "ticker": "VKTR",
+      "signal_date": "2026-10-12",
+      "entry_date": "2026-10-13",
+      "entry_open": 580.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-19",
+          "exit_close": 348.0,
+          "gross_return": -0.4,
+          "net_return": -0.406,
+          "ihsg_return": -0.155262,
+          "excess_ihsg": -0.250738,
+          "ewbook_return": -0.169799,
+          "excess_ewbook": -0.236201
+        },
+        "10": {
+          "exit_date": "2026-10-26",
+          "exit_close": 372.0,
+          "gross_return": -0.358621,
+          "net_return": -0.364621,
+          "ihsg_return": -0.091613,
+          "excess_ihsg": -0.273008,
+          "ewbook_return": -0.097187,
+          "excess_ewbook": -0.267434
+        },
+        "20": {
+          "exit_date": "2026-11-09",
+          "exit_close": 230.0,
+          "gross_return": -0.603448,
+          "net_return": -0.609448,
+          "ihsg_return": -0.142217,
+          "excess_ihsg": -0.467231,
+          "ewbook_return": -0.205588,
+          "excess_ewbook": -0.40386
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.905252+00:00"
+    },
+    {
+      "ticker": "AGRO",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 132.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 114.0,
+          "gross_return": -0.136364,
+          "net_return": -0.142364,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.030964,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.004052
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 113.0,
+          "gross_return": -0.143939,
+          "net_return": -0.149939,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.036393,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.012286
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 106.0,
+          "gross_return": -0.19697,
+          "net_return": -0.20297,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.065789,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.00644
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.887390+00:00"
+    },
+    {
+      "ticker": "AHAP",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 71.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 53.0,
+          "gross_return": -0.253521,
+          "net_return": -0.259521,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.148122,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.12121
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 51.0,
+          "gross_return": -0.28169,
+          "net_return": -0.28769,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.174143,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.150037
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 43.0,
+          "gross_return": -0.394366,
+          "net_return": -0.400366,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.263185,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.190957
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.887555+00:00"
+    },
+    {
+      "ticker": "ANTM",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 3110.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 2740.0,
+          "gross_return": -0.118971,
+          "net_return": -0.124971,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.013572,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.01334
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 2770.0,
+          "gross_return": -0.109325,
+          "net_return": -0.115325,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.001778,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.022328
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 2760.0,
+          "gross_return": -0.11254,
+          "net_return": -0.11854,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 0.018641,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.090869
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.887907+00:00"
+    },
+    {
+      "ticker": "APEX",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 167.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 146.0,
+          "gross_return": -0.125749,
+          "net_return": -0.131749,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.020349,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.006563
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 147.0,
+          "gross_return": -0.11976,
+          "net_return": -0.12576,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.012214,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.011892
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 134.0,
+          "gross_return": -0.197605,
+          "net_return": -0.203605,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.066424,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.005804
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.888057+00:00"
+    },
+    {
+      "ticker": "ARKO",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 2390.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 1610.0,
+          "gross_return": -0.32636,
+          "net_return": -0.33236,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.220961,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.194049
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 1365.0,
+          "gross_return": -0.42887,
+          "net_return": -0.43487,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.321323,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.297217
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 1110.0,
+          "gross_return": -0.535565,
+          "net_return": -0.541565,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.404384,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.332156
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.888246+00:00"
+    },
+    {
+      "ticker": "BAJA",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 256.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 192.0,
+          "gross_return": -0.25,
+          "net_return": -0.256,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.144601,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.117689
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 185.0,
+          "gross_return": -0.277344,
+          "net_return": -0.283344,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.169797,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.145691
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 220.0,
+          "gross_return": -0.140625,
+          "net_return": -0.146625,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.009444,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.062784
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.888557+00:00"
+    },
+    {
+      "ticker": "BBNI",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 3410.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 3220.0,
+          "gross_return": -0.055718,
+          "net_return": -0.061718,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.049681,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.076593
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 3310.0,
+          "gross_return": -0.029326,
+          "net_return": -0.035326,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.078221,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.102327
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 3400.0,
+          "gross_return": -0.002933,
+          "net_return": -0.008933,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 0.128249,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.200477
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.888788+00:00"
+    },
+    {
+      "ticker": "BBYB",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 195.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 165.0,
+          "gross_return": -0.153846,
+          "net_return": -0.159846,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.048447,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.021535
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 154.0,
+          "gross_return": -0.210256,
+          "net_return": -0.216256,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.10271,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.078603
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 156.0,
+          "gross_return": -0.2,
+          "net_return": -0.206,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.068819,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.003409
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.889000+00:00"
+    },
+    {
+      "ticker": "BIPI",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 118.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 87.0,
+          "gross_return": -0.262712,
+          "net_return": -0.268712,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.157313,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.130401
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 86.0,
+          "gross_return": -0.271186,
+          "net_return": -0.277186,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.16364,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.139533
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 79.0,
+          "gross_return": -0.330508,
+          "net_return": -0.336508,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.199327,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.127099
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.889284+00:00"
+    },
+    {
+      "ticker": "BJBR",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 755.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 725.0,
+          "gross_return": -0.039735,
+          "net_return": -0.045735,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.065664,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.092576
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 720.0,
+          "gross_return": -0.046358,
+          "net_return": -0.052358,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.061189,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.085295
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 710.0,
+          "gross_return": -0.059603,
+          "net_return": -0.065603,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 0.071579,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.143807
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.889477+00:00"
+    },
+    {
+      "ticker": "BMTR",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 76.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 59.0,
+          "gross_return": -0.223684,
+          "net_return": -0.229684,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.118285,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.091373
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 56.0,
+          "gross_return": -0.263158,
+          "net_return": -0.269158,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.155611,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.131505
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 60.0,
+          "gross_return": -0.210526,
+          "net_return": -0.216526,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.079345,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.007117
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.889670+00:00"
+    },
+    {
+      "ticker": "BNGA",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 1680.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 1550.0,
+          "gross_return": -0.077381,
+          "net_return": -0.083381,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.028018,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.05493
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 1525.0,
+          "gross_return": -0.092262,
+          "net_return": -0.098262,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.015285,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.039391
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 1510.0,
+          "gross_return": -0.10119,
+          "net_return": -0.10719,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 0.029991,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.102219
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.890020+00:00"
+    },
+    {
+      "ticker": "BREN",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 2440.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 2000.0,
+          "gross_return": -0.180328,
+          "net_return": -0.186328,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.074929,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.048017
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 2160.0,
+          "gross_return": -0.114754,
+          "net_return": -0.120754,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.007207,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.016899
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 2060.0,
+          "gross_return": -0.155738,
+          "net_return": -0.161738,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.024557,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.047672
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.890173+00:00"
+    },
+    {
+      "ticker": "BRMS",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 560.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 428.0,
+          "gross_return": -0.235714,
+          "net_return": -0.241714,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.130315,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.103403
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 398.0,
+          "gross_return": -0.289286,
+          "net_return": -0.295286,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.181739,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.157633
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 306.0,
+          "gross_return": -0.453571,
+          "net_return": -0.459571,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.32239,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.250162
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.890344+00:00"
+    },
+    {
+      "ticker": "BUMI",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 168.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 135.0,
+          "gross_return": -0.196429,
+          "net_return": -0.202429,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.091029,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.064117
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 128.0,
+          "gross_return": -0.238095,
+          "net_return": -0.244095,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.130548,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.106442
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 120.0,
+          "gross_return": -0.285714,
+          "net_return": -0.291714,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.154533,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.082305
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.890735+00:00"
+    },
+    {
+      "ticker": "BUVA",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 545.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 346.0,
+          "gross_return": -0.365138,
+          "net_return": -0.371138,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.259738,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.232826
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 352.0,
+          "gross_return": -0.354128,
+          "net_return": -0.360128,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.246582,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.222475
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 300.0,
+          "gross_return": -0.449541,
+          "net_return": -0.455541,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.31836,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.246132
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.890982+00:00"
+    },
+    {
+      "ticker": "BWPT",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 101.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 85.0,
+          "gross_return": -0.158416,
+          "net_return": -0.164416,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.053017,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.026105
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 82.0,
+          "gross_return": -0.188119,
+          "net_return": -0.194119,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.080572,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.056466
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 78.0,
+          "gross_return": -0.227723,
+          "net_return": -0.233723,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.096542,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.024314
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.891126+00:00"
+    },
+    {
+      "ticker": "CUAN",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 670.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 505.0,
+          "gross_return": -0.246269,
+          "net_return": -0.252269,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.140869,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.113957
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 456.0,
+          "gross_return": -0.319403,
+          "net_return": -0.325403,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.211856,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.18775
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 380.0,
+          "gross_return": -0.432836,
+          "net_return": -0.438836,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.301655,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.229427
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.891625+00:00"
+    },
+    {
+      "ticker": "DFAM",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 66.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 56.0,
+          "gross_return": -0.151515,
+          "net_return": -0.157515,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.046116,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.019204
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 60.0,
+          "gross_return": -0.090909,
+          "net_return": -0.096909,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.016638,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.040744
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 57.0,
+          "gross_return": -0.136364,
+          "net_return": -0.142364,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.005182,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.067046
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.892106+00:00"
+    },
+    {
+      "ticker": "DSFI",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 79.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 68.0,
+          "gross_return": -0.139241,
+          "net_return": -0.145241,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.033841,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.006929
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 78.0,
+          "gross_return": -0.012658,
+          "net_return": -0.018658,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.094889,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.118995
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 72.0,
+          "gross_return": -0.088608,
+          "net_return": -0.094608,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 0.042574,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.114802
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.892445+00:00"
+    },
+    {
+      "ticker": "ELSA",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 670.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 630.0,
+          "gross_return": -0.059701,
+          "net_return": -0.065701,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.045698,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.07261
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 685.0,
+          "gross_return": 0.022388,
+          "net_return": 0.016388,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.129935,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.154041
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 560.0,
+          "gross_return": -0.164179,
+          "net_return": -0.170179,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.032998,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.03923
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.892740+00:00"
+    },
+    {
+      "ticker": "ENRG",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 940.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 865.0,
+          "gross_return": -0.079787,
+          "net_return": -0.085787,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.025612,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.052524
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 765.0,
+          "gross_return": -0.18617,
+          "net_return": -0.19217,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.078623,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.054517
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 560.0,
+          "gross_return": -0.404255,
+          "net_return": -0.410255,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.273074,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.200846
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.892981+00:00"
+    },
+    {
+      "ticker": "FILM",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 565.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 414.0,
+          "gross_return": -0.267257,
+          "net_return": -0.273257,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.161857,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.134945
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 372.0,
+          "gross_return": -0.341593,
+          "net_return": -0.347593,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.234046,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.20994
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 284.0,
+          "gross_return": -0.497345,
+          "net_return": -0.503345,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.366164,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.293936
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.893342+00:00"
+    },
+    {
+      "ticker": "FIRE",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 101.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 79.0,
+          "gross_return": -0.217822,
+          "net_return": -0.223822,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.112423,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.085511
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 91.0,
+          "gross_return": -0.09901,
+          "net_return": -0.10501,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.008537,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.032643
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 82.0,
+          "gross_return": -0.188119,
+          "net_return": -0.194119,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.056938,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.01529
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.893511+00:00"
+    },
+    {
+      "ticker": "FORE",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 745.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 600.0,
+          "gross_return": -0.194631,
+          "net_return": -0.200631,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.089232,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.06232
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 580.0,
+          "gross_return": -0.221477,
+          "net_return": -0.227477,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.11393,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.089824
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 560.0,
+          "gross_return": -0.248322,
+          "net_return": -0.254322,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.117141,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.044913
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.893673+00:00"
+    },
+    {
+      "ticker": "GTSI",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 123.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 95.0,
+          "gross_return": -0.227642,
+          "net_return": -0.233642,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.122243,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.095331
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 86.0,
+          "gross_return": -0.300813,
+          "net_return": -0.306813,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.193266,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.16916
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 67.0,
+          "gross_return": -0.455285,
+          "net_return": -0.461285,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.324103,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.251875
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.894176+00:00"
+    },
+    {
+      "ticker": "GZCO",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 153.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 124.0,
+          "gross_return": -0.189542,
+          "net_return": -0.195542,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.084143,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.057231
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 121.0,
+          "gross_return": -0.20915,
+          "net_return": -0.21515,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.101603,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.077497
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 115.0,
+          "gross_return": -0.248366,
+          "net_return": -0.254366,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.117185,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.044957
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.894351+00:00"
+    },
+    {
+      "ticker": "HRUM",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 840.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 705.0,
+          "gross_return": -0.160714,
+          "net_return": -0.166714,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.055315,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.028403
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 695.0,
+          "gross_return": -0.172619,
+          "net_return": -0.178619,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.065072,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.040966
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 685.0,
+          "gross_return": -0.184524,
+          "net_return": -0.190524,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.053343,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.018885
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.894682+00:00"
+    },
+    {
+      "ticker": "ICON",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 110.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 87.0,
+          "gross_return": -0.209091,
+          "net_return": -0.215091,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.103692,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.07678
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 86.0,
+          "gross_return": -0.218182,
+          "net_return": -0.224182,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.110635,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.086529
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 70.0,
+          "gross_return": -0.363636,
+          "net_return": -0.369636,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.232455,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.160227
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.895313+00:00"
+    },
+    {
+      "ticker": "INET",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 236.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 187.0,
+          "gross_return": -0.207627,
+          "net_return": -0.213627,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.102228,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.075316
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 172.0,
+          "gross_return": -0.271186,
+          "net_return": -0.277186,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.16364,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.139533
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 175.0,
+          "gross_return": -0.258475,
+          "net_return": -0.264475,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.127293,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.055065
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.896038+00:00"
+    },
+    {
+      "ticker": "IRSX",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 298.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 228.0,
+          "gross_return": -0.234899,
+          "net_return": -0.240899,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.1295,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.102588
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 240.0,
+          "gross_return": -0.194631,
+          "net_return": -0.200631,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.087084,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.062978
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 163.0,
+          "gross_return": -0.45302,
+          "net_return": -0.45902,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.321839,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.249611
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.896354+00:00"
+    },
+    {
+      "ticker": "ISAT",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 2060.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 1715.0,
+          "gross_return": -0.167476,
+          "net_return": -0.173476,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.062076,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.035165
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 1685.0,
+          "gross_return": -0.182039,
+          "net_return": -0.188039,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.074492,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.050386
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 1415.0,
+          "gross_return": -0.313107,
+          "net_return": -0.319107,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.181926,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.109698
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.896541+00:00"
+    },
+    {
+      "ticker": "JPFA",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 2000.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 1720.0,
+          "gross_return": -0.14,
+          "net_return": -0.146,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.034601,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.007689
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 1785.0,
+          "gross_return": -0.1075,
+          "net_return": -0.1135,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 4.7e-05,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.024153
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 1490.0,
+          "gross_return": -0.255,
+          "net_return": -0.261,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.123819,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.051591
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.896814+00:00"
+    },
+    {
+      "ticker": "KETR",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 840.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 650.0,
+          "gross_return": -0.22619,
+          "net_return": -0.23219,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.120791,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.093879
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 545.0,
+          "gross_return": -0.35119,
+          "net_return": -0.35719,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.243644,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.219538
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 492.0,
+          "gross_return": -0.414286,
+          "net_return": -0.420286,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.283105,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.210876
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.897072+00:00"
+    },
+    {
+      "ticker": "KIJA",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 151.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 121.0,
+          "gross_return": -0.198675,
+          "net_return": -0.204675,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.093276,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.066364
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 121.0,
+          "gross_return": -0.198675,
+          "net_return": -0.204675,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.091129,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.067023
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 114.0,
+          "gross_return": -0.245033,
+          "net_return": -0.251033,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.113852,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.041624
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.897233+00:00"
+    },
+    {
+      "ticker": "KJEN",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 132.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 112.0,
+          "gross_return": -0.151515,
+          "net_return": -0.157515,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.046116,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.019204
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 110.0,
+          "gross_return": -0.166667,
+          "net_return": -0.172667,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.05912,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.035014
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 103.0,
+          "gross_return": -0.219697,
+          "net_return": -0.225697,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.088516,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.016288
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.897389+00:00"
+    },
+    {
+      "ticker": "KOKA",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 133.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 105.0,
+          "gross_return": -0.210526,
+          "net_return": -0.216526,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.105127,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.078215
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 113.0,
+          "gross_return": -0.150376,
+          "net_return": -0.156376,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.042829,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.018723
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 111.0,
+          "gross_return": -0.165414,
+          "net_return": -0.171414,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.034232,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.037996
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.897635+00:00"
+    },
+    {
+      "ticker": "MAIN",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 605.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 540.0,
+          "gross_return": -0.107438,
+          "net_return": -0.113438,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.002039,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.024873
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 555.0,
+          "gross_return": -0.082645,
+          "net_return": -0.088645,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.024902,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.049008
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 550.0,
+          "gross_return": -0.090909,
+          "net_return": -0.096909,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 0.040272,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.1125
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.898051+00:00"
+    },
+    {
+      "ticker": "MAPA",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 615.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 550.0,
+          "gross_return": -0.105691,
+          "net_return": -0.111691,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.000292,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.02662
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 580.0,
+          "gross_return": -0.056911,
+          "net_return": -0.062911,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.050636,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.074742
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 600.0,
+          "gross_return": -0.02439,
+          "net_return": -0.03039,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 0.106791,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.179019
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.898198+00:00"
+    },
+    {
+      "ticker": "MARK",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 1115.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 1115.0,
+          "gross_return": 0.0,
+          "net_return": -0.006,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.105399,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.132311
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 1100.0,
+          "gross_return": -0.013453,
+          "net_return": -0.019453,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.094094,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.1182
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 970.0,
+          "gross_return": -0.130045,
+          "net_return": -0.136045,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 0.001136,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.073364
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.898337+00:00"
+    },
+    {
+      "ticker": "MBTO",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 128.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 111.0,
+          "gross_return": -0.132812,
+          "net_return": -0.138813,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.027413,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.000501
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 120.0,
+          "gross_return": -0.0625,
+          "net_return": -0.0685,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.045047,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.069153
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 102.0,
+          "gross_return": -0.203125,
+          "net_return": -0.209125,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.071944,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.000284
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.898509+00:00"
+    },
+    {
+      "ticker": "MNCN",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 120.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 85.0,
+          "gross_return": -0.291667,
+          "net_return": -0.297667,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.186267,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.159355
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 84.0,
+          "gross_return": -0.3,
+          "net_return": -0.306,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.192453,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.168347
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 72.0,
+          "gross_return": -0.4,
+          "net_return": -0.406,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.268819,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.196591
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.899024+00:00"
+    },
+    {
+      "ticker": "NASI",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 155.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 127.0,
+          "gross_return": -0.180645,
+          "net_return": -0.186645,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.075246,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.048334
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 125.0,
+          "gross_return": -0.193548,
+          "net_return": -0.199548,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.086002,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.061895
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 146.0,
+          "gross_return": -0.058065,
+          "net_return": -0.064065,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 0.073117,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.145345
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.899542+00:00"
+    },
+    {
+      "ticker": "NICL",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 344.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 270.0,
+          "gross_return": -0.215116,
+          "net_return": -0.221116,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.109717,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.082805
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 240.0,
+          "gross_return": -0.302326,
+          "net_return": -0.308326,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.194779,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.170673
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 226.0,
+          "gross_return": -0.343023,
+          "net_return": -0.349023,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.211842,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.139614
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.899772+00:00"
+    },
+    {
+      "ticker": "OASA",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 224.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 167.0,
+          "gross_return": -0.254464,
+          "net_return": -0.260464,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.149065,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.122153
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 186.0,
+          "gross_return": -0.169643,
+          "net_return": -0.175643,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.062096,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.03799
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 168.0,
+          "gross_return": -0.25,
+          "net_return": -0.256,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.118819,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.046591
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.900216+00:00"
+    },
+    {
+      "ticker": "PADA",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 142.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 111.0,
+          "gross_return": -0.21831,
+          "net_return": -0.22431,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.112911,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.085999
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 111.0,
+          "gross_return": -0.21831,
+          "net_return": -0.22431,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.110763,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.086657
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 87.0,
+          "gross_return": -0.387324,
+          "net_return": -0.393324,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.256143,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.183915
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.900517+00:00"
+    },
+    {
+      "ticker": "PEGE",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 124.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 115.0,
+          "gross_return": -0.072581,
+          "net_return": -0.078581,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.032819,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.059731
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 111.0,
+          "gross_return": -0.104839,
+          "net_return": -0.110839,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.002708,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.026814
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 109.0,
+          "gross_return": -0.120968,
+          "net_return": -0.126968,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 0.010213,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.082441
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.900750+00:00"
+    },
+    {
+      "ticker": "PICO",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 218.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 132.0,
+          "gross_return": -0.394495,
+          "net_return": -0.400495,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.289096,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.262184
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 128.0,
+          "gross_return": -0.412844,
+          "net_return": -0.418844,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.305297,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.281191
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 117.0,
+          "gross_return": -0.463303,
+          "net_return": -0.469303,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.332122,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.259894
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.900985+00:00"
+    },
+    {
+      "ticker": "PIPA",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 133.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 106.0,
+          "gross_return": -0.203008,
+          "net_return": -0.209008,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.097608,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.070696
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 100.0,
+          "gross_return": -0.24812,
+          "net_return": -0.25412,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.140573,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.116467
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 82.0,
+          "gross_return": -0.383459,
+          "net_return": -0.389459,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.252277,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.180049
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.901140+00:00"
+    },
+    {
+      "ticker": "PNBN",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 820.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 740.0,
+          "gross_return": -0.097561,
+          "net_return": -0.103561,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.007838,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.03475
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 740.0,
+          "gross_return": -0.097561,
+          "net_return": -0.103561,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.009986,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.034092
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 720.0,
+          "gross_return": -0.121951,
+          "net_return": -0.127951,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 0.00923,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.081458
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.901329+00:00"
+    },
+    {
+      "ticker": "PPRE",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 85.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 77.0,
+          "gross_return": -0.094118,
+          "net_return": -0.100118,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.011282,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.038194
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 73.0,
+          "gross_return": -0.141176,
+          "net_return": -0.147176,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.03363,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.009524
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 66.0,
+          "gross_return": -0.223529,
+          "net_return": -0.229529,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.092348,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.02012
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.901498+00:00"
+    },
+    {
+      "ticker": "PTRO",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 4180.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 3150.0,
+          "gross_return": -0.246411,
+          "net_return": -0.252411,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.141012,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.1141
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 2870.0,
+          "gross_return": -0.313397,
+          "net_return": -0.319397,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.20585,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.181744
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 2410.0,
+          "gross_return": -0.423445,
+          "net_return": -0.429445,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.292264,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.220036
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.901734+00:00"
+    },
+    {
+      "ticker": "PTSN",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 360.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 280.0,
+          "gross_return": -0.222222,
+          "net_return": -0.228222,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.116823,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.089911
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 378.0,
+          "gross_return": 0.05,
+          "net_return": 0.044,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.157547,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.181653
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 240.0,
+          "gross_return": -0.333333,
+          "net_return": -0.339333,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.202152,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.129924
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.901886+00:00"
+    },
+    {
+      "ticker": "RAJA",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 610.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 484.0,
+          "gross_return": -0.206557,
+          "net_return": -0.212557,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.101158,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.074246
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 452.0,
+          "gross_return": -0.259016,
+          "net_return": -0.265016,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.15147,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.127363
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 466.0,
+          "gross_return": -0.236066,
+          "net_return": -0.242066,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.104884,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.032656
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.902077+00:00"
+    },
+    {
+      "ticker": "RATU",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 3710.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 2670.0,
+          "gross_return": -0.280323,
+          "net_return": -0.286323,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.174924,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.148012
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 2320.0,
+          "gross_return": -0.374663,
+          "net_return": -0.380663,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.267116,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.24301
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 2230.0,
+          "gross_return": -0.398922,
+          "net_return": -0.404922,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.267741,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.195513
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.902262+00:00"
+    },
+    {
+      "ticker": "RMKO",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 242.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 185.0,
+          "gross_return": -0.235537,
+          "net_return": -0.241537,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.130138,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.103226
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 196.0,
+          "gross_return": -0.190083,
+          "net_return": -0.196083,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.082536,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.05843
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 168.0,
+          "gross_return": -0.305785,
+          "net_return": -0.311785,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.174604,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.102376
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.902681+00:00"
+    },
+    {
+      "ticker": "SOCI",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 535.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 490.0,
+          "gross_return": -0.084112,
+          "net_return": -0.090112,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.021287,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.048199
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 440.0,
+          "gross_return": -0.17757,
+          "net_return": -0.18357,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.070023,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.045917
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 398.0,
+          "gross_return": -0.256075,
+          "net_return": -0.262075,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.124894,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.052666
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.903133+00:00"
+    },
+    {
+      "ticker": "SOFA",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 204.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 165.0,
+          "gross_return": -0.191176,
+          "net_return": -0.197176,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.085777,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.058865
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 162.0,
+          "gross_return": -0.205882,
+          "net_return": -0.211882,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.098336,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.074229
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 138.0,
+          "gross_return": -0.323529,
+          "net_return": -0.329529,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.192348,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.12012
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.903288+00:00"
+    },
+    {
+      "ticker": "TLDN",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 575.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 555.0,
+          "gross_return": -0.034783,
+          "net_return": -0.040783,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.070617,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.097529
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 550.0,
+          "gross_return": -0.043478,
+          "net_return": -0.049478,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.064069,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.088175
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 515.0,
+          "gross_return": -0.104348,
+          "net_return": -0.110348,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 0.026833,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.099061
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.903777+00:00"
+    },
+    {
+      "ticker": "TLKM",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 2260.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 2060.0,
+          "gross_return": -0.088496,
+          "net_return": -0.094496,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.016904,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.043816
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 2140.0,
+          "gross_return": -0.053097,
+          "net_return": -0.059097,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.05445,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.078556
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 2040.0,
+          "gross_return": -0.097345,
+          "net_return": -0.103345,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 0.033836,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.106064
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.903937+00:00"
+    },
+    {
+      "ticker": "TMPO",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 150.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 158.0,
+          "gross_return": 0.053333,
+          "net_return": 0.047333,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.158733,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.185645
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 228.0,
+          "gross_return": 0.52,
+          "net_return": 0.514,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.627547,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.651653
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 292.0,
+          "gross_return": 0.946667,
+          "net_return": 0.940667,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 1.077848,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 1.150076
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.904180+00:00"
+    },
+    {
+      "ticker": "TPIA",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 1520.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 1275.0,
+          "gross_return": -0.161184,
+          "net_return": -0.167184,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.055785,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.028873
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 1360.0,
+          "gross_return": -0.105263,
+          "net_return": -0.111263,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.002284,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.02639
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 1265.0,
+          "gross_return": -0.167763,
+          "net_return": -0.173763,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.036582,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.035646
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.904417+00:00"
+    },
+    {
+      "ticker": "UANG",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 3560.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 2160.0,
+          "gross_return": -0.393258,
+          "net_return": -0.399258,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.287859,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.260947
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 1975.0,
+          "gross_return": -0.445225,
+          "net_return": -0.451225,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.337678,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.313572
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 2130.0,
+          "gross_return": -0.401685,
+          "net_return": -0.407685,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.270504,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.198276
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.904689+00:00"
+    },
+    {
+      "ticker": "UNTD",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 69.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 63.0,
+          "gross_return": -0.086957,
+          "net_return": -0.092957,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.018443,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.045355
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 64.0,
+          "gross_return": -0.072464,
+          "net_return": -0.078464,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": 0.035083,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": 0.059189
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 59.0,
+          "gross_return": -0.144928,
+          "net_return": -0.150928,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.013746,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.058482
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.904912+00:00"
+    },
+    {
+      "ticker": "UNVR",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 1615.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 1375.0,
+          "gross_return": -0.148607,
+          "net_return": -0.154607,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.043208,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.016296
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 1395.0,
+          "gross_return": -0.136223,
+          "net_return": -0.142223,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.028676,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.00457
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 1540.0,
+          "gross_return": -0.04644,
+          "net_return": -0.05244,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": 0.084742,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": 0.15697
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.905038+00:00"
+    },
+    {
+      "ticker": "VKTR",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 555.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 336.0,
+          "gross_return": -0.394595,
+          "net_return": -0.400595,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": -0.289195,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": -0.262283
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 346.0,
+          "gross_return": -0.376577,
+          "net_return": -0.382577,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.26903,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.244924
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 248.0,
+          "gross_return": -0.553153,
+          "net_return": -0.559153,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.421972,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.349744
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.905407+00:00"
+    },
+    {
+      "ticker": "WIFI",
+      "signal_date": "2026-10-13",
+      "entry_date": "2026-10-14",
+      "entry_open": 1345.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-20",
+          "exit_close": 1225.0,
+          "gross_return": -0.089219,
+          "net_return": -0.095219,
+          "ihsg_return": -0.111399,
+          "excess_ihsg": 0.01618,
+          "ewbook_return": -0.138311,
+          "excess_ewbook": 0.043092
+        },
+        "10": {
+          "exit_date": "2026-10-27",
+          "exit_close": 970.0,
+          "gross_return": -0.27881,
+          "net_return": -0.28481,
+          "ihsg_return": -0.113547,
+          "excess_ihsg": -0.171264,
+          "ewbook_return": -0.137653,
+          "excess_ewbook": -0.147157
+        },
+        "20": {
+          "exit_date": "2026-11-10",
+          "exit_close": 810.0,
+          "gross_return": -0.39777,
+          "net_return": -0.40377,
+          "ihsg_return": -0.137181,
+          "excess_ihsg": -0.266588,
+          "ewbook_return": -0.209409,
+          "excess_ewbook": -0.19436
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-11T02:35:12.905686+00:00"
+    },
+    {
+      "ticker": "BRPT",
+      "signal_date": "2026-10-14",
+      "entry_date": "2026-10-15",
+      "entry_open": 1385.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-21",
+          "exit_close": 1485.0,
+          "gross_return": 0.072202,
+          "net_return": 0.066202,
+          "ihsg_return": -0.099503,
+          "excess_ihsg": 0.165705,
+          "ewbook_return": -0.123003,
+          "excess_ewbook": 0.189206
+        },
+        "10": {
+          "exit_date": "2026-10-28",
+          "exit_close": 1235.0,
+          "gross_return": -0.108303,
+          "net_return": -0.114303,
+          "ihsg_return": -0.107285,
+          "excess_ihsg": -0.007018,
+          "ewbook_return": -0.13181,
+          "excess_ewbook": 0.017506
+        },
+        "20": {
+          "exit_date": "2026-11-11",
+          "exit_close": 765.0,
+          "gross_return": -0.447653,
+          "net_return": -0.453653,
+          "ihsg_return": -0.135555,
+          "excess_ihsg": -0.318099,
+          "ewbook_return": -0.204386,
+          "excess_ewbook": -0.249267
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-13T02:35:18.347342+00:00"
+    },
+    {
+      "ticker": "CUAN",
+      "signal_date": "2026-10-14",
+      "entry_date": "2026-10-15",
+      "entry_open": 650.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-21",
+          "exit_close": 505.0,
+          "gross_return": -0.223077,
+          "net_return": -0.229077,
+          "ihsg_return": -0.099503,
+          "excess_ihsg": -0.129574,
+          "ewbook_return": -0.123003,
+          "excess_ewbook": -0.106074
+        },
+        "10": {
+          "exit_date": "2026-10-28",
+          "exit_close": 432.0,
+          "gross_return": -0.335385,
+          "net_return": -0.341385,
+          "ihsg_return": -0.107285,
+          "excess_ihsg": -0.2341,
+          "ewbook_return": -0.13181,
+          "excess_ewbook": -0.209575
+        },
+        "20": {
+          "exit_date": "2026-11-11",
+          "exit_close": 364.0,
+          "gross_return": -0.44,
+          "net_return": -0.446,
+          "ihsg_return": -0.135555,
+          "excess_ihsg": -0.310445,
+          "ewbook_return": -0.204386,
+          "excess_ewbook": -0.241614
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-13T02:35:18.349669+00:00"
+    },
+    {
+      "ticker": "FUTR",
+      "signal_date": "2026-10-14",
+      "entry_date": "2026-10-15",
+      "entry_open": 212.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-21",
+          "exit_close": 156.0,
+          "gross_return": -0.264151,
+          "net_return": -0.270151,
+          "ihsg_return": -0.099503,
+          "excess_ihsg": -0.170648,
+          "ewbook_return": -0.123003,
+          "excess_ewbook": -0.147148
+        },
+        "10": {
+          "exit_date": "2026-10-28",
+          "exit_close": 137.0,
+          "gross_return": -0.353774,
+          "net_return": -0.359774,
+          "ihsg_return": -0.107285,
+          "excess_ihsg": -0.252489,
+          "ewbook_return": -0.13181,
+          "excess_ewbook": -0.227964
+        },
+        "20": {
+          "exit_date": "2026-11-11",
+          "exit_close": 111.0,
+          "gross_return": -0.476415,
+          "net_return": -0.482415,
+          "ihsg_return": -0.135555,
+          "excess_ihsg": -0.34686,
+          "ewbook_return": -0.204386,
+          "excess_ewbook": -0.278029
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-13T02:35:18.354897+00:00"
+    },
+    {
+      "ticker": "HRTA",
+      "signal_date": "2026-10-14",
+      "entry_date": "2026-10-15",
+      "entry_open": 1985.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-21",
+          "exit_close": 1595.0,
+          "gross_return": -0.196474,
+          "net_return": -0.202474,
+          "ihsg_return": -0.099503,
+          "excess_ihsg": -0.102971,
+          "ewbook_return": -0.123003,
+          "excess_ewbook": -0.07947
+        },
+        "10": {
+          "exit_date": "2026-10-28",
+          "exit_close": 1595.0,
+          "gross_return": -0.196474,
+          "net_return": -0.202474,
+          "ihsg_return": -0.107285,
+          "excess_ihsg": -0.095189,
+          "ewbook_return": -0.13181,
+          "excess_ewbook": -0.070664
+        },
+        "20": {
+          "exit_date": "2026-11-11",
+          "exit_close": 1490.0,
+          "gross_return": -0.24937,
+          "net_return": -0.25537,
+          "ihsg_return": -0.135555,
+          "excess_ihsg": -0.119816,
+          "ewbook_return": -0.204386,
+          "excess_ewbook": -0.050984
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-13T02:35:18.356784+00:00"
+    },
+    {
+      "ticker": "TRIN",
+      "signal_date": "2026-10-14",
+      "entry_date": "2026-10-15",
+      "entry_open": 147.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-21",
+          "exit_close": 120.0,
+          "gross_return": -0.183673,
+          "net_return": -0.189673,
+          "ihsg_return": -0.099503,
+          "excess_ihsg": -0.090171,
+          "ewbook_return": -0.123003,
+          "excess_ewbook": -0.06667
+        },
+        "10": {
+          "exit_date": "2026-10-28",
+          "exit_close": 119.0,
+          "gross_return": -0.190476,
+          "net_return": -0.196476,
+          "ihsg_return": -0.107285,
+          "excess_ihsg": -0.089191,
+          "ewbook_return": -0.13181,
+          "excess_ewbook": -0.064667
+        },
+        "20": {
+          "exit_date": "2026-11-11",
+          "exit_close": 79.0,
+          "gross_return": -0.462585,
+          "net_return": -0.468585,
+          "ihsg_return": -0.135555,
+          "excess_ihsg": -0.33303,
+          "ewbook_return": -0.204386,
+          "excess_ewbook": -0.264199
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-13T02:35:18.365710+00:00"
+    },
+    {
+      "ticker": "VISI",
+      "signal_date": "2026-10-14",
+      "entry_date": "2026-10-15",
+      "entry_open": 1000.0,
+      "horizons": {
+        "5": {
+          "exit_date": "2026-10-21",
+          "exit_close": 790.0,
+          "gross_return": -0.21,
+          "net_return": -0.216,
+          "ihsg_return": -0.099503,
+          "excess_ihsg": -0.116497,
+          "ewbook_return": -0.123003,
+          "excess_ewbook": -0.092997
+        },
+        "10": {
+          "exit_date": "2026-10-28",
+          "exit_close": 695.0,
+          "gross_return": -0.305,
+          "net_return": -0.311,
+          "ihsg_return": -0.107285,
+          "excess_ihsg": -0.203715,
+          "ewbook_return": -0.13181,
+          "excess_ewbook": -0.17919
+        },
+        "20": {
+          "exit_date": "2026-11-11",
+          "exit_close": 530.0,
+          "gross_return": -0.47,
+          "net_return": -0.476,
+          "ihsg_return": -0.135555,
+          "excess_ihsg": -0.340445,
+          "ewbook_return": -0.204386,
+          "excess_ewbook": -0.271614
+        }
+      },
+      "censored": false,
+      "generated_utc": "2026-11-13T02:35:18.366388+00:00"
     }
   ],
   "hypothesis_id": "HYP-PM-0012",
@@ -15900,6 +20580,6 @@
   "first_eligible_entry": "2026-09-22",
   "registered_under": "D-052",
   "supersedes": null,
-  "fingerprint_sha256": "85b2627843d7ea9b4269dd4ce91c96f6ad0a0dfcc1db572fa68cb0159f165d9b",
-  "last_append_utc": "2026-11-06T02:35:20.805833+00:00"
+  "fingerprint_sha256": "cbeb40c5a0c638f567d23878aa9db82be3114f92f4de950b2a6bb5e3b7e3ed04",
+  "last_append_utc": "2026-11-13T02:35:18.384566+00:00"
 }
